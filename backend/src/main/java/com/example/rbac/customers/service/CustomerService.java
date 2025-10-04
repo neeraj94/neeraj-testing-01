@@ -7,7 +7,7 @@ import com.example.rbac.customers.dto.CustomerRequest;
 import com.example.rbac.customers.mapper.CustomerMapper;
 import com.example.rbac.customers.model.Customer;
 import com.example.rbac.customers.repository.CustomerRepository;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;

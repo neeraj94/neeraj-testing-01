@@ -12,7 +12,7 @@ import com.example.rbac.users.dto.UserDto;
 import com.example.rbac.users.mapper.UserMapper;
 import com.example.rbac.users.model.User;
 import com.example.rbac.users.repository.UserRepository;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;

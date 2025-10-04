@@ -12,7 +12,7 @@ import com.example.rbac.users.dto.UserDto;
 import com.example.rbac.users.mapper.UserMapper;
 import com.example.rbac.users.model.User;
 import com.example.rbac.users.repository.UserRepository;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;

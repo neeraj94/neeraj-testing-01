@@ -11,7 +11,7 @@ import com.example.rbac.invoices.mapper.InvoiceMapper;
 import com.example.rbac.invoices.model.Invoice;
 import com.example.rbac.invoices.model.InvoiceItem;
 import com.example.rbac.invoices.repository.InvoiceRepository;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
