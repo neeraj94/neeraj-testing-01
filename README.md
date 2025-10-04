@@ -8,7 +8,7 @@ This project is a full-stack Role-Based Access Control dashboard featuring a Spr
 - **RBAC**: Users may have multiple roles; roles are composed of permissions. API endpoints enforce permissions via `@PreAuthorize`.
 - **Domain Modules**: CRUD for users, roles, permissions, customers, invoices (with items and totals), and profile management.
 - **Dynamic Dashboard**: Frontend tabs render based on effective permissions. React Query keeps data fresh, Redux Toolkit stores auth state, and Tailwind provides styling.
-- **Database Migrations**: Flyway manages schema and seed data for PostgreSQL, including demo users and sample business data.
+- **Database Migrations**: Flyway manages schema and seed data for MySQL, including demo users and sample business data.
 - **Documentation**: OpenAPI docs available at `/swagger-ui.html` after running the backend.
 - **Testing**: Basic Spring context test scaffolded; extend with service tests as needed.
 - **Postman Collection**: Located at `backend/src/main/resources/postman/collection.json` for quick API exploration.
@@ -18,7 +18,7 @@ This project is a full-stack Role-Based Access Control dashboard featuring a Spr
 - Java 17+
 - Maven 3.9+
 - Node.js 18+
-- PostgreSQL 14+
+- MySQL 8.0+
 
 ## Backend Setup
 
@@ -28,7 +28,7 @@ This project is a full-stack Role-Based Access Control dashboard featuring a Spr
    cd backend
    ```
 
-2. Create a PostgreSQL database and update `src/main/resources/application.yml` if needed.
+2. Create a MySQL database (default: `rbac_dashboard` with user/password `rbac`) and update `src/main/resources/application.yml` if needed.
 
 3. Run database migrations and start the application:
 

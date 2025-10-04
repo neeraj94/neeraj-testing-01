@@ -1,4 +1,4 @@
-INSERT INTO permissions (key, name) VALUES
+INSERT INTO permissions (code, name) VALUES
  ('USER_VIEW', 'View Users'),
  ('USER_CREATE', 'Create Users'),
  ('USER_UPDATE', 'Update Users'),
@@ -20,7 +20,7 @@ INSERT INTO permissions (key, name) VALUES
  ('INVOICE_UPDATE', 'Update Invoices'),
  ('INVOICE_DELETE', 'Delete Invoices');
 
-INSERT INTO roles (key, name) VALUES
+INSERT INTO roles (code, name) VALUES
  ('SUPER_ADMIN', 'Super Administrator'),
  ('ADMIN', 'Administrator'),
  ('FINANCE', 'Finance Manager');
@@ -30,19 +30,19 @@ INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id
 FROM roles r
 CROSS JOIN permissions p
-WHERE r.key = 'SUPER_ADMIN';
+WHERE r.code = 'SUPER_ADMIN';
 
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id
 FROM roles r
-JOIN permissions p ON p.key IN ('USER_VIEW','USER_CREATE','USER_UPDATE','USER_DELETE','CUSTOMER_VIEW','CUSTOMER_CREATE','CUSTOMER_UPDATE')
-WHERE r.key = 'ADMIN';
+JOIN permissions p ON p.code IN ('USER_VIEW', 'USER_CREATE', 'USER_UPDATE', 'USER_DELETE', 'CUSTOMER_VIEW', 'CUSTOMER_CREATE', 'CUSTOMER_UPDATE')
+WHERE r.code = 'ADMIN';
 
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id
 FROM roles r
-JOIN permissions p ON p.key IN ('INVOICE_VIEW','INVOICE_CREATE','INVOICE_UPDATE','INVOICE_DELETE','CUSTOMER_VIEW')
-WHERE r.key = 'FINANCE';
+JOIN permissions p ON p.code IN ('INVOICE_VIEW', 'INVOICE_CREATE', 'INVOICE_UPDATE', 'INVOICE_DELETE', 'CUSTOMER_VIEW')
+WHERE r.code = 'FINANCE';
 
 -- Seed users
 INSERT INTO users (email, password_hash, full_name)
@@ -52,13 +52,13 @@ VALUES
  ('finance@demo.io', '$2y$12$4/QqzEUcSX6qeSSSzIMEt.Gu5M9I4Fv2TvbmaVbL.xSUMIaykSLIK', 'Finance User');
 
 INSERT INTO user_roles (user_id, role_id)
-SELECT u.id, r.id FROM users u JOIN roles r ON r.key = 'SUPER_ADMIN' WHERE u.email = 'superadmin@demo.io';
+SELECT u.id, r.id FROM users u JOIN roles r ON r.code = 'SUPER_ADMIN' WHERE u.email = 'superadmin@demo.io';
 
 INSERT INTO user_roles (user_id, role_id)
-SELECT u.id, r.id FROM users u JOIN roles r ON r.key = 'ADMIN' WHERE u.email = 'admin@demo.io';
+SELECT u.id, r.id FROM users u JOIN roles r ON r.code = 'ADMIN' WHERE u.email = 'admin@demo.io';
 
 INSERT INTO user_roles (user_id, role_id)
-SELECT u.id, r.id FROM users u JOIN roles r ON r.key = 'FINANCE' WHERE u.email = 'finance@demo.io';
+SELECT u.id, r.id FROM users u JOIN roles r ON r.code = 'FINANCE' WHERE u.email = 'finance@demo.io';
 
 -- Customers
 INSERT INTO customers (name, email, phone, address)
