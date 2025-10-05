@@ -11,33 +11,35 @@ const CustomersPage = () => {
   const canCreate = (permissions as PermissionKey[]).includes('CUSTOMER_CREATE');
   const canDelete = (permissions as PermissionKey[]).includes('CUSTOMER_DELETE');
 
-  const { data, refetch } = useQuery(['customers'], async () => {
-    const { data } = await api.get<Pagination<Customer>>('/customers');
-    return data.content;
+  const {
+    data: customers = [],
+    refetch
+  } = useQuery<Customer[]>({
+    queryKey: ['customers', 'all'],
+    queryFn: async () => {
+      const { data } = await api.get<Pagination<Customer>>('/customers');
+      return data.content;
+    }
   });
 
   const [form, setForm] = useState({ name: '', email: '', phone: '', address: '' });
 
-  const createCustomer = useMutation(
-    async () => {
+  const createCustomer = useMutation({
+    mutationFn: async () => {
       await api.post('/customers', form);
     },
-    {
-      onSuccess: () => {
-        setForm({ name: '', email: '', phone: '', address: '' });
-        refetch();
-      }
+    onSuccess: () => {
+      setForm({ name: '', email: '', phone: '', address: '' });
+      refetch();
     }
-  );
+  });
 
-  const deleteCustomer = useMutation<void, unknown, number>(
-    async (id: number) => {
+  const deleteCustomer = useMutation<void, unknown, number>({
+    mutationFn: async (id: number) => {
       await api.delete(`/customers/${id}`);
     },
-    {
-      onSuccess: () => refetch()
-    }
-  );
+    onSuccess: () => refetch()
+  });
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
@@ -91,9 +93,9 @@ const CustomersPage = () => {
           <button
             type="submit"
             className="mt-4 rounded-md bg-primary px-4 py-2 text-sm font-medium text-white"
-            disabled={createCustomer.isLoading}
+            disabled={createCustomer.isPending}
           >
-            {createCustomer.isLoading ? 'Saving...' : 'Create customer'}
+            {createCustomer.isPending ? 'Saving...' : 'Create customer'}
           </button>
         </form>
       )}
@@ -109,7 +111,7 @@ const CustomersPage = () => {
           </tr>
         </thead>
         <tbody>
-          {data?.map((customer) => (
+          {customers.map((customer) => (
             <tr key={customer.id} className="border-t border-slate-200">
               <td className="px-3 py-2">{customer.name}</td>
               <td className="px-3 py-2">{customer.email ?? '—'}</td>

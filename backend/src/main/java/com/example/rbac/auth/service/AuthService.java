@@ -69,7 +69,6 @@ public class AuthService {
             throw new ApiException(HttpStatus.UNAUTHORIZED, "Invalid credentials");
         }
         User user = userRepository.findByEmail(request.getEmail())
-                .flatMap(u -> userRepository.findDetailedById(u.getId()))
                 .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "User not found"));
         String refreshTokenValue = createRefreshToken(user);
         return buildAuthResponse(user, refreshTokenValue);

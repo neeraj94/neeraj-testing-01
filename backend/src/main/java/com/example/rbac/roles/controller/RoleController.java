@@ -19,8 +19,8 @@ public class RoleController {
     }
 
     @GetMapping
-    public PageResponse<RoleDto> list(@RequestParam(defaultValue = "0") int page,
-                                      @RequestParam(defaultValue = "20") int size) {
+    public PageResponse<RoleDto> list(@RequestParam(name = "page", defaultValue = "0") int page,
+                                      @RequestParam(name = "size", defaultValue = "20") int size) {
         return roleService.list(page, size);
     }
 
@@ -30,27 +30,27 @@ public class RoleController {
     }
 
     @GetMapping("/{id}")
-    public RoleDto get(@PathVariable Long id) {
+    public RoleDto get(@PathVariable("id") Long id) {
         return roleService.get(id);
     }
 
     @PutMapping("/{id}")
-    public RoleDto update(@PathVariable Long id, @Valid @RequestBody RoleRequest request) {
+    public RoleDto update(@PathVariable("id") Long id, @Valid @RequestBody RoleRequest request) {
         return roleService.update(id, request);
     }
 
     @DeleteMapping("/{id}")
-    public void delete(@PathVariable Long id) {
+    public void delete(@PathVariable("id") Long id) {
         roleService.delete(id);
     }
 
     @PostMapping("/{id}/permissions")
-    public RoleDto assignPermissions(@PathVariable Long id, @Valid @RequestBody AssignPermissionsRequest request) {
+    public RoleDto assignPermissions(@PathVariable("id") Long id, @Valid @RequestBody AssignPermissionsRequest request) {
         return roleService.assignPermissions(id, request);
     }
 
     @DeleteMapping("/{id}/permissions/{permissionId}")
-    public RoleDto removePermission(@PathVariable Long id, @PathVariable Long permissionId) {
+    public RoleDto removePermission(@PathVariable("id") Long id, @PathVariable("permissionId") Long permissionId) {
         return roleService.removePermission(id, permissionId);
     }
 }
