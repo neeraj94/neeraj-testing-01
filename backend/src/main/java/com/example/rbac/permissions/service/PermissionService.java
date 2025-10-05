@@ -10,6 +10,7 @@ import com.example.rbac.permissions.repository.PermissionRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
@@ -27,10 +28,22 @@ public class PermissionService {
     }
 
     @PreAuthorize("hasAuthority('PERMISSION_VIEW')")
-    public PageResponse<PermissionDto> list(int page, int size) {
-        Pageable pageable = PageRequest.of(page, size);
+    public PageResponse<PermissionDto> list(int page, int size, String sort, String direction) {
+        Pageable pageable = buildPageable(page, size, sort, direction);
         Page<PermissionDto> result = permissionRepository.findAll(pageable).map(permissionMapper::toDto);
         return PageResponse.from(result);
+    }
+
+    private Pageable buildPageable(int page, int size, String sort, String direction) {
+        String normalizedSort = sort == null ? "key" : sort.toLowerCase();
+        String property;
+        switch (normalizedSort) {
+            case "name" -> property = "name";
+            case "createdat" -> property = "createdAt";
+            default -> property = "key";
+        }
+        Sort.Direction sortDirection = "desc".equalsIgnoreCase(direction) ? Sort.Direction.DESC : Sort.Direction.ASC;
+        return PageRequest.of(page, size, Sort.by(sortDirection, property));
     }
 
     @PreAuthorize("hasAuthority('PERMISSION_CREATE')")
