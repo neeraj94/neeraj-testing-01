@@ -15,6 +15,7 @@ export interface User extends Record<string, unknown> {
   active: boolean;
   roles: string[];
   permissions: PermissionKey[];
+  directPermissions: PermissionKey[];
 }
 
 export interface Role {

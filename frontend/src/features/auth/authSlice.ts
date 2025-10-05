@@ -1,3 +1,4 @@
+import axios from 'axios';
 import { createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit';
 import api from '../../services/http';
 import type { AuthResponse, UserSummary } from '../../types/auth';
@@ -8,6 +9,7 @@ interface AuthState {
   refreshToken: string | null;
   roles: string[];
   permissions: string[];
+  directPermissions: string[];
   status: 'idle' | 'loading' | 'failed';
   error?: string;
 }
@@ -20,16 +22,30 @@ const initialState: AuthState = {
   refreshToken: localStorage.getItem(refreshTokenKey),
   roles: [],
   permissions: [],
+  directPermissions: [],
   status: 'idle'
 };
 
-export const login = createAsyncThunk<AuthResponse, { email: string; password: string }>(
-  'auth/login',
-  async (credentials) => {
+export const login = createAsyncThunk<
+  AuthResponse,
+  { email: string; password: string },
+  { rejectValue: string }
+>('auth/login', async (credentials, { rejectWithValue }) => {
+  try {
     const { data } = await api.post<AuthResponse>('/auth/login', credentials);
     return data;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      const message =
+        typeof error.response?.data === 'object' && error.response?.data !== null
+          ? (error.response?.data as { message?: string; error?: string }).message ??
+            (error.response?.data as { message?: string; error?: string }).error
+          : undefined;
+      return rejectWithValue(message ?? 'Invalid email or password. Please try again.');
+    }
+    return rejectWithValue('Unable to sign in right now. Please try again later.');
   }
-);
+});
 
 export const signup = createAsyncThunk<AuthResponse, { email: string; password: string; fullName: string }>(
   'auth/signup',
@@ -52,6 +68,7 @@ const authSlice = createSlice({
       state.user = null;
       state.accessToken = null;
       state.permissions = [];
+      state.directPermissions = [];
       state.roles = [];
       state.refreshToken = null;
       localStorage.removeItem(refreshTokenKey);
@@ -64,6 +81,7 @@ const authSlice = createSlice({
         state.user = action.payload.user;
         state.roles = action.payload.roles;
         state.permissions = action.payload.permissions;
+        state.directPermissions = action.payload.directPermissions;
       }
     }
   },
@@ -80,11 +98,12 @@ const authSlice = createSlice({
         state.refreshToken = action.payload.refreshToken;
         state.roles = action.payload.roles;
         state.permissions = action.payload.permissions;
+        state.directPermissions = action.payload.directPermissions;
         localStorage.setItem(refreshTokenKey, action.payload.refreshToken);
       })
       .addCase(login.rejected, (state, action) => {
         state.status = 'failed';
-        state.error = action.error.message;
+        state.error = action.payload ?? action.error.message ?? 'Unable to sign in.';
       })
       .addCase(signup.fulfilled, (state, action) => {
         state.user = action.payload.user;
@@ -92,12 +111,14 @@ const authSlice = createSlice({
         state.refreshToken = action.payload.refreshToken;
         state.roles = action.payload.roles;
         state.permissions = action.payload.permissions;
+        state.directPermissions = action.payload.directPermissions;
         localStorage.setItem(refreshTokenKey, action.payload.refreshToken);
       })
       .addCase(loadCurrentUser.fulfilled, (state, action) => {
         state.user = action.payload;
         state.roles = action.payload.roles;
         state.permissions = action.payload.permissions;
+        state.directPermissions = action.payload.directPermissions;
       });
   }
 });
