@@ -8,6 +8,8 @@ import type { PermissionKey } from '../types/auth';
 import { useToast } from '../components/ToastProvider';
 import { extractErrorMessage } from '../utils/errors';
 import { hasAnyPermission } from '../utils/permissions';
+import ExportMenu from '../components/ExportMenu';
+import { exportDataset, type ExportFormat } from '../utils/exporters';
 
 const initialItem = { description: '', qty: 1, unitPrice: 0 };
 
@@ -17,11 +19,14 @@ const InvoicesPage = () => {
   const canCreate = hasAnyPermission(grantedPermissions, ['INVOICE_CREATE']);
   const canDelete = hasAnyPermission(grantedPermissions, ['INVOICE_DELETE']);
   const canUpdate = hasAnyPermission(grantedPermissions, ['INVOICE_UPDATE']);
+  const canExport = hasAnyPermission(grantedPermissions, ['INVOICES_EXPORT']);
   const { notify } = useToast();
+  const [isExporting, setIsExporting] = useState(false);
 
   const {
     data: invoices = [],
-    refetch
+    refetch,
+    isLoading: isLoadingInvoices
   } = useQuery<Invoice[]>({
     queryKey: ['invoices', 'all'],
     queryFn: async () => {
@@ -176,6 +181,46 @@ const InvoicesPage = () => {
     }
   };
 
+  const handleExportInvoices = (format: ExportFormat) => {
+    if (!canExport || isExporting) {
+      return;
+    }
+    setIsExporting(true);
+    try {
+      const columns = [
+        { key: 'number', header: 'Number' },
+        { key: 'customer', header: 'Customer' },
+        { key: 'status', header: 'Status' },
+        { key: 'issueDate', header: 'Issue Date' },
+        { key: 'dueDate', header: 'Due Date' },
+        { key: 'total', header: 'Total' }
+      ];
+      const rows = (invoices ?? []).map((invoice) => ({
+        number: invoice.number,
+        customer: invoice.customerName,
+        status: invoice.status,
+        issueDate: invoice.issueDate,
+        dueDate: invoice.dueDate,
+        total: invoice.total.toFixed(2)
+      }));
+      if (!rows.length) {
+        notify({ type: 'error', message: 'There are no invoices to export.' });
+        return;
+      }
+      exportDataset({
+        format,
+        columns,
+        rows,
+        fileName: 'invoices',
+        title: 'Invoices'
+      });
+    } catch (error) {
+      notify({ type: 'error', message: 'Unable to export invoices. Please try again.' });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   const beginEdit = (invoice: Invoice) => {
     const [firstItem] = invoice.items;
     const computedTaxRate = invoice.subtotal === 0 ? 0 : Number(((invoice.tax / invoice.subtotal) * 100).toFixed(2));
@@ -201,7 +246,16 @@ const InvoicesPage = () => {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold text-slate-800">Invoices</h1>
+      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+        <h1 className="text-2xl font-semibold text-slate-800">Invoices</h1>
+        {canExport && (
+          <ExportMenu
+            onSelect={handleExportInvoices}
+            disabled={isLoadingInvoices}
+            isBusy={isExporting}
+          />
+        )}
+      </div>
 
       {canCreate && (
         <form onSubmit={handleSubmit} className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">

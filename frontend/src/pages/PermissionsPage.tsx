@@ -3,8 +3,23 @@ import { useQuery } from '@tanstack/react-query';
 import api from '../services/http';
 import type { Pagination, Permission } from '../types/models';
 import SortableColumnHeader from '../components/SortableColumnHeader';
+import { useAppSelector } from '../app/hooks';
+import type { PermissionKey } from '../types/auth';
+import { hasAnyPermission } from '../utils/permissions';
+import ExportMenu from '../components/ExportMenu';
+import { exportDataset, type ExportFormat } from '../utils/exporters';
+import { useToast } from '../components/ToastProvider';
 
 const PermissionsPage = () => {
+  const { notify } = useToast();
+  const { permissions: authPermissions } = useAppSelector((state) => state.auth);
+  const grantedPermissions = (authPermissions ?? []) as PermissionKey[];
+  const canExportPermissions = useMemo(
+    () => hasAnyPermission(grantedPermissions, ['PERMISSIONS_EXPORT']),
+    [grantedPermissions]
+  );
+  const [isExporting, setIsExporting] = useState(false);
+
   const [searchDraft, setSearchDraft] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [sort, setSort] = useState<{ field: 'key' | 'name'; direction: 'asc' | 'desc' }>({
@@ -61,13 +76,54 @@ const PermissionsPage = () => {
     });
   };
 
+  const handleExportPermissions = (format: ExportFormat) => {
+    if (!canExportPermissions || isExporting) {
+      return;
+    }
+    setIsExporting(true);
+    try {
+      const columns = [
+        { key: 'key', header: 'Key' },
+        { key: 'name', header: 'Name' }
+      ];
+      const rows = sortedPermissions.map((permission) => ({
+        key: permission.key,
+        name: permission.name
+      }));
+      if (!rows.length) {
+        notify({ type: 'error', message: 'There are no permissions to export for the current search.' });
+        return;
+      }
+      exportDataset({
+        format,
+        columns,
+        rows,
+        fileName: 'permissions',
+        title: 'Permissions'
+      });
+    } catch (error) {
+      notify({ type: 'error', message: 'Unable to export permissions. Please try again.' });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
     <div className="flex min-h-full flex-col gap-6 px-6 py-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-slate-900">Permissions</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          Review every permission provisioned by the platform so you can assign the right capabilities to roles and users.
-        </p>
+      <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
+        <div>
+          <h1 className="text-2xl font-semibold text-slate-900">Permissions</h1>
+          <p className="mt-1 text-sm text-slate-500">
+            Review every permission provisioned by the platform so you can assign the right capabilities to roles and users.
+          </p>
+        </div>
+        {canExportPermissions && (
+          <ExportMenu
+            onSelect={handleExportPermissions}
+            disabled={isLoading}
+            isBusy={isExporting}
+          />
+        )}
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

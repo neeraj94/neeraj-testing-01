@@ -7,6 +7,10 @@ import type { PermissionKey } from '../types/auth';
 import { useToast } from '../components/ToastProvider';
 import { CAPABILITY_COLUMNS, type PermissionGroup, buildPermissionGroups } from '../utils/permissionGroups';
 import SortableColumnHeader from '../components/SortableColumnHeader';
+import { useAppSelector } from '../app/hooks';
+import { hasAnyPermission } from '../utils/permissions';
+import ExportMenu from '../components/ExportMenu';
+import { exportDataset, type ExportFormat } from '../utils/exporters';
 
 const CUSTOMER_ROLE_KEY = 'CUSTOMER';
 
@@ -215,6 +219,12 @@ const TrashIcon = () => (
 
 const RolesPage = () => {
   const { notify } = useToast();
+  const { permissions: authPermissions } = useAppSelector((state) => state.auth);
+  const grantedPermissions = (authPermissions ?? []) as PermissionKey[];
+  const canExportRoles = useMemo(
+    () => hasAnyPermission(grantedPermissions, ['ROLES_EXPORT']),
+    [grantedPermissions]
+  );
 
   const [view, setView] = useState<DirectoryView>('list');
   const [pageSize, setPageSize] = useState(25);
@@ -236,6 +246,7 @@ const RolesPage = () => {
   const [editingPermissions, setEditingPermissions] = useState<number[]>([]);
   const [createError, setCreateError] = useState<string | null>(null);
   const [editError, setEditError] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -341,9 +352,9 @@ const RolesPage = () => {
     });
   };
 
-  const filteredRoles = useMemo(() => {
+  const applyRoleFilters = (list: Role[]) => {
     const term = searchTerm.toLowerCase();
-    return roles.filter((role) => {
+    return list.filter((role) => {
       if (typeFilter === 'customer' && !isCustomerRole(role)) {
         return false;
       }
@@ -368,12 +379,12 @@ const RolesPage = () => {
         permissionMatches
       );
     });
-  }, [roles, searchTerm, permissionLookup, typeFilter, permissionFilter]);
+  };
 
-  const sortedRoles = useMemo(() => {
-    const list = [...filteredRoles];
+  const sortRolesList = (list: Role[]) => {
+    const copy = [...list];
     const factor = sort.direction === 'asc' ? 1 : -1;
-    list.sort((a, b) => {
+    copy.sort((a, b) => {
       switch (sort.field) {
         case 'key':
           return compareText(a.key, b.key) * factor;
@@ -396,8 +407,83 @@ const RolesPage = () => {
           return compareText(a.name, b.name) * factor;
       }
     });
-    return list;
-  }, [filteredRoles, sort]);
+    return copy;
+  };
+
+  const filteredRoles = useMemo(
+    () => applyRoleFilters(roles),
+    [roles, searchTerm, permissionLookup, typeFilter, permissionFilter]
+  );
+
+  const sortedRoles = useMemo(() => sortRolesList(filteredRoles), [filteredRoles, sort]);
+
+  const fetchAllRoles = async (): Promise<Role[]> => {
+    const serverSortField = sort.field === 'key' ? 'key' : 'name';
+    const direction = serverSortField === sort.field ? sort.direction : 'asc';
+    const size = 200;
+    const baseParams: Record<string, unknown> = {
+      size,
+      sort: serverSortField,
+      direction
+    };
+    const aggregated: Role[] = [];
+    let pageIndex = 0;
+    let totalPagesCount = 1;
+
+    do {
+      const params = { ...baseParams, page: pageIndex };
+      const { data } = await api.get<Pagination<Role>>('/roles', { params });
+      aggregated.push(...(data.content ?? []));
+      totalPagesCount = data.totalPages ?? 1;
+      pageIndex += 1;
+      if (pageIndex >= totalPagesCount) {
+        break;
+      }
+    } while (pageIndex < totalPagesCount && pageIndex < 50);
+
+    return aggregated;
+  };
+
+  const handleExportRoles = async (format: ExportFormat) => {
+    if (!canExportRoles || isExporting) {
+      return;
+    }
+    setIsExporting(true);
+    try {
+      const allRoles = await fetchAllRoles();
+      const filtered = applyRoleFilters(allRoles);
+      const sorted = sortRolesList(filtered);
+      if (!sorted.length) {
+        notify({ type: 'error', message: 'There are no roles to export for the current filters.' });
+        return;
+      }
+      const columns = [
+        { key: 'name', header: 'Name' },
+        { key: 'key', header: 'Key' },
+        { key: 'audience', header: 'Audience' },
+        { key: 'permissionCount', header: 'Permission Count' },
+        { key: 'permissionList', header: 'Permission Keys' }
+      ];
+      const rows = sorted.map((role) => ({
+        name: role.name,
+        key: role.key,
+        audience: isCustomerRole(role) ? 'Customer' : 'Internal',
+        permissionCount: role.permissions.length,
+        permissionList: role.permissions.length ? role.permissions.join(', ') : '—'
+      }));
+      exportDataset({
+        format,
+        columns,
+        rows,
+        fileName: 'roles',
+        title: 'Roles'
+      });
+    } catch (error) {
+      notify({ type: 'error', message: 'Unable to export roles. Please try again.' });
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const metrics = useMemo(() => {
     const customerCount = roles.filter(isCustomerRole).length;
@@ -437,26 +523,6 @@ const RolesPage = () => {
 
       return next;
     });
-  };
-
-  const handleExport = () => {
-    if (typeof window === 'undefined' || !sortedRoles.length) {
-      return;
-    }
-    const exportData = sortedRoles.map((role) => ({
-      id: role.id,
-      key: role.key,
-      name: role.name,
-      permissions: role.permissions
-    }));
-
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'roles.json';
-    link.click();
-    URL.revokeObjectURL(url);
   };
 
   const { refetch: refetchRoles } = rolesResponse;
@@ -802,19 +868,26 @@ const RolesPage = () => {
         </div>
         {isListView ? (
           <div className="flex flex-wrap items-center gap-3">
-            <button
-              type="button"
-              onClick={handleExport}
-              className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 px-5 py-2 text-sm font-medium text-slate-600 transition hover:border-slate-400 hover:text-slate-800"
-            >
-              Export
-            </button>
+            {canExportRoles && (
+              <ExportMenu
+                onSelect={handleExportRoles}
+                disabled={rolesResponse.isLoading}
+                isBusy={isExporting}
+              />
+            )}
             <button
               type="button"
               onClick={() => setView('create')}
               className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-600"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} className="h-4 w-4">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={1.6}
+                className="h-4 w-4"
+              >
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m6-6H6" />
               </svg>
               New role

@@ -4,6 +4,8 @@ import api from '../services/http';
 import type { Pagination, Permission, Role, User, UserSummaryMetrics } from '../types/models';
 import { useToast } from '../components/ToastProvider';
 import SortableColumnHeader from '../components/SortableColumnHeader';
+import ExportMenu from '../components/ExportMenu';
+import { exportDataset, type ExportFormat } from '../utils/exporters';
 import { extractErrorMessage } from '../utils/errors';
 import { buildPermissionGroups, CAPABILITY_COLUMNS, type PermissionGroup } from '../utils/permissionGroups';
 import { useAppSelector } from '../app/hooks';
@@ -94,6 +96,7 @@ const UsersPage = () => {
   const [formError, setFormError] = useState<string | null>(null);
   const [statusUpdateId, setStatusUpdateId] = useState<number | null>(null);
   const [sort, setSort] = useState<{ field: UserSortField; direction: 'asc' | 'desc' }>({ field: 'name', direction: 'asc' });
+  const [isExporting, setIsExporting] = useState(false);
   const currentUserId = currentUser?.id ?? null;
   const isSuperAdmin = useMemo(
     () => (currentRoles ?? []).some((role) => role.toUpperCase() === 'SUPER_ADMIN'),
@@ -110,6 +113,10 @@ const UsersPage = () => {
   );
   const canDeleteUsers = useMemo(
     () => hasAnyPermission(grantedPermissions as PermissionKey[], ['USER_DELETE', 'CUSTOMER_DELETE']),
+    [grantedPermissions]
+  );
+  const canExportUsers = useMemo(
+    () => hasAnyPermission(grantedPermissions as PermissionKey[], ['USERS_EXPORT']),
     [grantedPermissions]
   );
 
@@ -464,10 +471,8 @@ const UsersPage = () => {
     });
   };
 
-  const users: User[] = usersQuery.data?.content ?? [];
-  const totalPages = usersQuery.data?.totalPages ?? 0;
-  const filteredUsers = useMemo(() => {
-    return users.filter((user) => {
+  const applyFilters = (list: User[]) =>
+    list.filter((user) => {
       if (statusFilter === 'active' && !user.active) {
         return false;
       }
@@ -482,12 +487,11 @@ const UsersPage = () => {
       }
       return true;
     });
-  }, [users, statusFilter, audienceFilter]);
 
-  const sortedUsers = useMemo(() => {
-    const list = [...filteredUsers];
+  const sortUsersList = (list: User[]) => {
+    const copy = [...list];
     const directionFactor = sort.direction === 'asc' ? 1 : -1;
-    list.sort((a, b) => {
+    copy.sort((a, b) => {
       switch (sort.field) {
         case 'email': {
           const comparison = compareText(a.email, b.email);
@@ -519,8 +523,86 @@ const UsersPage = () => {
           return compareText(a.fullName, b.fullName) * directionFactor;
       }
     });
-    return list;
-  }, [filteredUsers, sort]);
+    return copy;
+  };
+
+  const users: User[] = usersQuery.data?.content ?? [];
+  const totalPages = usersQuery.data?.totalPages ?? 0;
+  const filteredUsers = useMemo(() => applyFilters(users), [users, statusFilter, audienceFilter]);
+  const sortedUsers = useMemo(() => sortUsersList(filteredUsers), [filteredUsers, sort]);
+
+  const fetchAllUsers = async (): Promise<User[]> => {
+    const serverSortable: UserSortField[] = ['name', 'email', 'status'];
+    const serverSortField = serverSortable.includes(sort.field) ? sort.field : 'name';
+    const direction = serverSortField === sort.field ? sort.direction : 'asc';
+    const size = 250;
+    const baseParams: Record<string, unknown> = {
+      size,
+      sort: serverSortField,
+      direction
+    };
+    if (searchTerm.trim()) {
+      baseParams.search = searchTerm.trim();
+    }
+
+    const aggregated: User[] = [];
+    let pageIndex = 0;
+    let totalPagesCount = 1;
+
+    do {
+      const params = { ...baseParams, page: pageIndex };
+      const { data } = await api.get<Pagination<User>>('/users', { params });
+      aggregated.push(...(data.content ?? []));
+      totalPagesCount = data.totalPages ?? 1;
+      pageIndex += 1;
+      if (pageIndex >= totalPagesCount) {
+        break;
+      }
+    } while (pageIndex < totalPagesCount && pageIndex < 50);
+
+    return aggregated;
+  };
+
+  const handleExportUsers = async (format: ExportFormat) => {
+    if (!canExportUsers || isExporting) {
+      return;
+    }
+    setIsExporting(true);
+    try {
+      const allUsers = await fetchAllUsers();
+      const filtered = applyFilters(allUsers);
+      const sorted = sortUsersList(filtered);
+      if (!sorted.length) {
+        notify({ type: 'error', message: 'There are no users to export for the current filters.' });
+        return;
+      }
+      const columns = [
+        { key: 'name', header: 'Name' },
+        { key: 'email', header: 'Email' },
+        { key: 'status', header: 'Status' },
+        { key: 'groups', header: 'Groups' },
+        { key: 'audience', header: 'Audience' }
+      ];
+      const rows = sorted.map((user) => ({
+        name: user.fullName,
+        email: user.email,
+        status: user.active ? 'Active' : 'Inactive',
+        groups: user.roles.length ? user.roles.join(', ') : '—',
+        audience: isCustomerAccount(user) ? 'Customer' : 'Internal'
+      }));
+      exportDataset({
+        format,
+        columns,
+        rows,
+        fileName: 'users-and-customers',
+        title: 'Users & customers'
+      });
+    } catch (error) {
+      notify({ type: 'error', message: 'Unable to export users. Please try again.' });
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const metrics = summaryQuery.data;
   const directPermissionSet = useMemo(() => {
@@ -1310,17 +1392,31 @@ const UsersPage = () => {
             Manage internal teammates and customer contacts from a single, permission-aware workspace.
           </p>
         </div>
-        {isDirectoryView && canCreateUser && (
-          <button
-            type="button"
-            onClick={() => setPanelMode('create')}
-            className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-600"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} className="h-4 w-4">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m6-6H6" />
-            </svg>
-            New user
-          </button>
+        {isDirectoryView && (
+          <div className="flex flex-wrap items-center gap-3">
+            {canExportUsers && (
+              <ExportMenu onSelect={handleExportUsers} disabled={usersQuery.isLoading} isBusy={isExporting} />
+            )}
+            {canCreateUser && (
+              <button
+                type="button"
+                onClick={() => setPanelMode('create')}
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-600"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={1.6}
+                  className="h-4 w-4"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m6-6H6" />
+                </svg>
+                New user
+              </button>
+            )}
+          </div>
         )}
       </div>
       {isDirectoryView ? (
