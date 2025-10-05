@@ -14,11 +14,13 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 @Service
@@ -27,6 +29,12 @@ public class RoleService {
     private final RoleRepository roleRepository;
     private final PermissionRepository permissionRepository;
     private final RoleMapper roleMapper;
+
+    private static final Map<String, String> ROLE_SORT_MAPPING = Map.of(
+            "name", "name",
+            "key", "key",
+            "createdAt", "createdAt"
+    );
 
     public RoleService(RoleRepository roleRepository,
                        PermissionRepository permissionRepository,
@@ -38,10 +46,17 @@ public class RoleService {
 
     @PreAuthorize("hasAuthority('ROLE_VIEW') or hasAuthority('PERMISSION_VIEW')")
     @Transactional(readOnly = true)
-    public PageResponse<RoleDto> list(int page, int size) {
-        Pageable pageable = PageRequest.of(page, size);
+    public PageResponse<RoleDto> list(int page, int size, String sort, String direction) {
+        Pageable pageable = buildPageable(page, size, sort, direction);
         Page<RoleDto> result = roleRepository.findAll(pageable).map(roleMapper::toDto);
         return PageResponse.from(result);
+    }
+
+    private Pageable buildPageable(int page, int size, String sort, String direction) {
+        String normalizedSort = sort == null ? "name" : sort.toLowerCase();
+        String property = ROLE_SORT_MAPPING.getOrDefault(normalizedSort, ROLE_SORT_MAPPING.get("name"));
+        Sort.Direction sortDirection = "desc".equalsIgnoreCase(direction) ? Sort.Direction.DESC : Sort.Direction.ASC;
+        return PageRequest.of(page, size, Sort.by(sortDirection, property));
     }
 
     @PreAuthorize("hasAuthority('ROLE_CREATE')")
