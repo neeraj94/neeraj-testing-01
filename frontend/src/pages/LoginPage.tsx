@@ -11,15 +11,29 @@ const LoginPage = () => {
   const { notify } = useToast();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showErrorDialog, setShowErrorDialog] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (status === 'failed' && error) {
+      setErrorMessage(error);
+      setShowErrorDialog(true);
+    }
+  }, [status, error]);
+
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     setShowErrorDialog(false);
+    setErrorMessage(null);
     const result = await dispatch(login({ email, password }));
     if (login.fulfilled.match(result)) {
       notify({ type: 'success', message: 'Signed in successfully.' });
       navigate('/dashboard');
     } else if (login.rejected.match(result)) {
-      notify({ type: 'error', message: result.payload ?? 'Unable to sign in right now.' });
+      const message = result.payload ?? 'Unable to sign in right now.';
+      setErrorMessage(message);
+      setShowErrorDialog(true);
+      notify({ type: 'error', message });
     }
   };
 
@@ -135,6 +149,39 @@ const LoginPage = () => {
           </Link>
         </p>
       </div>
+      {showErrorDialog && errorMessage && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4">
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
+            <div className="flex items-center gap-3">
+              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-rose-100 text-rose-600">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={1.8}
+                  className="h-5 w-5"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m0 3.75h.007M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                </svg>
+              </span>
+              <div>
+                <h3 className="text-base font-semibold text-slate-800">We couldn&apos;t sign you in</h3>
+                <p className="mt-1 text-sm text-slate-500">{errorMessage}</p>
+              </div>
+            </div>
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setShowErrorDialog(false)}
+                className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
