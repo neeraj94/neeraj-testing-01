@@ -20,8 +20,10 @@ public class RoleController {
 
     @GetMapping
     public PageResponse<RoleDto> list(@RequestParam(name = "page", defaultValue = "0") int page,
-                                      @RequestParam(name = "size", defaultValue = "20") int size) {
-        return roleService.list(page, size);
+                                      @RequestParam(name = "size", defaultValue = "20") int size,
+                                      @RequestParam(name = "sort", defaultValue = "name") String sort,
+                                      @RequestParam(name = "direction", defaultValue = "asc") String direction) {
+        return roleService.list(page, size, sort, direction);
     }
 
     @PostMapping

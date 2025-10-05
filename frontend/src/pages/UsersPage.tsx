@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../services/http';
 import type { Pagination, Permission, Role, User, UserSummaryMetrics } from '../types/models';
 import { useToast } from '../components/ToastProvider';
+import SortableColumnHeader from '../components/SortableColumnHeader';
 import { extractErrorMessage } from '../utils/errors';
 import { buildPermissionGroups, CAPABILITY_COLUMNS, type PermissionGroup } from '../utils/permissionGroups';
 import { useAppSelector } from '../app/hooks';
@@ -46,6 +47,7 @@ const TrashIcon = () => (
 
 type PanelMode = 'empty' | 'create' | 'detail';
 type DetailTab = 'profile' | 'access';
+type UserSortField = 'name' | 'email' | 'status' | 'audience' | 'groups';
 
 type UserFormState = {
   fullName: string;
@@ -67,13 +69,15 @@ const emptyForm: UserFormState = {
 
 const normalizePermissionKey = (value: string) => value.toUpperCase();
 
+const compareText = (a: string, b: string) => a.localeCompare(b, undefined, { sensitivity: 'base' });
+
 const isCustomerAccount = (user: User) =>
   user.roles.some((role) => role.toUpperCase() === CUSTOMER_ROLE_KEY);
 
 const UsersPage = () => {
   const queryClient = useQueryClient();
   const { notify } = useToast();
-  const { permissions: grantedPermissions } = useAppSelector((state) => state.auth);
+  const { permissions: grantedPermissions, user: currentUser, roles: currentRoles } = useAppSelector((state) => state.auth);
 
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
@@ -87,6 +91,12 @@ const UsersPage = () => {
   const [form, setForm] = useState<UserFormState>(emptyForm);
   const [formError, setFormError] = useState<string | null>(null);
   const [statusUpdateId, setStatusUpdateId] = useState<number | null>(null);
+  const [sort, setSort] = useState<{ field: UserSortField; direction: 'asc' | 'desc' }>({ field: 'name', direction: 'asc' });
+  const currentUserId = currentUser?.id ?? null;
+  const isSuperAdmin = useMemo(
+    () => (currentRoles ?? []).some((role) => role.toUpperCase() === 'SUPER_ADMIN'),
+    [currentRoles]
+  );
 
   const canCreateUser = useMemo(
     () => hasAnyPermission(grantedPermissions as PermissionKey[], ['USER_CREATE', 'CUSTOMER_CREATE']),
@@ -103,7 +113,7 @@ const UsersPage = () => {
 
   useEffect(() => {
     setPage(0);
-  }, [pageSize, statusFilter, audienceFilter]);
+  }, [pageSize, statusFilter, audienceFilter, sort.field, sort.direction]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -165,9 +175,16 @@ const UsersPage = () => {
   });
 
   const usersQuery = useQuery<Pagination<User>>({
-    queryKey: ['users', 'list', { page, pageSize, searchTerm }],
+    queryKey: ['users', 'list', { page, pageSize, searchTerm, sortField: sort.field, sortDirection: sort.direction }],
     queryFn: async () => {
-      const params: Record<string, unknown> = { page, size: pageSize };
+      const serverSortable: UserSortField[] = ['name', 'email', 'status'];
+      const serverSortField = serverSortable.includes(sort.field) ? sort.field : 'name';
+      const params: Record<string, unknown> = {
+        page,
+        size: pageSize,
+        sort: serverSortField,
+        direction: serverSortField === sort.field ? sort.direction : 'asc'
+      };
       if (searchTerm.trim()) {
         params.search = searchTerm.trim();
       }
@@ -189,20 +206,32 @@ const UsersPage = () => {
   useEffect(() => {
     if (panelMode === 'detail' && selectedUserQuery.data) {
       const detail = selectedUserQuery.data;
+      const assignedRoleIds = detail.roles
+        .map((roleKey) => roleIdByKey.get(roleKey.toUpperCase()))
+        .filter((value): value is number => typeof value === 'number');
+      const roleDerivedPermissions = new Set<string>();
+      roles.forEach((role) => {
+        if (assignedRoleIds.includes(role.id)) {
+          role.permissions?.forEach((permission) => {
+            roleDerivedPermissions.add(normalizePermissionKey(permission));
+          });
+        }
+      });
+      const sanitizedDirect = (detail.directPermissions ?? [])
+        .map(normalizePermissionKey)
+        .filter((permissionKey) => !roleDerivedPermissions.has(permissionKey));
       setForm({
         fullName: detail.fullName,
         email: detail.email,
         password: '',
         active: detail.active,
-        roleIds: detail.roles
-          .map((roleKey) => roleIdByKey.get(roleKey.toUpperCase()))
-          .filter((value): value is number => typeof value === 'number'),
-        directPermissions: (detail.directPermissions ?? []).map(normalizePermissionKey)
+        roleIds: assignedRoleIds,
+        directPermissions: sanitizedDirect
       });
       setFormError(null);
       setActiveTab('profile');
     }
-  }, [panelMode, selectedUserQuery.data, roleIdByKey]);
+  }, [panelMode, selectedUserQuery.data, roleIdByKey, roles]);
 
   const invalidateUsers = () => {
     queryClient.invalidateQueries({ queryKey: ['users', 'list'] });
@@ -344,9 +373,22 @@ const UsersPage = () => {
   const toggleRoleSelection = (roleId: number) => {
     setForm((prev) => {
       const exists = prev.roleIds.includes(roleId);
+      const nextRoleIds = exists ? prev.roleIds.filter((id) => id !== roleId) : [...prev.roleIds, roleId];
+      const normalizedRolePermissions = new Set<string>();
+      roles.forEach((role) => {
+        if (nextRoleIds.includes(role.id)) {
+          role.permissions?.forEach((permission) => {
+            normalizedRolePermissions.add(normalizePermissionKey(permission));
+          });
+        }
+      });
+      const filteredDirect = prev.directPermissions
+        .map(normalizePermissionKey)
+        .filter((permissionKey) => !normalizedRolePermissions.has(permissionKey));
       return {
         ...prev,
-        roleIds: exists ? prev.roleIds.filter((id) => id !== roleId) : [...prev.roleIds, roleId]
+        roleIds: nextRoleIds,
+        directPermissions: Array.from(new Set(filteredDirect))
       };
     });
   };
@@ -355,6 +397,9 @@ const UsersPage = () => {
     const normalized = normalizePermissionKey(permissionKey);
     setForm((prev) => {
       const next = new Set(prev.directPermissions.map(normalizePermissionKey));
+      if (rolePermissionSet.has(normalized)) {
+        return prev;
+      }
       if (checked) {
         next.add(normalized);
         if (/_VIEW_GLOBAL$/i.test(normalized)) {
@@ -373,6 +418,15 @@ const UsersPage = () => {
     setForm(emptyForm);
     setFormError(null);
     setActiveTab('profile');
+  };
+
+  const handleSortChange = (field: UserSortField) => {
+    setSort((prev) => {
+      if (prev.field === field) {
+        return { field, direction: prev.direction === 'asc' ? 'desc' : 'asc' };
+      }
+      return { field, direction: 'asc' };
+    });
   };
 
   const users: User[] = usersQuery.data?.content ?? [];
@@ -394,6 +448,44 @@ const UsersPage = () => {
       return true;
     });
   }, [users, statusFilter, audienceFilter]);
+
+  const sortedUsers = useMemo(() => {
+    const list = [...filteredUsers];
+    const directionFactor = sort.direction === 'asc' ? 1 : -1;
+    list.sort((a, b) => {
+      switch (sort.field) {
+        case 'email': {
+          const comparison = compareText(a.email, b.email);
+          return comparison !== 0 ? comparison * directionFactor : compareText(a.fullName, b.fullName) * directionFactor;
+        }
+        case 'status': {
+          if (a.active === b.active) {
+            return compareText(a.fullName, b.fullName) * directionFactor;
+          }
+          return ((a.active ? 1 : 0) - (b.active ? 1 : 0)) * directionFactor;
+        }
+        case 'audience': {
+          const aAudience = isCustomerAccount(a) ? 1 : 0;
+          const bAudience = isCustomerAccount(b) ? 1 : 0;
+          if (aAudience === bAudience) {
+            return compareText(a.fullName, b.fullName) * directionFactor;
+          }
+          return (aAudience - bAudience) * directionFactor;
+        }
+        case 'groups': {
+          const difference = (a.roles?.length ?? 0) - (b.roles?.length ?? 0);
+          if (difference === 0) {
+            return compareText(a.fullName, b.fullName) * directionFactor;
+          }
+          return difference * directionFactor;
+        }
+        case 'name':
+        default:
+          return compareText(a.fullName, b.fullName) * directionFactor;
+      }
+    });
+    return list;
+  }, [filteredUsers, sort]);
 
   const metrics = summaryQuery.data;
   const directPermissionSet = useMemo(() => {
@@ -508,11 +600,41 @@ const UsersPage = () => {
         <table className="min-w-full divide-y divide-slate-200">
           <thead className="bg-slate-50">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Name</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Email</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Status</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Groups</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Audience</th>
+              <SortableColumnHeader
+                label="Name"
+                field="name"
+                currentField={sort.field}
+                direction={sort.direction}
+                onSort={handleSortChange}
+              />
+              <SortableColumnHeader
+                label="Email"
+                field="email"
+                currentField={sort.field}
+                direction={sort.direction}
+                onSort={handleSortChange}
+              />
+              <SortableColumnHeader
+                label="Status"
+                field="status"
+                currentField={sort.field}
+                direction={sort.direction}
+                onSort={handleSortChange}
+              />
+              <SortableColumnHeader
+                label="Groups"
+                field="groups"
+                currentField={sort.field}
+                direction={sort.direction}
+                onSort={handleSortChange}
+              />
+              <SortableColumnHeader
+                label="Audience"
+                field="audience"
+                currentField={sort.field}
+                direction={sort.direction}
+                onSort={handleSortChange}
+              />
               <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Actions</th>
             </tr>
           </thead>
@@ -523,15 +645,18 @@ const UsersPage = () => {
                   Loading users…
                 </td>
               </tr>
-            ) : filteredUsers.length === 0 ? (
+            ) : sortedUsers.length === 0 ? (
               <tr>
                 <td colSpan={6} className="px-4 py-6 text-center text-sm text-slate-500">
                   No users match the current filters.
                 </td>
               </tr>
             ) : (
-              filteredUsers.map((user) => {
+              sortedUsers.map((user) => {
                 const isSelected = panelMode === 'detail' && selectedUserId === user.id;
+                const isSelfSuperAdmin = isSuperAdmin && currentUserId === user.id;
+                const disableStatusToggle =
+                  isSelfSuperAdmin || (toggleStatus.isPending && statusUpdateId === user.id);
                 return (
                   <tr
                     key={user.id}
@@ -556,13 +681,23 @@ const UsersPage = () => {
                           type="button"
                           onClick={(event) => {
                             event.stopPropagation();
+                            if (isSelfSuperAdmin) {
+                              return;
+                            }
                             toggleStatus.mutate({ userId: user.id, nextActive: !user.active });
                           }}
-                          disabled={toggleStatus.isPending && statusUpdateId === user.id}
-                          className={`relative inline-flex h-6 w-11 items-center rounded-full border transition-all focus:outline-none focus:ring-2 focus:ring-primary/40 ${
+                          disabled={disableStatusToggle}
+                          className={`relative inline-flex h-6 w-11 items-center rounded-full border transition-all focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:cursor-not-allowed disabled:opacity-60 ${
                             user.active ? 'border-emerald-200 bg-emerald-500/90' : 'border-slate-300 bg-slate-200'
-                          } ${toggleStatus.isPending && statusUpdateId === user.id ? 'opacity-60' : ''}`}
+                          }`}
                           aria-label={user.active ? `Deactivate ${user.fullName}` : `Activate ${user.fullName}`}
+                          title={
+                            isSelfSuperAdmin
+                              ? 'Super Admins cannot change their own status.'
+                              : user.active
+                              ? `Deactivate ${user.fullName}`
+                              : `Activate ${user.fullName}`
+                          }
                         >
                           <span
                             className={`absolute left-1 h-4 w-4 rounded-full bg-white shadow transition-transform ${
@@ -591,11 +726,16 @@ const UsersPage = () => {
                           type="button"
                           onClick={(event) => {
                             event.stopPropagation();
+                            if (isSelfSuperAdmin) {
+                              return;
+                            }
                             setSelectedUserId(user.id);
                             setPanelMode('detail');
                           }}
-                          className="rounded-full border border-slate-200 p-2 text-slate-500 transition hover:border-slate-300 hover:text-slate-800"
+                          className="rounded-full border border-slate-200 p-2 text-slate-500 transition hover:border-slate-300 hover:text-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
                           aria-label={`Edit ${user.fullName}`}
+                          disabled={isSelfSuperAdmin}
+                          title={isSelfSuperAdmin ? 'Super Admins cannot edit their own record from this list.' : `Edit ${user.fullName}`}
                         >
                           <PencilIcon />
                         </button>
@@ -604,6 +744,9 @@ const UsersPage = () => {
                             type="button"
                             onClick={(event) => {
                               event.stopPropagation();
+                              if (isSelfSuperAdmin) {
+                                return;
+                              }
                               if (typeof window !== 'undefined') {
                                 const confirmed = window.confirm(`Delete ${user.fullName}?`);
                                 if (!confirmed) {
@@ -612,9 +755,14 @@ const UsersPage = () => {
                               }
                               deleteUser.mutate(user.id);
                             }}
-                            className="rounded-full border border-rose-200 p-2 text-rose-500 transition hover:border-rose-300 hover:text-rose-600"
+                            className="rounded-full border border-rose-200 p-2 text-rose-500 transition hover:border-rose-300 hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-50"
                             aria-label={`Delete ${user.fullName}`}
-                            disabled={deleteUser.isPending}
+                            disabled={deleteUser.isPending || isSelfSuperAdmin}
+                            title={
+                              isSelfSuperAdmin
+                                ? 'Super Admins cannot delete their own account from this list.'
+                                : `Delete ${user.fullName}`
+                            }
                           >
                             <TrashIcon />
                           </button>
@@ -771,23 +919,41 @@ const UsersPage = () => {
                     const checked = directPermissionSet.has(normalized);
                     const disableOwn = /_VIEW_OWN$/i.test(normalized) &&
                       directPermissionSet.has(normalized.replace(/_OWN$/i, '_GLOBAL'));
+                    const inherited = rolePermissionSet.has(normalized);
+                    const isDisabled = !isEditable || disableOwn || inherited;
                     return (
                       <label
                         key={option.id}
                         className={`flex items-start gap-3 rounded-lg border px-3 py-2 text-sm transition ${
-                          checked ? 'border-primary bg-primary/5 text-primary' : 'border-slate-200 text-slate-600'
-                        } ${!isEditable ? 'opacity-70' : 'hover:border-primary/60'}`}
-                      >
+                          checked
+                            ? 'border-primary bg-primary/5 text-primary'
+                            : inherited
+                            ? 'border-slate-200 bg-slate-50 text-slate-500'
+                            : 'border-slate-200 text-slate-600'
+                        } ${isEditable && !inherited ? 'hover:border-primary/60' : 'opacity-80'}`}
+                        >
                         <input
                           type="checkbox"
                           className="mt-1 h-4 w-4"
                           checked={checked}
-                          disabled={!isEditable || disableOwn}
+                          disabled={isDisabled}
                           onChange={(event) => toggleDirectPermission(option.key, event.target.checked)}
+                          title={
+                            inherited
+                              ? 'Granted through assigned roles'
+                              : disableOwn
+                              ? 'View (Global) already selected for this feature.'
+                              : undefined
+                          }
                         />
                         <span>
                           <span className="block font-semibold text-slate-800">{SLOT_LABELS[slot] ?? option.label}</span>
                           <span className="text-xs uppercase tracking-wide text-slate-400">{option.key}</span>
+                          {inherited && (
+                            <span className="mt-1 inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                              Inherited from role
+                            </span>
+                          )}
                         </span>
                       </label>
                     );
@@ -795,23 +961,34 @@ const UsersPage = () => {
                   {extras.map((option) => {
                     const normalized = normalizePermissionKey(option.key);
                     const checked = directPermissionSet.has(normalized);
+                    const inherited = rolePermissionSet.has(normalized);
                     return (
                       <label
                         key={option.id}
                         className={`flex items-start gap-3 rounded-lg border px-3 py-2 text-sm transition ${
-                          checked ? 'border-primary bg-primary/5 text-primary' : 'border-slate-200 text-slate-600'
-                        } ${!isEditable ? 'opacity-70' : 'hover:border-primary/60'}`}
+                          checked
+                            ? 'border-primary bg-primary/5 text-primary'
+                            : inherited
+                            ? 'border-slate-200 bg-slate-50 text-slate-500'
+                            : 'border-slate-200 text-slate-600'
+                        } ${isEditable && !inherited ? 'hover:border-primary/60' : 'opacity-80'}`}
                       >
                         <input
                           type="checkbox"
                           className="mt-1 h-4 w-4"
                           checked={checked}
-                          disabled={!isEditable}
+                          disabled={!isEditable || inherited}
                           onChange={(event) => toggleDirectPermission(option.key, event.target.checked)}
+                          title={inherited ? 'Granted through assigned roles' : undefined}
                         />
                         <span>
                           <span className="block font-semibold text-slate-800">{option.label}</span>
                           <span className="text-xs uppercase tracking-wide text-slate-400">{option.key}</span>
+                          {inherited && (
+                            <span className="mt-1 inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                              Inherited from role
+                            </span>
+                          )}
                         </span>
                       </label>
                     );

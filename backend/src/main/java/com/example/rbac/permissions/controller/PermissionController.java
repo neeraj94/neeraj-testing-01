@@ -19,8 +19,10 @@ public class PermissionController {
 
     @GetMapping
     public PageResponse<PermissionDto> list(@RequestParam(name = "page", defaultValue = "0") int page,
-                                            @RequestParam(name = "size", defaultValue = "20") int size) {
-        return permissionService.list(page, size);
+                                            @RequestParam(name = "size", defaultValue = "20") int size,
+                                            @RequestParam(name = "sort", defaultValue = "key") String sort,
+                                            @RequestParam(name = "direction", defaultValue = "asc") String direction) {
+        return permissionService.list(page, size, sort, direction);
     }
 
     @PostMapping

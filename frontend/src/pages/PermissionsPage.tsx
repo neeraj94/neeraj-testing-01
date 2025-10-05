@@ -2,10 +2,15 @@ import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '../services/http';
 import type { Pagination, Permission } from '../types/models';
+import SortableColumnHeader from '../components/SortableColumnHeader';
 
 const PermissionsPage = () => {
   const [searchDraft, setSearchDraft] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [sort, setSort] = useState<{ field: 'key' | 'name'; direction: 'asc' | 'desc' }>({
+    field: 'key',
+    direction: 'asc'
+  });
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -34,6 +39,27 @@ const PermissionsPage = () => {
       permission.key.toLowerCase().includes(term) || permission.name.toLowerCase().includes(term)
     );
   }, [permissions, searchTerm]);
+
+  const sortedPermissions = useMemo(() => {
+    const list = [...filteredPermissions];
+    const factor = sort.direction === 'asc' ? 1 : -1;
+    list.sort((a, b) => {
+      if (sort.field === 'key') {
+        return a.key.localeCompare(b.key, undefined, { sensitivity: 'base' }) * factor;
+      }
+      return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }) * factor;
+    });
+    return list;
+  }, [filteredPermissions, sort]);
+
+  const handleSortChange = (field: 'key' | 'name') => {
+    setSort((prev) => {
+      if (prev.field === field) {
+        return { field, direction: prev.direction === 'asc' ? 'desc' : 'asc' };
+      }
+      return { field, direction: 'asc' };
+    });
+  };
 
   return (
     <div className="flex min-h-full flex-col gap-6 px-6 py-6">
@@ -69,8 +95,20 @@ const PermissionsPage = () => {
           <table className="min-w-full divide-y divide-slate-200">
             <thead className="bg-slate-50">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Key</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Name</th>
+                <SortableColumnHeader
+                  label="Key"
+                  field="key"
+                  currentField={sort.field}
+                  direction={sort.direction}
+                  onSort={handleSortChange}
+                />
+                <SortableColumnHeader
+                  label="Name"
+                  field="name"
+                  currentField={sort.field}
+                  direction={sort.direction}
+                  onSort={handleSortChange}
+                />
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 bg-white">
@@ -80,14 +118,14 @@ const PermissionsPage = () => {
                     Loading permissions…
                   </td>
                 </tr>
-              ) : filteredPermissions.length === 0 ? (
+              ) : sortedPermissions.length === 0 ? (
                 <tr>
                   <td colSpan={2} className="px-4 py-6 text-center text-sm text-slate-500">
                     No permissions match your search.
                   </td>
                 </tr>
               ) : (
-                filteredPermissions.map((permission) => (
+                sortedPermissions.map((permission) => (
                   <tr key={permission.id} className="transition hover:bg-blue-50/40">
                     <td className="px-4 py-3 text-sm font-semibold uppercase tracking-wide text-slate-500">{permission.key}</td>
                     <td className="px-4 py-3 text-sm text-slate-600">{permission.name}</td>

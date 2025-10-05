@@ -25,8 +25,15 @@ public class UserController {
     @GetMapping
     public PageResponse<UserDto> list(@RequestParam(name = "search", required = false) String search,
                                       @RequestParam(name = "page", defaultValue = "0") int page,
-                                      @RequestParam(name = "size", defaultValue = "20") int size) {
-        return userService.list(search, page, size);
+                                      @RequestParam(name = "size", defaultValue = "20") int size,
+                                      @RequestParam(name = "sort", defaultValue = "name") String sort,
+                                      @RequestParam(name = "direction", defaultValue = "asc") String direction) {
+        return userService.list(search, page, size, sort, direction);
+    }
+
+    @GetMapping("/summary")
+    public UserSummaryResponse summary() {
+        return userService.summary();
     }
 
     @GetMapping("/summary")

@@ -6,6 +6,7 @@ import type { Pagination, Permission, Role } from '../types/models';
 import type { PermissionKey } from '../types/auth';
 import { useToast } from '../components/ToastProvider';
 import { CAPABILITY_COLUMNS, type PermissionGroup, buildPermissionGroups } from '../utils/permissionGroups';
+import SortableColumnHeader from '../components/SortableColumnHeader';
 
 const CUSTOMER_ROLE_KEY = 'CUSTOMER';
 
@@ -15,6 +16,8 @@ type ToggleOptions = {
   deselect?: number[];
   select?: number[];
 };
+
+type RoleSortField = 'name' | 'key' | 'audience' | 'permissionCount';
 
 const formatRoleKey = (value: string) =>
   value
@@ -54,6 +57,8 @@ const getErrorMessage = (error: unknown) => {
 };
 
 const isCustomerRole = (role: Role) => role.key.toUpperCase() === CUSTOMER_ROLE_KEY;
+
+const compareText = (a: string, b: string) => a.localeCompare(b, undefined, { sensitivity: 'base' });
 
 const PermissionMatrix = ({
   groups,
@@ -222,6 +227,10 @@ const RolesPage = () => {
   const [roleKey, setRoleKey] = useState('');
   const [keyTouched, setKeyTouched] = useState(false);
   const [rolePermissions, setRolePermissions] = useState<number[]>([]);
+  const [sort, setSort] = useState<{ field: RoleSortField; direction: 'asc' | 'desc' }>({
+    field: 'name',
+    direction: 'asc'
+  });
   const [editingRole, setEditingRole] = useState<Role | null>(null);
   const [editForm, setEditForm] = useState({ name: '', key: '' });
   const [editingPermissions, setEditingPermissions] = useState<number[]>([]);
@@ -237,7 +246,7 @@ const RolesPage = () => {
 
   useEffect(() => {
     setPage(0);
-  }, [pageSize, typeFilter, permissionFilter, searchTerm]);
+  }, [pageSize, typeFilter, permissionFilter, searchTerm, sort.field, sort.direction]);
 
   useEffect(() => {
     if (!keyTouched) {
@@ -246,9 +255,17 @@ const RolesPage = () => {
   }, [roleName, keyTouched]);
 
   const rolesResponse = useQuery<Pagination<Role>>({
-    queryKey: ['roles', page, pageSize],
+    queryKey: ['roles', page, pageSize, sort.field, sort.direction],
     queryFn: async () => {
-      const { data } = await api.get<Pagination<Role>>(`/roles?page=${page}&size=${pageSize}`);
+      const serverSortField = sort.field === 'key' ? 'key' : 'name';
+      const direction = serverSortField === sort.field ? sort.direction : 'asc';
+      const params = new URLSearchParams({
+        page: String(page),
+        size: String(pageSize),
+        sort: serverSortField,
+        direction
+      });
+      const { data } = await api.get<Pagination<Role>>(`/roles?${params.toString()}`);
       return data;
     }
   });
@@ -315,6 +332,15 @@ const RolesPage = () => {
     }
   }, [editingRole, permissions]);
 
+  const handleSortChange = (field: RoleSortField) => {
+    setSort((prev) => {
+      if (prev.field === field) {
+        return { field, direction: prev.direction === 'asc' ? 'desc' : 'asc' };
+      }
+      return { field, direction: 'asc' };
+    });
+  };
+
   const filteredRoles = useMemo(() => {
     const term = searchTerm.toLowerCase();
     return roles.filter((role) => {
@@ -343,6 +369,35 @@ const RolesPage = () => {
       );
     });
   }, [roles, searchTerm, permissionLookup, typeFilter, permissionFilter]);
+
+  const sortedRoles = useMemo(() => {
+    const list = [...filteredRoles];
+    const factor = sort.direction === 'asc' ? 1 : -1;
+    list.sort((a, b) => {
+      switch (sort.field) {
+        case 'key':
+          return compareText(a.key, b.key) * factor;
+        case 'audience': {
+          const diff = (isCustomerRole(a) ? 1 : 0) - (isCustomerRole(b) ? 1 : 0);
+          if (diff === 0) {
+            return compareText(a.name, b.name) * factor;
+          }
+          return diff * factor;
+        }
+        case 'permissionCount': {
+          const diff = a.permissions.length - b.permissions.length;
+          if (diff === 0) {
+            return compareText(a.name, b.name) * factor;
+          }
+          return diff * factor;
+        }
+        case 'name':
+        default:
+          return compareText(a.name, b.name) * factor;
+      }
+    });
+    return list;
+  }, [filteredRoles, sort]);
 
   const metrics = useMemo(() => {
     const customerCount = roles.filter(isCustomerRole).length;
@@ -385,10 +440,10 @@ const RolesPage = () => {
   };
 
   const handleExport = () => {
-    if (typeof window === 'undefined' || !filteredRoles.length) {
+    if (typeof window === 'undefined' || !sortedRoles.length) {
       return;
     }
-    const exportData = filteredRoles.map((role) => ({
+    const exportData = sortedRoles.map((role) => ({
       id: role.id,
       key: role.key,
       name: role.name,
@@ -614,10 +669,34 @@ const RolesPage = () => {
         <table className="min-w-full divide-y divide-slate-200">
           <thead className="bg-slate-50">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Role</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Key</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Audience</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Permissions</th>
+              <SortableColumnHeader
+                label="Role"
+                field="name"
+                currentField={sort.field}
+                direction={sort.direction}
+                onSort={handleSortChange}
+              />
+              <SortableColumnHeader
+                label="Key"
+                field="key"
+                currentField={sort.field}
+                direction={sort.direction}
+                onSort={handleSortChange}
+              />
+              <SortableColumnHeader
+                label="Audience"
+                field="audience"
+                currentField={sort.field}
+                direction={sort.direction}
+                onSort={handleSortChange}
+              />
+              <SortableColumnHeader
+                label="Permissions"
+                field="permissionCount"
+                currentField={sort.field}
+                direction={sort.direction}
+                onSort={handleSortChange}
+              />
               <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Actions</th>
             </tr>
           </thead>
@@ -628,14 +707,14 @@ const RolesPage = () => {
                   Loading roles…
                 </td>
               </tr>
-            ) : filteredRoles.length === 0 ? (
+            ) : sortedRoles.length === 0 ? (
               <tr>
                 <td colSpan={5} className="px-4 py-6 text-center text-sm text-slate-500">
                   No roles match the current filters.
                 </td>
               </tr>
             ) : (
-              filteredRoles.map((role) => (
+              sortedRoles.map((role) => (
                 <tr key={role.id} className="transition hover:bg-blue-50/40">
                   <td className="px-4 py-3">
                     <div className="text-sm font-semibold text-slate-800">{role.name}</div>
@@ -676,7 +755,7 @@ const RolesPage = () => {
               <td colSpan={5} className="px-4 py-3">
                 <div className="flex flex-col gap-3 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between">
                   <span>
-                    Showing {filteredRoles.length} of {totalElements} role{totalElements === 1 ? '' : 's'}
+                    Showing {sortedRoles.length} of {totalElements} role{totalElements === 1 ? '' : 's'}
                   </span>
                   <div className="flex items-center gap-3">
                     <button

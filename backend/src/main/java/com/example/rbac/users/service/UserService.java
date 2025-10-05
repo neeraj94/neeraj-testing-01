@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -28,6 +29,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -40,6 +42,13 @@ public class UserService {
     private static final String USER_OR_CUSTOMER_CREATE = "hasAnyAuthority('USER_CREATE','CUSTOMER_CREATE')";
     private static final String USER_OR_CUSTOMER_UPDATE = "hasAnyAuthority('USER_UPDATE','CUSTOMER_UPDATE')";
     private static final String USER_OR_CUSTOMER_DELETE = "hasAnyAuthority('USER_DELETE','CUSTOMER_DELETE')";
+
+    private static final Map<String, String> USER_SORT_MAPPING = Map.of(
+            "name", "fullName",
+            "email", "email",
+            "status", "active",
+            "createdAt", "createdAt"
+    );
 
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
@@ -60,8 +69,8 @@ public class UserService {
     }
 
     @PreAuthorize(USER_OR_CUSTOMER_VIEW)
-    public PageResponse<UserDto> list(String search, int page, int size) {
-        Pageable pageable = PageRequest.of(page, size);
+    public PageResponse<UserDto> list(String search, int page, int size, String sort, String direction) {
+        Pageable pageable = buildPageable(page, size, sort, direction);
         Page<User> result;
         if (search != null && !search.isBlank()) {
             result = userRepository.findByEmailContainingIgnoreCaseOrFullNameContainingIgnoreCase(search, search, pageable);
@@ -69,6 +78,13 @@ public class UserService {
             result = userRepository.findAll(pageable);
         }
         return PageResponse.from(result.map(userMapper::toDto));
+    }
+
+    private Pageable buildPageable(int page, int size, String sort, String direction) {
+        String normalizedSort = sort == null ? "name" : sort.toLowerCase();
+        String property = USER_SORT_MAPPING.getOrDefault(normalizedSort, USER_SORT_MAPPING.get("name"));
+        Sort.Direction sortDirection = "desc".equalsIgnoreCase(direction) ? Sort.Direction.DESC : Sort.Direction.ASC;
+        return PageRequest.of(page, size, Sort.by(sortDirection, property));
     }
 
     @PreAuthorize(USER_OR_CUSTOMER_CREATE)
