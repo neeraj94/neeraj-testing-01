@@ -21,6 +21,8 @@ public class UpdateUserRequest {
 
     private Set<Long> roleIds;
 
+    private Set<String> permissionKeys;
+
     public String getEmail() {
         return email;
     }
@@ -59,5 +61,13 @@ public class UpdateUserRequest {
 
     public void setRoleIds(Set<Long> roleIds) {
         this.roleIds = roleIds;
+    }
+
+    public Set<String> getPermissionKeys() {
+        return permissionKeys;
+    }
+
+    public void setPermissionKeys(Set<String> permissionKeys) {
+        this.permissionKeys = permissionKeys;
     }
 }
