@@ -738,16 +738,6 @@ const UsersPage = () => {
   );
 
   const renderPanel = () => {
-    if (panelMode === 'empty') {
-      return (
-        <div className="flex h-full items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50">
-          <div className="text-center text-sm text-slate-500">
-            Select a user from the directory to review their access or create a new user to invite someone.
-          </div>
-        </div>
-      );
-    }
-
     const isCreate = panelMode === 'create';
     const isEditable = isCreate ? canCreateUser : canManageUsers;
     const isSaving = isCreate ? createUser.isPending : updateUser.isPending;
@@ -762,7 +752,7 @@ const UsersPage = () => {
 
     return (
       <form
-        className="flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+        className="flex flex-col gap-6 rounded-2xl border border-slate-200 bg-white shadow-sm"
         onSubmit={(event) => {
           event.preventDefault();
           if (!isEditable) {
@@ -776,27 +766,40 @@ const UsersPage = () => {
           }
         }}
       >
-        <header className="border-b border-slate-200 bg-slate-50 px-6 py-4">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-primary">User management</p>
-              <h2 className="mt-1 text-xl font-semibold text-slate-800">{headerTitle}</h2>
-              {headerSubtitle && <p className="text-sm text-slate-500">{headerSubtitle}</p>}
-            </div>
+        <header className="flex flex-col gap-4 border-b border-slate-200 bg-slate-50 px-6 py-5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-start gap-4">
             <button
               type="button"
               onClick={clearPanel}
-              className="rounded-full border border-slate-200 p-2 text-slate-500 transition hover:bg-white hover:text-slate-700"
-              aria-label="Close panel"
+              className="rounded-full border border-slate-200 bg-white p-2 text-slate-600 transition hover:border-primary/40 hover:text-primary"
+              aria-label="Back to user directory"
             >
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} className="h-5 w-5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="m6 6 12 12M18 6 6 18" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="m15 19-7-7 7-7" />
               </svg>
             </button>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-primary">{isCreate ? 'New profile' : `#${selectedUserId ?? ''} Profile`}</p>
+              <h2 className="mt-1 text-2xl font-semibold text-slate-900">{headerTitle}</h2>
+              {headerSubtitle && <p className="text-sm text-slate-500">{headerSubtitle}</p>}
+            </div>
           </div>
+          {!isCreate && selectedUserQuery.data && (
+            <div className="flex flex-wrap gap-3 text-xs text-slate-500">
+              <span className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 font-semibold uppercase tracking-wide text-slate-600">
+                <span className={`h-2 w-2 rounded-full ${selectedUserQuery.data.active ? 'bg-emerald-500' : 'bg-slate-400'}`} />
+                {selectedUserQuery.data.active ? 'Active' : 'Inactive'}
+              </span>
+              {selectedUserQuery.data.roles.map((role) => (
+                <span key={role} className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 font-semibold uppercase tracking-wide text-slate-600">
+                  {role}
+                </span>
+              ))}
+            </div>
+          )}
         </header>
-        <div className="flex flex-1 flex-col lg:flex-row">
-          <nav className="flex shrink-0 flex-row gap-2 border-b border-slate-200 bg-white px-6 py-3 text-sm font-semibold text-slate-600 lg:w-48 lg:flex-col lg:border-b-0 lg:border-r">
+        <div className="grid gap-0 border-b border-slate-200 lg:grid-cols-[240px,1fr]">
+          <nav className="flex shrink-0 flex-row gap-2 border-b border-slate-200 bg-white px-6 py-3 text-sm font-semibold text-slate-600 lg:flex-col lg:border-b-0 lg:border-r">
             {(
               [
                 { key: 'profile', label: 'Profile details' },
@@ -817,7 +820,7 @@ const UsersPage = () => {
               </button>
             ))}
           </nav>
-          <div className="flex-1 overflow-y-auto px-6 py-6">
+          <div className="flex-1 px-6 py-6">
             {isLoadingDetail ? (
               <p className="text-sm text-slate-500">Loading user details…</p>
             ) : activeTab === 'profile' ? (
@@ -827,7 +830,7 @@ const UsersPage = () => {
             )}
           </div>
         </div>
-        <footer className="flex flex-col gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <footer className="flex flex-col gap-3 bg-slate-50 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
           {formError ? (
             <p className="text-sm text-rose-600">{formError}</p>
           ) : (
@@ -881,6 +884,8 @@ const UsersPage = () => {
     );
   };
 
+  const isDirectoryView = panelMode === 'empty';
+
   return (
     <div className="flex min-h-full flex-col gap-6 px-6 py-6">
       <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
@@ -890,7 +895,7 @@ const UsersPage = () => {
             Manage internal teammates and customer contacts from a single, permission-aware workspace.
           </p>
         </div>
-        {canCreateUser && (
+        {isDirectoryView && canCreateUser && (
           <button
             type="button"
             onClick={() => setPanelMode('create')}
@@ -903,11 +908,14 @@ const UsersPage = () => {
           </button>
         )}
       </div>
-      {renderSummaryCards()}
-      <div className="grid gap-6 xl:grid-cols-[2fr,minmax(340px,1fr)]">
-        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">{renderTable()}</div>
-        {renderPanel()}
-      </div>
+      {isDirectoryView ? (
+        <>
+          {renderSummaryCards()}
+          <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">{renderTable()}</div>
+        </>
+      ) : (
+        renderPanel()
+      )}
     </div>
   );
 };
