@@ -5,46 +5,51 @@ import DataTable from '../components/DataTable';
 import type { Pagination, Role, Permission } from '../types/models';
 
 const RolesPage = () => {
-  const { data: roles, refetch: refetchRoles } = useQuery(['roles'], async () => {
-    const { data } = await api.get<Pagination<Role>>('/roles');
-    return data.content;
+  const {
+    data: roles = [],
+    refetch: refetchRoles
+  } = useQuery<Role[]>({
+    queryKey: ['roles', 'all'],
+    queryFn: async () => {
+      const { data } = await api.get<Pagination<Role>>('/roles');
+      return data.content;
+    }
   });
 
-  const { data: permissions } = useQuery(['permissions'], async () => {
-    const { data } = await api.get<Pagination<Permission>>('/permissions?size=100');
-    return data.content;
+  const { data: permissions = [] } = useQuery<Permission[]>({
+    queryKey: ['permissions', 'options'],
+    queryFn: async () => {
+      const { data } = await api.get<Pagination<Permission>>('/permissions?size=100');
+      return data.content;
+    }
   });
 
   const [roleForm, setRoleForm] = useState({ key: '', name: '' });
   const [selectedRole, setSelectedRole] = useState<number | null>(null);
   const [selectedPermissions, setSelectedPermissions] = useState<number[]>([]);
 
-  const createRole = useMutation(
-    async () => {
+  const createRole = useMutation({
+    mutationFn: async () => {
       await api.post('/roles', roleForm);
     },
-    {
-      onSuccess: () => {
-        setRoleForm({ key: '', name: '' });
-        refetchRoles();
-      }
+    onSuccess: () => {
+      setRoleForm({ key: '', name: '' });
+      refetchRoles();
     }
-  );
+  });
 
-  const assignPermissions = useMutation(
-    async () => {
+  const assignPermissions = useMutation({
+    mutationFn: async () => {
       if (!selectedRole) return;
       await api.post(`/roles/${selectedRole}/permissions`, { permissionIds: selectedPermissions });
     },
-    {
-      onSuccess: () => {
-        setSelectedPermissions([]);
-        refetchRoles();
-      }
+    onSuccess: () => {
+      setSelectedPermissions([]);
+      refetchRoles();
     }
-  );
+  });
 
-  const roleOptions = useMemo(() => roles ?? [], [roles]);
+  const roleOptions = useMemo(() => roles, [roles]);
 
   const handleCreate = (event: FormEvent) => {
     event.preventDefault();
@@ -87,9 +92,9 @@ const RolesPage = () => {
         <button
           type="submit"
           className="mt-4 rounded-md bg-primary px-4 py-2 text-sm font-medium text-white"
-          disabled={createRole.isLoading}
+          disabled={createRole.isPending}
         >
-          {createRole.isLoading ? 'Saving...' : 'Create role'}
+          {createRole.isPending ? 'Saving...' : 'Create role'}
         </button>
       </form>
 
@@ -137,9 +142,9 @@ const RolesPage = () => {
         <button
           type="submit"
           className="mt-4 rounded-md bg-primary px-4 py-2 text-sm font-medium text-white"
-          disabled={assignPermissions.isLoading}
+          disabled={assignPermissions.isPending}
         >
-          {assignPermissions.isLoading ? 'Assigning...' : 'Assign permissions'}
+          {assignPermissions.isPending ? 'Assigning...' : 'Assign permissions'}
         </button>
       </form>
 
@@ -152,7 +157,7 @@ const RolesPage = () => {
           </tr>
         </thead>
         <tbody>
-          {roles?.map((role) => (
+          {roles.map((role) => (
             <tr key={role.id} className="border-t border-slate-200">
               <td className="px-3 py-2 uppercase tracking-wide text-slate-500">{role.key}</td>
               <td className="px-3 py-2">{role.name}</td>

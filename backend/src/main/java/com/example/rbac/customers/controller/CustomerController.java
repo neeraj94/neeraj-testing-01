@@ -18,8 +18,8 @@ public class CustomerController {
     }
 
     @GetMapping
-    public PageResponse<CustomerDto> list(@RequestParam(defaultValue = "0") int page,
-                                          @RequestParam(defaultValue = "20") int size) {
+    public PageResponse<CustomerDto> list(@RequestParam(name = "page", defaultValue = "0") int page,
+                                          @RequestParam(name = "size", defaultValue = "20") int size) {
         return customerService.list(page, size);
     }
 
@@ -29,17 +29,17 @@ public class CustomerController {
     }
 
     @GetMapping("/{id}")
-    public CustomerDto get(@PathVariable Long id) {
+    public CustomerDto get(@PathVariable("id") Long id) {
         return customerService.get(id);
     }
 
     @PutMapping("/{id}")
-    public CustomerDto update(@PathVariable Long id, @Valid @RequestBody CustomerRequest request) {
+    public CustomerDto update(@PathVariable("id") Long id, @Valid @RequestBody CustomerRequest request) {
         return customerService.update(id, request);
     }
 
     @DeleteMapping("/{id}")
-    public void delete(@PathVariable Long id) {
+    public void delete(@PathVariable("id") Long id) {
         customerService.delete(id);
     }
 }
