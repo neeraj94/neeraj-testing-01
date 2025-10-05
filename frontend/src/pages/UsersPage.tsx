@@ -18,6 +18,32 @@ const SLOT_LABELS = CAPABILITY_COLUMNS.reduce<Record<string, string>>((map, colu
   return map;
 }, {});
 
+const PencilIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+    <path d="M15.414 2.586a2 2 0 0 0-2.828 0L3 12.172V17h4.828l9.586-9.586a2 2 0 0 0 0-2.828l-2-2Zm-2.121 1.415 2 2L13 8.293l-2-2 2.293-2.292ZM5 13.414 11.293 7.12l1.586 1.586L6.586 15H5v-1.586Z" />
+  </svg>
+);
+
+const TrashIcon = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={1.6}
+    className="h-4 w-4"
+  >
+    <path strokeLinecap="round" strokeLinejoin="round" d="M6 7h12" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M10 11v6" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M14 11v6" />
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M9 7V4h6v3m2 0v12a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V7h12Z"
+    />
+  </svg>
+);
+
 type PanelMode = 'empty' | 'create' | 'detail';
 type DetailTab = 'profile' | 'access';
 
@@ -60,6 +86,7 @@ const UsersPage = () => {
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [form, setForm] = useState<UserFormState>(emptyForm);
   const [formError, setFormError] = useState<string | null>(null);
+  const [statusUpdateId, setStatusUpdateId] = useState<number | null>(null);
 
   const canCreateUser = useMemo(
     () => hasAnyPermission(grantedPermissions as PermissionKey[], ['USER_CREATE', 'CUSTOMER_CREATE']),
@@ -285,6 +312,31 @@ const UsersPage = () => {
     }
   });
 
+  const toggleStatus = useMutation({
+    mutationFn: async ({ userId, nextActive }: { userId: number; nextActive: boolean }) => {
+      setStatusUpdateId(userId);
+      const { data } = await api.patch<User>(`/users/${userId}/status`, { active: nextActive });
+      return data;
+    },
+    onSuccess: (data) => {
+      notify({
+        type: 'success',
+        message: data.active ? 'User activated.' : 'User deactivated.'
+      });
+      invalidateUsers();
+      if (panelMode === 'detail' && selectedUserId === data.id) {
+        setForm((prev) => ({ ...prev, active: data.active }));
+        queryClient.invalidateQueries({ queryKey: ['users', 'detail', data.id] });
+      }
+    },
+    onError: (error) => {
+      notify({ type: 'error', message: extractErrorMessage(error, 'Unable to update status.') });
+    },
+    onSettled: () => {
+      setStatusUpdateId(null);
+    }
+  });
+
   const handleFieldChange = <K extends keyof UserFormState>(key: K, value: UserFormState[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
@@ -461,18 +513,19 @@ const UsersPage = () => {
               <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Status</th>
               <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Groups</th>
               <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Audience</th>
+              <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 bg-white">
             {usersQuery.isLoading ? (
               <tr>
-                <td colSpan={5} className="px-4 py-6 text-center text-sm text-slate-500">
+                <td colSpan={6} className="px-4 py-6 text-center text-sm text-slate-500">
                   Loading users…
                 </td>
               </tr>
             ) : filteredUsers.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-4 py-6 text-center text-sm text-slate-500">
+                <td colSpan={6} className="px-4 py-6 text-center text-sm text-slate-500">
                   No users match the current filters.
                 </td>
               </tr>
@@ -495,13 +548,29 @@ const UsersPage = () => {
                     </td>
                     <td className="px-4 py-3 text-sm text-slate-600">{user.email}</td>
                     <td className="px-4 py-3">
-                      <span
-                        className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
-                          user.active ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-200 text-slate-600'
-                        }`}
-                      >
-                        {user.active ? 'Active' : 'Inactive'}
-                      </span>
+                      <div className="flex items-center gap-3 text-xs font-semibold">
+                        <span className={user.active ? 'text-emerald-600' : 'text-slate-500'}>
+                          {user.active ? 'Active' : 'Inactive'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            toggleStatus.mutate({ userId: user.id, nextActive: !user.active });
+                          }}
+                          disabled={toggleStatus.isPending && statusUpdateId === user.id}
+                          className={`relative inline-flex h-6 w-11 items-center rounded-full border transition-all focus:outline-none focus:ring-2 focus:ring-primary/40 ${
+                            user.active ? 'border-emerald-200 bg-emerald-500/90' : 'border-slate-300 bg-slate-200'
+                          } ${toggleStatus.isPending && statusUpdateId === user.id ? 'opacity-60' : ''}`}
+                          aria-label={user.active ? `Deactivate ${user.fullName}` : `Activate ${user.fullName}`}
+                        >
+                          <span
+                            className={`absolute left-1 h-4 w-4 rounded-full bg-white shadow transition-transform ${
+                              user.active ? 'translate-x-5' : 'translate-x-0'
+                            }`}
+                          />
+                        </button>
+                      </div>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap gap-2 text-xs text-slate-600">
@@ -515,6 +584,42 @@ const UsersPage = () => {
                     </td>
                     <td className="px-4 py-3 text-sm text-slate-600">
                       {isCustomerAccount(user) ? 'Customer' : 'Internal'}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setSelectedUserId(user.id);
+                            setPanelMode('detail');
+                          }}
+                          className="rounded-full border border-slate-200 p-2 text-slate-500 transition hover:border-slate-300 hover:text-slate-800"
+                          aria-label={`Edit ${user.fullName}`}
+                        >
+                          <PencilIcon />
+                        </button>
+                        {canDeleteUsers && (
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              if (typeof window !== 'undefined') {
+                                const confirmed = window.confirm(`Delete ${user.fullName}?`);
+                                if (!confirmed) {
+                                  return;
+                                }
+                              }
+                              deleteUser.mutate(user.id);
+                            }}
+                            className="rounded-full border border-rose-200 p-2 text-rose-500 transition hover:border-rose-300 hover:text-rose-600"
+                            aria-label={`Delete ${user.fullName}`}
+                            disabled={deleteUser.isPending}
+                          >
+                            <TrashIcon />
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );

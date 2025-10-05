@@ -2,19 +2,14 @@ import { Dispatch, FormEvent, SetStateAction, useEffect, useMemo, useState } fro
 import { useMutation, useQuery } from '@tanstack/react-query';
 import type { AxiosError } from 'axios';
 import api from '../services/http';
-import DataTable from '../components/DataTable';
 import type { Pagination, Permission, Role } from '../types/models';
 import type { PermissionKey } from '../types/auth';
 import { useToast } from '../components/ToastProvider';
-import {
-  CAPABILITY_COLUMNS,
-  type CapabilitySlot,
-  type PermissionGroup,
-  type PermissionOption,
-  buildPermissionGroups
-} from '../utils/permissionGroups';
+import { CAPABILITY_COLUMNS, type PermissionGroup, buildPermissionGroups } from '../utils/permissionGroups';
 
-type PanelView = 'overview' | 'create';
+const CUSTOMER_ROLE_KEY = 'CUSTOMER';
+
+type DirectoryView = 'list' | 'create' | 'edit';
 
 type ToggleOptions = {
   deselect?: number[];
@@ -57,6 +52,8 @@ const getErrorMessage = (error: unknown) => {
 
   return 'Something went wrong while processing the request.';
 };
+
+const isCustomerRole = (role: Role) => role.key.toUpperCase() === CUSTOMER_ROLE_KEY;
 
 const PermissionMatrix = ({
   groups,
@@ -211,23 +208,16 @@ const TrashIcon = () => (
   </svg>
 );
 
-const CloseIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
-    <path
-      fillRule="evenodd"
-      d="M4.293 4.293a1 1 0 0 1 1.414 0L10 8.586l4.293-4.293a1 1 0 1 1 1.414 1.414L11.414 10l4.293 4.293a1 1 0 0 1-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 0 1-1.414-1.414L8.586 10 4.293 5.707a1 1 0 0 1 0-1.414Z"
-      clipRule="evenodd"
-    />
-  </svg>
-);
-
 const RolesPage = () => {
   const { notify } = useToast();
 
-  const [activePanel, setActivePanel] = useState<PanelView>('overview');
+  const [view, setView] = useState<DirectoryView>('list');
   const [pageSize, setPageSize] = useState(25);
   const [page, setPage] = useState(0);
+  const [searchDraft, setSearchDraft] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [typeFilter, setTypeFilter] = useState<'all' | 'internal' | 'customer'>('all');
+  const [permissionFilter, setPermissionFilter] = useState<'all' | 'with' | 'without'>('all');
   const [roleName, setRoleName] = useState('');
   const [roleKey, setRoleKey] = useState('');
   const [keyTouched, setKeyTouched] = useState(false);
@@ -238,11 +228,24 @@ const RolesPage = () => {
   const [createError, setCreateError] = useState<string | null>(null);
   const [editError, setEditError] = useState<string | null>(null);
 
-  const {
-    data: rolesResponse,
-    isLoading: isLoadingRoles,
-    refetch: refetchRoles
-  } = useQuery<Pagination<Role>>({
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setSearchTerm(searchDraft.trim());
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [searchDraft]);
+
+  useEffect(() => {
+    setPage(0);
+  }, [pageSize, typeFilter, permissionFilter, searchTerm]);
+
+  useEffect(() => {
+    if (!keyTouched) {
+      setRoleKey(formatRoleKey(roleName));
+    }
+  }, [roleName, keyTouched]);
+
+  const rolesResponse = useQuery<Pagination<Role>>({
     queryKey: ['roles', page, pageSize],
     queryFn: async () => {
       const { data } = await api.get<Pagination<Role>>(`/roles?page=${page}&size=${pageSize}`);
@@ -250,10 +253,12 @@ const RolesPage = () => {
     }
   });
 
-  const { data: permissions = [] } = useQuery<Permission[]>({
+  const {
+    data: permissions = []
+  } = useQuery<Permission[]>({
     queryKey: ['permissions', 'options'],
     queryFn: async () => {
-      const { data } = await api.get<Pagination<Permission>>('/permissions?size=200');
+      const { data } = await api.get<Pagination<Permission>>('/permissions?size=500');
       return data.content;
     }
   });
@@ -265,56 +270,69 @@ const RolesPage = () => {
     return lookup;
   }, [permissions]);
 
-  useEffect(() => {
-    if (editingRole) {
-      setEditForm({ name: editingRole.name, key: editingRole.key });
-      setEditError(null);
-      if (permissions.length) {
-        const ids = permissions
-          .filter((permission) =>
-            editingRole.permissions.includes(permission.key as PermissionKey)
-          )
-          .map((permission) => permission.id);
-        setEditingPermissions(ids);
-      } else {
-        setEditingPermissions([]);
-      }
-    }
-  }, [editingRole, permissions]);
+  const roles = rolesResponse.data?.content ?? [];
+  const totalElements = rolesResponse.data?.totalElements ?? roles.length;
+  const totalPages = rolesResponse.data?.totalPages ?? 1;
 
   useEffect(() => {
-    if (!keyTouched) {
-      setRoleKey(formatRoleKey(roleName));
-    }
-  }, [roleName, keyTouched]);
-
-  const roles = rolesResponse?.content ?? [];
-  const totalElements = rolesResponse?.totalElements ?? roles.length;
-  const totalPages = rolesResponse?.totalPages ?? 1;
-
-  useEffect(() => {
-    if (!rolesResponse) {
+    if (!rolesResponse.data) {
       return;
     }
-
-    const pages = rolesResponse.totalPages;
+    const pages = rolesResponse.data.totalPages;
     if (pages === 0 && page !== 0) {
       setPage(0);
       return;
     }
-
     if (pages > 0 && page >= pages) {
       setPage(pages - 1);
     }
-  }, [rolesResponse, page]);
+  }, [rolesResponse.data, page]);
+
+  useEffect(() => {
+    if (view === 'create') {
+      setRoleName('');
+      setRoleKey('');
+      setKeyTouched(false);
+      setRolePermissions([]);
+      setCreateError(null);
+    }
+  }, [view]);
+
+  useEffect(() => {
+    if (!editingRole) {
+      setEditForm({ name: '', key: '' });
+      setEditingPermissions([]);
+      return;
+    }
+    setEditForm({ name: editingRole.name, key: editingRole.key });
+    if (permissions.length) {
+      const ids = permissions
+        .filter((permission) => editingRole.permissions.includes(permission.key as PermissionKey))
+        .map((permission) => permission.id);
+      setEditingPermissions(ids);
+    } else {
+      setEditingPermissions([]);
+    }
+  }, [editingRole, permissions]);
 
   const filteredRoles = useMemo(() => {
-    if (!searchTerm.trim()) {
-      return roles;
-    }
-
-    const term = searchTerm.trim().toLowerCase();
+    const term = searchTerm.toLowerCase();
     return roles.filter((role) => {
+      if (typeFilter === 'customer' && !isCustomerRole(role)) {
+        return false;
+      }
+      if (typeFilter === 'internal' && isCustomerRole(role)) {
+        return false;
+      }
+      if (permissionFilter === 'with' && role.permissions.length === 0) {
+        return false;
+      }
+      if (permissionFilter === 'without' && role.permissions.length > 0) {
+        return false;
+      }
+      if (!term) {
+        return true;
+      }
       const permissionMatches = role.permissions.some((permissionKey) =>
         (permissionLookup.get(permissionKey)?.name ?? permissionKey).toLowerCase().includes(term)
       );
@@ -324,7 +342,15 @@ const RolesPage = () => {
         permissionMatches
       );
     });
-  }, [roles, searchTerm, permissionLookup]);
+  }, [roles, searchTerm, permissionLookup, typeFilter, permissionFilter]);
+
+  const metrics = useMemo(() => {
+    const customerCount = roles.filter(isCustomerRole).length;
+    const withPermissions = roles.filter((role) => role.permissions.length > 0).length;
+    const total = totalElements;
+    const internalCount = Math.max(total - customerCount, 0);
+    return { total, withPermissions, customerCount, internalCount };
+  }, [roles, totalElements]);
 
   const togglePermission = (
     id: number,
@@ -359,11 +385,10 @@ const RolesPage = () => {
   };
 
   const handleExport = () => {
-    if (typeof window === 'undefined' || !roles.length) {
+    if (typeof window === 'undefined' || !filteredRoles.length) {
       return;
     }
-
-    const exportData = roles.map((role) => ({
+    const exportData = filteredRoles.map((role) => ({
       id: role.id,
       key: role.key,
       name: role.name,
@@ -379,6 +404,8 @@ const RolesPage = () => {
     URL.revokeObjectURL(url);
   };
 
+  const { refetch: refetchRoles } = rolesResponse;
+
   const createRole = useMutation({
     mutationFn: async (payload: { key: string; name: string; permissionIds: number[] }) => {
       const { data } = await api.post<Role>('/roles', { key: payload.key, name: payload.name });
@@ -388,11 +415,7 @@ const RolesPage = () => {
       return data;
     },
     onSuccess: () => {
-      setRoleName('');
-      setRoleKey('');
-      setKeyTouched(false);
-      setRolePermissions([]);
-      setActivePanel('overview');
+      setView('list');
       setCreateError(null);
       refetchRoles();
       notify({ type: 'success', message: 'Role created successfully.' });
@@ -411,6 +434,7 @@ const RolesPage = () => {
     },
     onSuccess: () => {
       setEditingRole(null);
+      setView('list');
       setEditError(null);
       refetchRoles();
       notify({ type: 'success', message: 'Role updated successfully.' });
@@ -427,6 +451,10 @@ const RolesPage = () => {
       await api.delete(`/roles/${id}`);
     },
     onSuccess: () => {
+      if (editingRole) {
+        setEditingRole(null);
+        setView('list');
+      }
       refetchRoles();
       notify({ type: 'success', message: 'Role deleted.' });
     },
@@ -454,7 +482,6 @@ const RolesPage = () => {
     if (!editingRole) {
       return;
     }
-
     const formattedKey = editForm.key || editingRole.key;
     const trimmedName = editForm.name.trim();
     if (!trimmedName) {
@@ -462,7 +489,6 @@ const RolesPage = () => {
       notify({ type: 'error', message: 'Role name is required.' });
       return;
     }
-
     setEditError(null);
     updateRole.mutate({
       id: editingRole.id,
@@ -481,39 +507,6 @@ const RolesPage = () => {
     }
     deleteRole.mutate(role.id);
   };
-
-  const overviewActions = (
-    <div className="flex items-center gap-2">
-      <select
-        className="rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-600"
-        value={pageSize}
-        onChange={(event) => {
-          setPageSize(Number(event.target.value));
-          setPage(0);
-        }}
-      >
-        {[10, 25, 50, 100].map((size) => (
-          <option key={size} value={size}>
-            {size}
-          </option>
-        ))}
-      </select>
-      <button
-        type="button"
-        onClick={handleExport}
-        className="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-600 transition hover:border-slate-400 hover:text-slate-800"
-      >
-        Export
-      </button>
-      <button
-        type="button"
-        onClick={() => setActivePanel('create')}
-        className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-primary/90"
-      >
-        + New Role
-      </button>
-    </div>
-  );
 
   const renderPermissionSummary = (role: Role) => {
     if (!role.permissions.length) {
@@ -534,294 +527,330 @@ const RolesPage = () => {
     return `${labels.slice(0, 3).join(', ')} +${labels.length - 3} more`;
   };
 
-  return (
-    <div className="grid gap-6 lg:grid-cols-[240px,1fr]">
-      <aside className="h-fit rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div className="border-b border-slate-200 px-5 py-4">
-          <h2 className="text-lg font-semibold text-slate-800">Access library</h2>
-          <p className="text-sm text-slate-500">Manage reusable roles and permission bundles.</p>
-        </div>
-        <nav className="px-2 py-3">
-          {[
-            { id: 'overview' as PanelView, label: 'Roles', description: 'View and organize existing roles.' },
-            { id: 'create' as PanelView, label: 'Create role', description: 'Design a new role and assign permissions.' }
-          ].map((item) => {
-            const isActive = activePanel === item.id;
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => setActivePanel(item.id)}
-                className={`w-full rounded-lg px-4 py-3 text-left transition ${
-                  isActive ? 'bg-primary/10 text-primary' : 'hover:bg-slate-50'
-                }`}
-              >
-                <div className="text-sm font-semibold">{item.label}</div>
-                <div className="text-xs text-slate-500">{item.description}</div>
-              </button>
-            );
-          })}
-        </nav>
-      </aside>
+  const renderSummaryCards = () => (
+    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Total roles</p>
+        <p className="mt-2 text-3xl font-semibold text-slate-800">{metrics.total}</p>
+        <p className="mt-1 text-xs text-slate-500">Across internal teams and customer accounts.</p>
+      </div>
+      <div className="rounded-2xl border border-emerald-100 bg-emerald-50/60 p-5 shadow-sm">
+        <p className="text-xs font-semibold uppercase tracking-wide text-emerald-600">Assignable</p>
+        <p className="mt-2 text-3xl font-semibold text-emerald-700">{metrics.withPermissions}</p>
+        <p className="mt-1 text-xs text-emerald-600">Roles that currently grant at least one permission.</p>
+      </div>
+      <div className="rounded-2xl border border-indigo-100 bg-indigo-50/60 p-5 shadow-sm">
+        <p className="text-xs font-semibold uppercase tracking-wide text-indigo-600">Internal</p>
+        <p className="mt-2 text-3xl font-semibold text-indigo-700">{metrics.internalCount}</p>
+        <p className="mt-1 text-xs text-indigo-600">Designed for internal staff and operations.</p>
+      </div>
+      <div className="rounded-2xl border border-blue-100 bg-blue-50/60 p-5 shadow-sm">
+        <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">Customer</p>
+        <p className="mt-2 text-3xl font-semibold text-blue-700">{metrics.customerCount}</p>
+        <p className="mt-1 text-xs text-blue-600">Shared with customer-facing collaborators.</p>
+      </div>
+    </div>
+  );
 
-      <section className="space-y-6">
-        {activePanel === 'overview' && (
-          <div className="space-y-4">
-            <div>
-              <h1 className="text-2xl font-semibold text-slate-800">Role directory</h1>
-              <p className="mt-1 text-sm text-slate-500">
-                Browse configured roles, review the permissions they grant, and keep your access model organised.
-              </p>
-            </div>
-            <div className="rounded-2xl border border-slate-200 bg-white px-6 py-5 shadow-sm">
-              <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500">Search</label>
-              <input
-                type="search"
-                value={searchTerm}
-                onChange={(event) => setSearchTerm(event.target.value)}
-                placeholder="Search by role name, key, or permission"
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none"
-              />
-            </div>
-            <DataTable title="Roles" actions={overviewActions}>
-              <thead className="bg-slate-50">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Role name</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Summary</th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Options</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 bg-white">
-                {isLoadingRoles ? (
-                  <tr>
-                    <td colSpan={3} className="px-4 py-8 text-center text-sm text-slate-500">
-                      Loading roles...
-                    </td>
-                  </tr>
-                ) : filteredRoles.length === 0 ? (
-                  <tr>
-                    <td colSpan={3} className="px-4 py-8 text-center text-sm text-slate-500">
-                      No roles match your filters.
-                    </td>
-                  </tr>
-                ) : (
-                  filteredRoles.map((role) => (
-                    <tr key={role.id} className="transition hover:bg-blue-50/40">
-                      <td className="px-4 py-3">
-                        <div className="font-semibold text-slate-800">{role.name}</div>
-                        <div className="text-xs uppercase tracking-wide text-slate-400">{role.key}</div>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-slate-600">{renderPermissionSummary(role)}</td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            type="button"
-                            onClick={() => setEditingRole(role)}
-                            className="flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-800"
-                          >
-                            <PencilIcon /> Edit
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDelete(role)}
-                            className="flex items-center gap-1 rounded-lg border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600 transition hover:border-red-300 hover:text-red-700"
-                            disabled={deleteRole.isPending}
-                          >
-                            <TrashIcon /> Delete
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-              <tfoot className="bg-slate-50">
-                <tr>
-                  <td colSpan={3} className="px-4 py-3">
-                    <div className="flex flex-col gap-3 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between">
-                      <span>
-                        Showing {filteredRoles.length} of {totalElements} role{totalElements === 1 ? '' : 's'}
-                      </span>
-                      <div className="flex items-center gap-3">
-                        <button
-                          type="button"
-                          onClick={() => setPage((prev) => Math.max(prev - 1, 0))}
-                          className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-600 transition hover:border-slate-400 hover:text-slate-800 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"
-                          disabled={page === 0}
-                        >
-                          Previous
-                        </button>
-                        <span>
-                          Page {page + 1} of {totalPages}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => setPage((prev) => (prev + 1 < totalPages ? prev + 1 : prev))}
-                          className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-600 transition hover:border-slate-400 hover:text-slate-800 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"
-                          disabled={page + 1 >= totalPages}
-                        >
-                          Next
-                        </button>
-                      </div>
+  const renderFilters = () => (
+    <div className="flex flex-col gap-4 border-b border-slate-200 px-6 py-4 lg:flex-row lg:items-end">
+      <div className="flex-1">
+        <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Search</label>
+        <input
+          type="search"
+          value={searchDraft}
+          onChange={(event) => setSearchDraft(event.target.value)}
+          placeholder="Search by role name, key, or permission"
+          className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none"
+        />
+      </div>
+      <div className="grid w-full gap-4 sm:grid-cols-2 lg:w-auto lg:flex lg:items-end lg:gap-4">
+        <div>
+          <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Audience</label>
+          <select
+            value={typeFilter}
+            onChange={(event) => setTypeFilter(event.target.value as typeof typeFilter)}
+            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none"
+          >
+            <option value="all">All</option>
+            <option value="internal">Internal</option>
+            <option value="customer">Customer</option>
+          </select>
+        </div>
+        <div>
+          <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Permissions</label>
+          <select
+            value={permissionFilter}
+            onChange={(event) => setPermissionFilter(event.target.value as typeof permissionFilter)}
+            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none"
+          >
+            <option value="all">All</option>
+            <option value="with">Has permissions</option>
+            <option value="without">No permissions</option>
+          </select>
+        </div>
+        <div>
+          <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Rows</label>
+          <select
+            value={pageSize}
+            onChange={(event) => setPageSize(Number(event.target.value))}
+            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none"
+          >
+            {[10, 25, 50, 100].map((size) => (
+              <option key={size} value={size}>
+                {size}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderTable = () => (
+    <div className="flex flex-col">
+      {renderFilters()}
+      <div className="flex-1 overflow-x-auto">
+        <table className="min-w-full divide-y divide-slate-200">
+          <thead className="bg-slate-50">
+            <tr>
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Role</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Key</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Audience</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Permissions</th>
+              <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100 bg-white">
+            {rolesResponse.isLoading ? (
+              <tr>
+                <td colSpan={5} className="px-4 py-6 text-center text-sm text-slate-500">
+                  Loading roles…
+                </td>
+              </tr>
+            ) : filteredRoles.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="px-4 py-6 text-center text-sm text-slate-500">
+                  No roles match the current filters.
+                </td>
+              </tr>
+            ) : (
+              filteredRoles.map((role) => (
+                <tr key={role.id} className="transition hover:bg-blue-50/40">
+                  <td className="px-4 py-3">
+                    <div className="text-sm font-semibold text-slate-800">{role.name}</div>
+                  </td>
+                  <td className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">{role.key}</td>
+                  <td className="px-4 py-3 text-sm text-slate-600">{isCustomerRole(role) ? 'Customer' : 'Internal'}</td>
+                  <td className="px-4 py-3 text-sm text-slate-600">{renderPermissionSummary(role)}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingRole(role);
+                          setView('edit');
+                        }}
+                        className="rounded-full border border-slate-200 p-2 text-slate-500 transition hover:border-slate-300 hover:text-slate-800"
+                        aria-label={`Edit ${role.name}`}
+                      >
+                        <PencilIcon />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(role)}
+                        className="rounded-full border border-rose-200 p-2 text-rose-500 transition hover:border-rose-300 hover:text-rose-600"
+                        aria-label={`Delete ${role.name}`}
+                        disabled={deleteRole.isPending}
+                      >
+                        <TrashIcon />
+                      </button>
                     </div>
                   </td>
                 </tr>
-              </tfoot>
-            </DataTable>
-          </div>
-        )}
-
-        {activePanel === 'create' && (
-          <form onSubmit={handleCreate} className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <div className="flex flex-col gap-3 border-b border-slate-200 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h2 className="text-xl font-semibold text-slate-800">Add new role</h2>
-                <p className="text-sm text-slate-500">Name the role and select the exact permissions it should grant.</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActivePanel('overview');
-                    setRoleName('');
-                    setRoleKey('');
-                    setRolePermissions([]);
-                    setKeyTouched(false);
-                    setCreateError(null);
-                  }}
-                  className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 transition hover:border-slate-400 hover:text-slate-800"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
-                  disabled={createRole.isPending}
-                >
-                  {createRole.isPending ? 'Saving…' : 'Save role'}
-                </button>
-              </div>
-            </div>
-
-            {(createError || createRole.isError) && (
-              <div className="mx-6 mt-4 rounded-md bg-red-50 px-4 py-3 text-sm text-red-600">
-                {createError ?? getErrorMessage(createRole.error)}
-              </div>
+              ))
             )}
+          </tbody>
+          <tfoot className="bg-slate-50">
+            <tr>
+              <td colSpan={5} className="px-4 py-3">
+                <div className="flex flex-col gap-3 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between">
+                  <span>
+                    Showing {filteredRoles.length} of {totalElements} role{totalElements === 1 ? '' : 's'}
+                  </span>
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setPage((prev) => Math.max(prev - 1, 0))}
+                      className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-600 transition hover:border-slate-400 hover:text-slate-800 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"
+                      disabled={page === 0}
+                    >
+                      Previous
+                    </button>
+                    <span>
+                      Page {page + 1} of {totalPages}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setPage((prev) => (prev + 1 < totalPages ? prev + 1 : prev))}
+                      className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-600 transition hover:border-slate-400 hover:text-slate-800 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"
+                      disabled={page + 1 >= totalPages}
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  );
 
-            <div className="space-y-6 px-6 py-6">
-              <div className="grid gap-4 lg:grid-cols-2">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700">Role name</label>
-                  <input
-                    type="text"
-                    value={roleName}
-                    onChange={(event) => setRoleName(event.target.value)}
-                    placeholder="e.g. Sales Manager"
-                    required
-                    className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700">Role key</label>
-                  <input
-                    type="text"
-                    value={roleKey}
-                    onChange={(event) => {
-                      setRoleKey(formatRoleKey(event.target.value));
-                      setKeyTouched(true);
-                    }}
-                    placeholder="SALES_MANAGER"
-                    required
-                    className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm uppercase focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-                  />
-                  <p className="mt-1 text-xs text-slate-500">This identifier must be unique and is used by the API.</p>
-                </div>
-              </div>
+  const isListView = view === 'list';
+  const isCreateView = view === 'create';
+  const isEditView = view === 'edit';
 
-              <div className="rounded-2xl border border-slate-200">
-                <div className="border-b border-slate-200 px-6 py-4">
-                  <h3 className="text-base font-semibold text-slate-800">Permission catalogue</h3>
-                  <p className="text-sm text-slate-500">Select the features and capabilities that this role should unlock.</p>
-                </div>
-                <PermissionMatrix
-                  groups={permissionGroups}
-                  selected={rolePermissions}
-                  onToggle={(id, checked, options) => togglePermission(id, checked, setRolePermissions, options)}
+  return (
+    <div className="flex min-h-full flex-col gap-6 px-6 py-6">
+      <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
+        <div>
+          <h1 className="text-2xl font-semibold text-slate-900">Roles</h1>
+          <p className="mt-1 text-sm text-slate-500">
+            Design and manage reusable permission bundles to keep access aligned with your operating model.
+          </p>
+        </div>
+        {isListView ? (
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={handleExport}
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 px-5 py-2 text-sm font-medium text-slate-600 transition hover:border-slate-400 hover:text-slate-800"
+            >
+              Export
+            </button>
+            <button
+              type="button"
+              onClick={() => setView('create')}
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-600"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} className="h-4 w-4">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m6-6H6" />
+              </svg>
+              New role
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => {
+              setView('list');
+              setEditingRole(null);
+            }}
+            className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-800"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-4 w-4">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+            </svg>
+            Back to roles
+          </button>
+        )}
+      </div>
+
+      {isListView ? (
+        <>
+          {renderSummaryCards()}
+          <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">{renderTable()}</div>
+        </>
+      ) : isCreateView ? (
+        <form onSubmit={handleCreate} className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="flex flex-col gap-3 border-b border-slate-200 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-xl font-semibold text-slate-800">Create role</h2>
+              <p className="text-sm text-slate-500">Give the role a friendly name and choose the permissions it should grant.</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setView('list')}
+                className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 transition hover:border-slate-400 hover:text-slate-800"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={createRole.isPending}
+              >
+                {createRole.isPending ? 'Saving…' : 'Save role'}
+              </button>
+            </div>
+          </div>
+
+          {(createError || createRole.isError) && (
+            <div className="mx-6 mt-4 rounded-md bg-red-50 px-4 py-3 text-sm text-red-600">
+              {createError ?? getErrorMessage(createRole.error)}
+            </div>
+          )}
+
+          <div className="space-y-6 px-6 py-6">
+            <div className="grid gap-4 lg:grid-cols-2">
+              <div>
+                <label className="block text-sm font-medium text-slate-700">Role name</label>
+                <input
+                  type="text"
+                  value={roleName}
+                  onChange={(event) => setRoleName(event.target.value)}
+                  placeholder="e.g. Sales Manager"
+                  required
+                  className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                 />
               </div>
-            </div>
-          </form>
-        )}
-      </section>
-
-      {editingRole && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4 py-10">
-          <form onSubmit={handleUpdate} className="relative w-full max-w-3xl rounded-2xl border border-slate-200 bg-white shadow-xl">
-            <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-5">
               <div>
-                <h3 className="text-xl font-semibold text-slate-800">Edit role</h3>
-                <p className="text-sm text-slate-500">Update the details and permissions assigned to this role.</p>
+                <label className="block text-sm font-medium text-slate-700">Role key</label>
+                <input
+                  type="text"
+                  value={roleKey}
+                  onChange={(event) => {
+                    setRoleKey(formatRoleKey(event.target.value));
+                    setKeyTouched(true);
+                  }}
+                  placeholder="SALES_MANAGER"
+                  required
+                  className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm uppercase focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+                <p className="mt-1 text-xs text-slate-500">This identifier must be unique and is used by the API.</p>
               </div>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200">
+              <div className="border-b border-slate-200 px-6 py-4">
+                <h3 className="text-base font-semibold text-slate-800">Permission catalogue</h3>
+                <p className="text-sm text-slate-500">Select the features and capabilities that this role should unlock.</p>
+              </div>
+              <PermissionMatrix
+                groups={permissionGroups}
+                selected={rolePermissions}
+                onToggle={(id, checked, options) => togglePermission(id, checked, setRolePermissions, options)}
+              />
+            </div>
+          </div>
+        </form>
+      ) : isEditView && editingRole ? (
+        <form onSubmit={handleUpdate} className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="flex flex-col gap-3 border-b border-slate-200 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-xl font-semibold text-slate-800">Edit {editingRole.name}</h2>
+              <p className="text-sm text-slate-500">Update the role details and adjust the permissions it grants.</p>
+            </div>
+            <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => {
                   setEditingRole(null);
-                  setEditError(null);
+                  setView('list');
                 }}
-                className="rounded-md p-1 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
-              >
-                <CloseIcon />
-              </button>
-            </div>
-
-            {(editError || updateRole.isError) && (
-              <div className="mx-6 mt-4 rounded-md bg-red-50 px-4 py-3 text-sm text-red-600">
-                {editError ?? getErrorMessage(updateRole.error)}
-              </div>
-            )}
-
-            <div className="space-y-6 px-6 py-6">
-              <div className="grid gap-4 lg:grid-cols-2">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700">Role name</label>
-                  <input
-                    type="text"
-                    value={editForm.name}
-                    onChange={(event) => setEditForm((prev) => ({ ...prev, name: event.target.value }))}
-                    required
-                    className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700">Role key</label>
-                  <input
-                    type="text"
-                    value={editForm.key}
-                    onChange={(event) => setEditForm((prev) => ({ ...prev, key: formatRoleKey(event.target.value) }))}
-                    required
-                    className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm uppercase focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-                  />
-                </div>
-              </div>
-
-              <div className="rounded-2xl border border-slate-200">
-                <div className="border-b border-slate-200 px-6 py-4">
-                  <h4 className="text-base font-semibold text-slate-800">Permissions</h4>
-                  <p className="text-sm text-slate-500">Adjust the capabilities granted to this role.</p>
-                </div>
-                <PermissionMatrix
-                  groups={permissionGroups}
-                  selected={editingPermissions}
-                  onToggle={(id, checked, options) => togglePermission(id, checked, setEditingPermissions, options)}
-                />
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-3 border-t border-slate-200 px-6 py-4 sm:flex-row sm:items-center sm:justify-end">
-              <button
-                type="button"
-                onClick={() => setEditingRole(null)}
                 className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 transition hover:border-slate-400 hover:text-slate-800"
               >
                 Cancel
@@ -834,9 +863,52 @@ const RolesPage = () => {
                 {updateRole.isPending ? 'Saving…' : 'Save changes'}
               </button>
             </div>
-          </form>
-        </div>
-      )}
+          </div>
+
+          {(editError || updateRole.isError) && (
+            <div className="mx-6 mt-4 rounded-md bg-red-50 px-4 py-3 text-sm text-red-600">
+              {editError ?? getErrorMessage(updateRole.error)}
+            </div>
+          )}
+
+          <div className="space-y-6 px-6 py-6">
+            <div className="grid gap-4 lg:grid-cols-2">
+              <div>
+                <label className="block text-sm font-medium text-slate-700">Role name</label>
+                <input
+                  type="text"
+                  value={editForm.name}
+                  onChange={(event) => setEditForm((prev) => ({ ...prev, name: event.target.value }))}
+                  required
+                  className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700">Role key</label>
+                <input
+                  type="text"
+                  value={editForm.key}
+                  onChange={(event) => setEditForm((prev) => ({ ...prev, key: formatRoleKey(event.target.value) }))}
+                  required
+                  className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm uppercase focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200">
+              <div className="border-b border-slate-200 px-6 py-4">
+                <h4 className="text-base font-semibold text-slate-800">Permissions</h4>
+                <p className="text-sm text-slate-500">Adjust the capabilities granted to this role.</p>
+              </div>
+              <PermissionMatrix
+                groups={permissionGroups}
+                selected={editingPermissions}
+                onToggle={(id, checked, options) => togglePermission(id, checked, setEditingPermissions, options)}
+              />
+            </div>
+          </div>
+        </form>
+      ) : null}
     </div>
   );
 };

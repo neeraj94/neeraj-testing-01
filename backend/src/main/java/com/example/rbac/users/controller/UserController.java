@@ -7,6 +7,7 @@ import com.example.rbac.users.dto.UpdateUserRequest;
 import com.example.rbac.users.dto.UpdateUserPermissionsRequest;
 import com.example.rbac.users.dto.UserDto;
 import com.example.rbac.users.dto.UserSummaryResponse;
+import com.example.rbac.users.dto.UpdateUserStatusRequest;
 import com.example.rbac.users.service.UserService;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
@@ -46,6 +47,12 @@ public class UserController {
     @PutMapping("/{id}")
     public UserDto update(@PathVariable("id") Long id, @Valid @RequestBody UpdateUserRequest request) {
         return userService.update(id, request);
+    }
+
+    @PatchMapping("/{id}/status")
+    public UserDto updateStatus(@PathVariable("id") Long id,
+                                @Valid @RequestBody UpdateUserStatusRequest request) {
+        return userService.updateStatus(id, request);
     }
 
     @DeleteMapping("/{id}")

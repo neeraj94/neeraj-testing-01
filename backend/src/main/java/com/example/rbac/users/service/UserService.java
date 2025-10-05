@@ -11,6 +11,7 @@ import com.example.rbac.users.dto.CreateUserRequest;
 import com.example.rbac.users.dto.ProfileUpdateRequest;
 import com.example.rbac.users.dto.UpdateUserRequest;
 import com.example.rbac.users.dto.UpdateUserPermissionsRequest;
+import com.example.rbac.users.dto.UpdateUserStatusRequest;
 import com.example.rbac.users.dto.UserDto;
 import com.example.rbac.users.dto.UserSummaryResponse;
 import com.example.rbac.users.mapper.UserMapper;
@@ -125,6 +126,16 @@ public class UserService {
             Set<Permission> direct = fetchPermissions(request.getPermissionKeys());
             user.setDirectPermissions(direct);
         }
+        user = userRepository.save(user);
+        return userMapper.toDto(userRepository.findDetailedById(user.getId()).orElseThrow());
+    }
+
+    @PreAuthorize(USER_OR_CUSTOMER_UPDATE)
+    @Transactional
+    public UserDto updateStatus(Long id, UpdateUserStatusRequest request) {
+        User user = userRepository.findDetailedById(id)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "User not found"));
+        user.setActive(Boolean.TRUE.equals(request.getActive()));
         user = userRepository.save(user);
         return userMapper.toDto(userRepository.findDetailedById(user.getId()).orElseThrow());
     }
