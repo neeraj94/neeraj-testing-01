@@ -7,7 +7,6 @@ import DashboardPage from './pages/DashboardPage';
 import UsersPage from './pages/UsersPage';
 import RolesPage from './pages/RolesPage';
 import PermissionsPage from './pages/PermissionsPage';
-import CustomersPage from './pages/CustomersPage';
 import InvoicesPage from './pages/InvoicesPage';
 import ProfilePage from './pages/ProfilePage';
 import ForbiddenPage from './pages/ForbiddenPage';
@@ -41,8 +40,12 @@ const App = () => {
     bootstrap();
   }, [accessToken, refreshToken, dispatch]);
 
-  if (!bootstrapped && refreshToken) {
-    return <div className="flex min-h-screen items-center justify-center">Loading...</div>;
+  if (!bootstrapped) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 text-sm text-slate-500">
+        Preparing your workspace…
+      </div>
+    );
   }
 
   return (
@@ -53,19 +56,45 @@ const App = () => {
         <Route element={<Layout />}>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<DashboardPage />} />
-          <Route element={<PermissionRoute required={['USER_VIEW', 'USER_CREATE', 'USER_UPDATE', 'USER_DELETE']} />}>
+          <Route
+            element={
+              <PermissionRoute
+                required={[
+                  'USER_VIEW',
+                  'USER_VIEW_GLOBAL',
+                  'USER_VIEW_OWN',
+                  'CUSTOMER_VIEW',
+                  'CUSTOMER_VIEW_GLOBAL',
+                  'CUSTOMER_VIEW_OWN',
+                  'CUSTOMER_CREATE',
+                  'CUSTOMER_UPDATE',
+                  'CUSTOMER_DELETE'
+                ]}
+              />
+            }
+          >
             <Route path="/users" element={<UsersPage />} />
           </Route>
-          <Route element={<PermissionRoute required={['ROLE_VIEW', 'PERMISSION_VIEW', 'ROLE_CREATE', 'ROLE_UPDATE']} />}>
+          <Route element={<PermissionRoute required={['ROLE_VIEW', 'ROLE_VIEW_GLOBAL', 'ROLE_VIEW_OWN']} />}>
             <Route path="/roles" element={<RolesPage />} />
           </Route>
           <Route element={<PermissionRoute required={['PERMISSION_VIEW']} />}>
             <Route path="/permissions" element={<PermissionsPage />} />
           </Route>
-          <Route element={<PermissionRoute required={['CUSTOMER_VIEW']} />}>
-            <Route path="/customers" element={<CustomersPage />} />
-          </Route>
-          <Route element={<PermissionRoute required={['INVOICE_VIEW']} />}>
+          <Route
+            element={
+              <PermissionRoute
+                required={[
+                  'INVOICE_VIEW',
+                  'INVOICE_VIEW_GLOBAL',
+                  'INVOICE_VIEW_OWN',
+                  'INVOICE_CREATE',
+                  'INVOICE_UPDATE',
+                  'INVOICE_DELETE'
+                ]}
+              />
+            }
+          >
             <Route path="/invoices" element={<InvoicesPage />} />
           </Route>
           <Route path="/profile" element={<ProfilePage />} />
