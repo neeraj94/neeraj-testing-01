@@ -8,6 +8,7 @@ import App from './App';
 import './styles/tailwind.css';
 import { injectStore, registerAuthListeners } from './services/http';
 import { tokensRefreshed, logout } from './features/auth/authSlice';
+import { ToastProvider } from './components/ToastProvider';
 
 injectStore(store);
 registerAuthListeners(
@@ -22,7 +23,9 @@ ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
     <Provider store={store}>
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
-          <App />
+          <ToastProvider>
+            <App />
+          </ToastProvider>
         </BrowserRouter>
       </QueryClientProvider>
     </Provider>

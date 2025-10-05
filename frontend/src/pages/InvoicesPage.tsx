@@ -5,6 +5,8 @@ import DataTable from '../components/DataTable';
 import type { Invoice, Pagination } from '../types/models';
 import { useAppSelector } from '../app/hooks';
 import type { PermissionKey } from '../types/auth';
+import { useToast } from '../components/ToastProvider';
+import { extractErrorMessage } from '../utils/errors';
 
 const initialItem = { description: '', qty: 1, unitPrice: 0 };
 
@@ -12,10 +14,17 @@ const InvoicesPage = () => {
   const { permissions } = useAppSelector((state) => state.auth);
   const canCreate = (permissions as PermissionKey[]).includes('INVOICE_CREATE');
   const canDelete = (permissions as PermissionKey[]).includes('INVOICE_DELETE');
+  const { notify } = useToast();
 
-  const { data, refetch } = useQuery(['invoices'], async () => {
-    const { data } = await api.get<Pagination<Invoice>>('/invoices');
-    return data.content;
+  const {
+    data: invoices = [],
+    refetch
+  } = useQuery<Invoice[]>({
+    queryKey: ['invoices', 'all'],
+    queryFn: async () => {
+      const { data } = await api.get<Pagination<Invoice>>('/invoices');
+      return data.content;
+    }
   });
 
   const [form, setForm] = useState({
@@ -26,9 +35,10 @@ const InvoicesPage = () => {
     taxRate: 10,
     item: initialItem
   });
+  const [formError, setFormError] = useState<string | null>(null);
 
-  const createInvoice = useMutation(
-    async () => {
+  const createInvoice = useMutation({
+    mutationFn: async () => {
       await api.post('/invoices', {
         customerId: Number(form.customerId),
         number: form.number,
@@ -39,25 +49,38 @@ const InvoicesPage = () => {
         items: [form.item]
       });
     },
-    {
-      onSuccess: () => {
-        setForm({ customerId: '', number: '', issueDate: '', dueDate: '', taxRate: 10, item: { ...initialItem } });
-        refetch();
-      }
+    onSuccess: () => {
+      setForm({ customerId: '', number: '', issueDate: '', dueDate: '', taxRate: 10, item: { ...initialItem } });
+      setFormError(null);
+      notify({ type: 'success', message: 'Invoice created successfully.' });
+      refetch();
+    },
+    onError: (error) => {
+      notify({ type: 'error', message: extractErrorMessage(error, 'Unable to create invoice.') });
     }
-  );
+  });
 
-  const deleteInvoice = useMutation<void, unknown, number>(
-    async (id: number) => {
+  const deleteInvoice = useMutation<void, unknown, number>({
+    mutationFn: async (id: number) => {
       await api.delete(`/invoices/${id}`);
     },
-    {
-      onSuccess: () => refetch()
+    onSuccess: () => {
+      notify({ type: 'success', message: 'Invoice removed.' });
+      refetch();
+    },
+    onError: (error) => {
+      notify({ type: 'error', message: extractErrorMessage(error, 'Unable to remove invoice.') });
     }
-  );
+  });
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
+    if (!form.customerId || !form.number.trim()) {
+      setFormError('Customer ID and invoice number are required.');
+      notify({ type: 'error', message: 'Customer ID and invoice number are required.' });
+      return;
+    }
+    setFormError(null);
     createInvoice.mutate();
   };
 
@@ -149,12 +172,13 @@ const InvoicesPage = () => {
               />
             </div>
           </div>
+          {formError && <p className="mt-3 text-sm text-red-600">{formError}</p>}
           <button
             type="submit"
             className="mt-4 rounded-md bg-primary px-4 py-2 text-sm font-medium text-white"
-            disabled={createInvoice.isLoading}
+            disabled={createInvoice.isPending}
           >
-            {createInvoice.isLoading ? 'Saving...' : 'Create invoice'}
+            {createInvoice.isPending ? 'Saving...' : 'Create invoice'}
           </button>
         </form>
       )}
@@ -170,7 +194,7 @@ const InvoicesPage = () => {
           </tr>
         </thead>
         <tbody>
-          {data?.map((invoice) => (
+          {invoices.map((invoice) => (
             <tr key={invoice.id} className="border-t border-slate-200">
               <td className="px-3 py-2">{invoice.number}</td>
               <td className="px-3 py-2">{invoice.customerName}</td>
