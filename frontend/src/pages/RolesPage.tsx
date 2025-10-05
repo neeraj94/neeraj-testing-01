@@ -8,10 +8,58 @@ import type { PermissionKey } from '../types/auth';
 
 type PanelView = 'overview' | 'create';
 
+type CapabilitySlot =
+  | 'viewOwn'
+  | 'viewGlobal'
+  | 'view'
+  | 'create'
+  | 'edit'
+  | 'delete'
+  | 'export'
+  | 'manage'
+  | 'assign';
+
+type PermissionOption = {
+  id: number;
+  key: string;
+  label: string;
+};
+
 type PermissionGroup = {
   feature: string;
-  items: Array<{ id: number; label: string; key: string }>;
+  slots: Partial<Record<CapabilitySlot, PermissionOption>>;
+  extras: PermissionOption[];
 };
+
+type ToggleOptions = {
+  deselect?: number[];
+  select?: number[];
+};
+
+const CAPABILITY_COLUMNS: Array<{ slot: CapabilitySlot; label: string }> = [
+  { slot: 'viewOwn', label: 'View (Own)' },
+  { slot: 'viewGlobal', label: 'View (Global)' },
+  { slot: 'view', label: 'View' },
+  { slot: 'create', label: 'Create' },
+  { slot: 'edit', label: 'Edit' },
+  { slot: 'delete', label: 'Delete' },
+  { slot: 'export', label: 'Export' },
+  { slot: 'manage', label: 'Manage' },
+  { slot: 'assign', label: 'Assign' }
+];
+
+const CAPABILITY_PATTERNS: Array<{ slot: CapabilitySlot; regex: RegExp }> = [
+  { slot: 'viewGlobal', regex: /_VIEW_GLOBAL$/i },
+  { slot: 'viewOwn', regex: /_VIEW_OWN$/i },
+  { slot: 'view', regex: /_VIEW$/i },
+  { slot: 'create', regex: /_CREATE$/i },
+  { slot: 'edit', regex: /_EDIT$/i },
+  { slot: 'edit', regex: /_UPDATE$/i },
+  { slot: 'delete', regex: /_DELETE$/i },
+  { slot: 'export', regex: /_EXPORT$/i },
+  { slot: 'manage', regex: /_MANAGE$/i },
+  { slot: 'assign', regex: /_ASSIGN$/i }
+];
 
 const formatRoleKey = (value: string) =>
   value
@@ -28,6 +76,22 @@ const toTitleCase = (value: string) =>
     .trim()
     .replace(/\w\S*/g, (word) => word.charAt(0).toUpperCase() + word.substring(1).toLowerCase());
 
+const formatFeatureName = (value: string) =>
+  value
+    .split(/[_\s]+/g)
+    .filter(Boolean)
+    .map((segment) => (segment.length <= 3 ? segment.toUpperCase() : segment.charAt(0).toUpperCase() + segment.substring(1).toLowerCase()))
+    .join(' ');
+
+const stripCapabilitySuffix = (key: string) => {
+  for (const pattern of CAPABILITY_PATTERNS) {
+    if (pattern.regex.test(key)) {
+      return key.replace(pattern.regex, '');
+    }
+  }
+  return key;
+};
+
 const parsePermissionLabel = (permission: Permission) => {
   const name = permission.name?.trim() ?? '';
   const separators = [':', ' - ', ' – ', ' — ', '|'];
@@ -35,21 +99,29 @@ const parsePermissionLabel = (permission: Permission) => {
   for (const separator of separators) {
     if (name.includes(separator)) {
       const [featureRaw, ...rest] = name.split(separator);
-      const feature = toTitleCase(featureRaw);
+      const feature = formatFeatureName(featureRaw);
       const label = rest.join(separator).trim();
       if (feature && label) {
-        return { feature, label };
+        return { feature, label: label || permission.key };
       }
     }
   }
 
   if (name) {
-    return { feature: toTitleCase(name), label: toTitleCase(name) };
+    const words = name.split(/\s+/g).filter(Boolean);
+    if (words.length > 1) {
+      const verbs = new Set(['view', 'create', 'update', 'edit', 'delete', 'manage', 'assign', 'export']);
+      const [first, ...rest] = words;
+      if (verbs.has(first.toLowerCase())) {
+        return { feature: formatFeatureName(rest.join(' ')), label: name };
+      }
+    }
+    return { feature: formatFeatureName(name), label: name };
   }
 
-  const parts = permission.key.split('_');
-  const feature = parts.length > 1 ? toTitleCase(parts[0]) : toTitleCase(permission.key);
-  const label = toTitleCase(parts.slice(1).join(' ')) || toTitleCase(permission.key);
+  const baseKey = stripCapabilitySuffix(permission.key);
+  const feature = formatFeatureName(baseKey || permission.key);
+  const label = permission.name?.trim() ?? toTitleCase(permission.key.replace(/_/g, ' '));
   return { feature, label };
 };
 
@@ -60,15 +132,39 @@ const buildPermissionGroups = (permissions: Permission[]): PermissionGroup[] => 
     const { feature, label } = parsePermissionLabel(permission);
     const key = feature || 'General';
     const existing = map.get(key);
-    const entry: PermissionGroup = existing ?? { feature: key, items: [] };
-    entry.items.push({ id: permission.id, key: permission.key, label: label || permission.name || permission.key });
+    const entry: PermissionGroup = existing ?? { feature: key, slots: {}, extras: [] };
+
+    let matchedSlot: CapabilitySlot | null = null;
+    for (const pattern of CAPABILITY_PATTERNS) {
+      if (pattern.regex.test(permission.key)) {
+        matchedSlot = pattern.slot;
+        break;
+      }
+    }
+
+    const option: PermissionOption = {
+      id: permission.id,
+      key: permission.key,
+      label: label || permission.name || permission.key
+    };
+
+    if (matchedSlot) {
+      if (!entry.slots[matchedSlot]) {
+        entry.slots[matchedSlot] = option;
+      } else {
+        entry.extras.push(option);
+      }
+    } else {
+      entry.extras.push(option);
+    }
+
     map.set(key, entry);
   });
 
   return Array.from(map.values())
     .map((group) => ({
       ...group,
-      items: group.items.sort((a, b) => a.label.localeCompare(b.label))
+      extras: group.extras.sort((a, b) => a.label.localeCompare(b.label))
     }))
     .sort((a, b) => a.feature.localeCompare(b.feature));
 };
@@ -102,65 +198,122 @@ const PermissionMatrix = ({
 }: {
   groups: PermissionGroup[];
   selected: number[];
-  onToggle: (permissionId: number, checked: boolean) => void;
+  onToggle: (permissionId: number, checked: boolean, options?: ToggleOptions) => void;
 }) => {
   if (!groups.length) {
     return (
       <div className="px-6 py-8 text-center text-sm text-slate-500">
-        No permissions are available yet. Create permissions first to assign them to roles.
+        No permissions have been published yet.
       </div>
     );
   }
 
-  return (
-    <div className="divide-y divide-slate-200">
-      {groups.map((group) => {
-        const selectedCount = group.items.filter((item) => selected.includes(item.id)).length;
-        const allSelected = selectedCount === group.items.length;
+  const visibleColumns = CAPABILITY_COLUMNS.filter((column) =>
+    groups.some((group) => Boolean(group.slots[column.slot]))
+  );
+  const showExtras = groups.some((group) => group.extras.length > 0);
+  const selectedSet = new Set(selected);
 
-        return (
-          <div key={group.feature} className="grid gap-4 px-6 py-5 lg:grid-cols-[240px,1fr]">
-            <div>
-              <div className="text-sm font-semibold text-slate-800">{group.feature}</div>
-              <div className="text-xs text-slate-500">{selectedCount} of {group.items.length} selected</div>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              {group.items.map((permission) => {
-                const checked = selected.includes(permission.id);
-                return (
-                  <label key={permission.id} className="flex items-start gap-3 rounded-md border border-transparent p-2 transition hover:border-slate-200">
-                    <input
-                      type="checkbox"
-                      className="mt-1 h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary"
-                      checked={checked}
-                      onChange={(event) => onToggle(permission.id, event.target.checked)}
-                    />
-                    <span className="text-sm text-slate-600">
-                      <span className="block font-medium text-slate-700">{permission.label}</span>
-                      <span className="text-xs uppercase tracking-wide text-slate-400">{permission.key}</span>
-                    </span>
-                  </label>
-                );
-              })}
-            </div>
-            {group.items.length > 1 && (
-              <div className="lg:col-start-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    group.items.forEach((permission) => {
-                      onToggle(permission.id, !allSelected);
-                    });
-                  }}
-                  className="text-xs font-medium text-primary hover:underline"
-                >
-                  {allSelected ? 'Clear group' : 'Select entire group'}
-                </button>
-              </div>
+  return (
+    <div className="overflow-x-auto">
+      <table className="min-w-full divide-y divide-slate-200">
+        <thead className="bg-slate-50">
+          <tr>
+            <th className="whitespace-nowrap px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Feature
+            </th>
+            {visibleColumns.map((column) => (
+              <th
+                key={column.slot}
+                className="whitespace-nowrap px-6 py-3 text-center text-xs font-semibold uppercase tracking-wide text-slate-500"
+              >
+                {column.label}
+              </th>
+            ))}
+            {showExtras && (
+              <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Other</th>
             )}
-          </div>
-        );
-      })}
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-slate-200 bg-white">
+          {groups.map((group) => {
+            const viewGlobalId = group.slots.viewGlobal?.id;
+            const viewOwnId = group.slots.viewOwn?.id;
+            const viewGlobalSelected = viewGlobalId ? selectedSet.has(viewGlobalId) : false;
+
+            return (
+              <tr key={group.feature}>
+                <td className="whitespace-nowrap px-6 py-4 text-sm font-semibold text-slate-800">{group.feature}</td>
+                {visibleColumns.map((column) => {
+                  const option = group.slots[column.slot];
+                  if (!option) {
+                    return (
+                      <td key={column.slot} className="px-6 py-4 text-center text-xs text-slate-300">
+                        —
+                      </td>
+                    );
+                  }
+
+                  const checked = selectedSet.has(option.id);
+                  const disableOwn = column.slot === 'viewOwn' && viewGlobalSelected;
+
+                  return (
+                    <td key={column.slot} className="px-6 py-4 text-center">
+                      <label className="inline-flex items-center justify-center gap-2">
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary disabled:cursor-not-allowed"
+                          checked={checked}
+                          disabled={disableOwn}
+                          onChange={(event) =>
+                            onToggle(option.id, event.target.checked, {
+                              deselect:
+                                event.target.checked && column.slot === 'viewGlobal' && viewOwnId
+                                  ? [viewOwnId]
+                                  : undefined
+                            })
+                          }
+                        />
+                        <span className="sr-only">{`${group.feature} – ${column.label}`}</span>
+                      </label>
+                    </td>
+                  );
+                })}
+                {showExtras && (
+                  <td className="px-6 py-4">
+                    {group.extras.length ? (
+                      <div className="space-y-2">
+                        {group.extras.map((option) => {
+                          const checked = selectedSet.has(option.id);
+                          return (
+                            <label
+                              key={option.id}
+                              className="flex items-start gap-3 rounded-md border border-slate-200 p-3 transition hover:border-slate-300"
+                            >
+                              <input
+                                type="checkbox"
+                                className="mt-1 h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary"
+                                checked={checked}
+                                onChange={(event) => onToggle(option.id, event.target.checked)}
+                              />
+                              <span className="text-sm text-slate-600">
+                                <span className="block font-medium text-slate-700">{option.label}</span>
+                                <span className="text-xs uppercase tracking-wide text-slate-400">{option.key}</span>
+                              </span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <span className="block text-center text-xs text-slate-300">—</span>
+                    )}
+                  </td>
+                )}
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
     </div>
   );
 };
@@ -304,19 +457,32 @@ const RolesPage = () => {
   const togglePermission = (
     id: number,
     checked: boolean,
-    setter: Dispatch<SetStateAction<number[]>>
+    setter: Dispatch<SetStateAction<number[]>>,
+    options: ToggleOptions = {}
   ) => {
     setter((prev) => {
-      const exists = prev.includes(id);
-      if (checked && !exists) {
-        return [...prev, id];
+      let next = [...prev];
+
+      if (checked) {
+        if (!next.includes(id)) {
+          next.push(id);
+        }
+      } else {
+        next = next.filter((permissionId) => permissionId !== id);
       }
 
-      if (!checked && exists) {
-        return prev.filter((permissionId) => permissionId !== id);
+      if (options.deselect?.length) {
+        const deselectSet = new Set(options.deselect);
+        next = next.filter((permissionId) => !deselectSet.has(permissionId));
       }
 
-      return prev;
+      if (options.select?.length) {
+        const set = new Set(next);
+        options.select.forEach((permissionId) => set.add(permissionId));
+        next = Array.from(set);
+      }
+
+      return next;
     });
   };
 
@@ -682,7 +848,7 @@ const RolesPage = () => {
                 <PermissionMatrix
                   groups={permissionGroups}
                   selected={rolePermissions}
-                  onToggle={(id, checked) => togglePermission(id, checked, setRolePermissions)}
+                  onToggle={(id, checked, options) => togglePermission(id, checked, setRolePermissions, options)}
                 />
               </div>
             </div>
@@ -745,7 +911,7 @@ const RolesPage = () => {
                 <PermissionMatrix
                   groups={permissionGroups}
                   selected={editingPermissions}
-                  onToggle={(id, checked) => togglePermission(id, checked, setEditingPermissions)}
+                  onToggle={(id, checked, options) => togglePermission(id, checked, setEditingPermissions, options)}
                 />
               </div>
             </div>
