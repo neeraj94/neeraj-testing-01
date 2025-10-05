@@ -8,17 +8,21 @@ import type { PermissionKey } from '../types/auth';
 import { hasAnyPermission } from '../utils/permissions';
 import { useToast } from '../components/ToastProvider';
 import { extractErrorMessage } from '../utils/errors';
+import ExportMenu from '../components/ExportMenu';
+import { exportDataset, type ExportFormat } from '../utils/exporters';
 
 const CustomersPage = () => {
   const { permissions } = useAppSelector((state) => state.auth);
   const grantedPermissions = permissions as PermissionKey[];
   const canCreate = hasAnyPermission(grantedPermissions, ['CUSTOMER_CREATE']);
   const canDelete = hasAnyPermission(grantedPermissions, ['CUSTOMER_DELETE']);
+  const canExport = hasAnyPermission(grantedPermissions, ['CUSTOMERS_EXPORT']);
   const { notify } = useToast();
 
   const {
     data: customers = [],
-    refetch
+    refetch,
+    isLoading: isLoadingCustomers
   } = useQuery<Customer[]>({
     queryKey: ['customers', 'all'],
     queryFn: async () => {
@@ -29,6 +33,7 @@ const CustomersPage = () => {
 
   const [form, setForm] = useState({ name: '', email: '', phone: '', address: '' });
   const [formError, setFormError] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
 
   const createCustomer = useMutation({
     mutationFn: async () => {
@@ -68,9 +73,56 @@ const CustomersPage = () => {
     createCustomer.mutate();
   };
 
+  const handleExport = async (format: ExportFormat) => {
+    if (!canExport || isExporting) {
+      return;
+    }
+    setIsExporting(true);
+    try {
+      if (!customers.length) {
+        notify({ type: 'error', message: 'There are no customers to export right now.' });
+        return;
+      }
+
+      const columns = [
+        { key: 'name', header: 'Name' },
+        { key: 'email', header: 'Email' },
+        { key: 'phone', header: 'Phone' },
+        { key: 'address', header: 'Address' }
+      ];
+
+      const rows = customers.map((customer) => ({
+        name: customer.name,
+        email: customer.email ?? '—',
+        phone: customer.phone ?? '—',
+        address: customer.address ?? '—'
+      }));
+
+      exportDataset({
+        format,
+        columns,
+        rows,
+        fileName: 'customers',
+        title: 'Customers directory'
+      });
+    } catch (error) {
+      notify({ type: 'error', message: 'Unable to export customers. Please try again.' });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold text-slate-800">Customers</h1>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-slate-800">Customers</h1>
+          <p className="text-sm text-slate-500">Manage all customer accounts and their contact details.</p>
+        </div>
+        {canExport && (
+          <ExportMenu onSelect={handleExport} isBusy={isExporting} disabled={isLoadingCustomers} />
+        )}
+      </div>
 
       {canCreate && (
         <form onSubmit={handleSubmit} className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">

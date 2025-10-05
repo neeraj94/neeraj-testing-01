@@ -40,7 +40,7 @@ class AuthIntegrationTest {
         assertThat(body).isNotNull();
         assertThat(body.getAccessToken()).isNotBlank();
         assertThat(body.getRoles()).contains("SUPER_ADMIN");
-        assertThat(body.getPermissions()).contains("CUSTOMER_VIEW", "USER_VIEW");
+        assertThat(body.getPermissions()).contains("CUSTOMER_VIEW", "USER_VIEW", "USERS_EXPORT", "CUSTOMERS_EXPORT");
 
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(body.getAccessToken());
