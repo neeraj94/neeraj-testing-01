@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import Layout from './components/Layout';
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
@@ -19,15 +19,18 @@ import api from './services/http';
 
 const App = () => {
   const dispatch = useAppDispatch();
+  const location = useLocation();
   const { accessToken, refreshToken } = useAppSelector((state) => state.auth);
-  const [initializing, setInitializing] = useState(() => Boolean(refreshToken));
+  const [initializing, setInitializing] = useState<'idle' | 'checking'>(() =>
+    refreshToken ? 'checking' : 'idle'
+  );
 
   useEffect(() => {
     let active = true;
 
     const restoreSession = async () => {
       if (!accessToken && refreshToken) {
-        setInitializing(true);
+        setInitializing('checking');
         try {
           const { data } = await api.post('/auth/refresh', { refreshToken });
           if (!active) {
@@ -39,13 +42,13 @@ const App = () => {
             return;
           }
           dispatch(logoutAction());
-          setInitializing(false);
+          setInitializing('idle');
         }
         return;
       }
 
       if (accessToken) {
-        setInitializing(true);
+        setInitializing('checking');
         try {
           await dispatch(loadCurrentUser()).unwrap();
         } catch (error) {
@@ -55,14 +58,14 @@ const App = () => {
           dispatch(logoutAction());
         } finally {
           if (active) {
-            setInitializing(false);
+            setInitializing('idle');
           }
         }
         return;
       }
 
       if (active) {
-        setInitializing(false);
+        setInitializing('idle');
       }
     };
 
@@ -73,7 +76,9 @@ const App = () => {
     };
   }, [accessToken, refreshToken, dispatch]);
 
-  if (initializing) {
+  const isPublicRoute = location.pathname.startsWith('/login') || location.pathname.startsWith('/signup');
+
+  if (initializing === 'checking' && !isPublicRoute) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50 text-sm text-slate-500">
         Preparing your workspace…
