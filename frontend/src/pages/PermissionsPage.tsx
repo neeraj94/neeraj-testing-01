@@ -17,24 +17,24 @@ const PermissionsPage = () => {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold text-slate-800">Permissions</h1>
-      <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="rounded-2xl border border-slate-200 bg-white px-6 py-5 shadow-sm">
         <p className="text-sm text-slate-600">
           Permissions are provisioned by the platform and listed below for reference. Contact your administrator if you need new
           capabilities enabled.
         </p>
       </div>
       <DataTable title="Available permissions">
-        <thead>
+        <thead className="bg-slate-50">
           <tr>
-            <th className="px-3 py-2 text-left">Key</th>
-            <th className="px-3 py-2 text-left">Name</th>
+            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Key</th>
+            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Name</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody className="divide-y divide-slate-100 bg-white">
           {permissions.map((permission) => (
-            <tr key={permission.id} className="border-t border-slate-200">
-              <td className="px-3 py-2 uppercase tracking-wide text-slate-500">{permission.key}</td>
-              <td className="px-3 py-2">{permission.name}</td>
+            <tr key={permission.id} className="transition hover:bg-blue-50/40">
+              <td className="px-4 py-3 text-sm font-semibold uppercase tracking-wide text-slate-500">{permission.key}</td>
+              <td className="px-4 py-3 text-sm text-slate-600">{permission.name}</td>
             </tr>
           ))}
         </tbody>

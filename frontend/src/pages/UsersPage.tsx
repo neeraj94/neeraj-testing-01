@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../services/http';
 import type { Pagination, Permission, Role, User, UserSummaryMetrics } from '../types/models';
@@ -77,6 +77,15 @@ const UsersPage = () => {
   useEffect(() => {
     setPage(0);
   }, [pageSize, statusFilter, audienceFilter]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setSearchTerm(searchDraft.trim());
+      setPage(0);
+    }, 300);
+
+    return () => window.clearTimeout(timer);
+  }, [searchDraft]);
 
   useEffect(() => {
     if (panelMode === 'create') {
@@ -276,12 +285,6 @@ const UsersPage = () => {
     }
   });
 
-  const handleSearchSubmit = (event: FormEvent) => {
-    event.preventDefault();
-    setSearchTerm(searchDraft.trim());
-    setPage(0);
-  };
-
   const handleFieldChange = <K extends keyof UserFormState>(key: K, value: UserFormState[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
@@ -341,21 +344,30 @@ const UsersPage = () => {
   }, [users, statusFilter, audienceFilter]);
 
   const metrics = summaryQuery.data;
-  const directPermissionSet = useMemo(
-    () => new Set(form.directPermissions.map(normalizePermissionKey)),
-    [form.directPermissions]
-  );
+  const directPermissionSet = useMemo(() => {
+    const next = new Set(form.directPermissions.map(normalizePermissionKey));
+    return next;
+  }, [form.directPermissions]);
 
-  const effectivePermissions = useMemo(() => {
-    if (panelMode === 'create') {
-      return Array.from(new Set(form.directPermissions.map(normalizePermissionKey))).sort();
-    }
-    const inherited = selectedUserQuery.data?.permissions ?? [];
+  const rolePermissionSet = useMemo(() => {
+    const assignedRoles = new Set(form.roleIds);
+    const collected = new Set<string>();
+    roles.forEach((role) => {
+      if (assignedRoles.has(role.id)) {
+        role.permissions?.forEach((permission) => {
+          collected.add(normalizePermissionKey(permission));
+        });
+      }
+    });
+    return collected;
+  }, [form.roleIds, roles]);
+
+  const effectivePermissionKeys = useMemo(() => {
     const combined = new Set<string>();
-    inherited.forEach((key) => combined.add(normalizePermissionKey(key)));
-    form.directPermissions.forEach((key) => combined.add(normalizePermissionKey(key)));
+    rolePermissionSet.forEach((key) => combined.add(key));
+    directPermissionSet.forEach((key) => combined.add(key));
     return Array.from(combined).sort();
-  }, [panelMode, selectedUserQuery.data?.permissions, form.directPermissions]);
+  }, [rolePermissionSet, directPermissionSet]);
 
   const renderSummaryCards = () => (
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -383,7 +395,7 @@ const UsersPage = () => {
   );
 
   const renderFilters = () => (
-    <form onSubmit={handleSearchSubmit} className="flex flex-col gap-4 border-b border-slate-200 px-6 py-4 lg:flex-row lg:items-end">
+    <div className="flex flex-col gap-4 border-b border-slate-200 px-6 py-4 lg:flex-row lg:items-end">
       <div className="flex-1">
         <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Search</label>
         <input
@@ -433,14 +445,8 @@ const UsersPage = () => {
             ))}
           </select>
         </div>
-        <button
-          type="submit"
-          className="mt-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-600"
-        >
-          Apply
-        </button>
       </div>
-    </form>
+    </div>
   );
 
   const renderTable = () => (
@@ -717,21 +723,33 @@ const UsersPage = () => {
           Includes role-derived permissions plus any direct overrides applied above.
         </p>
         <div className="mt-3 flex flex-wrap gap-2">
-          {effectivePermissions.length === 0 ? (
+          {effectivePermissionKeys.length === 0 ? (
             <span className="text-xs text-slate-400">No permissions selected yet.</span>
           ) : (
-            effectivePermissions.map((permissionKey) => {
+            effectivePermissionKeys.map((permissionKey) => {
               const permission = permissionLookup.get(permissionKey);
+              const isDirect = directPermissionSet.has(permissionKey);
+              const badgeClasses = isDirect
+                ? 'bg-emerald-100 text-emerald-700'
+                : 'bg-blue-100 text-blue-700';
               return (
                 <span
                   key={permissionKey}
-                  className="rounded-full bg-white px-2 py-1 text-xs font-semibold uppercase tracking-wide text-slate-600"
+                  className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide ${badgeClasses}`}
                 >
                   {permission?.name ?? permissionKey}
                 </span>
               );
             })
           )}
+        </div>
+        <div className="mt-3 flex flex-wrap gap-4 text-[11px] uppercase tracking-wide text-slate-400">
+          <span className="inline-flex items-center gap-2">
+            <span className="h-2.5 w-2.5 rounded-full bg-blue-500" /> Role permissions
+          </span>
+          <span className="inline-flex items-center gap-2">
+            <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" /> Direct overrides
+          </span>
         </div>
       </section>
     </div>

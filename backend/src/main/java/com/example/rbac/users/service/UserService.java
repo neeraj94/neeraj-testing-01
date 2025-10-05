@@ -196,12 +196,12 @@ public class UserService {
 
     private Set<Permission> fetchPermissions(Set<String> permissionKeys) {
         if (permissionKeys == null || permissionKeys.isEmpty()) {
-            return Set.of();
+            return new HashSet<>();
         }
         List<Permission> permissions = permissionRepository.findByKeyIn(permissionKeys);
         if (permissions.size() != permissionKeys.size()) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "One or more permissions were not found");
         }
-        return permissions.stream().collect(Collectors.toSet());
+        return permissions.stream().collect(Collectors.toCollection(HashSet::new));
     }
 }
