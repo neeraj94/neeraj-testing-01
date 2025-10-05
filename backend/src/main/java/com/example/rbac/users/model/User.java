@@ -1,6 +1,7 @@
 package com.example.rbac.users.model;
 
 import com.example.rbac.roles.model.Role;
+import com.example.rbac.permissions.model.Permission;
 import com.example.rbac.auth.token.RefreshToken;
 import jakarta.persistence.*;
 import java.time.Instant;
@@ -32,6 +33,12 @@ public class User {
             joinColumns = @JoinColumn(name = "user_id"),
             inverseJoinColumns = @JoinColumn(name = "role_id"))
     private Set<Role> roles = new HashSet<>();
+
+    @ManyToMany
+    @JoinTable(name = "user_permission_overrides",
+            joinColumns = @JoinColumn(name = "user_id"),
+            inverseJoinColumns = @JoinColumn(name = "permission_id"))
+    private Set<Permission> directPermissions = new HashSet<>();
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<RefreshToken> refreshTokens = new HashSet<>();
@@ -100,6 +107,14 @@ public class User {
 
     public void setRoles(Set<Role> roles) {
         this.roles = roles;
+    }
+
+    public Set<Permission> getDirectPermissions() {
+        return directPermissions;
+    }
+
+    public void setDirectPermissions(Set<Permission> directPermissions) {
+        this.directPermissions = directPermissions;
     }
 
     public Set<RefreshToken> getRefreshTokens() {
