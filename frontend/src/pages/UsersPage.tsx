@@ -13,31 +13,33 @@ const UsersPage = () => {
 
   const [form, setForm] = useState({ email: '', fullName: '', password: '' });
 
-  const { data, refetch } = useQuery(['users', 'list'], async () => {
-    const { data: response } = await api.get<Pagination<User>>('/users');
-    return response.content;
+  const {
+    data: users = [],
+    refetch
+  } = useQuery<User[]>({
+    queryKey: ['users', 'list'],
+    queryFn: async () => {
+      const { data: response } = await api.get<Pagination<User>>('/users');
+      return response.content;
+    }
   });
 
-  const createUser = useMutation(
-    async () => {
+  const createUser = useMutation({
+    mutationFn: async () => {
       await api.post('/users', { ...form, roleIds: [] });
     },
-    {
-      onSuccess: () => {
-        setForm({ email: '', fullName: '', password: '' });
-        refetch();
-      }
+    onSuccess: () => {
+      setForm({ email: '', fullName: '', password: '' });
+      refetch();
     }
-  );
+  });
 
-  const deleteUser = useMutation<void, unknown, number>(
-    async (id: number) => {
+  const deleteUser = useMutation<void, unknown, number>({
+    mutationFn: async (id: number) => {
       await api.delete(`/users/${id}`);
     },
-    {
-      onSuccess: () => refetch()
-    }
-  );
+    onSuccess: () => refetch()
+  });
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
@@ -84,9 +86,9 @@ const UsersPage = () => {
           <button
             type="submit"
             className="mt-4 rounded-md bg-primary px-4 py-2 text-sm font-medium text-white"
-            disabled={createUser.isLoading}
+            disabled={createUser.isPending}
           >
-            {createUser.isLoading ? 'Creating...' : 'Create user'}
+            {createUser.isPending ? 'Creating...' : 'Create user'}
           </button>
         </form>
       )}
@@ -101,7 +103,7 @@ const UsersPage = () => {
           </tr>
         </thead>
         <tbody>
-          {data?.map((user) => (
+          {users.map((user) => (
             <tr key={user.id} className="border-t border-slate-200">
               <td className="px-3 py-2">{user.fullName}</td>
               <td className="px-3 py-2">{user.email}</td>
