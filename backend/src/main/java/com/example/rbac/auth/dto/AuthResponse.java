@@ -10,6 +10,7 @@ public class AuthResponse {
     private UserDto user;
     private Set<String> roles;
     private Set<String> permissions;
+    private Set<String> directPermissions;
 
     public String getAccessToken() {
         return accessToken;
@@ -49,5 +50,13 @@ public class AuthResponse {
 
     public void setPermissions(Set<String> permissions) {
         this.permissions = permissions;
+    }
+
+    public Set<String> getDirectPermissions() {
+        return directPermissions;
+    }
+
+    public void setDirectPermissions(Set<String> directPermissions) {
+        this.directPermissions = directPermissions;
     }
 }
