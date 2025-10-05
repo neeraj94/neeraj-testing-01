@@ -18,6 +18,14 @@ export interface User extends Record<string, unknown> {
   directPermissions: PermissionKey[];
 }
 
+export interface UserSummaryMetrics {
+  totalUsers: number;
+  activeUsers: number;
+  inactiveUsers: number;
+  customerUsers: number;
+  internalUsers: number;
+}
+
 export interface Role {
   id: number;
   key: string;

@@ -6,6 +6,7 @@ import com.example.rbac.users.dto.CreateUserRequest;
 import com.example.rbac.users.dto.UpdateUserRequest;
 import com.example.rbac.users.dto.UpdateUserPermissionsRequest;
 import com.example.rbac.users.dto.UserDto;
+import com.example.rbac.users.dto.UserSummaryResponse;
 import com.example.rbac.users.service.UserService;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
@@ -25,6 +26,11 @@ public class UserController {
                                       @RequestParam(name = "page", defaultValue = "0") int page,
                                       @RequestParam(name = "size", defaultValue = "20") int size) {
         return userService.list(search, page, size);
+    }
+
+    @GetMapping("/summary")
+    public UserSummaryResponse summary() {
+        return userService.summary();
     }
 
     @PostMapping

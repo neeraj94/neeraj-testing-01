@@ -32,10 +32,10 @@ export const hasAnyPermission = (userPermissions: PermissionKey[], required: Per
 };
 
 export const TAB_RULES: Record<string, PermissionKey[]> = {
-  Users: ['USER_VIEW', 'USER_VIEW_GLOBAL', 'USER_VIEW_OWN'],
-  Roles: ['ROLE_VIEW'],
-  Permissions: ['PERMISSION_VIEW'],
-  Customers: [
+  Users: [
+    'USER_VIEW',
+    'USER_VIEW_GLOBAL',
+    'USER_VIEW_OWN',
     'CUSTOMER_VIEW',
     'CUSTOMER_VIEW_GLOBAL',
     'CUSTOMER_VIEW_OWN',
@@ -43,6 +43,8 @@ export const TAB_RULES: Record<string, PermissionKey[]> = {
     'CUSTOMER_UPDATE',
     'CUSTOMER_DELETE'
   ],
+  Roles: ['ROLE_VIEW'],
+  Permissions: ['PERMISSION_VIEW'],
   Invoices: [
     'INVOICE_VIEW',
     'INVOICE_VIEW_GLOBAL',

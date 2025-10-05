@@ -37,15 +37,6 @@ const Layout = () => {
       }
     ];
 
-    if (tabs.includes('Customers')) {
-      items.push({
-        key: 'customers',
-        label: 'Customers',
-        to: '/customers',
-        icon: '👥'
-      });
-    }
-
     const salesChildren: SidebarItem[] = [];
     if (tabs.includes('Invoices')) {
       salesChildren.push({ key: 'invoices', label: 'Invoices', to: '/invoices' });
@@ -131,7 +122,7 @@ const Layout = () => {
       }
     }
     dispatch(logout());
-    navigate('/login');
+    navigate('/login', { replace: true });
   };
 
   return (

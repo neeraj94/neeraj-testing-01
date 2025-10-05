@@ -12,6 +12,7 @@ import com.example.rbac.users.dto.ProfileUpdateRequest;
 import com.example.rbac.users.dto.UpdateUserRequest;
 import com.example.rbac.users.dto.UpdateUserPermissionsRequest;
 import com.example.rbac.users.dto.UserDto;
+import com.example.rbac.users.dto.UserSummaryResponse;
 import com.example.rbac.users.mapper.UserMapper;
 import com.example.rbac.users.model.User;
 import com.example.rbac.users.repository.UserRepository;
@@ -32,6 +33,13 @@ import java.util.stream.Collectors;
 @Service
 public class UserService {
 
+    private static final String CUSTOMER_ROLE_KEY = "CUSTOMER";
+
+    private static final String USER_OR_CUSTOMER_VIEW = "hasAnyAuthority('USER_VIEW','USER_VIEW_GLOBAL','USER_VIEW_OWN','CUSTOMER_VIEW','CUSTOMER_VIEW_GLOBAL','CUSTOMER_VIEW_OWN','CUSTOMER_CREATE','CUSTOMER_UPDATE','CUSTOMER_DELETE')";
+    private static final String USER_OR_CUSTOMER_CREATE = "hasAnyAuthority('USER_CREATE','CUSTOMER_CREATE')";
+    private static final String USER_OR_CUSTOMER_UPDATE = "hasAnyAuthority('USER_UPDATE','CUSTOMER_UPDATE')";
+    private static final String USER_OR_CUSTOMER_DELETE = "hasAnyAuthority('USER_DELETE','CUSTOMER_DELETE')";
+
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
@@ -50,7 +58,7 @@ public class UserService {
         this.userMapper = userMapper;
     }
 
-    @PreAuthorize("hasAuthority('USER_VIEW')")
+    @PreAuthorize(USER_OR_CUSTOMER_VIEW)
     public PageResponse<UserDto> list(String search, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
         Page<User> result;
@@ -62,7 +70,7 @@ public class UserService {
         return PageResponse.from(result.map(userMapper::toDto));
     }
 
-    @PreAuthorize("hasAuthority('USER_CREATE')")
+    @PreAuthorize(USER_OR_CUSTOMER_CREATE)
     @Transactional
     public UserDto create(CreateUserRequest request) {
         userRepository.findByEmail(request.getEmail()).ifPresent(existing -> {
@@ -88,14 +96,14 @@ public class UserService {
         return userMapper.toDto(userRepository.findDetailedById(user.getId()).orElseThrow());
     }
 
-    @PreAuthorize("hasAuthority('USER_VIEW')")
+    @PreAuthorize(USER_OR_CUSTOMER_VIEW)
     public UserDto get(Long id) {
         User user = userRepository.findDetailedById(id)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "User not found"));
         return userMapper.toDto(user);
     }
 
-    @PreAuthorize("hasAuthority('USER_UPDATE')")
+    @PreAuthorize(USER_OR_CUSTOMER_UPDATE)
     @Transactional
     public UserDto update(Long id, UpdateUserRequest request) {
         User user = userRepository.findDetailedById(id)
@@ -121,7 +129,7 @@ public class UserService {
         return userMapper.toDto(userRepository.findDetailedById(user.getId()).orElseThrow());
     }
 
-    @PreAuthorize("hasAuthority('USER_DELETE')")
+    @PreAuthorize(USER_OR_CUSTOMER_DELETE)
     public void delete(Long id) {
         if (!userRepository.existsById(id)) {
             throw new ApiException(HttpStatus.NOT_FOUND, "User not found");
@@ -129,7 +137,7 @@ public class UserService {
         userRepository.deleteById(id);
     }
 
-    @PreAuthorize("hasAuthority('USER_UPDATE')")
+    @PreAuthorize(USER_OR_CUSTOMER_UPDATE)
     @Transactional
     public UserDto assignRoles(Long id, AssignRolesRequest request) {
         User user = userRepository.findDetailedById(id)
@@ -143,7 +151,7 @@ public class UserService {
         return userMapper.toDto(userRepository.findDetailedById(user.getId()).orElseThrow());
     }
 
-    @PreAuthorize("hasAuthority('USER_UPDATE')")
+    @PreAuthorize(USER_OR_CUSTOMER_UPDATE)
     @Transactional
     public UserDto removeRole(Long userId, Long roleId) {
         User user = userRepository.findDetailedById(userId)
@@ -165,7 +173,7 @@ public class UserService {
         return userMapper.toDto(user);
     }
 
-    @PreAuthorize("hasAuthority('USER_UPDATE')")
+    @PreAuthorize(USER_OR_CUSTOMER_UPDATE)
     @Transactional
     public UserDto updateDirectPermissions(Long id, UpdateUserPermissionsRequest request) {
         User user = userRepository.findDetailedById(id)
@@ -174,6 +182,16 @@ public class UserService {
         user.setDirectPermissions(direct);
         user = userRepository.save(user);
         return userMapper.toDto(userRepository.findDetailedById(user.getId()).orElseThrow());
+    }
+
+    @PreAuthorize(USER_OR_CUSTOMER_VIEW)
+    public UserSummaryResponse summary() {
+        long total = userRepository.count();
+        long active = userRepository.countByActiveTrue();
+        long inactive = userRepository.countByActiveFalse();
+        long customers = userRepository.countByRoleKeyIgnoreCase(CUSTOMER_ROLE_KEY);
+        long internal = Math.max(total - customers, 0);
+        return new UserSummaryResponse(total, active, inactive, customers, internal);
     }
 
     private Set<Permission> fetchPermissions(Set<String> permissionKeys) {

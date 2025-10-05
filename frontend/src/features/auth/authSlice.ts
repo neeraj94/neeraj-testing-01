@@ -71,6 +71,8 @@ const authSlice = createSlice({
       state.directPermissions = [];
       state.roles = [];
       state.refreshToken = null;
+      state.status = 'idle';
+      state.error = undefined;
       localStorage.removeItem(refreshTokenKey);
     },
     tokensRefreshed(state, action: PayloadAction<AuthResponse>) {
