@@ -10,18 +10,16 @@ const ProfilePage = () => {
   const [form, setForm] = useState({ fullName: user?.fullName ?? '', password: '' });
   const [message, setMessage] = useState<string | null>(null);
 
-  const updateProfile = useMutation(
-    async () => {
+  const updateProfile = useMutation({
+    mutationFn: async () => {
       await api.put('/profile', form);
     },
-    {
-      onSuccess: () => {
-        setMessage('Profile updated successfully');
-        setForm((prev) => ({ ...prev, password: '' }));
-        dispatch(loadCurrentUser());
-      }
+    onSuccess: () => {
+      setMessage('Profile updated successfully');
+      setForm((prev) => ({ ...prev, password: '' }));
+      dispatch(loadCurrentUser());
     }
-  );
+  });
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
@@ -57,9 +55,9 @@ const ProfilePage = () => {
         <button
           type="submit"
           className="mt-6 rounded-md bg-primary px-4 py-2 text-sm font-medium text-white"
-          disabled={updateProfile.isLoading}
+          disabled={updateProfile.isPending}
         >
-          {updateProfile.isLoading ? 'Saving...' : 'Save changes'}
+          {updateProfile.isPending ? 'Saving...' : 'Save changes'}
         </button>
         {message && <p className="mt-4 text-sm text-green-600">{message}</p>}
       </form>

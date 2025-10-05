@@ -18,8 +18,8 @@ public class InvoiceController {
     }
 
     @GetMapping
-    public PageResponse<InvoiceDto> list(@RequestParam(defaultValue = "0") int page,
-                                         @RequestParam(defaultValue = "20") int size) {
+    public PageResponse<InvoiceDto> list(@RequestParam(name = "page", defaultValue = "0") int page,
+                                         @RequestParam(name = "size", defaultValue = "20") int size) {
         return invoiceService.list(page, size);
     }
 
@@ -29,17 +29,17 @@ public class InvoiceController {
     }
 
     @GetMapping("/{id}")
-    public InvoiceDto get(@PathVariable Long id) {
+    public InvoiceDto get(@PathVariable("id") Long id) {
         return invoiceService.get(id);
     }
 
     @PutMapping("/{id}")
-    public InvoiceDto update(@PathVariable Long id, @Valid @RequestBody InvoiceRequest request) {
+    public InvoiceDto update(@PathVariable("id") Long id, @Valid @RequestBody InvoiceRequest request) {
         return invoiceService.update(id, request);
     }
 
     @DeleteMapping("/{id}")
-    public void delete(@PathVariable Long id) {
+    public void delete(@PathVariable("id") Long id) {
         invoiceService.delete(id);
     }
 }
