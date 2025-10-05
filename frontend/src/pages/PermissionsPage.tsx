@@ -5,24 +5,28 @@ import DataTable from '../components/DataTable';
 import type { Pagination, Permission } from '../types/models';
 
 const PermissionsPage = () => {
-  const { data, refetch } = useQuery(['permissions'], async () => {
-    const { data } = await api.get<Pagination<Permission>>('/permissions?size=200');
-    return data.content;
+  const {
+    data: permissions = [],
+    refetch
+  } = useQuery<Permission[]>({
+    queryKey: ['permissions', 'all'],
+    queryFn: async () => {
+      const { data } = await api.get<Pagination<Permission>>('/permissions?size=200');
+      return data.content;
+    }
   });
 
   const [form, setForm] = useState({ key: '', name: '' });
 
-  const createPermission = useMutation(
-    async () => {
+  const createPermission = useMutation({
+    mutationFn: async () => {
       await api.post('/permissions', form);
     },
-    {
-      onSuccess: () => {
-        setForm({ key: '', name: '' });
-        refetch();
-      }
+    onSuccess: () => {
+      setForm({ key: '', name: '' });
+      refetch();
     }
-  );
+  });
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
@@ -58,9 +62,9 @@ const PermissionsPage = () => {
         <button
           type="submit"
           className="mt-4 rounded-md bg-primary px-4 py-2 text-sm font-medium text-white"
-          disabled={createPermission.isLoading}
+          disabled={createPermission.isPending}
         >
-          {createPermission.isLoading ? 'Saving...' : 'Create permission'}
+          {createPermission.isPending ? 'Saving...' : 'Create permission'}
         </button>
       </form>
 
@@ -72,7 +76,7 @@ const PermissionsPage = () => {
           </tr>
         </thead>
         <tbody>
-          {data?.map((permission) => (
+          {permissions.map((permission) => (
             <tr key={permission.id} className="border-t border-slate-200">
               <td className="px-3 py-2 uppercase tracking-wide text-slate-500">{permission.key}</td>
               <td className="px-3 py-2">{permission.name}</td>

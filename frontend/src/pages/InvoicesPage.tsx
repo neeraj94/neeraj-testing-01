@@ -13,9 +13,15 @@ const InvoicesPage = () => {
   const canCreate = (permissions as PermissionKey[]).includes('INVOICE_CREATE');
   const canDelete = (permissions as PermissionKey[]).includes('INVOICE_DELETE');
 
-  const { data, refetch } = useQuery(['invoices'], async () => {
-    const { data } = await api.get<Pagination<Invoice>>('/invoices');
-    return data.content;
+  const {
+    data: invoices = [],
+    refetch
+  } = useQuery<Invoice[]>({
+    queryKey: ['invoices', 'all'],
+    queryFn: async () => {
+      const { data } = await api.get<Pagination<Invoice>>('/invoices');
+      return data.content;
+    }
   });
 
   const [form, setForm] = useState({
@@ -27,8 +33,8 @@ const InvoicesPage = () => {
     item: initialItem
   });
 
-  const createInvoice = useMutation(
-    async () => {
+  const createInvoice = useMutation({
+    mutationFn: async () => {
       await api.post('/invoices', {
         customerId: Number(form.customerId),
         number: form.number,
@@ -39,22 +45,18 @@ const InvoicesPage = () => {
         items: [form.item]
       });
     },
-    {
-      onSuccess: () => {
-        setForm({ customerId: '', number: '', issueDate: '', dueDate: '', taxRate: 10, item: { ...initialItem } });
-        refetch();
-      }
+    onSuccess: () => {
+      setForm({ customerId: '', number: '', issueDate: '', dueDate: '', taxRate: 10, item: { ...initialItem } });
+      refetch();
     }
-  );
+  });
 
-  const deleteInvoice = useMutation<void, unknown, number>(
-    async (id: number) => {
+  const deleteInvoice = useMutation<void, unknown, number>({
+    mutationFn: async (id: number) => {
       await api.delete(`/invoices/${id}`);
     },
-    {
-      onSuccess: () => refetch()
-    }
-  );
+    onSuccess: () => refetch()
+  });
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
@@ -152,9 +154,9 @@ const InvoicesPage = () => {
           <button
             type="submit"
             className="mt-4 rounded-md bg-primary px-4 py-2 text-sm font-medium text-white"
-            disabled={createInvoice.isLoading}
+            disabled={createInvoice.isPending}
           >
-            {createInvoice.isLoading ? 'Saving...' : 'Create invoice'}
+            {createInvoice.isPending ? 'Saving...' : 'Create invoice'}
           </button>
         </form>
       )}
@@ -170,7 +172,7 @@ const InvoicesPage = () => {
           </tr>
         </thead>
         <tbody>
-          {data?.map((invoice) => (
+          {invoices.map((invoice) => (
             <tr key={invoice.id} className="border-t border-slate-200">
               <td className="px-3 py-2">{invoice.number}</td>
               <td className="px-3 py-2">{invoice.customerName}</td>

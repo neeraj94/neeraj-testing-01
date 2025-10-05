@@ -4,19 +4,28 @@ import type { Customer, Invoice, User } from '../types/models';
 import DataTable from '../components/DataTable';
 
 const DashboardPage = () => {
-  const { data: users } = useQuery(['users'], async () => {
-    const { data } = await api.get<{ content: User[] }>('/users?size=5');
-    return data.content;
+  const { data: users = [] } = useQuery<User[]>({
+    queryKey: ['users', 'recent'],
+    queryFn: async () => {
+      const { data } = await api.get<{ content: User[] }>('/users?size=5');
+      return data.content;
+    }
   });
 
-  const { data: customers } = useQuery(['customers'], async () => {
-    const { data } = await api.get<{ content: Customer[] }>('/customers?size=5');
-    return data.content;
+  const { data: customers = [] } = useQuery<Customer[]>({
+    queryKey: ['customers', 'recent'],
+    queryFn: async () => {
+      const { data } = await api.get<{ content: Customer[] }>('/customers?size=5');
+      return data.content;
+    }
   });
 
-  const { data: invoices } = useQuery(['invoices'], async () => {
-    const { data } = await api.get<{ content: Invoice[] }>('/invoices?size=5');
-    return data.content;
+  const { data: invoices = [] } = useQuery<Invoice[]>({
+    queryKey: ['invoices', 'recent'],
+    queryFn: async () => {
+      const { data } = await api.get<{ content: Invoice[] }>('/invoices?size=5');
+      return data.content;
+    }
   });
 
   return (
@@ -46,7 +55,7 @@ const DashboardPage = () => {
           </tr>
         </thead>
         <tbody>
-          {invoices?.map((invoice) => (
+          {invoices.map((invoice) => (
             <tr key={invoice.id} className="border-t border-slate-200">
               <td className="px-3 py-2">{invoice.number}</td>
               <td className="px-3 py-2">{invoice.customerName}</td>
