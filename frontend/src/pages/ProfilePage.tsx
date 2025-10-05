@@ -3,26 +3,48 @@ import { useMutation } from '@tanstack/react-query';
 import api from '../services/http';
 import { useAppSelector, useAppDispatch } from '../app/hooks';
 import { loadCurrentUser } from '../features/auth/authSlice';
+import { useToast } from '../components/ToastProvider';
+import { extractErrorMessage } from '../utils/errors';
 
 const ProfilePage = () => {
   const dispatch = useAppDispatch();
   const { user } = useAppSelector((state) => state.auth);
   const [form, setForm] = useState({ fullName: user?.fullName ?? '', password: '' });
-  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const { notify } = useToast();
 
   const updateProfile = useMutation({
     mutationFn: async () => {
       await api.put('/profile', form);
     },
     onSuccess: () => {
-      setMessage('Profile updated successfully');
       setForm((prev) => ({ ...prev, password: '' }));
+      setError(null);
       dispatch(loadCurrentUser());
+      notify({ type: 'success', message: 'Profile updated successfully.' });
+    },
+    onError: (err) => {
+      const message = extractErrorMessage(err, 'Unable to update profile.');
+      setError(message);
+      notify({ type: 'error', message });
     }
   });
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
+    if (!form.fullName.trim()) {
+      const message = 'Full name is required.';
+      setError(message);
+      notify({ type: 'error', message });
+      return;
+    }
+    if (form.password && form.password.length > 0 && form.password.length < 8) {
+      const message = 'Password must be at least 8 characters long.';
+      setError(message);
+      notify({ type: 'error', message });
+      return;
+    }
+    setError(null);
     updateProfile.mutate();
   };
 
@@ -59,7 +81,7 @@ const ProfilePage = () => {
         >
           {updateProfile.isPending ? 'Saving...' : 'Save changes'}
         </button>
-        {message && <p className="mt-4 text-sm text-green-600">{message}</p>}
+        {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
       </form>
     </div>
   );

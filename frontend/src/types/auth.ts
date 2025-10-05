@@ -14,6 +14,7 @@ export interface UserSummary {
   active: boolean;
   roles: string[];
   permissions: PermissionKey[];
+  directPermissions: PermissionKey[];
 }
 
 export interface AuthResponse {
@@ -22,4 +23,5 @@ export interface AuthResponse {
   user: UserSummary;
   roles: string[];
   permissions: PermissionKey[];
+  directPermissions: PermissionKey[];
 }

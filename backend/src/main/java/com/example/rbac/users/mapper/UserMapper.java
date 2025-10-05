@@ -12,16 +12,25 @@ import java.util.stream.Collectors;
 public interface UserMapper {
 
     @Mapping(target = "roles", expression = "java(extractRoleKeys(user))")
-    @Mapping(target = "permissions", expression = "java(extractPermissions(user))")
+    @Mapping(target = "permissions", expression = "java(extractAllPermissions(user))")
+    @Mapping(target = "directPermissions", expression = "java(extractDirectPermissions(user))")
     UserDto toDto(User user);
 
     default Set<String> extractRoleKeys(User user) {
         return user.getRoles().stream().map(role -> role.getKey()).collect(Collectors.toSet());
     }
 
-    default Set<String> extractPermissions(User user) {
-        return user.getRoles().stream()
+    default Set<String> extractAllPermissions(User user) {
+        Set<String> permissions = user.getRoles().stream()
                 .flatMap(role -> role.getPermissions().stream())
+                .map(permission -> permission.getKey())
+                .collect(Collectors.toSet());
+        permissions.addAll(extractDirectPermissions(user));
+        return permissions;
+    }
+
+    default Set<String> extractDirectPermissions(User user) {
+        return user.getDirectPermissions().stream()
                 .map(permission -> permission.getKey())
                 .collect(Collectors.toSet());
     }

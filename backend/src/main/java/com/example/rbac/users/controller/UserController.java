@@ -4,6 +4,7 @@ import com.example.rbac.common.pagination.PageResponse;
 import com.example.rbac.users.dto.AssignRolesRequest;
 import com.example.rbac.users.dto.CreateUserRequest;
 import com.example.rbac.users.dto.UpdateUserRequest;
+import com.example.rbac.users.dto.UpdateUserPermissionsRequest;
 import com.example.rbac.users.dto.UserDto;
 import com.example.rbac.users.service.UserService;
 import jakarta.validation.Valid;
@@ -54,5 +55,11 @@ public class UserController {
     @DeleteMapping("/{userId}/roles/{roleId}")
     public UserDto removeRole(@PathVariable("userId") Long userId, @PathVariable("roleId") Long roleId) {
         return userService.removeRole(userId, roleId);
+    }
+
+    @PutMapping("/{id}/permissions")
+    public UserDto updatePermissions(@PathVariable("id") Long id,
+                                     @Valid @RequestBody UpdateUserPermissionsRequest request) {
+        return userService.updateDirectPermissions(id, request);
     }
 }

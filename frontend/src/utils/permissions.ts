@@ -35,6 +35,20 @@ export const TAB_RULES: Record<string, PermissionKey[]> = {
   Users: ['USER_VIEW', 'USER_VIEW_GLOBAL', 'USER_VIEW_OWN'],
   Roles: ['ROLE_VIEW'],
   Permissions: ['PERMISSION_VIEW'],
-  Customers: ['CUSTOMER_VIEW', 'CUSTOMER_VIEW_GLOBAL', 'CUSTOMER_VIEW_OWN'],
-  Invoices: ['INVOICE_VIEW', 'INVOICE_VIEW_GLOBAL', 'INVOICE_VIEW_OWN']
+  Customers: [
+    'CUSTOMER_VIEW',
+    'CUSTOMER_VIEW_GLOBAL',
+    'CUSTOMER_VIEW_OWN',
+    'CUSTOMER_CREATE',
+    'CUSTOMER_UPDATE',
+    'CUSTOMER_DELETE'
+  ],
+  Invoices: [
+    'INVOICE_VIEW',
+    'INVOICE_VIEW_GLOBAL',
+    'INVOICE_VIEW_OWN',
+    'INVOICE_CREATE',
+    'INVOICE_UPDATE',
+    'INVOICE_DELETE'
+  ]
 };

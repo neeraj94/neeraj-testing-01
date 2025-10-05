@@ -5,11 +5,14 @@ import DataTable from '../components/DataTable';
 import type { Customer, Pagination } from '../types/models';
 import { useAppSelector } from '../app/hooks';
 import type { PermissionKey } from '../types/auth';
+import { useToast } from '../components/ToastProvider';
+import { extractErrorMessage } from '../utils/errors';
 
 const CustomersPage = () => {
   const { permissions } = useAppSelector((state) => state.auth);
   const canCreate = (permissions as PermissionKey[]).includes('CUSTOMER_CREATE');
   const canDelete = (permissions as PermissionKey[]).includes('CUSTOMER_DELETE');
+  const { notify } = useToast();
 
   const {
     data: customers = [],
@@ -23,6 +26,7 @@ const CustomersPage = () => {
   });
 
   const [form, setForm] = useState({ name: '', email: '', phone: '', address: '' });
+  const [formError, setFormError] = useState<string | null>(null);
 
   const createCustomer = useMutation({
     mutationFn: async () => {
@@ -30,7 +34,12 @@ const CustomersPage = () => {
     },
     onSuccess: () => {
       setForm({ name: '', email: '', phone: '', address: '' });
+      setFormError(null);
+      notify({ type: 'success', message: 'Customer created successfully.' });
       refetch();
+    },
+    onError: (error) => {
+      notify({ type: 'error', message: extractErrorMessage(error, 'Unable to create customer.') });
     }
   });
 
@@ -38,11 +47,22 @@ const CustomersPage = () => {
     mutationFn: async (id: number) => {
       await api.delete(`/customers/${id}`);
     },
-    onSuccess: () => refetch()
+    onSuccess: () => {
+      notify({ type: 'success', message: 'Customer removed.' });
+      refetch();
+    },
+    onError: (error) => {
+      notify({ type: 'error', message: extractErrorMessage(error, 'Unable to remove customer.') });
+    }
   });
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
+    if (!form.name.trim()) {
+      setFormError('Name is required.');
+      return;
+    }
+    setFormError(null);
     createCustomer.mutate();
   };
 
@@ -60,6 +80,7 @@ const CustomersPage = () => {
                 value={form.name}
                 onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
                 required
+                minLength={2}
                 className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
               />
             </div>
@@ -90,6 +111,7 @@ const CustomersPage = () => {
               />
             </div>
           </div>
+          {formError && <p className="mt-2 text-sm text-red-600">{formError}</p>}
           <button
             type="submit"
             className="mt-4 rounded-md bg-primary px-4 py-2 text-sm font-medium text-white"

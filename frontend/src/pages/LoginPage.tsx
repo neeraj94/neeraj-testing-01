@@ -2,27 +2,24 @@ import { FormEvent, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../app/hooks';
 import { login } from '../features/auth/authSlice';
+import { useToast } from '../components/ToastProvider';
 
 const LoginPage = () => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const { status, error } = useAppSelector((state) => state.auth);
+  const { notify } = useToast();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showErrorDialog, setShowErrorDialog] = useState(false);
-
-  useEffect(() => {
-    if (status === 'failed' && error) {
-      setShowErrorDialog(true);
-    }
-  }, [status, error]);
-
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     setShowErrorDialog(false);
     const result = await dispatch(login({ email, password }));
     if (login.fulfilled.match(result)) {
+      notify({ type: 'success', message: 'Signed in successfully.' });
       navigate('/dashboard');
+    } else if (login.rejected.match(result)) {
+      notify({ type: 'error', message: result.payload ?? 'Unable to sign in right now.' });
     }
   };
 
@@ -123,7 +120,6 @@ const LoginPage = () => {
               className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 focus:border-primary focus:outline-none"
             />
           </div>
-          {error && <p className="text-sm text-red-600">{error}</p>}
           <button
             type="submit"
             className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-blue-600"

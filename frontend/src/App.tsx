@@ -62,10 +62,36 @@ const App = () => {
           <Route element={<PermissionRoute required={['PERMISSION_VIEW']} />}>
             <Route path="/permissions" element={<PermissionsPage />} />
           </Route>
-          <Route element={<PermissionRoute required={['CUSTOMER_VIEW', 'CUSTOMER_VIEW_GLOBAL', 'CUSTOMER_VIEW_OWN']} />}>
+          <Route
+            element={
+              <PermissionRoute
+                required={[
+                  'CUSTOMER_VIEW',
+                  'CUSTOMER_VIEW_GLOBAL',
+                  'CUSTOMER_VIEW_OWN',
+                  'CUSTOMER_CREATE',
+                  'CUSTOMER_UPDATE',
+                  'CUSTOMER_DELETE'
+                ]}
+              />
+            }
+          >
             <Route path="/customers" element={<CustomersPage />} />
           </Route>
-          <Route element={<PermissionRoute required={['INVOICE_VIEW', 'INVOICE_VIEW_GLOBAL', 'INVOICE_VIEW_OWN']} />}>
+          <Route
+            element={
+              <PermissionRoute
+                required={[
+                  'INVOICE_VIEW',
+                  'INVOICE_VIEW_GLOBAL',
+                  'INVOICE_VIEW_OWN',
+                  'INVOICE_CREATE',
+                  'INVOICE_UPDATE',
+                  'INVOICE_DELETE'
+                ]}
+              />
+            }
+          >
             <Route path="/invoices" element={<InvoicesPage />} />
           </Route>
           <Route path="/profile" element={<ProfilePage />} />

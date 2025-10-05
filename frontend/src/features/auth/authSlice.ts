@@ -9,6 +9,7 @@ interface AuthState {
   refreshToken: string | null;
   roles: string[];
   permissions: string[];
+  directPermissions: string[];
   status: 'idle' | 'loading' | 'failed';
   error?: string;
 }
@@ -21,6 +22,7 @@ const initialState: AuthState = {
   refreshToken: localStorage.getItem(refreshTokenKey),
   roles: [],
   permissions: [],
+  directPermissions: [],
   status: 'idle'
 };
 
@@ -66,6 +68,7 @@ const authSlice = createSlice({
       state.user = null;
       state.accessToken = null;
       state.permissions = [];
+      state.directPermissions = [];
       state.roles = [];
       state.refreshToken = null;
       localStorage.removeItem(refreshTokenKey);
@@ -78,6 +81,7 @@ const authSlice = createSlice({
         state.user = action.payload.user;
         state.roles = action.payload.roles;
         state.permissions = action.payload.permissions;
+        state.directPermissions = action.payload.directPermissions;
       }
     }
   },
@@ -94,6 +98,7 @@ const authSlice = createSlice({
         state.refreshToken = action.payload.refreshToken;
         state.roles = action.payload.roles;
         state.permissions = action.payload.permissions;
+        state.directPermissions = action.payload.directPermissions;
         localStorage.setItem(refreshTokenKey, action.payload.refreshToken);
       })
       .addCase(login.rejected, (state, action) => {
@@ -106,12 +111,14 @@ const authSlice = createSlice({
         state.refreshToken = action.payload.refreshToken;
         state.roles = action.payload.roles;
         state.permissions = action.payload.permissions;
+        state.directPermissions = action.payload.directPermissions;
         localStorage.setItem(refreshTokenKey, action.payload.refreshToken);
       })
       .addCase(loadCurrentUser.fulfilled, (state, action) => {
         state.user = action.payload;
         state.roles = action.payload.roles;
         state.permissions = action.payload.permissions;
+        state.directPermissions = action.payload.directPermissions;
       });
   }
 });

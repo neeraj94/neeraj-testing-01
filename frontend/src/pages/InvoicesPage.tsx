@@ -5,6 +5,8 @@ import DataTable from '../components/DataTable';
 import type { Invoice, Pagination } from '../types/models';
 import { useAppSelector } from '../app/hooks';
 import type { PermissionKey } from '../types/auth';
+import { useToast } from '../components/ToastProvider';
+import { extractErrorMessage } from '../utils/errors';
 
 const initialItem = { description: '', qty: 1, unitPrice: 0 };
 
@@ -12,6 +14,7 @@ const InvoicesPage = () => {
   const { permissions } = useAppSelector((state) => state.auth);
   const canCreate = (permissions as PermissionKey[]).includes('INVOICE_CREATE');
   const canDelete = (permissions as PermissionKey[]).includes('INVOICE_DELETE');
+  const { notify } = useToast();
 
   const {
     data: invoices = [],
@@ -32,6 +35,7 @@ const InvoicesPage = () => {
     taxRate: 10,
     item: initialItem
   });
+  const [formError, setFormError] = useState<string | null>(null);
 
   const createInvoice = useMutation({
     mutationFn: async () => {
@@ -47,7 +51,12 @@ const InvoicesPage = () => {
     },
     onSuccess: () => {
       setForm({ customerId: '', number: '', issueDate: '', dueDate: '', taxRate: 10, item: { ...initialItem } });
+      setFormError(null);
+      notify({ type: 'success', message: 'Invoice created successfully.' });
       refetch();
+    },
+    onError: (error) => {
+      notify({ type: 'error', message: extractErrorMessage(error, 'Unable to create invoice.') });
     }
   });
 
@@ -55,11 +64,23 @@ const InvoicesPage = () => {
     mutationFn: async (id: number) => {
       await api.delete(`/invoices/${id}`);
     },
-    onSuccess: () => refetch()
+    onSuccess: () => {
+      notify({ type: 'success', message: 'Invoice removed.' });
+      refetch();
+    },
+    onError: (error) => {
+      notify({ type: 'error', message: extractErrorMessage(error, 'Unable to remove invoice.') });
+    }
   });
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
+    if (!form.customerId || !form.number.trim()) {
+      setFormError('Customer ID and invoice number are required.');
+      notify({ type: 'error', message: 'Customer ID and invoice number are required.' });
+      return;
+    }
+    setFormError(null);
     createInvoice.mutate();
   };
 
@@ -151,6 +172,7 @@ const InvoicesPage = () => {
               />
             </div>
           </div>
+          {formError && <p className="mt-3 text-sm text-red-600">{formError}</p>}
           <button
             type="submit"
             className="mt-4 rounded-md bg-primary px-4 py-2 text-sm font-medium text-white"

@@ -122,6 +122,7 @@ public class AuthService {
         response.setUser(userDto);
         response.setRoles(userDto.getRoles());
         response.setPermissions(userDto.getPermissions());
+        response.setDirectPermissions(userDto.getDirectPermissions());
         return response;
     }
 }

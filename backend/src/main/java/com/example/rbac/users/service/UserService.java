@@ -4,10 +4,13 @@ import com.example.rbac.common.exception.ApiException;
 import com.example.rbac.common.pagination.PageResponse;
 import com.example.rbac.roles.model.Role;
 import com.example.rbac.roles.repository.RoleRepository;
+import com.example.rbac.permissions.model.Permission;
+import com.example.rbac.permissions.repository.PermissionRepository;
 import com.example.rbac.users.dto.AssignRolesRequest;
 import com.example.rbac.users.dto.CreateUserRequest;
 import com.example.rbac.users.dto.ProfileUpdateRequest;
 import com.example.rbac.users.dto.UpdateUserRequest;
+import com.example.rbac.users.dto.UpdateUserPermissionsRequest;
 import com.example.rbac.users.dto.UserDto;
 import com.example.rbac.users.mapper.UserMapper;
 import com.example.rbac.users.model.User;
@@ -22,7 +25,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 public class UserService {
@@ -30,15 +35,18 @@ public class UserService {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
+    private final PermissionRepository permissionRepository;
     private final UserMapper userMapper;
 
     public UserService(UserRepository userRepository,
                        RoleRepository roleRepository,
                        PasswordEncoder passwordEncoder,
+                       PermissionRepository permissionRepository,
                        UserMapper userMapper) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
+        this.permissionRepository = permissionRepository;
         this.userMapper = userMapper;
     }
 
@@ -72,8 +80,12 @@ public class UserService {
             }
             user.setRoles(roles);
         }
+        if (request.getPermissionKeys() != null && !request.getPermissionKeys().isEmpty()) {
+            Set<Permission> direct = fetchPermissions(request.getPermissionKeys());
+            user.setDirectPermissions(direct);
+        }
         user = userRepository.save(user);
-        return userMapper.toDto(user);
+        return userMapper.toDto(userRepository.findDetailedById(user.getId()).orElseThrow());
     }
 
     @PreAuthorize("hasAuthority('USER_VIEW')")
@@ -86,7 +98,7 @@ public class UserService {
     @PreAuthorize("hasAuthority('USER_UPDATE')")
     @Transactional
     public UserDto update(Long id, UpdateUserRequest request) {
-        User user = userRepository.findById(id)
+        User user = userRepository.findDetailedById(id)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "User not found"));
         user.setEmail(request.getEmail());
         user.setFullName(request.getFullName());
@@ -96,7 +108,14 @@ public class UserService {
         }
         if (request.getRoleIds() != null) {
             Set<Role> roles = new HashSet<>(roleRepository.findAllById(request.getRoleIds()));
+            if (roles.size() != request.getRoleIds().size()) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, "One or more roles not found");
+            }
             user.setRoles(roles);
+        }
+        if (request.getPermissionKeys() != null) {
+            Set<Permission> direct = fetchPermissions(request.getPermissionKeys());
+            user.setDirectPermissions(direct);
         }
         user = userRepository.save(user);
         return userMapper.toDto(userRepository.findDetailedById(user.getId()).orElseThrow());
@@ -121,7 +140,7 @@ public class UserService {
         }
         user.setRoles(roles);
         user = userRepository.save(user);
-        return userMapper.toDto(user);
+        return userMapper.toDto(userRepository.findDetailedById(user.getId()).orElseThrow());
     }
 
     @PreAuthorize("hasAuthority('USER_UPDATE')")
@@ -131,7 +150,7 @@ public class UserService {
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "User not found"));
         user.getRoles().removeIf(role -> role.getId().equals(roleId));
         user = userRepository.save(user);
-        return userMapper.toDto(user);
+        return userMapper.toDto(userRepository.findDetailedById(user.getId()).orElseThrow());
     }
 
     @Transactional
@@ -144,5 +163,27 @@ public class UserService {
         }
         user = userRepository.save(user);
         return userMapper.toDto(user);
+    }
+
+    @PreAuthorize("hasAuthority('USER_UPDATE')")
+    @Transactional
+    public UserDto updateDirectPermissions(Long id, UpdateUserPermissionsRequest request) {
+        User user = userRepository.findDetailedById(id)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "User not found"));
+        Set<Permission> direct = fetchPermissions(request.getPermissionKeys());
+        user.setDirectPermissions(direct);
+        user = userRepository.save(user);
+        return userMapper.toDto(userRepository.findDetailedById(user.getId()).orElseThrow());
+    }
+
+    private Set<Permission> fetchPermissions(Set<String> permissionKeys) {
+        if (permissionKeys == null || permissionKeys.isEmpty()) {
+            return Set.of();
+        }
+        List<Permission> permissions = permissionRepository.findByKeyIn(permissionKeys);
+        if (permissions.size() != permissionKeys.size()) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "One or more permissions were not found");
+        }
+        return permissions.stream().collect(Collectors.toSet());
     }
 }

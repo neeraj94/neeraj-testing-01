@@ -5,6 +5,7 @@ import api from '../services/http';
 import DataTable from '../components/DataTable';
 import type { Pagination, Permission, Role } from '../types/models';
 import type { PermissionKey } from '../types/auth';
+import { useToast } from '../components/ToastProvider';
 
 type PanelView = 'overview' | 'create';
 
@@ -355,6 +356,8 @@ const CloseIcon = () => (
 );
 
 const RolesPage = () => {
+  const { notify } = useToast();
+
   const [activePanel, setActivePanel] = useState<PanelView>('overview');
   const [pageSize, setPageSize] = useState(25);
   const [page, setPage] = useState(0);
@@ -366,6 +369,8 @@ const RolesPage = () => {
   const [editingRole, setEditingRole] = useState<Role | null>(null);
   const [editForm, setEditForm] = useState({ name: '', key: '' });
   const [editingPermissions, setEditingPermissions] = useState<number[]>([]);
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [editError, setEditError] = useState<string | null>(null);
 
   const {
     data: rolesResponse,
@@ -397,6 +402,7 @@ const RolesPage = () => {
   useEffect(() => {
     if (editingRole) {
       setEditForm({ name: editingRole.name, key: editingRole.key });
+      setEditError(null);
       if (permissions.length) {
         const ids = permissions
           .filter((permission) =>
@@ -521,7 +527,14 @@ const RolesPage = () => {
       setKeyTouched(false);
       setRolePermissions([]);
       setActivePanel('overview');
+      setCreateError(null);
       refetchRoles();
+      notify({ type: 'success', message: 'Role created successfully.' });
+    },
+    onError: (error) => {
+      const message = getErrorMessage(error);
+      setCreateError(message);
+      notify({ type: 'error', message });
     }
   });
 
@@ -532,7 +545,14 @@ const RolesPage = () => {
     },
     onSuccess: () => {
       setEditingRole(null);
+      setEditError(null);
       refetchRoles();
+      notify({ type: 'success', message: 'Role updated successfully.' });
+    },
+    onError: (error) => {
+      const message = getErrorMessage(error);
+      setEditError(message);
+      notify({ type: 'error', message });
     }
   });
 
@@ -540,7 +560,13 @@ const RolesPage = () => {
     mutationFn: async (id: number) => {
       await api.delete(`/roles/${id}`);
     },
-    onSuccess: () => refetchRoles()
+    onSuccess: () => {
+      refetchRoles();
+      notify({ type: 'success', message: 'Role deleted.' });
+    },
+    onError: (error) => {
+      notify({ type: 'error', message: getErrorMessage(error) });
+    }
   });
 
   const handleCreate = (event: FormEvent) => {
@@ -548,9 +574,12 @@ const RolesPage = () => {
     const formattedKey = roleKey || formatRoleKey(roleName);
     const trimmedName = roleName.trim();
     if (!formattedKey || !trimmedName) {
+      setCreateError('Role name and key are required.');
+      notify({ type: 'error', message: 'Role name and key are required.' });
       return;
     }
 
+    setCreateError(null);
     createRole.mutate({ key: formattedKey, name: trimmedName, permissionIds: rolePermissions });
   };
 
@@ -563,9 +592,12 @@ const RolesPage = () => {
     const formattedKey = editForm.key || editingRole.key;
     const trimmedName = editForm.name.trim();
     if (!trimmedName) {
+      setEditError('Role name is required.');
+      notify({ type: 'error', message: 'Role name is required.' });
       return;
     }
 
+    setEditError(null);
     updateRole.mutate({
       id: editingRole.id,
       key: formatRoleKey(formattedKey),
@@ -789,6 +821,7 @@ const RolesPage = () => {
                     setRoleKey('');
                     setRolePermissions([]);
                     setKeyTouched(false);
+                    setCreateError(null);
                   }}
                   className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 transition hover:border-slate-400 hover:text-slate-800"
                 >
@@ -804,9 +837,9 @@ const RolesPage = () => {
               </div>
             </div>
 
-            {createRole.isError && (
+            {(createError || createRole.isError) && (
               <div className="mx-6 mt-4 rounded-md bg-red-50 px-4 py-3 text-sm text-red-600">
-                {getErrorMessage(createRole.error)}
+                {createError ?? getErrorMessage(createRole.error)}
               </div>
             )}
 
@@ -866,16 +899,19 @@ const RolesPage = () => {
               </div>
               <button
                 type="button"
-                onClick={() => setEditingRole(null)}
+                onClick={() => {
+                  setEditingRole(null);
+                  setEditError(null);
+                }}
                 className="rounded-md p-1 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
               >
                 <CloseIcon />
               </button>
             </div>
 
-            {updateRole.isError && (
+            {(editError || updateRole.isError) && (
               <div className="mx-6 mt-4 rounded-md bg-red-50 px-4 py-3 text-sm text-red-600">
-                {getErrorMessage(updateRole.error)}
+                {editError ?? getErrorMessage(updateRole.error)}
               </div>
             )}
 
