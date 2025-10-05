@@ -27,6 +27,11 @@ app:
     secret: V1RY9m0xL8U7Q2pX5s6d8f1g2h3j4k5l6m7n8o9p0q1r2s3t4u5v6w7x8y9z0a
     access-token-ttl-seconds: 900
     refresh-token-ttl-seconds: 604800
+  cors:
+    allowed-origins:
+      - http://localhost:*
+      - http://127.0.0.1:*
+      - http://0.0.0.0:*
 
 springdoc:
   swagger-ui:
