@@ -1,4 +1,4 @@
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../app/hooks';
 import { login } from '../features/auth/authSlice';
@@ -13,6 +13,7 @@ const LoginPage = () => {
   const [password, setPassword] = useState('');
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
+    setShowErrorDialog(false);
     const result = await dispatch(login({ email, password }));
     if (login.fulfilled.match(result)) {
       notify({ type: 'success', message: 'Signed in successfully.' });
@@ -22,8 +23,79 @@ const LoginPage = () => {
     }
   };
 
+  const handleDismissError = () => {
+    setShowErrorDialog(false);
+  };
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-100 px-4">
+      {showErrorDialog && error && (
+        <div
+          role="alertdialog"
+          aria-modal="true"
+          aria-labelledby="login-error-title"
+          aria-describedby="login-error-description"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm"
+        >
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl ring-1 ring-slate-200">
+            <div className="flex items-start gap-4">
+              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-red-100 text-red-600">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  className="h-6 w-6"
+                  aria-hidden="true"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M12 9v3m0 3h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+                  />
+                </svg>
+              </span>
+              <div className="flex-1">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <h3 id="login-error-title" className="text-lg font-semibold text-slate-900">
+                      Sign in failed
+                    </h3>
+                    <p id="login-error-description" className="mt-1 text-sm text-slate-600">
+                      {error}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleDismissError}
+                    className="rounded-full p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+                    aria-label="Close sign in error dialog"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      className="h-5 w-5"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" d="m6 6 12 12M18 6 6 18" />
+                    </svg>
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleDismissError}
+                  className="mt-4 w-full rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-700"
+                >
+                  Try again
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="w-full max-w-md rounded-xl bg-white p-8 shadow-lg">
         <h2 className="text-2xl font-semibold text-slate-800">Welcome Back</h2>
         <p className="mt-2 text-sm text-slate-500">Sign in with your RBAC Dashboard account.</p>
