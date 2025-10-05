@@ -11,6 +11,7 @@ interface AuthState {
   roles: string[];
   permissions: string[];
   directPermissions: string[];
+  revokedPermissions: string[];
   status: 'idle' | 'loading' | 'failed';
   error?: string;
 }
@@ -24,6 +25,7 @@ const initialState: AuthState = {
   roles: [],
   permissions: [],
   directPermissions: [],
+  revokedPermissions: [],
   status: 'idle'
 };
 
@@ -70,6 +72,7 @@ const authSlice = createSlice({
       state.accessToken = null;
       state.permissions = [];
       state.directPermissions = [];
+      state.revokedPermissions = [];
       state.roles = [];
       state.refreshToken = null;
       state.status = 'idle';
@@ -85,6 +88,7 @@ const authSlice = createSlice({
         state.roles = action.payload.roles;
         state.permissions = action.payload.permissions;
         state.directPermissions = action.payload.directPermissions;
+        state.revokedPermissions = action.payload.revokedPermissions;
       }
     }
   },
@@ -102,6 +106,7 @@ const authSlice = createSlice({
         state.roles = action.payload.roles;
         state.permissions = action.payload.permissions;
         state.directPermissions = action.payload.directPermissions;
+        state.revokedPermissions = action.payload.revokedPermissions;
         safeLocalStorage.setItem(refreshTokenKey, action.payload.refreshToken);
       })
       .addCase(login.rejected, (state, action) => {
@@ -115,6 +120,7 @@ const authSlice = createSlice({
         state.roles = action.payload.roles;
         state.permissions = action.payload.permissions;
         state.directPermissions = action.payload.directPermissions;
+        state.revokedPermissions = action.payload.revokedPermissions;
         safeLocalStorage.setItem(refreshTokenKey, action.payload.refreshToken);
       })
       .addCase(loadCurrentUser.fulfilled, (state, action) => {
@@ -122,6 +128,7 @@ const authSlice = createSlice({
         state.roles = action.payload.roles;
         state.permissions = action.payload.permissions;
         state.directPermissions = action.payload.directPermissions;
+        state.revokedPermissions = action.payload.revokedPermissions;
       });
   }
 });

@@ -11,6 +11,7 @@ public class AuthResponse {
     private Set<String> roles;
     private Set<String> permissions;
     private Set<String> directPermissions;
+    private Set<String> revokedPermissions;
 
     public String getAccessToken() {
         return accessToken;
@@ -58,5 +59,13 @@ public class AuthResponse {
 
     public void setDirectPermissions(Set<String> directPermissions) {
         this.directPermissions = directPermissions;
+    }
+
+    public Set<String> getRevokedPermissions() {
+        return revokedPermissions;
+    }
+
+    public void setRevokedPermissions(Set<String> revokedPermissions) {
+        this.revokedPermissions = revokedPermissions;
     }
 }

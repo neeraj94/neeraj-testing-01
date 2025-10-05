@@ -105,10 +105,11 @@ public class UserService {
             }
             user.setRoles(roles);
         }
-        if (request.getPermissionKeys() != null && !request.getPermissionKeys().isEmpty()) {
-            Set<Permission> direct = fetchPermissions(request.getPermissionKeys());
-            user.setDirectPermissions(direct);
-        }
+        Set<Permission> direct = fetchPermissions(request.getPermissionKeys());
+        user.setDirectPermissions(direct);
+        Set<Permission> revoked = fetchPermissions(request.getRevokedPermissionKeys());
+        removeOverlap(direct, revoked);
+        user.setRevokedPermissions(revoked);
         user = userRepository.save(user);
         return userMapper.toDto(userRepository.findDetailedById(user.getId()).orElseThrow());
     }
@@ -141,6 +142,14 @@ public class UserService {
         if (request.getPermissionKeys() != null) {
             Set<Permission> direct = fetchPermissions(request.getPermissionKeys());
             user.setDirectPermissions(direct);
+            Set<Permission> revoked = fetchPermissions(request.getRevokedPermissionKeys());
+            removeOverlap(direct, revoked);
+            user.setRevokedPermissions(revoked);
+        }
+        if (request.getRevokedPermissionKeys() != null && request.getPermissionKeys() == null) {
+            Set<Permission> revoked = fetchPermissions(request.getRevokedPermissionKeys());
+            removeOverlap(user.getDirectPermissions(), revoked);
+            user.setRevokedPermissions(revoked);
         }
         user = userRepository.save(user);
         return userMapper.toDto(userRepository.findDetailedById(user.getId()).orElseThrow());
@@ -205,8 +214,11 @@ public class UserService {
     public UserDto updateDirectPermissions(Long id, UpdateUserPermissionsRequest request) {
         User user = userRepository.findDetailedById(id)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "User not found"));
-        Set<Permission> direct = fetchPermissions(request.getPermissionKeys());
+        Set<Permission> direct = fetchPermissions(request.getGrantedPermissionKeys());
+        Set<Permission> revoked = fetchPermissions(request.getRevokedPermissionKeys());
+        removeOverlap(direct, revoked);
         user.setDirectPermissions(direct);
+        user.setRevokedPermissions(revoked);
         user = userRepository.save(user);
         return userMapper.toDto(userRepository.findDetailedById(user.getId()).orElseThrow());
     }
@@ -225,10 +237,27 @@ public class UserService {
         if (permissionKeys == null || permissionKeys.isEmpty()) {
             return new HashSet<>();
         }
-        List<Permission> permissions = permissionRepository.findByKeyIn(permissionKeys);
-        if (permissions.size() != permissionKeys.size()) {
+        Set<String> normalized = permissionKeys.stream()
+                .filter(key -> key != null && !key.isBlank())
+                .map(key -> key.toUpperCase())
+                .collect(Collectors.toCollection(HashSet::new));
+        if (normalized.isEmpty()) {
+            return new HashSet<>();
+        }
+        List<Permission> permissions = permissionRepository.findByKeyIn(normalized);
+        if (permissions.size() != normalized.size()) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "One or more permissions were not found");
         }
-        return permissions.stream().collect(Collectors.toCollection(HashSet::new));
+        return new HashSet<>(permissions);
+    }
+
+    private void removeOverlap(Set<Permission> direct, Set<Permission> revoked) {
+        if (direct.isEmpty() || revoked.isEmpty()) {
+            return;
+        }
+        Set<String> directKeys = direct.stream()
+                .map(Permission::getKey)
+                .collect(Collectors.toSet());
+        revoked.removeIf(permission -> directKeys.contains(permission.getKey()));
     }
 }

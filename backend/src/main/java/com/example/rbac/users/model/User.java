@@ -40,6 +40,12 @@ public class User {
             inverseJoinColumns = @JoinColumn(name = "permission_id"))
     private Set<Permission> directPermissions = new HashSet<>();
 
+    @ManyToMany
+    @JoinTable(name = "user_permission_revocations",
+            joinColumns = @JoinColumn(name = "user_id"),
+            inverseJoinColumns = @JoinColumn(name = "permission_id"))
+    private Set<Permission> revokedPermissions = new HashSet<>();
+
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<RefreshToken> refreshTokens = new HashSet<>();
 
@@ -115,6 +121,14 @@ public class User {
 
     public void setDirectPermissions(Set<Permission> directPermissions) {
         this.directPermissions = directPermissions;
+    }
+
+    public Set<Permission> getRevokedPermissions() {
+        return revokedPermissions;
+    }
+
+    public void setRevokedPermissions(Set<Permission> revokedPermissions) {
+        this.revokedPermissions = revokedPermissions;
     }
 
     public Set<RefreshToken> getRefreshTokens() {

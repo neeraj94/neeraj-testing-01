@@ -5,13 +5,15 @@ import DataTable from '../components/DataTable';
 import type { Customer, Pagination } from '../types/models';
 import { useAppSelector } from '../app/hooks';
 import type { PermissionKey } from '../types/auth';
+import { hasAnyPermission } from '../utils/permissions';
 import { useToast } from '../components/ToastProvider';
 import { extractErrorMessage } from '../utils/errors';
 
 const CustomersPage = () => {
   const { permissions } = useAppSelector((state) => state.auth);
-  const canCreate = (permissions as PermissionKey[]).includes('CUSTOMER_CREATE');
-  const canDelete = (permissions as PermissionKey[]).includes('CUSTOMER_DELETE');
+  const grantedPermissions = permissions as PermissionKey[];
+  const canCreate = hasAnyPermission(grantedPermissions, ['CUSTOMER_CREATE']);
+  const canDelete = hasAnyPermission(grantedPermissions, ['CUSTOMER_DELETE']);
   const { notify } = useToast();
 
   const {
@@ -143,7 +145,8 @@ const CustomersPage = () => {
                 <td className="px-3 py-2 text-right">
                   <button
                     onClick={() => deleteCustomer.mutate(customer.id)}
-                    className="text-sm text-red-600 hover:underline"
+                    className="text-sm text-red-600 hover:underline disabled:cursor-not-allowed disabled:opacity-60"
+                    disabled={deleteCustomer.isPending}
                   >
                     Remove
                   </button>

@@ -36,11 +36,6 @@ public class UserController {
         return userService.summary();
     }
 
-    @GetMapping("/summary")
-    public UserSummaryResponse summary() {
-        return userService.summary();
-    }
-
     @PostMapping
     public UserDto create(@Valid @RequestBody CreateUserRequest request) {
         return userService.create(request);

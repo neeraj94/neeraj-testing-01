@@ -30,6 +30,10 @@ public class UserPrincipal implements UserDetails {
         perms.addAll(user.getDirectPermissions().stream()
                 .map(permission -> permission.getKey())
                 .collect(Collectors.toSet()));
+        Set<String> revoked = user.getRevokedPermissions().stream()
+                .map(permission -> permission.getKey())
+                .collect(Collectors.toSet());
+        perms.removeAll(revoked);
         return perms.stream().map(SimpleGrantedAuthority::new).collect(Collectors.toSet());
     }
 

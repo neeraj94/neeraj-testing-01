@@ -23,6 +23,8 @@ public class UpdateUserRequest {
 
     private Set<String> permissionKeys;
 
+    private Set<String> revokedPermissionKeys;
+
     public String getEmail() {
         return email;
     }
@@ -69,5 +71,13 @@ public class UpdateUserRequest {
 
     public void setPermissionKeys(Set<String> permissionKeys) {
         this.permissionKeys = permissionKeys;
+    }
+
+    public Set<String> getRevokedPermissionKeys() {
+        return revokedPermissionKeys;
+    }
+
+    public void setRevokedPermissionKeys(Set<String> revokedPermissionKeys) {
+        this.revokedPermissionKeys = revokedPermissionKeys;
     }
 }

@@ -123,6 +123,7 @@ public class AuthService {
         response.setRoles(userDto.getRoles());
         response.setPermissions(userDto.getPermissions());
         response.setDirectPermissions(userDto.getDirectPermissions());
+        response.setRevokedPermissions(userDto.getRevokedPermissions());
         return response;
     }
 }

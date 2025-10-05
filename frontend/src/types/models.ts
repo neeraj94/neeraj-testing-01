@@ -16,6 +16,7 @@ export interface User extends Record<string, unknown> {
   roles: string[];
   permissions: PermissionKey[];
   directPermissions: PermissionKey[];
+  revokedPermissions: PermissionKey[];
 }
 
 export interface UserSummaryMetrics {

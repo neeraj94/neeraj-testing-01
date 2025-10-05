@@ -56,6 +56,7 @@ type UserFormState = {
   active: boolean;
   roleIds: number[];
   directPermissions: string[];
+  revokedPermissions: string[];
 };
 
 const emptyForm: UserFormState = {
@@ -64,7 +65,8 @@ const emptyForm: UserFormState = {
   password: '',
   active: true,
   roleIds: [],
-  directPermissions: []
+  directPermissions: [],
+  revokedPermissions: []
 };
 
 const normalizePermissionKey = (value: string) => value.toUpperCase();
@@ -220,13 +222,17 @@ const UsersPage = () => {
       const sanitizedDirect = (detail.directPermissions ?? [])
         .map(normalizePermissionKey)
         .filter((permissionKey) => !roleDerivedPermissions.has(permissionKey));
+      const sanitizedRevoked = (detail.revokedPermissions ?? [])
+        .map(normalizePermissionKey)
+        .filter((permissionKey) => roleDerivedPermissions.has(permissionKey));
       setForm({
         fullName: detail.fullName,
         email: detail.email,
         password: '',
         active: detail.active,
         roleIds: assignedRoleIds,
-        directPermissions: sanitizedDirect
+        directPermissions: sanitizedDirect,
+        revokedPermissions: sanitizedRevoked
       });
       setFormError(null);
       setActiveTab('profile');
@@ -250,7 +256,8 @@ const UsersPage = () => {
         password: trimmedPassword,
         active: form.active,
         roleIds: form.roleIds,
-        permissionKeys: form.directPermissions
+        permissionKeys: form.directPermissions,
+        revokedPermissionKeys: form.revokedPermissions
       });
       return data;
     },
@@ -268,7 +275,8 @@ const UsersPage = () => {
         roleIds: data.roles
           .map((roleKey) => roleIdByKey.get(roleKey.toUpperCase()))
           .filter((value): value is number => typeof value === 'number'),
-        directPermissions: (data.directPermissions ?? []).map(normalizePermissionKey)
+        directPermissions: (data.directPermissions ?? []).map(normalizePermissionKey),
+        revokedPermissions: (data.revokedPermissions ?? []).map(normalizePermissionKey)
       });
       queryClient.invalidateQueries({ queryKey: ['users', 'detail', data.id] });
     },
@@ -294,7 +302,8 @@ const UsersPage = () => {
         active: form.active,
         password: trimmedPassword || undefined,
         roleIds: form.roleIds,
-        permissionKeys: form.directPermissions
+        permissionKeys: form.directPermissions,
+        revokedPermissionKeys: form.revokedPermissions
       });
       return data;
     },
@@ -312,7 +321,8 @@ const UsersPage = () => {
         roleIds: data.roles
           .map((roleKey) => roleIdByKey.get(roleKey.toUpperCase()))
           .filter((value): value is number => typeof value === 'number'),
-        directPermissions: (data.directPermissions ?? []).map(normalizePermissionKey)
+        directPermissions: (data.directPermissions ?? []).map(normalizePermissionKey),
+        revokedPermissions: (data.revokedPermissions ?? []).map(normalizePermissionKey)
       });
       if (selectedUserId) {
         queryClient.invalidateQueries({ queryKey: ['users', 'detail', selectedUserId] });
@@ -385,10 +395,14 @@ const UsersPage = () => {
       const filteredDirect = prev.directPermissions
         .map(normalizePermissionKey)
         .filter((permissionKey) => !normalizedRolePermissions.has(permissionKey));
+      const filteredRevoked = prev.revokedPermissions
+        .map(normalizePermissionKey)
+        .filter((permissionKey) => normalizedRolePermissions.has(permissionKey));
       return {
         ...prev,
         roleIds: nextRoleIds,
-        directPermissions: Array.from(new Set(filteredDirect))
+        directPermissions: Array.from(new Set(filteredDirect)),
+        revokedPermissions: Array.from(new Set(filteredRevoked))
       };
     });
   };
@@ -397,6 +411,7 @@ const UsersPage = () => {
     const normalized = normalizePermissionKey(permissionKey);
     setForm((prev) => {
       const next = new Set(prev.directPermissions.map(normalizePermissionKey));
+      const nextRevoked = new Set(prev.revokedPermissions.map(normalizePermissionKey));
       if (rolePermissionSet.has(normalized)) {
         return prev;
       }
@@ -405,10 +420,30 @@ const UsersPage = () => {
         if (/_VIEW_GLOBAL$/i.test(normalized)) {
           next.delete(normalized.replace(/_GLOBAL$/i, '_OWN'));
         }
+        nextRevoked.delete(normalized);
       } else {
         next.delete(normalized);
       }
-      return { ...prev, directPermissions: Array.from(next) };
+      return { ...prev, directPermissions: Array.from(next), revokedPermissions: Array.from(nextRevoked) };
+    });
+  };
+
+  const toggleRevokedPermission = (permissionKey: string, checked: boolean) => {
+    const normalized = normalizePermissionKey(permissionKey);
+    setForm((prev) => {
+      const nextRevoked = new Set(prev.revokedPermissions.map(normalizePermissionKey));
+      const nextDirect = new Set(prev.directPermissions.map(normalizePermissionKey));
+      if (checked) {
+        nextDirect.delete(normalized);
+        nextRevoked.add(normalized);
+      } else {
+        nextRevoked.delete(normalized);
+      }
+      return {
+        ...prev,
+        revokedPermissions: Array.from(nextRevoked),
+        directPermissions: Array.from(nextDirect)
+      };
     });
   };
 
@@ -493,6 +528,11 @@ const UsersPage = () => {
     return next;
   }, [form.directPermissions]);
 
+  const revokedPermissionSet = useMemo(() => {
+    const next = new Set(form.revokedPermissions.map(normalizePermissionKey));
+    return next;
+  }, [form.revokedPermissions]);
+
   const rolePermissionSet = useMemo(() => {
     const assignedRoles = new Set(form.roleIds);
     const collected = new Set<string>();
@@ -508,10 +548,22 @@ const UsersPage = () => {
 
   const effectivePermissionKeys = useMemo(() => {
     const combined = new Set<string>();
-    rolePermissionSet.forEach((key) => combined.add(key));
-    directPermissionSet.forEach((key) => combined.add(key));
+    rolePermissionSet.forEach((key) => {
+      if (!revokedPermissionSet.has(key)) {
+        combined.add(key);
+      }
+    });
+    directPermissionSet.forEach((key) => {
+      if (!revokedPermissionSet.has(key)) {
+        combined.add(key);
+      }
+    });
     return Array.from(combined).sort();
-  }, [rolePermissionSet, directPermissionSet]);
+  }, [rolePermissionSet, directPermissionSet, revokedPermissionSet]);
+
+  const revokedPermissionKeys = useMemo(() => {
+    return Array.from(revokedPermissionSet).sort();
+  }, [revokedPermissionSet]);
 
   const renderSummaryCards = () => (
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -920,17 +972,21 @@ const UsersPage = () => {
                     const disableOwn = /_VIEW_OWN$/i.test(normalized) &&
                       directPermissionSet.has(normalized.replace(/_OWN$/i, '_GLOBAL'));
                     const inherited = rolePermissionSet.has(normalized);
+                    const isRevoked = revokedPermissionSet.has(normalized);
                     const isDisabled = !isEditable || disableOwn || inherited;
+                    const borderClasses = isRevoked
+                      ? 'border-rose-300 bg-rose-50 text-rose-600'
+                      : checked
+                      ? 'border-primary bg-primary/5 text-primary'
+                      : inherited
+                      ? 'border-slate-200 bg-slate-50 text-slate-500'
+                      : 'border-slate-200 text-slate-600';
                     return (
                       <label
                         key={option.id}
-                        className={`flex items-start gap-3 rounded-lg border px-3 py-2 text-sm transition ${
-                          checked
-                            ? 'border-primary bg-primary/5 text-primary'
-                            : inherited
-                            ? 'border-slate-200 bg-slate-50 text-slate-500'
-                            : 'border-slate-200 text-slate-600'
-                        } ${isEditable && !inherited ? 'hover:border-primary/60' : 'opacity-80'}`}
+                        className={`flex items-start gap-3 rounded-lg border px-3 py-2 text-sm transition ${borderClasses} ${
+                          isEditable && !inherited ? 'hover:border-primary/60' : 'opacity-80'
+                        }`}
                         >
                         <input
                           type="checkbox"
@@ -954,6 +1010,23 @@ const UsersPage = () => {
                               Inherited from role
                             </span>
                           )}
+                          {isRevoked && (
+                            <span className="mt-1 inline-flex items-center rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-rose-600">
+                              Revoked for this user
+                            </span>
+                          )}
+                          {inherited && (
+                            <label className="mt-2 inline-flex items-center gap-2 text-xs font-medium text-rose-600">
+                              <input
+                                type="checkbox"
+                                className="h-3.5 w-3.5"
+                                checked={isRevoked}
+                                onChange={(event) => toggleRevokedPermission(option.key, event.target.checked)}
+                                disabled={!isEditable}
+                              />
+                              Revoke for this user
+                            </label>
+                          )}
                         </span>
                       </label>
                     );
@@ -962,11 +1035,14 @@ const UsersPage = () => {
                     const normalized = normalizePermissionKey(option.key);
                     const checked = directPermissionSet.has(normalized);
                     const inherited = rolePermissionSet.has(normalized);
+                    const isRevoked = revokedPermissionSet.has(normalized);
                     return (
                       <label
                         key={option.id}
                         className={`flex items-start gap-3 rounded-lg border px-3 py-2 text-sm transition ${
-                          checked
+                          isRevoked
+                            ? 'border-rose-300 bg-rose-50 text-rose-600'
+                            : checked
                             ? 'border-primary bg-primary/5 text-primary'
                             : inherited
                             ? 'border-slate-200 bg-slate-50 text-slate-500'
@@ -988,6 +1064,23 @@ const UsersPage = () => {
                             <span className="mt-1 inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
                               Inherited from role
                             </span>
+                          )}
+                          {isRevoked && (
+                            <span className="mt-1 inline-flex items-center rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-rose-600">
+                              Revoked for this user
+                            </span>
+                          )}
+                          {inherited && (
+                            <label className="mt-2 inline-flex items-center gap-2 text-xs font-medium text-rose-600">
+                              <input
+                                type="checkbox"
+                                className="h-3.5 w-3.5"
+                                checked={isRevoked}
+                                onChange={(event) => toggleRevokedPermission(option.key, event.target.checked)}
+                                disabled={!isEditable}
+                              />
+                              Revoke for this user
+                            </label>
                           )}
                         </span>
                       </label>
@@ -1025,12 +1118,33 @@ const UsersPage = () => {
             })
           )}
         </div>
+        {revokedPermissionKeys.length > 0 && (
+          <div className="mt-4">
+            <h5 className="text-xs font-semibold uppercase tracking-wide text-rose-500">Revoked for this user</h5>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {revokedPermissionKeys.map((permissionKey) => {
+                const permission = permissionLookup.get(permissionKey);
+                return (
+                  <span
+                    key={`revoked-${permissionKey}`}
+                    className="rounded-full bg-rose-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-rose-600"
+                  >
+                    {permission?.name ?? permissionKey}
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+        )}
         <div className="mt-3 flex flex-wrap gap-4 text-[11px] uppercase tracking-wide text-slate-400">
           <span className="inline-flex items-center gap-2">
             <span className="h-2.5 w-2.5 rounded-full bg-blue-500" /> Role permissions
           </span>
           <span className="inline-flex items-center gap-2">
             <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" /> Direct overrides
+          </span>
+          <span className="inline-flex items-center gap-2">
+            <span className="h-2.5 w-2.5 rounded-full bg-rose-500" /> Revoked overrides
           </span>
         </div>
       </section>
@@ -1162,7 +1276,8 @@ const UsersPage = () => {
                     roleIds: detail.roles
                       .map((roleKey) => roleIdByKey.get(roleKey.toUpperCase()))
                       .filter((value): value is number => typeof value === 'number'),
-                    directPermissions: (detail.directPermissions ?? []).map(normalizePermissionKey)
+                    directPermissions: (detail.directPermissions ?? []).map(normalizePermissionKey),
+                    revokedPermissions: (detail.revokedPermissions ?? []).map(normalizePermissionKey)
                   });
                   setFormError(null);
                 }}

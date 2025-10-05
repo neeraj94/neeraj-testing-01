@@ -15,6 +15,7 @@ export interface UserSummary {
   roles: string[];
   permissions: PermissionKey[];
   directPermissions: PermissionKey[];
+  revokedPermissions: PermissionKey[];
 }
 
 export interface AuthResponse {
@@ -24,4 +25,5 @@ export interface AuthResponse {
   roles: string[];
   permissions: PermissionKey[];
   directPermissions: PermissionKey[];
+  revokedPermissions: PermissionKey[];
 }

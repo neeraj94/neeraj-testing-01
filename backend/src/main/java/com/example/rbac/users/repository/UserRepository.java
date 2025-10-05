@@ -11,17 +11,17 @@ import org.springframework.data.repository.query.Param;
 import java.util.Optional;
 
 public interface UserRepository extends JpaRepository<User, Long> {
-    @EntityGraph(attributePaths = {"roles", "roles.permissions", "directPermissions"})
+    @EntityGraph(attributePaths = {"roles", "roles.permissions", "directPermissions", "revokedPermissions"})
     Optional<User> findByEmail(String email);
 
-    @EntityGraph(attributePaths = {"roles", "roles.permissions", "directPermissions"})
+    @EntityGraph(attributePaths = {"roles", "roles.permissions", "directPermissions", "revokedPermissions"})
     Optional<User> findDetailedById(Long id);
 
-    @EntityGraph(attributePaths = {"roles", "roles.permissions", "directPermissions"})
+    @EntityGraph(attributePaths = {"roles", "roles.permissions", "directPermissions", "revokedPermissions"})
     Page<User> findByEmailContainingIgnoreCaseOrFullNameContainingIgnoreCase(String email, String name, Pageable pageable);
 
     @Override
-    @EntityGraph(attributePaths = {"roles", "roles.permissions", "directPermissions"})
+    @EntityGraph(attributePaths = {"roles", "roles.permissions", "directPermissions", "revokedPermissions"})
     Page<User> findAll(Pageable pageable);
 
     long countByActiveTrue();

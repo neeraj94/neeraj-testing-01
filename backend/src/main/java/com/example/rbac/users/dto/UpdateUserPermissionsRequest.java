@@ -7,13 +7,24 @@ import java.util.Set;
 public class UpdateUserPermissionsRequest {
 
     @NotNull
-    private Set<String> permissionKeys;
+    private Set<String> grantedPermissionKeys;
 
-    public Set<String> getPermissionKeys() {
-        return permissionKeys;
+    @NotNull
+    private Set<String> revokedPermissionKeys;
+
+    public Set<String> getGrantedPermissionKeys() {
+        return grantedPermissionKeys;
     }
 
-    public void setPermissionKeys(Set<String> permissionKeys) {
-        this.permissionKeys = permissionKeys;
+    public void setGrantedPermissionKeys(Set<String> grantedPermissionKeys) {
+        this.grantedPermissionKeys = grantedPermissionKeys;
+    }
+
+    public Set<String> getRevokedPermissionKeys() {
+        return revokedPermissionKeys;
+    }
+
+    public void setRevokedPermissionKeys(Set<String> revokedPermissionKeys) {
+        this.revokedPermissionKeys = revokedPermissionKeys;
     }
 }
