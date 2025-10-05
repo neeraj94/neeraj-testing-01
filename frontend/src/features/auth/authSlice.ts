@@ -2,6 +2,7 @@ import axios from 'axios';
 import { createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit';
 import api from '../../services/http';
 import type { AuthResponse, UserSummary } from '../../types/auth';
+import { safeLocalStorage } from '../../utils/storage';
 
 interface AuthState {
   user: UserSummary | null;
@@ -19,7 +20,7 @@ const refreshTokenKey = 'rbac.refreshToken';
 const initialState: AuthState = {
   user: null,
   accessToken: null,
-  refreshToken: localStorage.getItem(refreshTokenKey),
+  refreshToken: safeLocalStorage.getItem(refreshTokenKey),
   roles: [],
   permissions: [],
   directPermissions: [],
@@ -73,12 +74,12 @@ const authSlice = createSlice({
       state.refreshToken = null;
       state.status = 'idle';
       state.error = undefined;
-      localStorage.removeItem(refreshTokenKey);
+      safeLocalStorage.removeItem(refreshTokenKey);
     },
     tokensRefreshed(state, action: PayloadAction<AuthResponse>) {
       state.accessToken = action.payload.accessToken;
       state.refreshToken = action.payload.refreshToken;
-      localStorage.setItem(refreshTokenKey, action.payload.refreshToken);
+      safeLocalStorage.setItem(refreshTokenKey, action.payload.refreshToken);
       if (action.payload.user) {
         state.user = action.payload.user;
         state.roles = action.payload.roles;
@@ -101,7 +102,7 @@ const authSlice = createSlice({
         state.roles = action.payload.roles;
         state.permissions = action.payload.permissions;
         state.directPermissions = action.payload.directPermissions;
-        localStorage.setItem(refreshTokenKey, action.payload.refreshToken);
+        safeLocalStorage.setItem(refreshTokenKey, action.payload.refreshToken);
       })
       .addCase(login.rejected, (state, action) => {
         state.status = 'failed';
@@ -114,7 +115,7 @@ const authSlice = createSlice({
         state.roles = action.payload.roles;
         state.permissions = action.payload.permissions;
         state.directPermissions = action.payload.directPermissions;
-        localStorage.setItem(refreshTokenKey, action.payload.refreshToken);
+        safeLocalStorage.setItem(refreshTokenKey, action.payload.refreshToken);
       })
       .addCase(loadCurrentUser.fulfilled, (state, action) => {
         state.user = action.payload;
