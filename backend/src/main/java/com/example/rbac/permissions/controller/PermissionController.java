@@ -18,9 +18,11 @@ public class PermissionController {
     }
 
     @GetMapping
-    public PageResponse<PermissionDto> list(@RequestParam(defaultValue = "0") int page,
-                                            @RequestParam(defaultValue = "20") int size) {
-        return permissionService.list(page, size);
+    public PageResponse<PermissionDto> list(@RequestParam(name = "page", defaultValue = "0") int page,
+                                            @RequestParam(name = "size", defaultValue = "20") int size,
+                                            @RequestParam(name = "sort", defaultValue = "key") String sort,
+                                            @RequestParam(name = "direction", defaultValue = "asc") String direction) {
+        return permissionService.list(page, size, sort, direction);
     }
 
     @PostMapping
@@ -29,12 +31,12 @@ public class PermissionController {
     }
 
     @PutMapping("/{id}")
-    public PermissionDto update(@PathVariable Long id, @Valid @RequestBody PermissionRequest request) {
+    public PermissionDto update(@PathVariable("id") Long id, @Valid @RequestBody PermissionRequest request) {
         return permissionService.update(id, request);
     }
 
     @DeleteMapping("/{id}")
-    public void delete(@PathVariable Long id) {
+    public void delete(@PathVariable("id") Long id) {
         permissionService.delete(id);
     }
 }
