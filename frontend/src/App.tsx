@@ -14,33 +14,66 @@ import NotFoundPage from './pages/NotFoundPage';
 import ProtectedRoute from './routes/ProtectedRoute';
 import PermissionRoute from './routes/PermissionRoute';
 import { useAppDispatch, useAppSelector } from './app/hooks';
-import { loadCurrentUser, tokensRefreshed } from './features/auth/authSlice';
+import { loadCurrentUser, logout as logoutAction, tokensRefreshed } from './features/auth/authSlice';
 import api from './services/http';
 
 const App = () => {
   const dispatch = useAppDispatch();
   const { accessToken, refreshToken } = useAppSelector((state) => state.auth);
-  const [bootstrapped, setBootstrapped] = useState(false);
+  const [initializing, setInitializing] = useState(() => Boolean(refreshToken));
 
   useEffect(() => {
-    const bootstrap = async () => {
+    let active = true;
+
+    const restoreSession = async () => {
       if (!accessToken && refreshToken) {
+        setInitializing(true);
         try {
           const { data } = await api.post('/auth/refresh', { refreshToken });
+          if (!active) {
+            return;
+          }
           dispatch(tokensRefreshed(data));
         } catch (error) {
-          // ignore - user must sign in again
+          if (!active) {
+            return;
+          }
+          dispatch(logoutAction());
+          setInitializing(false);
         }
+        return;
       }
+
       if (accessToken) {
-        dispatch(loadCurrentUser());
+        setInitializing(true);
+        try {
+          await dispatch(loadCurrentUser()).unwrap();
+        } catch (error) {
+          if (!active) {
+            return;
+          }
+          dispatch(logoutAction());
+        } finally {
+          if (active) {
+            setInitializing(false);
+          }
+        }
+        return;
       }
-      setBootstrapped(true);
+
+      if (active) {
+        setInitializing(false);
+      }
     };
-    bootstrap();
+
+    restoreSession();
+
+    return () => {
+      active = false;
+    };
   }, [accessToken, refreshToken, dispatch]);
 
-  if (!bootstrapped) {
+  if (initializing) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50 text-sm text-slate-500">
         Preparing your workspace…
