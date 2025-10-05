@@ -1,3 +1,4 @@
+import axios from 'axios';
 import { createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit';
 import api from '../../services/http';
 import type { AuthResponse, UserSummary } from '../../types/auth';
@@ -23,13 +24,26 @@ const initialState: AuthState = {
   status: 'idle'
 };
 
-export const login = createAsyncThunk<AuthResponse, { email: string; password: string }>(
-  'auth/login',
-  async (credentials) => {
+export const login = createAsyncThunk<
+  AuthResponse,
+  { email: string; password: string },
+  { rejectValue: string }
+>('auth/login', async (credentials, { rejectWithValue }) => {
+  try {
     const { data } = await api.post<AuthResponse>('/auth/login', credentials);
     return data;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      const message =
+        typeof error.response?.data === 'object' && error.response?.data !== null
+          ? (error.response?.data as { message?: string; error?: string }).message ??
+            (error.response?.data as { message?: string; error?: string }).error
+          : undefined;
+      return rejectWithValue(message ?? 'Invalid email or password. Please try again.');
+    }
+    return rejectWithValue('Unable to sign in right now. Please try again later.');
   }
-);
+});
 
 export const signup = createAsyncThunk<AuthResponse, { email: string; password: string; fullName: string }>(
   'auth/signup',
@@ -84,7 +98,7 @@ const authSlice = createSlice({
       })
       .addCase(login.rejected, (state, action) => {
         state.status = 'failed';
-        state.error = action.error.message;
+        state.error = action.payload ?? action.error.message ?? 'Unable to sign in.';
       })
       .addCase(signup.fulfilled, (state, action) => {
         state.user = action.payload.user;
