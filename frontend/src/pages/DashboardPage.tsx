@@ -7,44 +7,7 @@ import { useAppSelector } from '../app/hooks';
 import { selectBaseCurrency } from '../features/settings/selectors';
 import { formatCurrency, formatCurrencyCompact } from '../utils/currency';
 
-const SparkleIcon = () => (
-  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M12 3.75 13.2 8.7l4.95 1.2-4.95 1.2-1.2 4.95-1.2-4.95L5.85 9.9l4.95-1.2L12 3.75Z"
-    />
-  </svg>
-);
-
-const UsersIcon = () => (
-  <svg className="h-8 w-8 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.5 20.25a7.5 7.5 0 0 1 15 0v.75h-15v-.75Z"
-    />
-  </svg>
-);
-
-const ChartIcon = () => (
-  <svg className="h-8 w-8 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 19.5 4.5 9.75m6 9.75V5.25m6 14.25v-6" />
-    <path strokeLinecap="round" strokeLinejoin="round" d="M3 20.25h18" />
-  </svg>
-);
-
-const ClipboardIcon = () => (
-  <svg className="h-8 w-8 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M9 4.5h6M9.75 3h4.5a1.5 1.5 0 0 1 1.5 1.5V6h2.25A1.5 1.5 0 0 1 19.5 7.5V19.5A1.5 1.5 0 0 1 18 21H6a1.5 1.5 0 0 1-1.5-1.5V7.5A1.5 1.5 0 0 1 6.75 6H9V4.5A1.5 1.5 0 0 1 10.5 3h3"
-    />
-  </svg>
-);
-
-const SparkleIcon = () => (
+const DashboardSparkleIcon = () => (
   <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
     <path
       strokeLinecap="round"
@@ -137,7 +100,7 @@ const DashboardPage = () => {
           </div>
           <div className="flex flex-col gap-3 text-sm sm:text-right">
             <span className="inline-flex items-center gap-2 rounded-full bg-white/20 px-3 py-1 text-white">
-              <SparkleIcon />
+              <DashboardSparkleIcon />
               Daily summary refreshed moments ago
             </span>
             <button className="rounded-md bg-white px-4 py-2 font-semibold text-primary shadow-sm transition hover:bg-slate-100">
