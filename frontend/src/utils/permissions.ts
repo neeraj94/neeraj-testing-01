@@ -1,13 +1,54 @@
 import type { PermissionKey } from '../types/auth';
 
+const normalizeViewPermission = (permission: PermissionKey) => {
+  if (/_VIEW_(OWN|GLOBAL)$/i.test(permission)) {
+    return permission.replace(/_(OWN|GLOBAL)$/i, '');
+  }
+  return permission;
+};
+
 export const hasAnyPermission = (userPermissions: PermissionKey[], required: PermissionKey[]): boolean => {
-  return required.some((permission) => userPermissions.includes(permission));
+  if (!userPermissions?.length || !required?.length) {
+    return false;
+  }
+
+  const userSet = new Set(userPermissions);
+  return required.some((permission) => {
+    if (userSet.has(permission)) {
+      return true;
+    }
+
+    if (/_VIEW$/i.test(permission)) {
+      const normalized = normalizeViewPermission(permission);
+      for (const userPermission of userSet) {
+        if (normalizeViewPermission(userPermission) === normalized) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  });
 };
 
 export const TAB_RULES: Record<string, PermissionKey[]> = {
-  Users: ['USER_VIEW', 'USER_CREATE', 'USER_UPDATE', 'USER_DELETE'],
-  Roles: ['ROLE_VIEW', 'ROLE_CREATE', 'ROLE_UPDATE', 'ROLE_DELETE'],
-  Permissions: ['PERMISSION_VIEW', 'PERMISSION_CREATE', 'PERMISSION_UPDATE', 'PERMISSION_DELETE'],
-  Customers: ['CUSTOMER_VIEW', 'CUSTOMER_CREATE', 'CUSTOMER_UPDATE', 'CUSTOMER_DELETE'],
-  Invoices: ['INVOICE_VIEW', 'INVOICE_CREATE', 'INVOICE_UPDATE', 'INVOICE_DELETE']
+  Users: [
+    'USER_VIEW',
+    'USER_VIEW_GLOBAL',
+    'USER_VIEW_OWN',
+    'USER_CREATE',
+    'USER_UPDATE',
+    'USER_DELETE'
+  ],
+  Roles: ['ROLE_VIEW'],
+  Permissions: ['PERMISSION_VIEW'],
+  Invoices: [
+    'INVOICE_VIEW',
+    'INVOICE_VIEW_GLOBAL',
+    'INVOICE_VIEW_OWN',
+    'INVOICE_CREATE',
+    'INVOICE_UPDATE',
+    'INVOICE_DELETE'
+  ],
+  Settings: ['SETTINGS_VIEW']
 };

@@ -5,6 +5,7 @@ import com.example.rbac.customers.dto.CustomerDto;
 import com.example.rbac.customers.dto.CustomerRequest;
 import com.example.rbac.customers.service.CustomerService;
 import jakarta.validation.Valid;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -18,28 +19,33 @@ public class CustomerController {
     }
 
     @GetMapping
-    public PageResponse<CustomerDto> list(@RequestParam(defaultValue = "0") int page,
-                                          @RequestParam(defaultValue = "20") int size) {
+    @PreAuthorize("hasAnyAuthority('USER_VIEW','USER_VIEW_GLOBAL','USER_VIEW_OWN')")
+    public PageResponse<CustomerDto> list(@RequestParam(name = "page", defaultValue = "0") int page,
+                                          @RequestParam(name = "size", defaultValue = "20") int size) {
         return customerService.list(page, size);
     }
 
     @PostMapping
+    @PreAuthorize("hasAuthority('USER_CREATE')")
     public CustomerDto create(@Valid @RequestBody CustomerRequest request) {
         return customerService.create(request);
     }
 
     @GetMapping("/{id}")
-    public CustomerDto get(@PathVariable Long id) {
+    @PreAuthorize("hasAnyAuthority('USER_VIEW','USER_VIEW_GLOBAL','USER_VIEW_OWN')")
+    public CustomerDto get(@PathVariable("id") Long id) {
         return customerService.get(id);
     }
 
     @PutMapping("/{id}")
-    public CustomerDto update(@PathVariable Long id, @Valid @RequestBody CustomerRequest request) {
+    @PreAuthorize("hasAuthority('USER_UPDATE')")
+    public CustomerDto update(@PathVariable("id") Long id, @Valid @RequestBody CustomerRequest request) {
         return customerService.update(id, request);
     }
 
     @DeleteMapping("/{id}")
-    public void delete(@PathVariable Long id) {
+    @PreAuthorize("hasAuthority('USER_DELETE')")
+    public void delete(@PathVariable("id") Long id) {
         customerService.delete(id);
     }
 }

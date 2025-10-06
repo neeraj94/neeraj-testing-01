@@ -22,6 +22,10 @@ public class CreateUserRequest {
 
     private Set<Long> roleIds;
 
+    private Set<String> permissionKeys;
+
+    private Set<String> revokedPermissionKeys;
+
     public String getEmail() {
         return email;
     }
@@ -60,5 +64,21 @@ public class CreateUserRequest {
 
     public void setRoleIds(Set<Long> roleIds) {
         this.roleIds = roleIds;
+    }
+
+    public Set<String> getPermissionKeys() {
+        return permissionKeys;
+    }
+
+    public void setPermissionKeys(Set<String> permissionKeys) {
+        this.permissionKeys = permissionKeys;
+    }
+
+    public Set<String> getRevokedPermissionKeys() {
+        return revokedPermissionKeys;
+    }
+
+    public void setRevokedPermissionKeys(Set<String> revokedPermissionKeys) {
+        this.revokedPermissionKeys = revokedPermissionKeys;
     }
 }

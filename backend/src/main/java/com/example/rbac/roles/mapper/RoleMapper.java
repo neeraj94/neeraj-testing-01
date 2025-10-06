@@ -12,6 +12,8 @@ import java.util.stream.Collectors;
 @Mapper(componentModel = "spring")
 public interface RoleMapper {
 
+    String CUSTOMER_PREFIX = "CUSTOMER_";
+
     @Mapping(target = "permissions", expression = "java(mapPermissionKeys(role.getPermissions()))")
     RoleDto toDto(Role role);
 
@@ -21,6 +23,7 @@ public interface RoleMapper {
         }
         return permissions.stream()
                 .map(Permission::getKey)
+                .filter(key -> key != null && !key.toUpperCase().startsWith(CUSTOMER_PREFIX))
                 .collect(Collectors.toCollection(java.util.LinkedHashSet::new));
     }
 }

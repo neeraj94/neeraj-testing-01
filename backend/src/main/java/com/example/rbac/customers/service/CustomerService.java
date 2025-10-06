@@ -27,14 +27,14 @@ public class CustomerService {
         this.customerMapper = customerMapper;
     }
 
-    @PreAuthorize("hasAuthority('CUSTOMER_VIEW')")
+    @PreAuthorize("hasAnyAuthority('USER_VIEW','USER_VIEW_GLOBAL','USER_VIEW_OWN')")
     public PageResponse<CustomerDto> list(int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
         Page<CustomerDto> result = customerRepository.findAll(pageable).map(customerMapper::toDto);
         return PageResponse.from(result);
     }
 
-    @PreAuthorize("hasAuthority('CUSTOMER_CREATE')")
+    @PreAuthorize("hasAuthority('USER_CREATE')")
     @Transactional
     public CustomerDto create(CustomerRequest request) {
         Customer customer = new Customer();
@@ -46,14 +46,14 @@ public class CustomerService {
         return customerMapper.toDto(customer);
     }
 
-    @PreAuthorize("hasAuthority('CUSTOMER_VIEW')")
+    @PreAuthorize("hasAnyAuthority('USER_VIEW','USER_VIEW_GLOBAL','USER_VIEW_OWN')")
     public CustomerDto get(Long id) {
         Customer customer = customerRepository.findById(id)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Customer not found"));
         return customerMapper.toDto(customer);
     }
 
-    @PreAuthorize("hasAuthority('CUSTOMER_UPDATE')")
+    @PreAuthorize("hasAuthority('USER_UPDATE')")
     @Transactional
     public CustomerDto update(Long id, CustomerRequest request) {
         Customer customer = customerRepository.findById(id)
@@ -66,7 +66,7 @@ public class CustomerService {
         return customerMapper.toDto(customer);
     }
 
-    @PreAuthorize("hasAuthority('CUSTOMER_DELETE')")
+    @PreAuthorize("hasAuthority('USER_DELETE')")
     public void delete(Long id) {
         if (!customerRepository.existsById(id)) {
             throw new ApiException(HttpStatus.NOT_FOUND, "Customer not found");
