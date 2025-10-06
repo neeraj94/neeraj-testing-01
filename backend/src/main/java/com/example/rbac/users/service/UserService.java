@@ -1,5 +1,6 @@
 package com.example.rbac.users.service;
 
+import com.example.rbac.activity.service.ActivityRecorder;
 import com.example.rbac.common.exception.ApiException;
 import com.example.rbac.common.pagination.PageResponse;
 import com.example.rbac.roles.model.Role;
@@ -27,6 +28,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -55,17 +57,20 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final PermissionRepository permissionRepository;
     private final UserMapper userMapper;
+    private final ActivityRecorder activityRecorder;
 
     public UserService(UserRepository userRepository,
                        RoleRepository roleRepository,
                        PasswordEncoder passwordEncoder,
                        PermissionRepository permissionRepository,
-                       UserMapper userMapper) {
+                       UserMapper userMapper,
+                       ActivityRecorder activityRecorder) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
         this.permissionRepository = permissionRepository;
         this.userMapper = userMapper;
+        this.activityRecorder = activityRecorder;
     }
 
     @PreAuthorize(USER_VIEW_AUTHORITY)
@@ -111,7 +116,9 @@ public class UserService {
         removeOverlap(direct, revoked);
         user.setRevokedPermissions(revoked);
         user = userRepository.save(user);
-        return userMapper.toDto(userRepository.findDetailedById(user.getId()).orElseThrow());
+        UserDto dto = userMapper.toDto(userRepository.findDetailedById(user.getId()).orElseThrow());
+        activityRecorder.record("Users", "CREATE", "Created user " + user.getEmail(), "SUCCESS", buildUserContext(user));
+        return dto;
     }
 
     @PreAuthorize(USER_VIEW_AUTHORITY)
@@ -152,7 +159,9 @@ public class UserService {
             user.setRevokedPermissions(revoked);
         }
         user = userRepository.save(user);
-        return userMapper.toDto(userRepository.findDetailedById(user.getId()).orElseThrow());
+        UserDto dto = userMapper.toDto(userRepository.findDetailedById(user.getId()).orElseThrow());
+        activityRecorder.record("Users", "UPDATE", "Updated user " + user.getEmail(), "SUCCESS", buildUserContext(user));
+        return dto;
     }
 
     @PreAuthorize(USER_UPDATE_AUTHORITY)
@@ -162,15 +171,17 @@ public class UserService {
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "User not found"));
         user.setActive(Boolean.TRUE.equals(request.getActive()));
         user = userRepository.save(user);
-        return userMapper.toDto(userRepository.findDetailedById(user.getId()).orElseThrow());
+        UserDto dto = userMapper.toDto(userRepository.findDetailedById(user.getId()).orElseThrow());
+        activityRecorder.record("Users", "STATUS_CHANGE", "Updated status for user " + user.getEmail(), "SUCCESS", buildUserContext(user));
+        return dto;
     }
 
     @PreAuthorize(USER_DELETE_AUTHORITY)
     public void delete(Long id) {
-        if (!userRepository.existsById(id)) {
-            throw new ApiException(HttpStatus.NOT_FOUND, "User not found");
-        }
-        userRepository.deleteById(id);
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "User not found"));
+        userRepository.delete(user);
+        activityRecorder.record("Users", "DELETE", "Deleted user " + user.getEmail(), "SUCCESS", buildUserContext(user));
     }
 
     @PreAuthorize(USER_UPDATE_AUTHORITY)
@@ -184,7 +195,11 @@ public class UserService {
         }
         user.setRoles(roles);
         user = userRepository.save(user);
-        return userMapper.toDto(userRepository.findDetailedById(user.getId()).orElseThrow());
+        UserDto dto = userMapper.toDto(userRepository.findDetailedById(user.getId()).orElseThrow());
+        HashMap<String, Object> context = new HashMap<>(buildUserContext(user));
+        context.put("roleIds", request.getRoleIds());
+        activityRecorder.record("Users", "ASSIGN_ROLES", "Assigned roles to user " + user.getEmail(), "SUCCESS", context);
+        return dto;
     }
 
     @PreAuthorize(USER_UPDATE_AUTHORITY)
@@ -194,7 +209,11 @@ public class UserService {
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "User not found"));
         user.getRoles().removeIf(role -> role.getId().equals(roleId));
         user = userRepository.save(user);
-        return userMapper.toDto(userRepository.findDetailedById(user.getId()).orElseThrow());
+        UserDto dto = userMapper.toDto(userRepository.findDetailedById(user.getId()).orElseThrow());
+        HashMap<String, Object> context = new HashMap<>(buildUserContext(user));
+        context.put("roleId", roleId);
+        activityRecorder.record("Users", "REMOVE_ROLE", "Removed role from user " + user.getEmail(), "SUCCESS", context);
+        return dto;
     }
 
     @Transactional
@@ -206,7 +225,11 @@ public class UserService {
             user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
         }
         user = userRepository.save(user);
-        return userMapper.toDto(user);
+        UserDto dto = userMapper.toDto(user);
+        HashMap<String, Object> context = new HashMap<>(buildUserContext(user));
+        context.put("profileUpdated", true);
+        activityRecorder.record("Users", "PROFILE_UPDATE", "Updated profile for user " + user.getEmail(), "SUCCESS", context);
+        return dto;
     }
 
     @PreAuthorize(USER_UPDATE_AUTHORITY)
@@ -220,7 +243,12 @@ public class UserService {
         user.setDirectPermissions(direct);
         user.setRevokedPermissions(revoked);
         user = userRepository.save(user);
-        return userMapper.toDto(userRepository.findDetailedById(user.getId()).orElseThrow());
+        UserDto dto = userMapper.toDto(userRepository.findDetailedById(user.getId()).orElseThrow());
+        HashMap<String, Object> context = new HashMap<>(buildUserContext(user));
+        context.put("grantedPermissions", request.getGrantedPermissionKeys());
+        context.put("revokedPermissions", request.getRevokedPermissionKeys());
+        activityRecorder.record("Users", "PERMISSIONS_UPDATE", "Updated direct permissions for user " + user.getEmail(), "SUCCESS", context);
+        return dto;
     }
 
     @PreAuthorize(USER_VIEW_AUTHORITY)
@@ -259,5 +287,20 @@ public class UserService {
                 .map(Permission::getKey)
                 .collect(Collectors.toSet());
         revoked.removeIf(permission -> directKeys.contains(permission.getKey()));
+    }
+
+    private HashMap<String, Object> buildUserContext(User user) {
+        HashMap<String, Object> context = new HashMap<>();
+        if (user == null) {
+            return context;
+        }
+        if (user.getId() != null) {
+            context.put("userId", user.getId());
+        }
+        if (user.getEmail() != null) {
+            context.put("email", user.getEmail());
+        }
+        context.put("active", user.isActive());
+        return context;
     }
 }
