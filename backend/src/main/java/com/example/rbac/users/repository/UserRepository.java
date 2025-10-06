@@ -30,4 +30,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     @Query("SELECT COUNT(DISTINCT u) FROM User u JOIN u.roles r WHERE UPPER(r.key) = UPPER(:roleKey)")
     long countByRoleKeyIgnoreCase(@Param("roleKey") String roleKey);
+
+    boolean existsByEmailAndIdNot(String email, Long id);
 }

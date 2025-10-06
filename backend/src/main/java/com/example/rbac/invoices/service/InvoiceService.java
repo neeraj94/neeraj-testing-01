@@ -1,5 +1,6 @@
 package com.example.rbac.invoices.service;
 
+import com.example.rbac.activity.service.ActivityRecorder;
 import com.example.rbac.common.exception.ApiException;
 import com.example.rbac.common.pagination.PageResponse;
 import com.example.rbac.customers.model.Customer;
@@ -19,6 +20,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
@@ -30,13 +34,16 @@ public class InvoiceService {
     private final InvoiceRepository invoiceRepository;
     private final CustomerRepository customerRepository;
     private final InvoiceMapper invoiceMapper;
+    private final ActivityRecorder activityRecorder;
 
     public InvoiceService(InvoiceRepository invoiceRepository,
                           CustomerRepository customerRepository,
-                          InvoiceMapper invoiceMapper) {
+                          InvoiceMapper invoiceMapper,
+                          ActivityRecorder activityRecorder) {
         this.invoiceRepository = invoiceRepository;
         this.customerRepository = customerRepository;
         this.invoiceMapper = invoiceMapper;
+        this.activityRecorder = activityRecorder;
     }
 
     @PreAuthorize("hasAuthority('INVOICE_VIEW')")
@@ -56,7 +63,9 @@ public class InvoiceService {
         invoice.setCustomer(customer);
         applyInvoiceData(invoice, request);
         invoice = invoiceRepository.save(invoice);
-        return invoiceMapper.toDto(invoice);
+        InvoiceDto dto = invoiceMapper.toDto(invoice);
+        activityRecorder.record("Invoices", "CREATE", "Created invoice " + invoice.getNumber(), "SUCCESS", buildContext(invoice));
+        return dto;
     }
 
     @PreAuthorize("hasAuthority('INVOICE_VIEW')")
@@ -77,15 +86,17 @@ public class InvoiceService {
         invoice.setCustomer(customer);
         applyInvoiceData(invoice, request);
         invoice = invoiceRepository.save(invoice);
-        return invoiceMapper.toDto(invoice);
+        InvoiceDto dto = invoiceMapper.toDto(invoice);
+        activityRecorder.record("Invoices", "UPDATE", "Updated invoice " + invoice.getNumber(), "SUCCESS", buildContext(invoice));
+        return dto;
     }
 
     @PreAuthorize("hasAuthority('INVOICE_DELETE')")
     public void delete(Long id) {
-        if (!invoiceRepository.existsById(id)) {
-            throw new ApiException(HttpStatus.NOT_FOUND, "Invoice not found");
-        }
-        invoiceRepository.deleteById(id);
+        Invoice invoice = invoiceRepository.findDetailedById(id)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Invoice not found"));
+        invoiceRepository.delete(invoice);
+        activityRecorder.record("Invoices", "DELETE", "Deleted invoice " + invoice.getNumber(), "SUCCESS", buildContext(invoice));
     }
 
     private void applyInvoiceData(Invoice invoice, InvoiceRequest request) {
@@ -116,5 +127,25 @@ public class InvoiceService {
         invoice.setSubtotal(subtotal.setScale(2, RoundingMode.HALF_UP));
         invoice.setTax(tax.setScale(2, RoundingMode.HALF_UP));
         invoice.setTotal(total.setScale(2, RoundingMode.HALF_UP));
+    }
+
+    private Map<String, Object> buildContext(Invoice invoice) {
+        HashMap<String, Object> context = new HashMap<>();
+        if (invoice == null) {
+            return context;
+        }
+        if (invoice.getId() != null) {
+            context.put("invoiceId", invoice.getId());
+        }
+        if (invoice.getNumber() != null) {
+            context.put("invoiceNumber", invoice.getNumber());
+        }
+        if (invoice.getCustomer() != null && invoice.getCustomer().getId() != null) {
+            context.put("customerId", invoice.getCustomer().getId());
+        }
+        if (invoice.getStatus() != null) {
+            context.put("status", invoice.getStatus());
+        }
+        return context;
     }
 }
