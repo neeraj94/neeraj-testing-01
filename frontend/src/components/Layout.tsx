@@ -90,6 +90,15 @@ const Layout = () => {
       });
     }
 
+    if (tabs.includes('Activity')) {
+      items.push({
+        key: 'activity',
+        label: 'Activity',
+        to: '/activity',
+        icon: '📝'
+      });
+    }
+
     if (tabs.includes('Settings')) {
       items.push({
         key: 'settings',
