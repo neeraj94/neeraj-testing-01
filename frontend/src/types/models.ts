@@ -12,6 +12,14 @@ export interface User extends Record<string, unknown> {
   id: number;
   email: string;
   fullName: string;
+  firstName: string;
+  lastName: string;
+  phoneNumber?: string | null;
+  whatsappNumber?: string | null;
+  facebookUrl?: string | null;
+  linkedinUrl?: string | null;
+  skypeId?: string | null;
+  emailSignature?: string | null;
   active: boolean;
   roles: string[];
   permissions: PermissionKey[];
@@ -68,4 +76,34 @@ export interface Invoice {
   tax: number;
   total: number;
   items: InvoiceItem[];
+}
+
+export interface ActivityLogEntry {
+  id: number;
+  occurredAt: string;
+  userId?: number | null;
+  userName: string;
+  userRole?: string | null;
+  department?: string | null;
+  module?: string | null;
+  activityType: string;
+  description?: string | null;
+  status?: string | null;
+  ipAddress?: string | null;
+  device?: string | null;
+}
+
+export interface ActivityLogDetail extends ActivityLogEntry {
+  context?: Record<string, unknown> | null;
+  rawContext?: string | null;
+}
+
+export interface ActivityFilterOptions {
+  activityTypes: string[];
+  modules: string[];
+  statuses: string[];
+  roles: string[];
+  departments: string[];
+  ipAddresses: string[];
+  devices: string[];
 }

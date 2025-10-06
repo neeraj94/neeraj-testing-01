@@ -20,6 +20,8 @@ import SettingsPage from './pages/SettingsPage';
 import { fetchTheme } from './features/settings/settingsSlice';
 import { selectApplicationName, selectPrimaryColor } from './features/settings/selectors';
 import { applyPrimaryColor } from './utils/colors';
+import ActivityPage from './pages/ActivityPage';
+import ActivityDetailPage from './pages/ActivityDetailPage';
 
 const App = () => {
   const dispatch = useAppDispatch();
@@ -149,6 +151,10 @@ const App = () => {
             }
           >
             <Route path="/invoices" element={<InvoicesPage />} />
+          </Route>
+          <Route element={<PermissionRoute required={['ACTIVITY_VIEW']} />}>
+            <Route path="/activity" element={<ActivityPage />} />
+            <Route path="/activity/:id" element={<ActivityDetailPage />} />
           </Route>
           <Route element={<PermissionRoute required={['SETTINGS_VIEW']} />}>
             <Route path="/settings" element={<SettingsPage />} />
