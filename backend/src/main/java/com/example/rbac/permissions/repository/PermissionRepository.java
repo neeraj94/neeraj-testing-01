@@ -4,6 +4,8 @@ import com.example.rbac.permissions.model.Permission;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
@@ -14,5 +16,6 @@ public interface PermissionRepository extends JpaRepository<Permission, Long> {
 
     List<Permission> findByKeyIn(Set<String> keys);
 
-    Page<Permission> findByKeyNotStartingWithIgnoreCase(String prefix, Pageable pageable);
+    @Query("SELECT p FROM Permission p WHERE LOWER(p.key) NOT LIKE LOWER(CONCAT(:prefix, '%'))")
+    Page<Permission> findByKeyNotStartingWithIgnoreCase(@Param("prefix") String prefix, Pageable pageable);
 }
