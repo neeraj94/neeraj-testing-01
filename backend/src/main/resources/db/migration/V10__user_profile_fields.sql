@@ -1,12 +1,12 @@
 ALTER TABLE users
-    ADD COLUMN first_name VARCHAR(100) NULL,
-    ADD COLUMN last_name VARCHAR(100) NULL,
-    ADD COLUMN phone_number VARCHAR(50),
-    ADD COLUMN whatsapp_number VARCHAR(50),
-    ADD COLUMN facebook_url VARCHAR(255),
-    ADD COLUMN linkedin_url VARCHAR(255),
-    ADD COLUMN skype_id VARCHAR(100),
-    ADD COLUMN email_signature TEXT;
+    ADD COLUMN IF NOT EXISTS first_name VARCHAR(100) NULL,
+    ADD COLUMN IF NOT EXISTS last_name VARCHAR(100) NULL,
+    ADD COLUMN IF NOT EXISTS phone_number VARCHAR(50),
+    ADD COLUMN IF NOT EXISTS whatsapp_number VARCHAR(50),
+    ADD COLUMN IF NOT EXISTS facebook_url VARCHAR(255),
+    ADD COLUMN IF NOT EXISTS linkedin_url VARCHAR(255),
+    ADD COLUMN IF NOT EXISTS skype_id VARCHAR(100),
+    ADD COLUMN IF NOT EXISTS email_signature TEXT;
 
 UPDATE users
 SET first_name = CASE
