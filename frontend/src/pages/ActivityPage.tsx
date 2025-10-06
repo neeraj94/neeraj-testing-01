@@ -1,9 +1,10 @@
-import { ChangeEvent, useEffect, useMemo, useState } from 'react';
+import { ChangeEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import DataTable from '../components/DataTable';
 import SortableColumnHeader from '../components/SortableColumnHeader';
 import ExportMenu from '../components/ExportMenu';
+import FilterDropdown from '../components/FilterDropdown';
 import api from '../services/http';
 import { useAppSelector } from '../app/hooks';
 import { hasAnyPermission } from '../utils/permissions';
@@ -52,14 +53,16 @@ const ActivityPage = () => {
   const [endDate, setEndDate] = useState('');
   const [isExporting, setIsExporting] = useState(false);
 
+  const goToFirstPage = useCallback(() => setPage(0), []);
+
   useEffect(() => {
     const timer = window.setTimeout(() => {
       setSearch(searchDraft.trim());
-      setPage(0);
+      goToFirstPage();
     }, 300);
 
     return () => window.clearTimeout(timer);
-  }, [searchDraft]);
+  }, [goToFirstPage, searchDraft]);
 
   const filtersKey = useMemo(
     () => ({
@@ -158,7 +161,7 @@ const ActivityPage = () => {
     if (!isLoading && !hasError && totalPages > 0 && page >= totalPages) {
       setPage(totalPages - 1);
     }
-  }, [isLoading, hasError, totalPages, page]);
+  }, [hasError, isLoading, page, totalPages]);
 
   const handleSort = (field: ActivitySortField) => {
     setSort((prev) => {
@@ -168,13 +171,13 @@ const ActivityPage = () => {
       }
       return { field, direction: field === 'timestamp' ? 'desc' : 'asc' };
     });
-    setPage(0);
+    goToFirstPage();
   };
 
   const handlePageSizeChange = (event: SelectChangeEvent) => {
     const nextSize = Number(event.target.value);
     setPageSize(nextSize);
-    setPage(0);
+    goToFirstPage();
   };
 
   const handlePreviousPage = () => {
@@ -185,12 +188,6 @@ const ActivityPage = () => {
     if (page + 1 < totalPages) {
       setPage((prev) => prev + 1);
     }
-  };
-
-  const handleMultiSelectChange = (event: SelectChangeEvent, setter: (values: string[]) => void) => {
-    const values = Array.from(event.target.selectedOptions).map((option) => option.value);
-    setter(values);
-    setPage(0);
   };
 
   const handleClearFilters = () => {
@@ -206,7 +203,7 @@ const ActivityPage = () => {
     setEndDate('');
     setSearch('');
     setSearchDraft('');
-    setPage(0);
+    goToFirstPage();
   };
 
   const handleExport = async (format: ExportFormat) => {
@@ -278,6 +275,153 @@ const ActivityPage = () => {
     return <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${badgeClass}`}>{normalized}</span>;
   };
 
+  const formatDateOnly = (value: string) =>
+    new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(new Date(`${value}T00:00:00`));
+
+  const activeFilterChips = useMemo(
+    () => {
+      const chips: { key: string; label: string; onRemove: () => void }[] = [];
+      roleFilter.forEach((value) => {
+        chips.push({
+          key: `role:${value}`,
+          label: `Role: ${value}`,
+          onRemove: () => {
+            setRoleFilter((prev) => prev.filter((item) => item !== value));
+            goToFirstPage();
+          }
+        });
+      });
+      departmentFilter.forEach((value) => {
+        chips.push({
+          key: `department:${value}`,
+          label: `Department: ${value}`,
+          onRemove: () => {
+            setDepartmentFilter((prev) => prev.filter((item) => item !== value));
+            goToFirstPage();
+          }
+        });
+      });
+      moduleFilter.forEach((value) => {
+        chips.push({
+          key: `module:${value}`,
+          label: `Module: ${value}`,
+          onRemove: () => {
+            setModuleFilter((prev) => prev.filter((item) => item !== value));
+            goToFirstPage();
+          }
+        });
+      });
+      typeFilter.forEach((value) => {
+        chips.push({
+          key: `type:${value}`,
+          label: `Type: ${value}`,
+          onRemove: () => {
+            setTypeFilter((prev) => prev.filter((item) => item !== value));
+            goToFirstPage();
+          }
+        });
+      });
+      statusFilter.forEach((value) => {
+        chips.push({
+          key: `status:${value}`,
+          label: `Status: ${value}`,
+          onRemove: () => {
+            setStatusFilter((prev) => prev.filter((item) => item !== value));
+            goToFirstPage();
+          }
+        });
+      });
+      deviceFilter.forEach((value) => {
+        chips.push({
+          key: `device:${value}`,
+          label: `Device: ${value}`,
+          onRemove: () => {
+            setDeviceFilter((prev) => prev.filter((item) => item !== value));
+            goToFirstPage();
+          }
+        });
+      });
+      if (startDate) {
+        chips.push({
+          key: 'startDate',
+          label: `From: ${formatDateOnly(startDate)}`,
+          onRemove: () => {
+            setStartDate('');
+            goToFirstPage();
+          }
+        });
+      }
+      if (endDate) {
+        chips.push({
+          key: 'endDate',
+          label: `To: ${formatDateOnly(endDate)}`,
+          onRemove: () => {
+            setEndDate('');
+            goToFirstPage();
+          }
+        });
+      }
+      if (userFilter.trim()) {
+        chips.push({
+          key: 'user',
+          label: `User: ${userFilter.trim()}`,
+          onRemove: () => {
+            setUserFilter('');
+            goToFirstPage();
+          }
+        });
+      }
+      if (ipFilter.trim()) {
+        chips.push({
+          key: 'ip',
+          label: `IP: ${ipFilter.trim()}`,
+          onRemove: () => {
+            setIpFilter('');
+            goToFirstPage();
+          }
+        });
+      }
+      if (search.trim()) {
+        chips.push({
+          key: 'search',
+          label: `Search: ${search.trim()}`,
+          onRemove: () => {
+            setSearch('');
+            setSearchDraft('');
+            goToFirstPage();
+          }
+        });
+      }
+      return chips;
+    },
+    [
+      departmentFilter,
+      deviceFilter,
+      goToFirstPage,
+      ipFilter,
+      moduleFilter,
+      roleFilter,
+      search,
+      setDepartmentFilter,
+      setDeviceFilter,
+      setIpFilter,
+      setModuleFilter,
+      setRoleFilter,
+      setSearch,
+      setSearchDraft,
+      setStatusFilter,
+      setTypeFilter,
+      setUserFilter,
+      startDate,
+      statusFilter,
+      typeFilter,
+      userFilter,
+      endDate,
+      setStartDate,
+      setEndDate
+    ]
+  );
+
   const from = totalElements === 0 ? 0 : page * pageSize + 1;
   const to = Math.min((page + 1) * pageSize, totalElements);
 
@@ -296,15 +440,15 @@ const ActivityPage = () => {
       </div>
 
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="grid gap-4 lg:grid-cols-4">
-          <div className="lg:col-span-2">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <div className="md:col-span-2 xl:col-span-2">
             <label className="block text-sm font-medium text-slate-600">Search</label>
             <input
               type="search"
               value={searchDraft}
               onChange={(event) => setSearchDraft(event.target.value)}
               placeholder="Search descriptions, modules, users, or IP addresses"
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
             />
           </div>
           <div>
@@ -314,10 +458,10 @@ const ActivityPage = () => {
               value={userFilter}
               onChange={(event) => {
                 setUserFilter(event.target.value);
-                setPage(0);
+                goToFirstPage();
               }}
               placeholder="Name or ID"
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
             />
           </div>
           <div>
@@ -327,108 +471,81 @@ const ActivityPage = () => {
               value={ipFilter}
               onChange={(event) => {
                 setIpFilter(event.target.value);
-                setPage(0);
+                goToFirstPage();
               }}
               placeholder="e.g. 192.168.1.10"
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
             />
           </div>
         </div>
 
-        <div className="mt-4 grid gap-4 lg:grid-cols-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-600">Roles</label>
-            <select
-              multiple
-              value={roleFilter}
-              onChange={(event) => handleMultiSelectChange(event, setRoleFilter)}
-              className="mt-1 h-28 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-            >
-              {filtersQuery.data?.roles.map((role) => (
-                <option key={role} value={role}>
-                  {role}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-600">Departments</label>
-            <select
-              multiple
-              value={departmentFilter}
-              onChange={(event) => handleMultiSelectChange(event, setDepartmentFilter)}
-              className="mt-1 h-28 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-            >
-              {filtersQuery.data?.departments.map((department) => (
-                <option key={department} value={department}>
-                  {department}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-600">Modules</label>
-            <select
-              multiple
-              value={moduleFilter}
-              onChange={(event) => handleMultiSelectChange(event, setModuleFilter)}
-              className="mt-1 h-28 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-            >
-              {filtersQuery.data?.modules.map((module) => (
-                <option key={module} value={module}>
-                  {module}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-600">Activity Types</label>
-            <select
-              multiple
-              value={typeFilter}
-              onChange={(event) => handleMultiSelectChange(event, setTypeFilter)}
-              className="mt-1 h-28 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-            >
-              {filtersQuery.data?.activityTypes.map((type) => (
-                <option key={type} value={type}>
-                  {type}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        <div className="mt-4 grid gap-4 lg:grid-cols-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-600">Statuses</label>
-            <select
-              multiple
-              value={statusFilter}
-              onChange={(event) => handleMultiSelectChange(event, setStatusFilter)}
-              className="mt-1 h-28 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-            >
-              {filtersQuery.data?.statuses.map((status) => (
-                <option key={status} value={status}>
-                  {status}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-600">Devices</label>
-            <select
-              multiple
-              value={deviceFilter}
-              onChange={(event) => handleMultiSelectChange(event, setDeviceFilter)}
-              className="mt-1 h-28 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-            >
-              {filtersQuery.data?.devices.map((device) => (
-                <option key={device} value={device}>
-                  {device}
-                </option>
-              ))}
-            </select>
-          </div>
+        <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <FilterDropdown
+            label="Roles"
+            placeholder="All roles"
+            options={filtersQuery.data?.roles}
+            values={roleFilter}
+            onChange={(values) => {
+              setRoleFilter(values);
+              goToFirstPage();
+            }}
+            disabled={filtersQuery.isLoading || filtersQuery.isError}
+          />
+          <FilterDropdown
+            label="Departments"
+            placeholder="All departments"
+            options={filtersQuery.data?.departments}
+            values={departmentFilter}
+            onChange={(values) => {
+              setDepartmentFilter(values);
+              goToFirstPage();
+            }}
+            disabled={filtersQuery.isLoading || filtersQuery.isError}
+          />
+          <FilterDropdown
+            label="Modules"
+            placeholder="All modules"
+            options={filtersQuery.data?.modules}
+            values={moduleFilter}
+            onChange={(values) => {
+              setModuleFilter(values);
+              goToFirstPage();
+            }}
+            disabled={filtersQuery.isLoading || filtersQuery.isError}
+          />
+          <FilterDropdown
+            label="Activity Types"
+            placeholder="All activity types"
+            options={filtersQuery.data?.activityTypes}
+            values={typeFilter}
+            onChange={(values) => {
+              setTypeFilter(values);
+              goToFirstPage();
+            }}
+            disabled={filtersQuery.isLoading || filtersQuery.isError}
+          />
+          <FilterDropdown
+            label="Statuses"
+            placeholder="All statuses"
+            options={filtersQuery.data?.statuses}
+            values={statusFilter}
+            onChange={(values) => {
+              setStatusFilter(values);
+              goToFirstPage();
+            }}
+            disabled={filtersQuery.isLoading || filtersQuery.isError}
+          />
+          <FilterDropdown
+            label="Devices"
+            placeholder="All devices"
+            options={filtersQuery.data?.devices}
+            values={deviceFilter}
+            onChange={(values) => {
+              setDeviceFilter(values);
+              goToFirstPage();
+            }}
+            disabled={filtersQuery.isLoading || filtersQuery.isError}
+          />
           <div>
             <label className="block text-sm font-medium text-slate-600">Start Date</label>
             <input
@@ -436,9 +553,9 @@ const ActivityPage = () => {
               value={startDate}
               onChange={(event) => {
                 setStartDate(event.target.value);
-                setPage(0);
+                goToFirstPage();
               }}
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
             />
           </div>
           <div>
@@ -448,27 +565,46 @@ const ActivityPage = () => {
               value={endDate}
               onChange={(event) => {
                 setEndDate(event.target.value);
-                setPage(0);
+                goToFirstPage();
               }}
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
             />
           </div>
         </div>
 
-        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="text-sm text-slate-500">
-            Filters update results in real time. Use the multi-select fields to focus on specific actors or modules.
-          </div>
-          <div className="flex gap-2">
+        {activeFilterChips.length > 0 && (
+          <div className="mt-6 flex flex-wrap items-center gap-2">
+            {activeFilterChips.map((chip) => (
+              <span
+                key={chip.key}
+                className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary"
+              >
+                {chip.label}
+                <button
+                  type="button"
+                  onClick={chip.onRemove}
+                  className="rounded-full p-1 text-primary transition hover:bg-primary/10"
+                  aria-label={`Remove ${chip.label}`}
+                >
+                  <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path
+                      fillRule="evenodd"
+                      d="M10 8.586 4.707 3.293a1 1 0 0 0-1.414 1.414L8.586 10l-5.293 5.293a1 1 0 1 0 1.414 1.414L10 11.414l5.293 5.293a1 1 0 0 0 1.414-1.414L11.414 10l5.293-5.293A1 1 0 0 0 15.293 3.293L10 8.586Z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </button>
+              </span>
+            ))}
             <button
               type="button"
               onClick={handleClearFilters}
-              className="inline-flex items-center rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100"
+              className="inline-flex items-center rounded-full border border-slate-300 px-3 py-1 text-xs font-medium text-slate-600 transition hover:bg-slate-100"
             >
-              Clear filters
+              Clear all
             </button>
           </div>
-        </div>
+        )}
       </div>
 
       <DataTable
@@ -531,29 +667,30 @@ const ActivityPage = () => {
               onSort={handleSort}
               align="center"
             />
-            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">IP Address</th>
-            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Device</th>
-            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Description</th>
+            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Context</th>
+            <th className="hidden px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 lg:table-cell">
+              Description
+            </th>
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-200 bg-white">
           {isLoading && (
             <tr>
-              <td colSpan={9} className="px-6 py-6 text-center text-sm text-slate-500">
+              <td colSpan={8} className="px-6 py-6 text-center text-sm text-slate-500">
                 Loading activity records…
               </td>
             </tr>
           )}
           {!isLoading && hasError && (
             <tr>
-              <td colSpan={9} className="px-6 py-6 text-center text-sm text-rose-500">
+              <td colSpan={8} className="px-6 py-6 text-center text-sm text-rose-500">
                 {errorMessage}
               </td>
             </tr>
           )}
           {!isLoading && !hasError && activities.length === 0 && (
             <tr>
-              <td colSpan={9} className="px-6 py-6 text-center text-sm text-slate-500">
+              <td colSpan={8} className="px-6 py-6 text-center text-sm text-slate-500">
                 No activity records found for the selected filters.
               </td>
             </tr>
@@ -576,10 +713,12 @@ const ActivityPage = () => {
                 <td className="px-4 py-3 text-sm text-slate-600">{activity.module ?? '—'}</td>
                 <td className="px-4 py-3 text-sm text-slate-600">{activity.activityType}</td>
                 <td className="px-4 py-3 text-center">{renderStatusBadge(activity.status)}</td>
-                <td className="whitespace-nowrap px-4 py-3 text-sm text-slate-600">{activity.ipAddress ?? '—'}</td>
-                <td className="px-4 py-3 text-sm text-slate-600">{activity.device ?? '—'}</td>
                 <td className="px-4 py-3 text-sm text-slate-600">
-                  <div className="max-w-xs truncate" title={activity.description ?? undefined}>
+                  <div className="font-medium text-slate-700">{activity.ipAddress ?? '—'}</div>
+                  <div className="text-xs text-slate-500">{activity.device ?? '—'}</div>
+                </td>
+                <td className="hidden px-4 py-3 text-sm text-slate-600 lg:table-cell">
+                  <div className="max-w-md whitespace-normal" title={activity.description ?? undefined}>
                     {activity.description ?? '—'}
                   </div>
                 </td>
