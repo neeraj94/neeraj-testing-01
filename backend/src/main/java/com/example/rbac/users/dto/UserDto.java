@@ -10,6 +10,8 @@ public class UserDto {
     private boolean active;
     private Set<String> roles;
     private Set<String> permissions;
+    private Set<String> directPermissions;
+    private Set<String> revokedPermissions;
     private Instant createdAt;
     private Instant updatedAt;
 
@@ -59,6 +61,22 @@ public class UserDto {
 
     public void setPermissions(Set<String> permissions) {
         this.permissions = permissions;
+    }
+
+    public Set<String> getDirectPermissions() {
+        return directPermissions;
+    }
+
+    public void setDirectPermissions(Set<String> directPermissions) {
+        this.directPermissions = directPermissions;
+    }
+
+    public Set<String> getRevokedPermissions() {
+        return revokedPermissions;
+    }
+
+    public void setRevokedPermissions(Set<String> revokedPermissions) {
+        this.revokedPermissions = revokedPermissions;
     }
 
     public Instant getCreatedAt() {

@@ -3,8 +3,8 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        primary: '#2563eb',
-        accent: '#10b981'
+        primary: 'rgb(var(--color-primary) / <alpha-value>)',
+        accent: 'rgb(var(--color-accent) / <alpha-value>)'
       }
     }
   },
