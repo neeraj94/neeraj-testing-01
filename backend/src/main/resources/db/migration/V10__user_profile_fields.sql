@@ -1,12 +1,100 @@
-ALTER TABLE users
-    ADD COLUMN IF NOT EXISTS first_name VARCHAR(100) NULL,
-    ADD COLUMN IF NOT EXISTS last_name VARCHAR(100) NULL,
-    ADD COLUMN IF NOT EXISTS phone_number VARCHAR(50),
-    ADD COLUMN IF NOT EXISTS whatsapp_number VARCHAR(50),
-    ADD COLUMN IF NOT EXISTS facebook_url VARCHAR(255),
-    ADD COLUMN IF NOT EXISTS linkedin_url VARCHAR(255),
-    ADD COLUMN IF NOT EXISTS skype_id VARCHAR(100),
-    ADD COLUMN IF NOT EXISTS email_signature TEXT;
+SET @schema := DATABASE();
+
+SET @sql := IF (
+    EXISTS (
+        SELECT 1 FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = @schema AND TABLE_NAME = 'users' AND COLUMN_NAME = 'first_name'
+    ),
+    'SELECT 1',
+    'ALTER TABLE users ADD COLUMN first_name VARCHAR(100) NULL'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @sql := IF (
+    EXISTS (
+        SELECT 1 FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = @schema AND TABLE_NAME = 'users' AND COLUMN_NAME = 'last_name'
+    ),
+    'SELECT 1',
+    'ALTER TABLE users ADD COLUMN last_name VARCHAR(100) NULL'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @sql := IF (
+    EXISTS (
+        SELECT 1 FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = @schema AND TABLE_NAME = 'users' AND COLUMN_NAME = 'phone_number'
+    ),
+    'SELECT 1',
+    'ALTER TABLE users ADD COLUMN phone_number VARCHAR(50)'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @sql := IF (
+    EXISTS (
+        SELECT 1 FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = @schema AND TABLE_NAME = 'users' AND COLUMN_NAME = 'whatsapp_number'
+    ),
+    'SELECT 1',
+    'ALTER TABLE users ADD COLUMN whatsapp_number VARCHAR(50)'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @sql := IF (
+    EXISTS (
+        SELECT 1 FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = @schema AND TABLE_NAME = 'users' AND COLUMN_NAME = 'facebook_url'
+    ),
+    'SELECT 1',
+    'ALTER TABLE users ADD COLUMN facebook_url VARCHAR(255)'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @sql := IF (
+    EXISTS (
+        SELECT 1 FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = @schema AND TABLE_NAME = 'users' AND COLUMN_NAME = 'linkedin_url'
+    ),
+    'SELECT 1',
+    'ALTER TABLE users ADD COLUMN linkedin_url VARCHAR(255)'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @sql := IF (
+    EXISTS (
+        SELECT 1 FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = @schema AND TABLE_NAME = 'users' AND COLUMN_NAME = 'skype_id'
+    ),
+    'SELECT 1',
+    'ALTER TABLE users ADD COLUMN skype_id VARCHAR(100)'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @sql := IF (
+    EXISTS (
+        SELECT 1 FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = @schema AND TABLE_NAME = 'users' AND COLUMN_NAME = 'email_signature'
+    ),
+    'SELECT 1',
+    'ALTER TABLE users ADD COLUMN email_signature TEXT'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
 UPDATE users
 SET first_name = CASE
