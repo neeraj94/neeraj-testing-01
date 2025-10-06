@@ -1,5 +1,6 @@
 package com.example.rbac.settings.service;
 
+import com.example.rbac.activity.service.ActivityRecorder;
 import com.example.rbac.common.exception.ApiException;
 import com.example.rbac.settings.dto.*;
 import com.example.rbac.settings.model.Setting;
@@ -40,10 +41,12 @@ public class SettingsService {
 
     private final SettingRepository settingRepository;
     private final ObjectMapper objectMapper;
+    private final ActivityRecorder activityRecorder;
 
-    public SettingsService(SettingRepository settingRepository, ObjectMapper objectMapper) {
+    public SettingsService(SettingRepository settingRepository, ObjectMapper objectMapper, ActivityRecorder activityRecorder) {
         this.settingRepository = settingRepository;
         this.objectMapper = objectMapper;
+        this.activityRecorder = activityRecorder;
     }
 
     public SettingsResponse getSettings() {
@@ -87,6 +90,7 @@ public class SettingsService {
 
         if (!toPersist.isEmpty()) {
             settingRepository.saveAll(toPersist);
+            activityRecorder.record("Settings", "UPDATE", "Updated application settings", "SUCCESS", buildSettingsContext(toPersist));
         }
 
         return getSettings();
@@ -94,6 +98,19 @@ public class SettingsService {
 
     public SettingsThemeDto getTheme() {
         return new SettingsThemeDto(resolvePrimaryColor(), resolveApplicationName(), resolveBaseCurrency());
+    }
+
+    private Map<String, Object> buildSettingsContext(List<Setting> updatedSettings) {
+        Map<String, Object> context = new LinkedHashMap<>();
+        if (updatedSettings == null || updatedSettings.isEmpty()) {
+            return context;
+        }
+        context.put("updatedCodes", updatedSettings.stream()
+                .map(Setting::getCode)
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList()));
+        return context;
     }
 
     public String resolvePrimaryColor() {
