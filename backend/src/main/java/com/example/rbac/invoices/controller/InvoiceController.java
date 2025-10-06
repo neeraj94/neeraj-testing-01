@@ -5,6 +5,7 @@ import com.example.rbac.invoices.dto.InvoiceDto;
 import com.example.rbac.invoices.dto.InvoiceRequest;
 import com.example.rbac.invoices.service.InvoiceService;
 import jakarta.validation.Valid;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -18,28 +19,33 @@ public class InvoiceController {
     }
 
     @GetMapping
-    public PageResponse<InvoiceDto> list(@RequestParam(defaultValue = "0") int page,
-                                         @RequestParam(defaultValue = "20") int size) {
+    @PreAuthorize("hasAuthority('INVOICE_VIEW')")
+    public PageResponse<InvoiceDto> list(@RequestParam(name = "page", defaultValue = "0") int page,
+                                         @RequestParam(name = "size", defaultValue = "20") int size) {
         return invoiceService.list(page, size);
     }
 
     @PostMapping
+    @PreAuthorize("hasAuthority('INVOICE_CREATE')")
     public InvoiceDto create(@Valid @RequestBody InvoiceRequest request) {
         return invoiceService.create(request);
     }
 
     @GetMapping("/{id}")
-    public InvoiceDto get(@PathVariable Long id) {
+    @PreAuthorize("hasAuthority('INVOICE_VIEW')")
+    public InvoiceDto get(@PathVariable("id") Long id) {
         return invoiceService.get(id);
     }
 
     @PutMapping("/{id}")
-    public InvoiceDto update(@PathVariable Long id, @Valid @RequestBody InvoiceRequest request) {
+    @PreAuthorize("hasAuthority('INVOICE_UPDATE')")
+    public InvoiceDto update(@PathVariable("id") Long id, @Valid @RequestBody InvoiceRequest request) {
         return invoiceService.update(id, request);
     }
 
     @DeleteMapping("/{id}")
-    public void delete(@PathVariable Long id) {
+    @PreAuthorize("hasAuthority('INVOICE_DELETE')")
+    public void delete(@PathVariable("id") Long id) {
         invoiceService.delete(id);
     }
 }

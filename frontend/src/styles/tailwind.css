@@ -4,4 +4,7 @@
 
 :root {
   color-scheme: light;
+  --color-primary: 37 99 235;
+  --color-primary-hex: #2563eb;
+  --color-accent: 16 185 129;
 }

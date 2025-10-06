@@ -1,10 +1,12 @@
 import { FormEvent, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAppDispatch } from '../app/hooks';
+import { useAppDispatch, useAppSelector } from '../app/hooks';
 import { signup } from '../features/auth/authSlice';
+import { selectApplicationName } from '../features/settings/selectors';
 
 const SignupPage = () => {
   const dispatch = useAppDispatch();
+  const applicationName = useAppSelector(selectApplicationName);
   const navigate = useNavigate();
   const [form, setForm] = useState({ email: '', password: '', fullName: '' });
 
@@ -20,7 +22,9 @@ const SignupPage = () => {
     <div className="flex min-h-screen items-center justify-center bg-slate-100 px-4">
       <div className="w-full max-w-md rounded-xl bg-white p-8 shadow-lg">
         <h2 className="text-2xl font-semibold text-slate-800">Create Account</h2>
-        <p className="mt-2 text-sm text-slate-500">Sign up to explore the RBAC dashboard.</p>
+        <p className="mt-2 text-sm text-slate-500">
+          Sign up to explore {applicationName || 'the dashboard'}.
+        </p>
         <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
           <div>
             <label className="block text-sm font-medium text-slate-600">Full name</label>
