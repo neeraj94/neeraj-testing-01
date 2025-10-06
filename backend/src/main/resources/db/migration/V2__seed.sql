@@ -18,7 +18,11 @@ INSERT INTO permissions (code, name) VALUES
  ('INVOICE_VIEW', 'View Invoices'),
  ('INVOICE_CREATE', 'Create Invoices'),
  ('INVOICE_UPDATE', 'Update Invoices'),
- ('INVOICE_DELETE', 'Delete Invoices');
+ ('INVOICE_DELETE', 'Delete Invoices'),
+ ('USERS_EXPORT', 'Export Users'),
+ ('ROLES_EXPORT', 'Export Roles'),
+ ('PERMISSIONS_EXPORT', 'Export Permissions'),
+ ('INVOICES_EXPORT', 'Export Invoices');
 
 INSERT INTO roles (code, name) VALUES
  ('SUPER_ADMIN', 'Super Administrator'),
