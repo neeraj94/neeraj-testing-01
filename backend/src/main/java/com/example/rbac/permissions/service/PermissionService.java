@@ -18,6 +18,8 @@ import org.springframework.stereotype.Service;
 @Service
 public class PermissionService {
 
+    private static final String CUSTOMER_PERMISSION_PREFIX = "CUSTOMER_";
+
     private final PermissionRepository permissionRepository;
     private final PermissionMapper permissionMapper;
 
@@ -30,7 +32,9 @@ public class PermissionService {
     @PreAuthorize("hasAuthority('PERMISSION_VIEW')")
     public PageResponse<PermissionDto> list(int page, int size, String sort, String direction) {
         Pageable pageable = buildPageable(page, size, sort, direction);
-        Page<PermissionDto> result = permissionRepository.findAll(pageable).map(permissionMapper::toDto);
+        Page<PermissionDto> result = permissionRepository
+                .findByKeyNotStartingWithIgnoreCase(CUSTOMER_PERMISSION_PREFIX, pageable)
+                .map(permissionMapper::toDto);
         return PageResponse.from(result);
     }
 

@@ -119,12 +119,9 @@ const App = () => {
                   'USER_VIEW',
                   'USER_VIEW_GLOBAL',
                   'USER_VIEW_OWN',
-                  'CUSTOMER_VIEW',
-                  'CUSTOMER_VIEW_GLOBAL',
-                  'CUSTOMER_VIEW_OWN',
-                  'CUSTOMER_CREATE',
-                  'CUSTOMER_UPDATE',
-                  'CUSTOMER_DELETE'
+                  'USER_CREATE',
+                  'USER_UPDATE',
+                  'USER_DELETE'
                 ]}
               />
             }

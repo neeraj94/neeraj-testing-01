@@ -36,12 +36,9 @@ export const TAB_RULES: Record<string, PermissionKey[]> = {
     'USER_VIEW',
     'USER_VIEW_GLOBAL',
     'USER_VIEW_OWN',
-    'CUSTOMER_VIEW',
-    'CUSTOMER_VIEW_GLOBAL',
-    'CUSTOMER_VIEW_OWN',
-    'CUSTOMER_CREATE',
-    'CUSTOMER_UPDATE',
-    'CUSTOMER_DELETE'
+    'USER_CREATE',
+    'USER_UPDATE',
+    'USER_DELETE'
   ],
   Roles: ['ROLE_VIEW'],
   Permissions: ['PERMISSION_VIEW'],

@@ -104,15 +104,15 @@ const UsersPage = () => {
   );
 
   const canCreateUser = useMemo(
-    () => hasAnyPermission(grantedPermissions as PermissionKey[], ['USER_CREATE', 'CUSTOMER_CREATE']),
+    () => hasAnyPermission(grantedPermissions as PermissionKey[], ['USER_CREATE']),
     [grantedPermissions]
   );
   const canManageUsers = useMemo(
-    () => hasAnyPermission(grantedPermissions as PermissionKey[], ['USER_UPDATE', 'CUSTOMER_UPDATE']),
+    () => hasAnyPermission(grantedPermissions as PermissionKey[], ['USER_UPDATE']),
     [grantedPermissions]
   );
   const canDeleteUsers = useMemo(
-    () => hasAnyPermission(grantedPermissions as PermissionKey[], ['USER_DELETE', 'CUSTOMER_DELETE']),
+    () => hasAnyPermission(grantedPermissions as PermissionKey[], ['USER_DELETE']),
     [grantedPermissions]
   );
   const canExportUsers = useMemo(

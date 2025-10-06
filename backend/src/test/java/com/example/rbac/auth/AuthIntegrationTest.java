@@ -42,10 +42,9 @@ class AuthIntegrationTest {
         assertThat(body.getAccessToken()).isNotBlank();
         assertThat(body.getRoles()).contains("SUPER_ADMIN");
         assertThat(body.getPermissions()).contains(
-                "CUSTOMER_VIEW",
                 "USER_VIEW",
+                "USER_CREATE",
                 "USERS_EXPORT",
-                "CUSTOMERS_EXPORT",
                 "SETTINGS_VIEW",
                 "SETTINGS_UPDATE"
         );

@@ -11,6 +11,8 @@ import java.util.stream.Collectors;
 @Mapper(componentModel = "spring")
 public interface UserMapper {
 
+    String CUSTOMER_PREFIX = "CUSTOMER_";
+
     @Mapping(target = "roles", expression = "java(extractRoleKeys(user))")
     @Mapping(target = "permissions", expression = "java(extractAllPermissions(user))")
     @Mapping(target = "directPermissions", expression = "java(extractDirectPermissions(user))")
@@ -28,18 +30,24 @@ public interface UserMapper {
                 .collect(Collectors.toSet());
         permissions.addAll(extractDirectPermissions(user));
         permissions.removeAll(extractRevokedPermissions(user));
-        return permissions;
+        return filterCustomerPermissions(permissions);
     }
 
     default Set<String> extractDirectPermissions(User user) {
         return user.getDirectPermissions().stream()
                 .map(permission -> permission.getKey())
-                .collect(Collectors.toSet());
+                .collect(Collectors.collectingAndThen(Collectors.toSet(), this::filterCustomerPermissions));
     }
 
     default Set<String> extractRevokedPermissions(User user) {
         return user.getRevokedPermissions().stream()
                 .map(permission -> permission.getKey())
+                .collect(Collectors.collectingAndThen(Collectors.toSet(), this::filterCustomerPermissions));
+    }
+
+    default Set<String> filterCustomerPermissions(Set<String> permissions) {
+        return permissions.stream()
+                .filter(key -> key != null && !key.toUpperCase().startsWith(CUSTOMER_PREFIX))
                 .collect(Collectors.toSet());
     }
 }

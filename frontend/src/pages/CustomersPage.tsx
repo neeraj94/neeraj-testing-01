@@ -14,9 +14,9 @@ import { exportDataset, type ExportFormat } from '../utils/exporters';
 const CustomersPage = () => {
   const { permissions } = useAppSelector((state) => state.auth);
   const grantedPermissions = permissions as PermissionKey[];
-  const canCreate = hasAnyPermission(grantedPermissions, ['CUSTOMER_CREATE']);
-  const canDelete = hasAnyPermission(grantedPermissions, ['CUSTOMER_DELETE']);
-  const canExport = hasAnyPermission(grantedPermissions, ['CUSTOMERS_EXPORT']);
+  const canCreate = hasAnyPermission(grantedPermissions, ['USER_CREATE']);
+  const canDelete = hasAnyPermission(grantedPermissions, ['USER_DELETE']);
+  const canExport = hasAnyPermission(grantedPermissions, ['USERS_EXPORT']);
   const { notify } = useToast();
 
   const {
