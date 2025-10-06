@@ -10,11 +10,14 @@ import { extractErrorMessage } from '../utils/errors';
 import { hasAnyPermission } from '../utils/permissions';
 import ExportMenu from '../components/ExportMenu';
 import { exportDataset, type ExportFormat } from '../utils/exporters';
+import { selectBaseCurrency } from '../features/settings/selectors';
+import { formatCurrency } from '../utils/currency';
 
 const initialItem = { description: '', qty: 1, unitPrice: 0 };
 
 const InvoicesPage = () => {
   const { permissions } = useAppSelector((state) => state.auth);
+  const baseCurrency = useAppSelector(selectBaseCurrency);
   const grantedPermissions = permissions as PermissionKey[];
   const canCreate = hasAnyPermission(grantedPermissions, ['INVOICE_CREATE']);
   const canDelete = hasAnyPermission(grantedPermissions, ['INVOICE_DELETE']);
@@ -201,7 +204,7 @@ const InvoicesPage = () => {
         status: invoice.status,
         issueDate: invoice.issueDate,
         dueDate: invoice.dueDate,
-        total: invoice.total.toFixed(2)
+        total: formatCurrency(invoice.total, baseCurrency)
       }));
       if (!rows.length) {
         notify({ type: 'error', message: 'There are no invoices to export.' });
@@ -344,7 +347,9 @@ const InvoicesPage = () => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-600">Unit price</label>
+              <label className="block text-sm font-medium text-slate-600">
+                Unit price ({baseCurrency})
+              </label>
               <input
                 type="number"
                 min={0}
@@ -394,7 +399,7 @@ const InvoicesPage = () => {
               <td className="px-3 py-2">{invoice.number}</td>
               <td className="px-3 py-2">{invoice.customerName}</td>
               <td className="px-3 py-2">{invoice.status}</td>
-              <td className="px-3 py-2 text-right">${invoice.total.toFixed(2)}</td>
+              <td className="px-3 py-2 text-right">{formatCurrency(invoice.total, baseCurrency)}</td>
               {showActions && (
                 <td className="px-3 py-2 text-right">
                   <div className="flex items-center justify-end gap-3">

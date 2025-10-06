@@ -3,13 +3,15 @@ package com.example.rbac.settings.dto;
 public class SettingsThemeDto {
     private String primaryColor;
     private String applicationName;
+    private String baseCurrency;
 
     public SettingsThemeDto() {
     }
 
-    public SettingsThemeDto(String primaryColor, String applicationName) {
+    public SettingsThemeDto(String primaryColor, String applicationName, String baseCurrency) {
         this.primaryColor = primaryColor;
         this.applicationName = applicationName;
+        this.baseCurrency = baseCurrency;
     }
 
     public String getPrimaryColor() {
@@ -26,5 +28,13 @@ public class SettingsThemeDto {
 
     public void setApplicationName(String applicationName) {
         this.applicationName = applicationName;
+    }
+
+    public String getBaseCurrency() {
+        return baseCurrency;
+    }
+
+    public void setBaseCurrency(String baseCurrency) {
+        this.baseCurrency = baseCurrency;
     }
 }

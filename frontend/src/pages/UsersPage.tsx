@@ -1371,6 +1371,7 @@ const UsersPage = () => {
             <button
               type="submit"
               disabled={!isEditable || isSaving}
+              title={!isEditable ? 'You do not have permission to update this user.' : undefined}
               className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isCreate ? (isSaving ? 'Creating…' : 'Create user') : isSaving ? 'Saving…' : 'Save changes'}

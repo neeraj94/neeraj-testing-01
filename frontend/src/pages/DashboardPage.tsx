@@ -3,6 +3,46 @@ import { useQuery } from '@tanstack/react-query';
 import api from '../services/http';
 import type { Customer, Invoice, Pagination, User } from '../types/models';
 import DataTable from '../components/DataTable';
+import { useAppSelector } from '../app/hooks';
+import { selectBaseCurrency } from '../features/settings/selectors';
+import { formatCurrency, formatCurrencyCompact } from '../utils/currency';
+
+const SparkleIcon = () => (
+  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M12 3.75 13.2 8.7l4.95 1.2-4.95 1.2-1.2 4.95-1.2-4.95L5.85 9.9l4.95-1.2L12 3.75Z"
+    />
+  </svg>
+);
+
+const UsersIcon = () => (
+  <svg className="h-8 w-8 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.5 20.25a7.5 7.5 0 0 1 15 0v.75h-15v-.75Z"
+    />
+  </svg>
+);
+
+const ChartIcon = () => (
+  <svg className="h-8 w-8 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 19.5 4.5 9.75m6 9.75V5.25m6 14.25v-6" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M3 20.25h18" />
+  </svg>
+);
+
+const ClipboardIcon = () => (
+  <svg className="h-8 w-8 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M9 4.5h6M9.75 3h4.5a1.5 1.5 0 0 1 1.5 1.5V6h2.25A1.5 1.5 0 0 1 19.5 7.5V19.5A1.5 1.5 0 0 1 18 21H6a1.5 1.5 0 0 1-1.5-1.5V7.5A1.5 1.5 0 0 1 6.75 6H9V4.5A1.5 1.5 0 0 1 10.5 3h3"
+    />
+  </svg>
+);
 
 const SparkleIcon = () => (
   <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -42,6 +82,7 @@ const ClipboardIcon = () => (
 );
 
 const DashboardPage = () => {
+  const baseCurrency = useAppSelector(selectBaseCurrency);
   const { data: usersPage } = useQuery<Pagination<User>>({
     queryKey: ['users', 'recent'],
     queryFn: async () => {
@@ -131,7 +172,9 @@ const DashboardPage = () => {
           <div className="flex items-start justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Invoices paid</p>
-              <p className="mt-2 text-3xl font-semibold text-slate-900">${paidTotal.toFixed(2)}</p>
+              <p className="mt-2 text-3xl font-semibold text-slate-900">
+                {formatCurrencyCompact(paidTotal, baseCurrency)}
+              </p>
               <p className="mt-1 text-xs text-emerald-600">Up to date</p>
             </div>
             <ClipboardIcon />
@@ -141,7 +184,9 @@ const DashboardPage = () => {
           <div className="flex items-start justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Outstanding</p>
-              <p className="mt-2 text-3xl font-semibold text-slate-900">${outstandingTotal.toFixed(2)}</p>
+              <p className="mt-2 text-3xl font-semibold text-slate-900">
+                {formatCurrencyCompact(outstandingTotal, baseCurrency)}
+              </p>
               <p className="mt-1 text-xs text-amber-600">{sentCount} sent • {draftCount} drafts</p>
             </div>
             <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-amber-100 text-amber-500">!</span>
@@ -178,7 +223,9 @@ const DashboardPage = () => {
                       {invoice.status}
                     </span>
                   </td>
-                  <td className="px-3 py-2 text-right font-semibold text-slate-700">${invoice.total.toFixed(2)}</td>
+                  <td className="px-3 py-2 text-right font-semibold text-slate-700">
+                    {formatCurrency(invoice.total, baseCurrency)}
+                  </td>
                 </tr>
               ))}
             </tbody>

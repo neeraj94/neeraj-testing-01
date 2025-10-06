@@ -19,13 +19,6 @@ const escapeXml = (value: string) =>
 
 const escapePdfText = (value: string) => value.replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)');
 
-const padEnd = (value: string, length: number) => {
-  if (value.length >= length) {
-    return value;
-  }
-  return value + ' '.repeat(length - value.length);
-};
-
 const toArrayBuffer = (data: Uint8Array): ArrayBuffer =>
   data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) as ArrayBuffer;
 
@@ -282,38 +275,151 @@ const buildCsv = (columns: ExportColumn[], rows: string[][]) => {
   return `${header}${rows.length ? '\r\n' : ''}${body}`;
 };
 
-const chunkLines = (lines: string[], maxLinesPerPage: number) => {
-  const pages: string[][] = [];
-  for (let index = 0; index < lines.length; index += maxLinesPerPage) {
-    pages.push(lines.slice(index, index + maxLinesPerPage));
+const truncateText = (value: string, maxLength = 120) => {
+  if (value.length <= maxLength) {
+    return value;
   }
-  return pages;
+  return `${value.substring(0, maxLength - 1)}…`;
+};
+
+const isNumericLike = (value: string) => {
+  if (!value) {
+    return false;
+  }
+  const normalized = value.replace(/[^0-9.,\-]/g, '').replace(/,/g, '.');
+  return /^-?\d+(?:\.\d+)?$/.test(normalized);
+};
+
+const computeColumnWidths = (columns: ExportColumn[], rows: string[][], tableWidth: number) => {
+  const charCounts = columns.map((column, index) => {
+    const values = rows.map((row) => row[index] ?? '');
+    const longest = Math.max(column.header.length, ...values.map((value) => value.length));
+    return Math.max(longest, 6);
+  });
+  const totalChars = charCounts.reduce((sum, count) => sum + count, 0) || columns.length;
+  const minWidth = tableWidth / columns.length * 0.25;
+  let widths = charCounts.map((count) => Math.max((count / totalChars) * tableWidth, minWidth));
+  const adjustedTotal = widths.reduce((sum, width) => sum + width, 0);
+  const scale = tableWidth / adjustedTotal;
+  widths = widths.map((width) => width * scale);
+  const sum = widths.reduce((acc, width) => acc + width, 0);
+  const diff = tableWidth - sum;
+  widths[widths.length - 1] += diff;
+  return widths;
 };
 
 const buildPdf = (title: string, columns: ExportColumn[], rows: string[][]) => {
-  const colWidths = columns.map((column, index) => {
-    const columnValues = rows.map((row) => row[index] ?? '');
-    const maxLength = Math.max(column.header.length, ...columnValues.map((value) => value.length));
-    return Math.min(Math.max(maxLength + 2, 8), 40);
+  const pageWidth = 612;
+  const pageHeight = 792;
+  const horizontalMargin = 48;
+  const verticalMargin = 64;
+  const headerHeight = 28;
+  const rowHeight = 22;
+  const tableWidth = pageWidth - horizontalMargin * 2;
+  const dataRows = rows.length
+    ? rows
+    : [columns.map((_, index) => (index === 0 ? 'No data available' : ''))];
+  const columnWidths = computeColumnWidths(columns, dataRows, tableWidth);
+  const columnOffsets = columns.map((_, index) => {
+    let offset = horizontalMargin;
+    for (let i = 0; i < index; i += 1) {
+      offset += columnWidths[i];
+    }
+    return offset;
   });
-
-  const headerLine = columns
-    .map((column, index) => padEnd(column.header.toUpperCase(), colWidths[index]))
-    .join(' ');
-
-  const bodyLines = rows.map((row) =>
-    row.map((value, index) => padEnd(value, colWidths[index])).join(' ')
+  const numericColumns = columns.map((_, index) =>
+    dataRows.every((row) => isNumericLike(row[index] ?? ''))
   );
 
-  const lines = [title, ''.padEnd(headerLine.length, '='), headerLine, ''.padEnd(headerLine.length, '-')];
-  lines.push(...bodyLines);
+  const pages: string[][] = [];
+  let commands: string[] = [];
+  let currentY = 0;
 
-  const lineHeight = 14;
-  const topMargin = 780;
-  const bottomMargin = 60;
-  const usableHeight = topMargin - bottomMargin;
-  const maxLinesPerPage = Math.max(1, Math.floor(usableHeight / lineHeight));
-  const pages = chunkLines(lines, maxLinesPerPage);
+  const drawHeader = () => {
+    const top = currentY;
+    const bottom = top - headerHeight;
+    commands.push('q');
+    commands.push('0.90 0.95 1 rg');
+    commands.push(`${horizontalMargin} ${bottom} ${tableWidth} ${headerHeight} re f`);
+    commands.push('Q');
+    commands.push('q');
+    commands.push('0.70 0.78 0.92 RG');
+    commands.push('1 w');
+    commands.push(`${horizontalMargin} ${bottom} ${tableWidth} ${headerHeight} re S`);
+    commands.push('Q');
+    commands.push('0.18 0.25 0.45 rg');
+    columns.forEach((column, index) => {
+      const textX = columnOffsets[index] + 8;
+      const textY = bottom + headerHeight - 10;
+      commands.push(
+        `BT /F1 10 Tf 1 0 0 1 ${textX} ${textY} Tm (${escapePdfText(column.header.toUpperCase())}) Tj ET`
+      );
+    });
+    commands.push('0 0 0 rg');
+    currentY = bottom;
+  };
+
+  const startPage = (isFirst: boolean) => {
+    if (!isFirst) {
+      pages.push(commands);
+    }
+    commands = [];
+    currentY = pageHeight - verticalMargin;
+    commands.push('0 0 0 rg');
+    commands.push(`BT /F1 16 Tf 1 0 0 1 ${horizontalMargin} ${currentY} Tm (${escapePdfText(title)}) Tj ET`);
+    currentY -= 36;
+    drawHeader();
+  };
+
+  const appendRow = (row: string[], index: number) => {
+    if (currentY - rowHeight < verticalMargin) {
+      startPage(false);
+    }
+    const top = currentY;
+    const bottom = top - rowHeight;
+    if (index % 2 === 0) {
+      commands.push('q');
+      commands.push('0.97 0.99 1 rg');
+      commands.push(`${horizontalMargin} ${bottom} ${tableWidth} ${rowHeight} re f`);
+      commands.push('Q');
+    }
+    commands.push('q');
+    commands.push('0.85 0.88 0.94 RG');
+    commands.push('0.5 w');
+    commands.push(`${horizontalMargin} ${bottom} ${tableWidth} ${rowHeight} re S`);
+    commands.push('Q');
+
+    row.forEach((value, columnIndex) => {
+      const truncated = truncateText(value ?? '', 140);
+      const textY = bottom + rowHeight - 8;
+      let textX = columnOffsets[columnIndex] + 8;
+      if (numericColumns[columnIndex]) {
+        const approxWidth = Math.min(truncated.length * 5.2, columnWidths[columnIndex] - 10);
+        textX = columnOffsets[columnIndex] + columnWidths[columnIndex] - approxWidth - 8;
+      }
+      const safeX = Math.max(textX, columnOffsets[columnIndex] + 8);
+      commands.push(
+        `BT /F1 10 Tf 1 0 0 1 ${safeX} ${textY} Tm (${escapePdfText(truncated)}) Tj ET`
+      );
+    });
+
+    currentY = bottom;
+  };
+
+  startPage(true);
+  dataRows.forEach((row, index) => appendRow(row, index));
+  pages.push(commands);
+
+  pages.forEach((pageCommands, pageIndex) => {
+    const footerY = verticalMargin - 32;
+    pageCommands.push('0.45 0.50 0.60 rg');
+    pageCommands.push(
+      `BT /F1 9 Tf 1 0 0 1 ${horizontalMargin} ${footerY} Tm (${escapePdfText(
+        `Page ${pageIndex + 1} of ${pages.length}`
+      )}) Tj ET`
+    );
+    pageCommands.push('0 0 0 rg');
+  });
 
   const objects: string[] = [];
   const pageReferences: Array<{ pageId: number; contentId: number }> = [];
@@ -322,18 +428,14 @@ const buildPdf = (title: string, columns: ExportColumn[], rows: string[][]) => {
   const pagesId = 2;
   const fontId = 3;
 
-  pages.forEach((pageLines, index) => {
-    const contentParts = pageLines.map((line, lineIndex) => {
-      const y = topMargin - lineIndex * lineHeight - 40;
-      return `BT /F1 10 Tf 1 0 0 1 40 ${y} Tm (${escapePdfText(line)}) Tj ET`;
-    });
-    const content = contentParts.join('\n');
+  pages.forEach((pageCommands, index) => {
+    const content = pageCommands.join('\n');
     const contentStream = `<< /Length ${content.length} >>\nstream\n${content}\nendstream`;
     const contentId = 4 + index * 2;
     const pageId = contentId + 1;
     objects[contentId] = contentStream;
     const pageObject =
-      `<< /Type /Page /Parent ${pagesId} 0 R /MediaBox [0 0 612 792] /Contents ${contentId} 0 R /Resources << /Font << /F1 ${fontId} 0 R >> >> >>`;
+      `<< /Type /Page /Parent ${pagesId} 0 R /MediaBox [0 0 ${pageWidth} ${pageHeight}] /Contents ${contentId} 0 R /Resources << /Font << /F1 ${fontId} 0 R >> >> >>`;
     objects[pageId] = pageObject;
     pageReferences.push({ pageId, contentId });
   });

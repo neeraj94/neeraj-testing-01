@@ -5,3 +5,4 @@ export const selectSettingsStatus = (state: RootState) => state.settings.status;
 export const selectSettingsError = (state: RootState) => state.settings.error;
 export const selectPrimaryColor = (state: RootState) => state.settings.theme.primaryColor;
 export const selectApplicationName = (state: RootState) => state.settings.theme.applicationName;
+export const selectBaseCurrency = (state: RootState) => state.settings.theme.baseCurrency;

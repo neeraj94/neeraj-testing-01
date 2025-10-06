@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Currency;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -23,6 +24,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.Comparator;
 import java.util.stream.Collectors;
 
 @Service
@@ -33,6 +35,8 @@ public class SettingsService {
     private static final String APPLICATION_NAME_CODE = "general.site_name";
     private static final String DEFAULT_PRIMARY_COLOR = "#2563EB";
     private static final String DEFAULT_APPLICATION_NAME = "RBAC Portal";
+    private static final String BASE_CURRENCY_CODE = "finance.base_currency";
+    private static final String DEFAULT_BASE_CURRENCY = "USD";
 
     private final SettingRepository settingRepository;
     private final ObjectMapper objectMapper;
@@ -89,7 +93,7 @@ public class SettingsService {
     }
 
     public SettingsThemeDto getTheme() {
-        return new SettingsThemeDto(resolvePrimaryColor(), resolveApplicationName());
+        return new SettingsThemeDto(resolvePrimaryColor(), resolveApplicationName(), resolveBaseCurrency());
     }
 
     public String resolvePrimaryColor() {
@@ -103,6 +107,14 @@ public class SettingsService {
                 .map(String::trim)
                 .filter(value -> !value.isBlank())
                 .orElse(DEFAULT_APPLICATION_NAME);
+    }
+
+    public String resolveBaseCurrency() {
+        return settingRepository.findByCode(BASE_CURRENCY_CODE)
+                .map(Setting::getValue)
+                .map(value -> value == null ? "" : value.trim().toUpperCase(Locale.ROOT))
+                .filter(value -> !value.isBlank())
+                .orElse(DEFAULT_BASE_CURRENCY);
     }
 
     private SettingsResponse mapSettings(List<Setting> settings) {
@@ -146,11 +158,21 @@ public class SettingsService {
         dto.setValue(setting.getValue());
         dto.setValueType(setting.getValueType());
         dto.setEditable(setting.isEditable());
-        dto.setOptions(parseOptions(setting.getOptionsJson()));
+        dto.setOptions(resolveOptions(setting));
         return dto;
     }
 
-    private List<SettingOptionDto> parseOptions(String optionsJson) {
+    private List<SettingOptionDto> resolveOptions(Setting setting) {
+        if (BASE_CURRENCY_CODE.equals(setting.getCode())) {
+            return Currency.getAvailableCurrencies().stream()
+                    .sorted(Comparator.comparing(Currency::getCurrencyCode))
+                    .map(currency -> new SettingOptionDto(
+                            currency.getCurrencyCode(),
+                            currency.getDisplayName(Locale.ENGLISH) + " (" + currency.getCurrencyCode() + ")"
+                    ))
+                    .collect(Collectors.toList());
+        }
+        String optionsJson = setting.getOptionsJson();
         if (optionsJson == null || optionsJson.isBlank()) {
             return List.of();
         }
@@ -175,10 +197,34 @@ public class SettingsService {
             return normalizeColor(raw);
         }
         if (type == SettingValueType.TEXT) {
-            return raw == null ? "" : raw;
+            String normalized = raw == null ? "" : raw;
+            if (BASE_CURRENCY_CODE.equals(setting.getCode())) {
+                return normalizeCurrency(normalized);
+            }
+            return normalized;
         }
         // STRING fallback
-        return raw == null ? "" : raw.trim();
+        String normalized = raw == null ? "" : raw.trim();
+        if (BASE_CURRENCY_CODE.equals(setting.getCode())) {
+            return normalizeCurrency(normalized);
+        }
+        return normalized;
+    }
+
+    private String normalizeCurrency(String value) {
+        if (value == null) {
+            return DEFAULT_BASE_CURRENCY;
+        }
+        String upper = value.trim().toUpperCase(Locale.ROOT);
+        if (upper.isBlank()) {
+            return DEFAULT_BASE_CURRENCY;
+        }
+        boolean exists = Currency.getAvailableCurrencies().stream()
+                .anyMatch(currency -> currency.getCurrencyCode().equalsIgnoreCase(upper));
+        if (!exists) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Unknown currency code: " + value);
+        }
+        return upper;
     }
 
     private String normalizeBoolean(String raw) {

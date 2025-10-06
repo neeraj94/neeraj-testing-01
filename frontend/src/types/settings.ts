@@ -37,6 +37,7 @@ export interface SettingsResponse {
 export interface SettingsThemeResponse {
   primaryColor: string;
   applicationName: string;
+  baseCurrency: string;
 }
 
 export interface SettingUpdatePayload {

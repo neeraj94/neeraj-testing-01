@@ -105,9 +105,22 @@ const parsePermissionLabel = (permission: Permission) => {
 };
 
 export const buildPermissionGroups = (permissions: Permission[]): PermissionGroup[] => {
+  const keySet = new Set(
+    permissions.map((permission) => (permission.key ?? '').toUpperCase())
+  );
+  const filtered = permissions.filter((permission) => {
+    const key = (permission.key ?? '').toUpperCase();
+    if (key.startsWith('CUSTOMER_')) {
+      const equivalent = `USER_${key.substring('CUSTOMER_'.length)}`;
+      if (keySet.has(equivalent)) {
+        return false;
+      }
+    }
+    return true;
+  });
   const map = new Map<string, PermissionGroup>();
 
-  permissions.forEach((permission) => {
+  filtered.forEach((permission) => {
     const { feature, label } = parsePermissionLabel(permission);
     const key = feature || 'General';
     const existing = map.get(key);
