@@ -12,6 +12,14 @@ export interface User extends Record<string, unknown> {
   id: number;
   email: string;
   fullName: string;
+  firstName: string;
+  lastName: string;
+  phoneNumber?: string | null;
+  whatsappNumber?: string | null;
+  facebookUrl?: string | null;
+  linkedinUrl?: string | null;
+  skypeId?: string | null;
+  emailSignature?: string | null;
   active: boolean;
   roles: string[];
   permissions: PermissionKey[];

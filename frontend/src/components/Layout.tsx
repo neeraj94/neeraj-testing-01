@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../app/hooks';
 import { logout } from '../features/auth/authSlice';
@@ -23,6 +23,8 @@ const Layout = () => {
   const applicationName = useAppSelector(selectApplicationName);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const profileMenuRef = useRef<HTMLDivElement | null>(null);
 
   const brandName = applicationName?.trim() || 'RBAC Portal';
   const brandInitials = useMemo(() => {
@@ -136,6 +138,23 @@ const Layout = () => {
     });
   }, [location.pathname, navigation]);
 
+  useEffect(() => {
+    const handleClickAway = (event: MouseEvent) => {
+      if (!profileMenuRef.current) {
+        return;
+      }
+      if (!profileMenuRef.current.contains(event.target as Node)) {
+        setProfileMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickAway);
+    return () => document.removeEventListener('mousedown', handleClickAway);
+  }, []);
+
+  useEffect(() => {
+    setProfileMenuOpen(false);
+  }, [location.pathname]);
+
   const toggleSection = (key: string) => {
     setExpandedSections((prev) => ({ ...prev, [key]: !(prev[key] ?? true) }));
   };
@@ -162,6 +181,11 @@ const Layout = () => {
     }
     dispatch(logout());
     navigate('/login', { replace: true });
+  };
+
+  const handleProfileNavigate = () => {
+    setProfileMenuOpen(false);
+    navigate('/profile');
   };
 
   return (
@@ -201,22 +225,49 @@ const Layout = () => {
           </button>
         </div>
         <div className="px-3">
-          <div
-            className={`mt-6 rounded-xl border border-slate-200 bg-slate-50 p-3 transition-all ${
-              sidebarCollapsed ? 'items-center px-0 py-4' : 'flex items-center gap-3'
-            }`}
-          >
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
-              {getInitials()}
-            </div>
-            {!sidebarCollapsed && user && (
-              <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-slate-800">{user.fullName}</p>
-                <p className="truncate text-xs text-slate-500">{user.email}</p>
+          <div className="relative" ref={profileMenuRef}>
+            <button
+              type="button"
+              onClick={() => setProfileMenuOpen((prev) => !prev)}
+              className={`mt-6 w-full rounded-xl border border-slate-200 bg-slate-50 p-3 text-left transition-all ${
+                sidebarCollapsed ? 'flex flex-col items-center gap-3 px-0 py-4' : 'flex items-center gap-3'
+              }`}
+            >
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+                {getInitials()}
               </div>
-            )}
-            {!sidebarCollapsed && !user && (
-              <p className="text-sm font-medium text-slate-600">Welcome</p>
+              {!sidebarCollapsed && user && (
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-slate-800">{user.fullName}</p>
+                  <p className="truncate text-xs text-slate-500">{user.email}</p>
+                </div>
+              )}
+              {!sidebarCollapsed && !user && (
+                <p className="text-sm font-medium text-slate-600">Welcome</p>
+              )}
+            </button>
+            {profileMenuOpen && !sidebarCollapsed && (
+              <div className="absolute left-0 right-0 z-20 mt-2 rounded-xl border border-slate-200 bg-white shadow-lg">
+                <button
+                  type="button"
+                  onClick={handleProfileNavigate}
+                  className="flex w-full items-center gap-3 rounded-t-xl px-4 py-3 text-sm text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
+                >
+                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-base text-primary">👤</span>
+                  <span>Edit profile</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setProfileMenuOpen(false);
+                    handleLogout();
+                  }}
+                  className="flex w-full items-center gap-3 rounded-b-xl px-4 py-3 text-sm text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
+                >
+                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-50 text-base text-rose-500">⏻</span>
+                  <span>Sign out</span>
+                </button>
+              </div>
             )}
           </div>
         </div>

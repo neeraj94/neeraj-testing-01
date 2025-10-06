@@ -25,6 +25,30 @@ public class User {
     @Column(name = "full_name", nullable = false, length = 150)
     private String fullName;
 
+    @Column(name = "first_name", nullable = false, length = 100)
+    private String firstName;
+
+    @Column(name = "last_name", nullable = false, length = 100)
+    private String lastName;
+
+    @Column(name = "phone_number", length = 50)
+    private String phoneNumber;
+
+    @Column(name = "whatsapp_number", length = 50)
+    private String whatsappNumber;
+
+    @Column(name = "facebook_url", length = 255)
+    private String facebookUrl;
+
+    @Column(name = "linkedin_url", length = 255)
+    private String linkedinUrl;
+
+    @Column(name = "skype_id", length = 100)
+    private String skypeId;
+
+    @Column(name = "email_signature")
+    private String emailSignature;
+
     @Column(name = "is_active", nullable = false)
     private boolean active = true;
 
@@ -60,11 +84,22 @@ public class User {
         Instant now = Instant.now();
         createdAt = now;
         updatedAt = now;
+        refreshFullName();
     }
 
     @PreUpdate
     public void preUpdate() {
         updatedAt = Instant.now();
+        refreshFullName();
+    }
+
+    private void refreshFullName() {
+        String first = firstName != null ? firstName.trim() : "";
+        String last = lastName != null ? lastName.trim() : "";
+        String combined = (first + " " + last).trim();
+        if (!combined.isEmpty()) {
+            fullName = combined;
+        }
     }
 
     public Long getId() {
@@ -97,6 +132,70 @@ public class User {
 
     public void setFullName(String fullName) {
         this.fullName = fullName;
+    }
+
+    public String getFirstName() {
+        return firstName;
+    }
+
+    public void setFirstName(String firstName) {
+        this.firstName = firstName;
+    }
+
+    public String getLastName() {
+        return lastName;
+    }
+
+    public void setLastName(String lastName) {
+        this.lastName = lastName;
+    }
+
+    public String getPhoneNumber() {
+        return phoneNumber;
+    }
+
+    public void setPhoneNumber(String phoneNumber) {
+        this.phoneNumber = phoneNumber;
+    }
+
+    public String getWhatsappNumber() {
+        return whatsappNumber;
+    }
+
+    public void setWhatsappNumber(String whatsappNumber) {
+        this.whatsappNumber = whatsappNumber;
+    }
+
+    public String getFacebookUrl() {
+        return facebookUrl;
+    }
+
+    public void setFacebookUrl(String facebookUrl) {
+        this.facebookUrl = facebookUrl;
+    }
+
+    public String getLinkedinUrl() {
+        return linkedinUrl;
+    }
+
+    public void setLinkedinUrl(String linkedinUrl) {
+        this.linkedinUrl = linkedinUrl;
+    }
+
+    public String getSkypeId() {
+        return skypeId;
+    }
+
+    public void setSkypeId(String skypeId) {
+        this.skypeId = skypeId;
+    }
+
+    public String getEmailSignature() {
+        return emailSignature;
+    }
+
+    public void setEmailSignature(String emailSignature) {
+        this.emailSignature = emailSignature;
     }
 
     public boolean isActive() {

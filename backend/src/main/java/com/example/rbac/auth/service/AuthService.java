@@ -21,6 +21,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.time.Instant;
 import java.util.HashMap;
@@ -58,12 +59,17 @@ public class AuthService {
 
     @Transactional
     public AuthResponse signup(SignupRequest request) {
-        userRepository.findByEmail(request.getEmail()).ifPresent(user -> {
+        String email = request.getEmail() == null ? "" : request.getEmail().trim();
+        userRepository.findByEmail(email).ifPresent(user -> {
             throw new ApiException(HttpStatus.BAD_REQUEST, "Email already in use");
         });
         User user = new User();
-        user.setEmail(request.getEmail());
-        user.setFullName(request.getFullName());
+        String firstName = request.getFirstName() == null ? "" : request.getFirstName().trim();
+        String lastName = request.getLastName() == null ? "" : request.getLastName().trim();
+        user.setEmail(email);
+        user.setFirstName(firstName);
+        user.setLastName(lastName);
+        user.setFullName(buildFullName(firstName, lastName));
         user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
         user = userRepository.save(user);
         user = userRepository.findDetailedById(user.getId()).orElseThrow();
@@ -169,5 +175,19 @@ public class AuthService {
             context.put("userId", token.getUser().getId());
         }
         return context;
+    }
+
+    private String buildFullName(String firstName, String lastName) {
+        StringBuilder builder = new StringBuilder();
+        if (StringUtils.hasText(firstName)) {
+            builder.append(firstName.trim());
+        }
+        if (StringUtils.hasText(lastName)) {
+            if (builder.length() > 0) {
+                builder.append(' ');
+            }
+            builder.append(lastName.trim());
+        }
+        return builder.length() > 0 ? builder.toString() : null;
     }
 }

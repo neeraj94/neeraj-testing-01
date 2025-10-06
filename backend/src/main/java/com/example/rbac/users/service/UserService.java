@@ -27,6 +27,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -95,14 +96,25 @@ public class UserService {
     @PreAuthorize(USER_CREATE_AUTHORITY)
     @Transactional
     public UserDto create(CreateUserRequest request) {
-        userRepository.findByEmail(request.getEmail()).ifPresent(existing -> {
+        String email = trimToEmpty(request.getEmail());
+        userRepository.findByEmail(email).ifPresent(existing -> {
             throw new ApiException(HttpStatus.BAD_REQUEST, "Email already in use");
         });
         User user = new User();
-        user.setEmail(request.getEmail());
-        user.setFullName(request.getFullName());
+        String firstName = trimToEmpty(request.getFirstName());
+        String lastName = trimToEmpty(request.getLastName());
+        user.setEmail(email);
+        user.setFirstName(firstName);
+        user.setLastName(lastName);
+        user.setFullName(combineFullName(firstName, lastName));
         user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
         user.setActive(request.isActive());
+        user.setPhoneNumber(normalize(request.getPhoneNumber()));
+        user.setWhatsappNumber(normalize(request.getWhatsappNumber()));
+        user.setFacebookUrl(normalize(request.getFacebookUrl()));
+        user.setLinkedinUrl(normalize(request.getLinkedinUrl()));
+        user.setSkypeId(normalize(request.getSkypeId()));
+        user.setEmailSignature(normalizeMultiline(request.getEmailSignature()));
         if (request.getRoleIds() != null && !request.getRoleIds().isEmpty()) {
             Set<Role> roles = new HashSet<>(roleRepository.findAllById(request.getRoleIds()));
             if (roles.size() != request.getRoleIds().size()) {
@@ -133,9 +145,24 @@ public class UserService {
     public UserDto update(Long id, UpdateUserRequest request) {
         User user = userRepository.findDetailedById(id)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "User not found"));
-        user.setEmail(request.getEmail());
-        user.setFullName(request.getFullName());
+        String email = trimToEmpty(request.getEmail());
+        if (!user.getEmail().equalsIgnoreCase(email)
+                && userRepository.existsByEmailAndIdNot(email, id)) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Email already in use");
+        }
+        String firstName = trimToEmpty(request.getFirstName());
+        String lastName = trimToEmpty(request.getLastName());
+        user.setEmail(email);
+        user.setFirstName(firstName);
+        user.setLastName(lastName);
+        user.setFullName(combineFullName(firstName, lastName));
         user.setActive(request.isActive());
+        user.setPhoneNumber(normalize(request.getPhoneNumber()));
+        user.setWhatsappNumber(normalize(request.getWhatsappNumber()));
+        user.setFacebookUrl(normalize(request.getFacebookUrl()));
+        user.setLinkedinUrl(normalize(request.getLinkedinUrl()));
+        user.setSkypeId(normalize(request.getSkypeId()));
+        user.setEmailSignature(normalizeMultiline(request.getEmailSignature()));
         if (request.getPassword() != null && !request.getPassword().isBlank()) {
             user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
         }
@@ -220,9 +247,37 @@ public class UserService {
     public UserDto updateProfile(User currentUser, ProfileUpdateRequest request) {
         User user = userRepository.findDetailedById(currentUser.getId())
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "User not found"));
-        user.setFullName(request.getFullName());
-        if (request.getPassword() != null && !request.getPassword().isBlank()) {
-            user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
+        String email = trimToEmpty(request.getEmail());
+        if (!user.getEmail().equalsIgnoreCase(email)
+                && userRepository.existsByEmailAndIdNot(email, user.getId())) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Email already in use");
+        }
+        String firstName = trimToEmpty(request.getFirstName());
+        String lastName = trimToEmpty(request.getLastName());
+        user.setFirstName(firstName);
+        user.setLastName(lastName);
+        user.setFullName(combineFullName(firstName, lastName));
+        user.setEmail(email);
+        user.setPhoneNumber(normalize(request.getPhoneNumber()));
+        user.setWhatsappNumber(normalize(request.getWhatsappNumber()));
+        user.setFacebookUrl(normalize(request.getFacebookUrl()));
+        user.setLinkedinUrl(normalize(request.getLinkedinUrl()));
+        user.setSkypeId(normalize(request.getSkypeId()));
+        user.setEmailSignature(normalizeMultiline(request.getEmailSignature()));
+        if (StringUtils.hasText(request.getNewPassword())) {
+            if (!StringUtils.hasText(request.getOldPassword())) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, "Current password is required to set a new password");
+            }
+            if (!passwordEncoder.matches(request.getOldPassword(), user.getPasswordHash())) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, "Current password is incorrect");
+            }
+            if (!StringUtils.hasText(request.getConfirmNewPassword())
+                    || !request.getNewPassword().equals(request.getConfirmNewPassword())) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, "New password confirmation does not match");
+            }
+            user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        } else if (StringUtils.hasText(request.getOldPassword()) || StringUtils.hasText(request.getConfirmNewPassword())) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "New password is required when updating your password");
         }
         user = userRepository.save(user);
         UserDto dto = userMapper.toDto(user);
@@ -302,5 +357,37 @@ public class UserService {
         }
         context.put("active", user.isActive());
         return context;
+    }
+
+    private String combineFullName(String firstName, String lastName) {
+        StringBuilder builder = new StringBuilder();
+        if (StringUtils.hasText(firstName)) {
+            builder.append(firstName.trim());
+        }
+        if (StringUtils.hasText(lastName)) {
+            if (builder.length() > 0) {
+                builder.append(' ');
+            }
+            builder.append(lastName.trim());
+        }
+        return builder.length() > 0 ? builder.toString() : null;
+    }
+
+    private String normalize(String value) {
+        if (!StringUtils.hasText(value)) {
+            return null;
+        }
+        return value.trim();
+    }
+
+    private String normalizeMultiline(String value) {
+        if (!StringUtils.hasText(value)) {
+            return null;
+        }
+        return value.trim();
+    }
+
+    private String trimToEmpty(String value) {
+        return value == null ? "" : value.trim();
     }
 }
