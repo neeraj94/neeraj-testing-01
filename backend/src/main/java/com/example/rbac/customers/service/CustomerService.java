@@ -1,5 +1,6 @@
 package com.example.rbac.customers.service;
 
+import com.example.rbac.activity.service.ActivityRecorder;
 import com.example.rbac.common.exception.ApiException;
 import com.example.rbac.common.pagination.PageResponse;
 import com.example.rbac.customers.dto.CustomerDto;
@@ -15,16 +16,22 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 
+import java.util.HashMap;
+import java.util.Map;
+
 @Service
 public class CustomerService {
 
     private final CustomerRepository customerRepository;
     private final CustomerMapper customerMapper;
+    private final ActivityRecorder activityRecorder;
 
     public CustomerService(CustomerRepository customerRepository,
-                           CustomerMapper customerMapper) {
+                           CustomerMapper customerMapper,
+                           ActivityRecorder activityRecorder) {
         this.customerRepository = customerRepository;
         this.customerMapper = customerMapper;
+        this.activityRecorder = activityRecorder;
     }
 
     @PreAuthorize("hasAnyAuthority('USER_VIEW','USER_VIEW_GLOBAL','USER_VIEW_OWN')")
@@ -43,7 +50,9 @@ public class CustomerService {
         customer.setPhone(request.getPhone());
         customer.setAddress(request.getAddress());
         customer = customerRepository.save(customer);
-        return customerMapper.toDto(customer);
+        CustomerDto dto = customerMapper.toDto(customer);
+        activityRecorder.record("Customers", "CREATE", "Created customer " + customer.getName(), "SUCCESS", buildContext(customer));
+        return dto;
     }
 
     @PreAuthorize("hasAnyAuthority('USER_VIEW','USER_VIEW_GLOBAL','USER_VIEW_OWN')")
@@ -63,14 +72,33 @@ public class CustomerService {
         customer.setPhone(request.getPhone());
         customer.setAddress(request.getAddress());
         customer = customerRepository.save(customer);
-        return customerMapper.toDto(customer);
+        CustomerDto dto = customerMapper.toDto(customer);
+        activityRecorder.record("Customers", "UPDATE", "Updated customer " + customer.getName(), "SUCCESS", buildContext(customer));
+        return dto;
     }
 
     @PreAuthorize("hasAuthority('USER_DELETE')")
     public void delete(Long id) {
-        if (!customerRepository.existsById(id)) {
-            throw new ApiException(HttpStatus.NOT_FOUND, "Customer not found");
+        Customer customer = customerRepository.findById(id)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Customer not found"));
+        customerRepository.delete(customer);
+        activityRecorder.record("Customers", "DELETE", "Deleted customer " + customer.getName(), "SUCCESS", buildContext(customer));
+    }
+
+    private Map<String, Object> buildContext(Customer customer) {
+        HashMap<String, Object> context = new HashMap<>();
+        if (customer == null) {
+            return context;
         }
-        customerRepository.deleteById(id);
+        if (customer.getId() != null) {
+            context.put("customerId", customer.getId());
+        }
+        if (customer.getName() != null) {
+            context.put("name", customer.getName());
+        }
+        if (customer.getEmail() != null) {
+            context.put("email", customer.getEmail());
+        }
+        return context;
     }
 }

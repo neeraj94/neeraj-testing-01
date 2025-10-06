@@ -1,5 +1,6 @@
 package com.example.rbac.auth.service;
 
+import com.example.rbac.activity.service.ActivityRecorder;
 import com.example.rbac.auth.dto.AuthResponse;
 import com.example.rbac.auth.dto.LoginRequest;
 import com.example.rbac.auth.dto.RefreshTokenRequest;
@@ -22,6 +23,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.HashMap;
+import java.util.Map;
 
 @Service
 public class AuthService {
@@ -33,6 +36,7 @@ public class AuthService {
     private final JwtService jwtService;
     private final UserMapper userMapper;
     private final SettingsService settingsService;
+    private final ActivityRecorder activityRecorder;
 
     public AuthService(UserRepository userRepository,
                        RefreshTokenRepository refreshTokenRepository,
@@ -40,7 +44,8 @@ public class AuthService {
                        AuthenticationManager authenticationManager,
                        JwtService jwtService,
                        UserMapper userMapper,
-                       SettingsService settingsService) {
+                       SettingsService settingsService,
+                       ActivityRecorder activityRecorder) {
         this.userRepository = userRepository;
         this.refreshTokenRepository = refreshTokenRepository;
         this.passwordEncoder = passwordEncoder;
@@ -48,6 +53,7 @@ public class AuthService {
         this.jwtService = jwtService;
         this.userMapper = userMapper;
         this.settingsService = settingsService;
+        this.activityRecorder = activityRecorder;
     }
 
     @Transactional
@@ -62,7 +68,9 @@ public class AuthService {
         user = userRepository.save(user);
         user = userRepository.findDetailedById(user.getId()).orElseThrow();
         String refreshTokenValue = createRefreshToken(user);
-        return buildAuthResponse(user, refreshTokenValue);
+        AuthResponse response = buildAuthResponse(user, refreshTokenValue);
+        activityRecorder.recordForUser(user, "Authentication", "SIGNUP", "User registered", "SUCCESS", buildAuthContext(user));
+        return response;
     }
 
     @Transactional
@@ -75,7 +83,9 @@ public class AuthService {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "User not found"));
         String refreshTokenValue = createRefreshToken(user);
-        return buildAuthResponse(user, refreshTokenValue);
+        AuthResponse response = buildAuthResponse(user, refreshTokenValue);
+        activityRecorder.recordForUser(user, "Authentication", "LOGIN", "User logged in", "SUCCESS", buildAuthContext(user));
+        return response;
     }
 
     @Transactional
@@ -90,7 +100,9 @@ public class AuthService {
         User user = userRepository.findDetailedById(refreshToken.getUser().getId())
                 .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "User not found"));
         String newRefresh = createRefreshToken(user);
-        return buildAuthResponse(user, newRefresh);
+        AuthResponse response = buildAuthResponse(user, newRefresh);
+        activityRecorder.recordForUser(user, "Authentication", "TOKEN_REFRESH", "Refreshed access token", "SUCCESS", buildAuthContext(user));
+        return response;
     }
 
     @Transactional
@@ -98,6 +110,7 @@ public class AuthService {
         refreshTokenRepository.findByToken(request.getRefreshToken()).ifPresent(token -> {
             token.setRevoked(true);
             refreshTokenRepository.save(token);
+            activityRecorder.recordForUser(token.getUser(), "Authentication", "LOGOUT", "User logged out", "SUCCESS", buildLogoutContext(token));
         });
     }
 
@@ -130,5 +143,31 @@ public class AuthService {
         response.setRevokedPermissions(userDto.getRevokedPermissions());
         response.setTheme(settingsService.getTheme());
         return response;
+    }
+
+    private Map<String, Object> buildAuthContext(User user) {
+        HashMap<String, Object> context = new HashMap<>();
+        if (user == null) {
+            return context;
+        }
+        if (user.getId() != null) {
+            context.put("userId", user.getId());
+        }
+        if (user.getEmail() != null) {
+            context.put("email", user.getEmail());
+        }
+        context.put("active", user.isActive());
+        return context;
+    }
+
+    private Map<String, Object> buildLogoutContext(RefreshToken token) {
+        HashMap<String, Object> context = new HashMap<>();
+        if (token.getId() != null) {
+            context.put("refreshTokenId", token.getId());
+        }
+        if (token.getUser() != null && token.getUser().getId() != null) {
+            context.put("userId", token.getUser().getId());
+        }
+        return context;
     }
 }
