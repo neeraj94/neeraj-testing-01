@@ -1,3 +1,5 @@
+import type { SettingsThemeResponse } from './settings';
+
 export type PermissionKey = string;
 
 export interface RoleSummary {
@@ -26,4 +28,5 @@ export interface AuthResponse {
   permissions: PermissionKey[];
   directPermissions: PermissionKey[];
   revokedPermissions: PermissionKey[];
+  theme: SettingsThemeResponse;
 }

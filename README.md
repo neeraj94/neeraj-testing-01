@@ -11,6 +11,8 @@ This project is a full-stack Role-Based Access Control dashboard featuring a Spr
 - **Database Migrations**: Flyway manages schema and seed data for MySQL, including demo users and sample business data.
 - **Data Exports**: Users with the new export permissions can download filtered table views (Users, Roles, Permissions, Invoices,
   Customers) to Excel, CSV, PDF, or a print-friendly layout directly from the UI.
+- **Settings Workspace**: Permission-gated settings hub covers general, finance, integrations, and miscellaneous categories and
+  supports live theme customization (primary color updates apply instantly across the dashboard).
 - **Documentation**: OpenAPI docs available at `/swagger-ui.html` after running the backend.
 - **Testing**: Basic Spring context test scaffolded; extend with service tests as needed.
 - **Postman Collection**: Located at `backend/src/main/resources/postman/collection.json` for quick API exploration.

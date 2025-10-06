@@ -2,6 +2,7 @@ package com.example.rbac.auth;
 
 import com.example.rbac.auth.dto.AuthResponse;
 import com.example.rbac.auth.dto.LoginRequest;
+import com.example.rbac.settings.dto.SettingsThemeDto;
 import com.example.rbac.users.dto.UserDto;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,7 +41,16 @@ class AuthIntegrationTest {
         assertThat(body).isNotNull();
         assertThat(body.getAccessToken()).isNotBlank();
         assertThat(body.getRoles()).contains("SUPER_ADMIN");
-        assertThat(body.getPermissions()).contains("CUSTOMER_VIEW", "USER_VIEW", "USERS_EXPORT", "CUSTOMERS_EXPORT");
+        assertThat(body.getPermissions()).contains(
+                "CUSTOMER_VIEW",
+                "USER_VIEW",
+                "USERS_EXPORT",
+                "CUSTOMERS_EXPORT",
+                "SETTINGS_VIEW",
+                "SETTINGS_UPDATE"
+        );
+        assertThat(body.getTheme()).isNotNull();
+        assertThat(body.getTheme().getPrimaryColor()).isEqualTo("#2563EB");
 
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(body.getAccessToken());
@@ -63,6 +73,15 @@ class AuthIntegrationTest {
         );
 
         assertThat(customersResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        ResponseEntity<SettingsThemeDto> themeResponse = restTemplate.getForEntity(
+                baseUrl("/settings/theme"),
+                SettingsThemeDto.class
+        );
+
+        assertThat(themeResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(themeResponse.getBody()).isNotNull();
+        assertThat(themeResponse.getBody().getPrimaryColor()).isEqualTo("#2563EB");
     }
 
     private String baseUrl(String path) {

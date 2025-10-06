@@ -16,14 +16,27 @@ import PermissionRoute from './routes/PermissionRoute';
 import { useAppDispatch, useAppSelector } from './app/hooks';
 import { loadCurrentUser, logout as logoutAction, tokensRefreshed } from './features/auth/authSlice';
 import api from './services/http';
+import SettingsPage from './pages/SettingsPage';
+import { fetchTheme } from './features/settings/settingsSlice';
+import { selectPrimaryColor } from './features/settings/selectors';
+import { applyPrimaryColor } from './utils/colors';
 
 const App = () => {
   const dispatch = useAppDispatch();
   const location = useLocation();
   const { accessToken, refreshToken } = useAppSelector((state) => state.auth);
+  const primaryColor = useAppSelector(selectPrimaryColor);
   const [initializing, setInitializing] = useState<'idle' | 'checking'>(() =>
     refreshToken ? 'checking' : 'idle'
   );
+
+  useEffect(() => {
+    dispatch(fetchTheme());
+  }, [dispatch]);
+
+  useEffect(() => {
+    applyPrimaryColor(primaryColor);
+  }, [primaryColor]);
 
   useEffect(() => {
     let active = true;
@@ -134,6 +147,9 @@ const App = () => {
             }
           >
             <Route path="/invoices" element={<InvoicesPage />} />
+          </Route>
+          <Route element={<PermissionRoute required={['SETTINGS_VIEW']} />}>
+            <Route path="/settings" element={<SettingsPage />} />
           </Route>
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/403" element={<ForbiddenPage />} />

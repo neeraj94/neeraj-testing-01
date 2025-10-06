@@ -69,6 +69,15 @@ const Layout = () => {
       });
     }
 
+    if (tabs.includes('Settings')) {
+      items.push({
+        key: 'settings',
+        label: 'Settings',
+        to: '/settings',
+        icon: '⚙️'
+      });
+    }
+
     items.push({
       key: 'profile',
       label: 'Profile',

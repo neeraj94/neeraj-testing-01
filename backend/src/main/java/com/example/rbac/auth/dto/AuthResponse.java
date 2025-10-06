@@ -1,5 +1,6 @@
 package com.example.rbac.auth.dto;
 
+import com.example.rbac.settings.dto.SettingsThemeDto;
 import com.example.rbac.users.dto.UserDto;
 
 import java.util.Set;
@@ -12,6 +13,7 @@ public class AuthResponse {
     private Set<String> permissions;
     private Set<String> directPermissions;
     private Set<String> revokedPermissions;
+    private SettingsThemeDto theme;
 
     public String getAccessToken() {
         return accessToken;
@@ -67,5 +69,13 @@ public class AuthResponse {
 
     public void setRevokedPermissions(Set<String> revokedPermissions) {
         this.revokedPermissions = revokedPermissions;
+    }
+
+    public SettingsThemeDto getTheme() {
+        return theme;
+    }
+
+    public void setTheme(SettingsThemeDto theme) {
+        this.theme = theme;
     }
 }

@@ -52,5 +52,6 @@ export const TAB_RULES: Record<string, PermissionKey[]> = {
     'INVOICE_CREATE',
     'INVOICE_UPDATE',
     'INVOICE_DELETE'
-  ]
+  ],
+  Settings: ['SETTINGS_VIEW']
 };

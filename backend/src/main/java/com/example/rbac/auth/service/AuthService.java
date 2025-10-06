@@ -8,6 +8,7 @@ import com.example.rbac.auth.token.RefreshToken;
 import com.example.rbac.auth.token.RefreshTokenRepository;
 import com.example.rbac.common.exception.ApiException;
 import com.example.rbac.config.JwtService;
+import com.example.rbac.settings.service.SettingsService;
 import com.example.rbac.users.dto.UserDto;
 import com.example.rbac.users.mapper.UserMapper;
 import com.example.rbac.users.model.User;
@@ -31,19 +32,22 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
     private final UserMapper userMapper;
+    private final SettingsService settingsService;
 
     public AuthService(UserRepository userRepository,
                        RefreshTokenRepository refreshTokenRepository,
                        PasswordEncoder passwordEncoder,
                        AuthenticationManager authenticationManager,
                        JwtService jwtService,
-                       UserMapper userMapper) {
+                       UserMapper userMapper,
+                       SettingsService settingsService) {
         this.userRepository = userRepository;
         this.refreshTokenRepository = refreshTokenRepository;
         this.passwordEncoder = passwordEncoder;
         this.authenticationManager = authenticationManager;
         this.jwtService = jwtService;
         this.userMapper = userMapper;
+        this.settingsService = settingsService;
     }
 
     @Transactional
@@ -124,6 +128,7 @@ public class AuthService {
         response.setPermissions(userDto.getPermissions());
         response.setDirectPermissions(userDto.getDirectPermissions());
         response.setRevokedPermissions(userDto.getRevokedPermissions());
+        response.setTheme(settingsService.getTheme());
         return response;
     }
 }
