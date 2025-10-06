@@ -1,5 +1,6 @@
 package com.example.rbac.roles.service;
 
+import com.example.rbac.activity.service.ActivityRecorder;
 import com.example.rbac.common.exception.ApiException;
 import com.example.rbac.common.pagination.PageResponse;
 import com.example.rbac.permissions.model.Permission;
@@ -19,6 +20,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -29,6 +31,7 @@ public class RoleService {
     private final RoleRepository roleRepository;
     private final PermissionRepository permissionRepository;
     private final RoleMapper roleMapper;
+    private final ActivityRecorder activityRecorder;
 
     private static final Map<String, String> ROLE_SORT_MAPPING = Map.of(
             "name", "name",
@@ -38,10 +41,12 @@ public class RoleService {
 
     public RoleService(RoleRepository roleRepository,
                        PermissionRepository permissionRepository,
-                       RoleMapper roleMapper) {
+                       RoleMapper roleMapper,
+                       ActivityRecorder activityRecorder) {
         this.roleRepository = roleRepository;
         this.permissionRepository = permissionRepository;
         this.roleMapper = roleMapper;
+        this.activityRecorder = activityRecorder;
     }
 
     @PreAuthorize("hasAuthority('ROLE_VIEW') or hasAuthority('PERMISSION_VIEW')")
@@ -69,7 +74,9 @@ public class RoleService {
         role.setKey(request.getKey());
         role.setName(request.getName());
         role = roleRepository.save(role);
-        return roleMapper.toDto(role);
+        RoleDto dto = roleMapper.toDto(role);
+        activityRecorder.record("Roles", "CREATE", "Created role " + role.getName(), "SUCCESS", buildRoleContext(role));
+        return dto;
     }
 
     @PreAuthorize("hasAuthority('ROLE_VIEW')")
@@ -88,15 +95,17 @@ public class RoleService {
         role.setKey(request.getKey());
         role.setName(request.getName());
         role = roleRepository.save(role);
-        return roleMapper.toDto(role);
+        RoleDto dto = roleMapper.toDto(role);
+        activityRecorder.record("Roles", "UPDATE", "Updated role " + role.getName(), "SUCCESS", buildRoleContext(role));
+        return dto;
     }
 
     @PreAuthorize("hasAuthority('ROLE_DELETE')")
     public void delete(Long id) {
-        if (!roleRepository.existsById(id)) {
-            throw new ApiException(HttpStatus.NOT_FOUND, "Role not found");
-        }
-        roleRepository.deleteById(id);
+        Role role = roleRepository.findById(id)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Role not found"));
+        roleRepository.delete(role);
+        activityRecorder.record("Roles", "DELETE", "Deleted role " + role.getName(), "SUCCESS", buildRoleContext(role));
     }
 
     @PreAuthorize("hasAuthority('ROLE_UPDATE') or hasAuthority('PERMISSION_UPDATE')")
@@ -111,7 +120,11 @@ public class RoleService {
         role.getPermissions().clear();
         role.getPermissions().addAll(permissions);
         role = roleRepository.save(role);
-        return roleMapper.toDto(role);
+        RoleDto dto = roleMapper.toDto(role);
+        HashMap<String, Object> context = new HashMap<>(buildRoleContext(role));
+        context.put("permissionIds", request.getPermissionIds());
+        activityRecorder.record("Roles", "ASSIGN_PERMISSIONS", "Updated permissions for role " + role.getName(), "SUCCESS", context);
+        return dto;
     }
 
     @PreAuthorize("hasAuthority('ROLE_UPDATE') or hasAuthority('PERMISSION_UPDATE')")
@@ -121,6 +134,27 @@ public class RoleService {
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Role not found"));
         role.getPermissions().removeIf(permission -> permission.getId().equals(permissionId));
         role = roleRepository.save(role);
-        return roleMapper.toDto(role);
+        RoleDto dto = roleMapper.toDto(role);
+        HashMap<String, Object> context = new HashMap<>(buildRoleContext(role));
+        context.put("permissionId", permissionId);
+        activityRecorder.record("Roles", "REMOVE_PERMISSION", "Removed permission from role " + role.getName(), "SUCCESS", context);
+        return dto;
+    }
+
+    private HashMap<String, Object> buildRoleContext(Role role) {
+        HashMap<String, Object> context = new HashMap<>();
+        if (role == null) {
+            return context;
+        }
+        if (role.getId() != null) {
+            context.put("roleId", role.getId());
+        }
+        if (role.getKey() != null) {
+            context.put("key", role.getKey());
+        }
+        if (role.getName() != null) {
+            context.put("name", role.getName());
+        }
+        return context;
     }
 }
