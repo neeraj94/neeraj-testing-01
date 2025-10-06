@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../app/hooks';
 import { logout } from '../features/auth/authSlice';
+import { selectApplicationName } from '../features/settings/selectors';
 import { TAB_RULES, hasAnyPermission } from '../utils/permissions';
 import type { PermissionKey } from '../types/auth';
 import api from '../services/http';
@@ -19,8 +20,28 @@ const Layout = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, permissions, refreshToken } = useAppSelector((state) => state.auth);
+  const applicationName = useAppSelector(selectApplicationName);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
+
+  const brandName = applicationName?.trim() || 'RBAC Portal';
+  const brandInitials = useMemo(() => {
+    const words = brandName.split(/\s+/).filter(Boolean);
+    if (!words.length) {
+      return 'AP';
+    }
+    if (words.length === 1) {
+      const sanitized = words[0].replace(/[^A-Za-z0-9]/g, '');
+      if (sanitized.length >= 2) {
+        return sanitized.slice(0, 2).toUpperCase();
+      }
+      if (sanitized.length === 1) {
+        return (sanitized + sanitized).slice(0, 2).toUpperCase();
+      }
+      return 'AP';
+    }
+    return `${words[0].charAt(0)}${words[1].charAt(0)}`.toUpperCase();
+  }, [brandName]);
 
   const tabs = useMemo(() => {
     const keys = Object.keys(TAB_RULES);
@@ -144,9 +165,13 @@ const Layout = () => {
         <div className="flex h-16 items-center justify-between px-4">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-base font-semibold text-white">
-              RB
+              {brandInitials}
             </div>
-            {!sidebarCollapsed && <span className="text-lg font-semibold text-slate-800">RBAC Portal</span>}
+            {!sidebarCollapsed && (
+              <span className="text-lg font-semibold text-slate-800" title={brandName}>
+                {brandName}
+              </span>
+            )}
           </div>
           <button
             type="button"
@@ -272,7 +297,9 @@ const Layout = () => {
       </aside>
       <div className="flex flex-1 flex-col">
         <header className="flex h-16 items-center justify-between border-b border-slate-200 bg-white px-6">
-          <h1 className="text-lg font-semibold text-slate-800">RBAC Dashboard</h1>
+          <h1 className="text-lg font-semibold text-slate-800" title={brandName}>
+            {brandName}
+          </h1>
           <div className="flex items-center gap-4">
             {user && (
               <div className="hidden text-right text-sm text-slate-600 md:block">

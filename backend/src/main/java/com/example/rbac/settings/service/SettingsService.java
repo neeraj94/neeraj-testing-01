@@ -30,7 +30,9 @@ public class SettingsService {
 
     private static final Logger log = LoggerFactory.getLogger(SettingsService.class);
     private static final String PRIMARY_COLOR_CODE = "appearance.primary_color";
+    private static final String APPLICATION_NAME_CODE = "general.site_name";
     private static final String DEFAULT_PRIMARY_COLOR = "#2563EB";
+    private static final String DEFAULT_APPLICATION_NAME = "RBAC Portal";
 
     private final SettingRepository settingRepository;
     private final ObjectMapper objectMapper;
@@ -87,12 +89,20 @@ public class SettingsService {
     }
 
     public SettingsThemeDto getTheme() {
-        return new SettingsThemeDto(resolvePrimaryColor());
+        return new SettingsThemeDto(resolvePrimaryColor(), resolveApplicationName());
     }
 
     public String resolvePrimaryColor() {
         Optional<Setting> setting = settingRepository.findByCode(PRIMARY_COLOR_CODE);
         return normalizeColor(setting.map(Setting::getValue).orElse(DEFAULT_PRIMARY_COLOR));
+    }
+
+    public String resolveApplicationName() {
+        return settingRepository.findByCode(APPLICATION_NAME_CODE)
+                .map(Setting::getValue)
+                .map(String::trim)
+                .filter(value -> !value.isBlank())
+                .orElse(DEFAULT_APPLICATION_NAME);
     }
 
     private SettingsResponse mapSettings(List<Setting> settings) {

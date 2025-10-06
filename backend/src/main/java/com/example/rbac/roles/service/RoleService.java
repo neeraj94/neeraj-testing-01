@@ -60,6 +60,7 @@ public class RoleService {
     }
 
     @PreAuthorize("hasAuthority('ROLE_CREATE')")
+    @Transactional
     public RoleDto create(RoleRequest request) {
         roleRepository.findByKey(request.getKey()).ifPresent(existing -> {
             throw new ApiException(HttpStatus.BAD_REQUEST, "Role key already exists");
@@ -72,15 +73,17 @@ public class RoleService {
     }
 
     @PreAuthorize("hasAuthority('ROLE_VIEW')")
+    @Transactional(readOnly = true)
     public RoleDto get(Long id) {
-        Role role = roleRepository.findById(id)
+        Role role = roleRepository.findWithPermissionsById(id)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Role not found"));
         return roleMapper.toDto(role);
     }
 
     @PreAuthorize("hasAuthority('ROLE_UPDATE')")
+    @Transactional
     public RoleDto update(Long id, RoleRequest request) {
-        Role role = roleRepository.findById(id)
+        Role role = roleRepository.findWithPermissionsById(id)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Role not found"));
         role.setKey(request.getKey());
         role.setName(request.getName());

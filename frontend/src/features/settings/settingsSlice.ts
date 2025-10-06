@@ -11,6 +11,7 @@ import type {
 import { login, logout, signup, tokensRefreshed } from '../auth/authSlice';
 
 const PRIMARY_COLOR_CODE = 'appearance.primary_color';
+const APPLICATION_NAME_CODE = 'general.site_name';
 
 interface SettingsState {
   categories: SettingsCategory[];
@@ -18,6 +19,7 @@ interface SettingsState {
   error?: string;
   theme: {
     primaryColor: string;
+    applicationName: string;
   };
 }
 
@@ -25,7 +27,8 @@ const initialState: SettingsState = {
   categories: [],
   status: 'idle',
   theme: {
-    primaryColor: '#2563EB'
+    primaryColor: '#2563EB',
+    applicationName: 'RBAC Portal'
   }
 };
 
@@ -71,6 +74,19 @@ const findPrimaryColor = (categories: SettingsCategory[]): string | undefined =>
   return undefined;
 };
 
+const findApplicationName = (categories: SettingsCategory[]): string | undefined => {
+  for (const category of categories) {
+    for (const section of category.sections) {
+      for (const setting of section.settings) {
+        if (setting.code === APPLICATION_NAME_CODE) {
+          return setting.value ?? undefined;
+        }
+      }
+    }
+  }
+  return undefined;
+};
+
 const settingsSlice = createSlice({
   name: 'settings',
   initialState,
@@ -79,6 +95,7 @@ const settingsSlice = createSlice({
     builder
       .addCase(fetchTheme.fulfilled, (state, action) => {
         state.theme.primaryColor = normalizeHexColor(action.payload.primaryColor);
+        state.theme.applicationName = action.payload.applicationName || 'RBAC Portal';
       })
       .addCase(fetchSettings.pending, (state) => {
         state.status = 'loading';
@@ -92,6 +109,10 @@ const settingsSlice = createSlice({
         if (color) {
           state.theme.primaryColor = normalizeHexColor(color);
         }
+        const applicationName = findApplicationName(action.payload.categories);
+        if (applicationName) {
+          state.theme.applicationName = applicationName.trim() || 'RBAC Portal';
+        }
       })
       .addCase(fetchSettings.rejected, (state, action) => {
         state.status = 'failed';
@@ -103,6 +124,10 @@ const settingsSlice = createSlice({
         if (color) {
           state.theme.primaryColor = normalizeHexColor(color);
         }
+        const applicationName = findApplicationName(action.payload.categories);
+        if (applicationName) {
+          state.theme.applicationName = applicationName.trim() || 'RBAC Portal';
+        }
       })
       .addCase(updateSettings.rejected, (state, action) => {
         state.error = action.payload ?? action.error.message ?? 'Unable to update settings.';
@@ -110,16 +135,19 @@ const settingsSlice = createSlice({
       .addCase(login.fulfilled, (state, action) => {
         if (action.payload.theme) {
           state.theme.primaryColor = normalizeHexColor(action.payload.theme.primaryColor);
+          state.theme.applicationName = action.payload.theme.applicationName || 'RBAC Portal';
         }
       })
       .addCase(signup.fulfilled, (state, action) => {
         if (action.payload.theme) {
           state.theme.primaryColor = normalizeHexColor(action.payload.theme.primaryColor);
+          state.theme.applicationName = action.payload.theme.applicationName || 'RBAC Portal';
         }
       })
       .addCase(tokensRefreshed, (state, action) => {
         if (action.payload.theme) {
           state.theme.primaryColor = normalizeHexColor(action.payload.theme.primaryColor);
+          state.theme.applicationName = action.payload.theme.applicationName || 'RBAC Portal';
         }
       })
       .addCase(logout, (state) => {
@@ -127,6 +155,7 @@ const settingsSlice = createSlice({
         state.status = 'idle';
         state.error = undefined;
         state.theme.primaryColor = '#2563EB';
+        state.theme.applicationName = 'RBAC Portal';
       });
   }
 });

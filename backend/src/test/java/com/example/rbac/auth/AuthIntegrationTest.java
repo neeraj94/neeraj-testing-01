@@ -51,6 +51,7 @@ class AuthIntegrationTest {
         );
         assertThat(body.getTheme()).isNotNull();
         assertThat(body.getTheme().getPrimaryColor()).isEqualTo("#2563EB");
+        assertThat(body.getTheme().getApplicationName()).isEqualTo("RBAC Portal");
 
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(body.getAccessToken());
@@ -82,6 +83,7 @@ class AuthIntegrationTest {
         assertThat(themeResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(themeResponse.getBody()).isNotNull();
         assertThat(themeResponse.getBody().getPrimaryColor()).isEqualTo("#2563EB");
+        assertThat(themeResponse.getBody().getApplicationName()).isEqualTo("RBAC Portal");
     }
 
     private String baseUrl(String path) {

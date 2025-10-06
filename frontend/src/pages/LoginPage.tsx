@@ -3,11 +3,13 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../app/hooks';
 import { login } from '../features/auth/authSlice';
 import { useToast } from '../components/ToastProvider';
+import { selectApplicationName } from '../features/settings/selectors';
 
 const LoginPage = () => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const { status, error } = useAppSelector((state) => state.auth);
+  const applicationName = useAppSelector(selectApplicationName);
   const { notify } = useToast();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -113,7 +115,9 @@ const LoginPage = () => {
       )}
       <div className="w-full max-w-md rounded-xl bg-white p-8 shadow-lg">
         <h2 className="text-2xl font-semibold text-slate-800">Welcome Back</h2>
-        <p className="mt-2 text-sm text-slate-500">Sign in with your RBAC Dashboard account.</p>
+        <p className="mt-2 text-sm text-slate-500">
+          Sign in to continue to {applicationName || 'your dashboard'}.
+        </p>
         <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
           <div>
             <label className="block text-sm font-medium text-slate-600">Email</label>

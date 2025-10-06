@@ -50,6 +50,9 @@ const SettingsPage = () => {
   const status: SettingsStatus = useAppSelector(selectSettingsStatus);
   const error = useAppSelector(selectSettingsError);
   const primaryColor = useAppSelector(selectPrimaryColor);
+  const canUpdateSettings = useAppSelector((state) =>
+    state.auth.permissions.includes('SETTINGS_UPDATE')
+  );
 
   const [activeCategoryKey, setActiveCategoryKey] = useState<string | null>(null);
   const [activeSectionKey, setActiveSectionKey] = useState<string | null>(null);
@@ -147,7 +150,7 @@ const SettingsPage = () => {
   };
 
   const handleValueChange = (setting: SettingItem, nextValue: SettingFormValue) => {
-    if (!setting.editable) return;
+    if (!setting.editable || !canUpdateSettings) return;
     setDraftValues((prev) => ({ ...prev, [setting.code]: nextValue }));
   };
 
@@ -156,7 +159,7 @@ const SettingsPage = () => {
   };
 
   const handleSave = async () => {
-    if (!dirtyCodes.length) {
+    if (!canUpdateSettings || !dirtyCodes.length) {
       return;
     }
     setIsSaving(true);
@@ -186,7 +189,7 @@ const SettingsPage = () => {
 
   const renderFieldControl = (setting: SettingItem) => {
     const currentValue = draftValues[setting.code];
-    const disabled = !setting.editable || isSaving;
+    const disabled = !setting.editable || isSaving || !canUpdateSettings;
 
     if (setting.valueType === 'BOOLEAN') {
       const checked = Boolean(currentValue);
@@ -308,6 +311,7 @@ const SettingsPage = () => {
 
   const isLoading = status === 'loading' && categories.length === 0;
   const hasError = status === 'failed' && categories.length === 0;
+  const saveDisabled = !canUpdateSettings || !dirtyCodes.length || isSaving;
 
   return (
     <div className="space-y-6">
@@ -317,6 +321,12 @@ const SettingsPage = () => {
           Manage global preferences, company details, integrations, and the appearance of the
           dashboard.
         </p>
+        {!canUpdateSettings && (
+          <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+            You have read-only access to settings. Contact an administrator to request edit
+            permissions.
+          </div>
+        )}
       </div>
       <div className="flex flex-col gap-6 lg:flex-row">
         <aside className="w-full lg:w-72">
@@ -380,7 +390,7 @@ const SettingsPage = () => {
                   <button
                     type="button"
                     onClick={handleReset}
-                    disabled={!dirtyCodes.length || isSaving}
+                    disabled={!canUpdateSettings || !dirtyCodes.length || isSaving}
                     className="inline-flex items-center justify-center rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 transition disabled:cursor-not-allowed disabled:opacity-60 hover:bg-slate-100"
                   >
                     Reset
@@ -388,7 +398,10 @@ const SettingsPage = () => {
                   <button
                     type="button"
                     onClick={handleSave}
-                    disabled={!dirtyCodes.length || isSaving}
+                    disabled={saveDisabled}
+                    title={
+                      !canUpdateSettings ? 'You do not have permission to update settings.' : undefined
+                    }
                     className="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white shadow transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {isSaving ? 'Saving…' : 'Save changes'}

@@ -18,7 +18,7 @@ import { loadCurrentUser, logout as logoutAction, tokensRefreshed } from './feat
 import api from './services/http';
 import SettingsPage from './pages/SettingsPage';
 import { fetchTheme } from './features/settings/settingsSlice';
-import { selectPrimaryColor } from './features/settings/selectors';
+import { selectApplicationName, selectPrimaryColor } from './features/settings/selectors';
 import { applyPrimaryColor } from './utils/colors';
 
 const App = () => {
@@ -26,6 +26,7 @@ const App = () => {
   const location = useLocation();
   const { accessToken, refreshToken } = useAppSelector((state) => state.auth);
   const primaryColor = useAppSelector(selectPrimaryColor);
+  const applicationName = useAppSelector(selectApplicationName);
   const [initializing, setInitializing] = useState<'idle' | 'checking'>(() =>
     refreshToken ? 'checking' : 'idle'
   );
@@ -37,6 +38,10 @@ const App = () => {
   useEffect(() => {
     applyPrimaryColor(primaryColor);
   }, [primaryColor]);
+
+  useEffect(() => {
+    document.title = applicationName || 'RBAC Portal';
+  }, [applicationName]);
 
   useEffect(() => {
     let active = true;
