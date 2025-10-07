@@ -30,26 +30,3 @@ export const hasAnyPermission = (userPermissions: PermissionKey[], required: Per
     return false;
   });
 };
-
-export const TAB_RULES: Record<string, PermissionKey[]> = {
-  Users: [
-    'USER_VIEW',
-    'USER_VIEW_GLOBAL',
-    'USER_VIEW_OWN',
-    'USER_CREATE',
-    'USER_UPDATE',
-    'USER_DELETE'
-  ],
-  Roles: ['ROLE_VIEW'],
-  Permissions: ['PERMISSION_VIEW'],
-  Invoices: [
-    'INVOICE_VIEW',
-    'INVOICE_VIEW_GLOBAL',
-    'INVOICE_VIEW_OWN',
-    'INVOICE_CREATE',
-    'INVOICE_UPDATE',
-    'INVOICE_DELETE'
-  ],
-  Activity: ['ACTIVITY_VIEW'],
-  Settings: ['SETTINGS_VIEW']
-};

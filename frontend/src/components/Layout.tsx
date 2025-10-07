@@ -3,9 +3,11 @@ import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../app/hooks';
 import { logout } from '../features/auth/authSlice';
 import { selectApplicationName } from '../features/settings/selectors';
-import { TAB_RULES, hasAnyPermission } from '../utils/permissions';
+import { hasAnyPermission } from '../utils/permissions';
 import type { PermissionKey } from '../types/auth';
 import api from '../services/http';
+import { DEFAULT_NAVIGATION_MENU } from '../constants/navigation';
+import type { NavigationNode, NavigationResponse } from '../types/navigation';
 
 type SidebarItem = {
   key: string;
@@ -25,6 +27,7 @@ const Layout = () => {
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement | null>(null);
+  const [navItems, setNavItems] = useState<NavigationNode[]>(DEFAULT_NAVIGATION_MENU);
 
   const brandName = applicationName?.trim() || 'RBAC Portal';
   const brandInitials = useMemo(() => {
@@ -45,80 +48,70 @@ const Layout = () => {
     return `${words[0].charAt(0)}${words[1].charAt(0)}`.toUpperCase();
   }, [brandName]);
 
-  const tabs = useMemo(() => {
-    const keys = Object.keys(TAB_RULES);
-    return keys.filter((tab) => hasAnyPermission(permissions as PermissionKey[], TAB_RULES[tab]));
-  }, [permissions]);
+  useEffect(() => {
+    let active = true;
+    const loadNavigation = async () => {
+      try {
+        const { data } = await api.get<NavigationResponse>('/navigation/menu');
+        if (!active) {
+          return;
+        }
+        if (data?.menu?.length) {
+          setNavItems(data.menu);
+        } else if (data?.defaults?.length) {
+          setNavItems(data.defaults);
+        }
+      } catch (error) {
+        if (!active) {
+          return;
+        }
+        setNavItems(DEFAULT_NAVIGATION_MENU);
+      }
+    };
+
+    loadNavigation();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const accessibleNavigation = useMemo<NavigationNode[]>(() => {
+    const granted = (permissions as PermissionKey[]) ?? [];
+
+    const filterNodes = (nodes: NavigationNode[]): NavigationNode[] =>
+      nodes
+        .map((node) => {
+          const filteredChildren = node.children?.length ? filterNodes(node.children) : [];
+          const nodeHasPermission = !node.permissions?.length || hasAnyPermission(granted, node.permissions);
+
+          if (filteredChildren.length > 0) {
+            return { ...node, children: filteredChildren };
+          }
+
+          if (node.group) {
+            return nodeHasPermission ? { ...node, children: [] } : null;
+          }
+
+          return nodeHasPermission ? { ...node, children: [] } : null;
+        })
+        .filter((node): node is NavigationNode => node !== null);
+
+    return filterNodes(navItems);
+  }, [navItems, permissions]);
 
   const navigation = useMemo<SidebarItem[]>(() => {
-    const items: SidebarItem[] = [
-      {
-        key: 'dashboard',
-        label: 'Dashboard',
-        to: '/dashboard',
-        icon: '🏠'
-      }
-    ];
+    const buildSidebar = (nodes: NavigationNode[]): SidebarItem[] =>
+      nodes.map((node) => ({
+        key: node.key,
+        label: node.label,
+        to: node.path ?? undefined,
+        icon: node.icon ?? undefined,
+        children: node.children?.length ? buildSidebar(node.children) : undefined
+      }));
 
-    const salesChildren: SidebarItem[] = [];
-    if (tabs.includes('Invoices')) {
-      salesChildren.push({ key: 'invoices', label: 'Invoices', to: '/invoices' });
-    }
-    if (salesChildren.length) {
-      items.push({
-        key: 'sales',
-        label: 'Sales',
-        icon: '⚡',
-        children: salesChildren
-      });
-    }
-
-    const accessChildren: SidebarItem[] = [];
-    if (tabs.includes('Users')) {
-      accessChildren.push({ key: 'users', label: 'Users', to: '/users' });
-    }
-    if (tabs.includes('Roles')) {
-      accessChildren.push({ key: 'roles', label: 'Roles', to: '/roles' });
-    }
-    if (tabs.includes('Permissions')) {
-      accessChildren.push({ key: 'permissions', label: 'Permissions', to: '/permissions' });
-    }
-    if (accessChildren.length) {
-      items.push({
-        key: 'access',
-        label: 'Access Control',
-        icon: '🔐',
-        children: accessChildren
-      });
-    }
-
-    if (tabs.includes('Activity')) {
-      items.push({
-        key: 'activity',
-        label: 'Activity',
-        to: '/activity',
-        icon: '📝'
-      });
-    }
-
-    if (tabs.includes('Settings')) {
-      items.push({
-        key: 'settings',
-        label: 'Settings',
-        to: '/settings',
-        icon: '⚙️'
-      });
-    }
-
-    items.push({
-      key: 'profile',
-      label: 'Profile',
-      to: '/profile',
-      icon: '👤'
-    });
-
-    return items;
-  }, [tabs]);
+    return buildSidebar(accessibleNavigation);
+  }, [accessibleNavigation]);
 
   useEffect(() => {
     setExpandedSections((prev) => {
