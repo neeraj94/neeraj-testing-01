@@ -23,6 +23,7 @@ import { applyPrimaryColor } from './utils/colors';
 import ActivityPage from './pages/ActivityPage';
 import ActivityDetailPage from './pages/ActivityDetailPage';
 import SetupPage from './pages/SetupPage';
+import GalleryPage from './pages/GalleryPage';
 
 const App = () => {
   const dispatch = useAppDispatch();
@@ -159,6 +160,13 @@ const App = () => {
           </Route>
           <Route element={<PermissionRoute required={['SETTINGS_VIEW']} />}>
             <Route path="/settings" element={<SettingsPage />} />
+          </Route>
+          <Route
+            element={
+              <PermissionRoute required={['GALLERY_VIEW_ALL', 'GALLERY_VIEW_OWN', 'GALLERY_CREATE']} />
+            }
+          >
+            <Route path="/gallery" element={<GalleryPage />} />
           </Route>
           <Route element={<PermissionRoute required={['SETUP_MANAGE']} />}>
             <Route path="/setup" element={<SetupPage />} />
