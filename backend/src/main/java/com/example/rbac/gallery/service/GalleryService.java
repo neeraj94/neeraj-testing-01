@@ -45,6 +45,7 @@ public class GalleryService {
         this.activityRecorder = activityRecorder;
     }
 
+    @Transactional(readOnly = true)
     public PageResponse<GalleryFileDto> list(int page,
                                              int size,
                                              String sort,
@@ -169,6 +170,7 @@ public class GalleryService {
         activityRecorder.record(MODULE_NAME, "DELETE", "Bulk deleted gallery files", "SUCCESS", context);
     }
 
+    @Transactional(readOnly = true)
     public GalleryFileContent loadContent(Long id, UserPrincipal principal) {
         GalleryFile file = fileRepository.findById(id)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "File not found"));
@@ -180,6 +182,7 @@ public class GalleryService {
         );
     }
 
+    @Transactional(readOnly = true)
     public List<GalleryFolderDto> listFolders() {
         List<GalleryFolder> folders = folderRepository.findAll(Sort.by(Sort.Direction.ASC, "path"));
         List<GalleryFolderDto> result = new ArrayList<>();
