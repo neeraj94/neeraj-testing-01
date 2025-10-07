@@ -281,6 +281,7 @@ public class SetupService {
                             List.of("PERMISSION_VIEW")
                     )
             )),
+            MenuDefinition.item("gallery", "Gallery", "🖼️", "/gallery", List.of("GALLERY_VIEW_ALL", "GALLERY_VIEW_OWN", "GALLERY_CREATE")),
             MenuDefinition.item("activity", "Activity", "📝", "/activity", List.of("ACTIVITY_VIEW")),
             MenuDefinition.item("settings", "Settings", "⚙️", "/settings", List.of("SETTINGS_VIEW")),
             MenuDefinition.item("setup", "Setup", "🧭", "/setup", List.of("SETUP_MANAGE")),
