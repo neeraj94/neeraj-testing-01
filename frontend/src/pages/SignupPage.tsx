@@ -8,7 +8,7 @@ const SignupPage = () => {
   const dispatch = useAppDispatch();
   const applicationName = useAppSelector(selectApplicationName);
   const navigate = useNavigate();
-  const [form, setForm] = useState({ email: '', password: '', fullName: '' });
+  const [form, setForm] = useState({ email: '', password: '', firstName: '', lastName: '' });
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -26,15 +26,27 @@ const SignupPage = () => {
           Sign up to explore {applicationName || 'the dashboard'}.
         </p>
         <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
-          <div>
-            <label className="block text-sm font-medium text-slate-600">Full name</label>
-            <input
-              type="text"
-              value={form.fullName}
-              onChange={(e) => setForm((prev) => ({ ...prev, fullName: e.target.value }))}
-              required
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 focus:border-primary focus:outline-none"
-            />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="block text-sm font-medium text-slate-600">First name</label>
+              <input
+                type="text"
+                value={form.firstName}
+                onChange={(e) => setForm((prev) => ({ ...prev, firstName: e.target.value }))}
+                required
+                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 focus:border-primary focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-600">Last name</label>
+              <input
+                type="text"
+                value={form.lastName}
+                onChange={(e) => setForm((prev) => ({ ...prev, lastName: e.target.value }))}
+                required
+                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 focus:border-primary focus:outline-none"
+              />
+            </div>
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-600">Email</label>
@@ -53,8 +65,10 @@ const SignupPage = () => {
               value={form.password}
               onChange={(e) => setForm((prev) => ({ ...prev, password: e.target.value }))}
               required
+              minLength={8}
               className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 focus:border-primary focus:outline-none"
             />
+            <p className="mt-1 text-xs text-slate-500">Passwords must contain at least 8 characters.</p>
           </div>
           <button
             type="submit"

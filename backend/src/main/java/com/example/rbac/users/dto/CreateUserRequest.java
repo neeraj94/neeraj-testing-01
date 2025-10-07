@@ -16,7 +16,10 @@ public class CreateUserRequest {
     private String password;
 
     @NotBlank
-    private String fullName;
+    private String firstName;
+
+    @NotBlank
+    private String lastName;
 
     private boolean active = true;
 
@@ -25,6 +28,18 @@ public class CreateUserRequest {
     private Set<String> permissionKeys;
 
     private Set<String> revokedPermissionKeys;
+
+    private String phoneNumber;
+
+    private String whatsappNumber;
+
+    private String facebookUrl;
+
+    private String linkedinUrl;
+
+    private String skypeId;
+
+    private String emailSignature;
 
     public String getEmail() {
         return email;
@@ -42,12 +57,20 @@ public class CreateUserRequest {
         this.password = password;
     }
 
-    public String getFullName() {
-        return fullName;
+    public String getFirstName() {
+        return firstName;
     }
 
-    public void setFullName(String fullName) {
-        this.fullName = fullName;
+    public void setFirstName(String firstName) {
+        this.firstName = firstName;
+    }
+
+    public String getLastName() {
+        return lastName;
+    }
+
+    public void setLastName(String lastName) {
+        this.lastName = lastName;
     }
 
     public boolean isActive() {
@@ -80,5 +103,53 @@ public class CreateUserRequest {
 
     public void setRevokedPermissionKeys(Set<String> revokedPermissionKeys) {
         this.revokedPermissionKeys = revokedPermissionKeys;
+    }
+
+    public String getPhoneNumber() {
+        return phoneNumber;
+    }
+
+    public void setPhoneNumber(String phoneNumber) {
+        this.phoneNumber = phoneNumber;
+    }
+
+    public String getWhatsappNumber() {
+        return whatsappNumber;
+    }
+
+    public void setWhatsappNumber(String whatsappNumber) {
+        this.whatsappNumber = whatsappNumber;
+    }
+
+    public String getFacebookUrl() {
+        return facebookUrl;
+    }
+
+    public void setFacebookUrl(String facebookUrl) {
+        this.facebookUrl = facebookUrl;
+    }
+
+    public String getLinkedinUrl() {
+        return linkedinUrl;
+    }
+
+    public void setLinkedinUrl(String linkedinUrl) {
+        this.linkedinUrl = linkedinUrl;
+    }
+
+    public String getSkypeId() {
+        return skypeId;
+    }
+
+    public void setSkypeId(String skypeId) {
+        this.skypeId = skypeId;
+    }
+
+    public String getEmailSignature() {
+        return emailSignature;
+    }
+
+    public void setEmailSignature(String emailSignature) {
+        this.emailSignature = emailSignature;
     }
 }
