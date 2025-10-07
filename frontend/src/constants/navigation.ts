@@ -90,6 +90,15 @@ export const DEFAULT_NAVIGATION_MENU: NavigationNode[] = [
     children: []
   },
   {
+    key: 'gallery',
+    label: 'Gallery',
+    icon: '🖼️',
+    path: '/gallery',
+    group: false,
+    permissions: ['GALLERY_VIEW_ALL', 'GALLERY_VIEW_OWN', 'GALLERY_CREATE'],
+    children: []
+  },
+  {
     key: 'settings',
     label: 'Settings',
     icon: '⚙️',
