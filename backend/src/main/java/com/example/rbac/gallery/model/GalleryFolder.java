@@ -1,5 +1,6 @@
 package com.example.rbac.gallery.model;
 
+import com.example.rbac.users.model.User;
 import jakarta.persistence.*;
 
 import java.text.Normalizer;
@@ -26,6 +27,10 @@ public class GalleryFolder {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "parent_id")
     private GalleryFolder parent;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "owner_id")
+    private User owner;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
@@ -69,14 +74,25 @@ public class GalleryFolder {
     }
 
     private String buildPath() {
-        String parentPath = parent != null ? parent.getPath() : "/";
+        String parentPath = parent != null ? parent.getPath() : null;
         if (parentPath == null || parentPath.isBlank() || "/".equals(parentPath)) {
+            String ownerSegment = buildOwnerSegment();
+            if (ownerSegment != null) {
+                return "/" + ownerSegment + "/" + slug;
+            }
             return "/" + slug;
         }
         if (parentPath.endsWith("/")) {
             return parentPath + slug;
         }
         return parentPath + "/" + slug;
+    }
+
+    private String buildOwnerSegment() {
+        if (owner == null || owner.getId() == null) {
+            return null;
+        }
+        return "usr-" + owner.getId();
     }
 
     public Long getId() {
@@ -133,5 +149,13 @@ public class GalleryFolder {
 
     public void setUpdatedAt(Instant updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public User getOwner() {
+        return owner;
+    }
+
+    public void setOwner(User owner) {
+        this.owner = owner;
     }
 }

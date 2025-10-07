@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../services/http';
 import { useToast } from '../components/ToastProvider';
@@ -32,6 +32,43 @@ type FolderModalState = {
   parentId: number | null;
 };
 
+type FolderTreeNode = {
+  key: string;
+  label: string;
+  folderId: number | null;
+  ownerId: number | null;
+  depth: number;
+  children: FolderTreeNode[];
+  description?: string;
+  isSynthetic: boolean;
+};
+
+type DetailsModalState = {
+  file: GalleryFile;
+};
+
+const IMAGE_EXTENSIONS = new Set(['png', 'jpg', 'jpeg', 'gif', 'bmp', 'svg', 'webp', 'heic', 'heif', 'tiff']);
+
+const EXTENSION_ICONS: Record<string, string> = {
+  pdf: '📕',
+  doc: '📄',
+  docx: '📄',
+  xls: '📊',
+  xlsx: '📊',
+  csv: '📈',
+  txt: '📝',
+  ppt: '📊',
+  pptx: '📊',
+  zip: '🗜️',
+  rar: '🗜️',
+  mp4: '🎞️',
+  mov: '🎞️',
+  avi: '🎞️',
+  mp3: '🎵',
+  wav: '🎵',
+  json: '🧾'
+};
+
 const formatDateTime = (value: string) => {
   if (!value) {
     return '—';
@@ -54,6 +91,85 @@ const resolveFileUrl = (id: number) => {
   return `${baseUrl.replace(/\/$/, '')}/gallery/files/${id}/content`;
 };
 
+const buildFolderTree = (
+  folders: GalleryFolder[],
+  currentUserId: number | null,
+  canViewAll: boolean
+): FolderTreeNode[] => {
+  const concreteFolders = folders.filter((folder): folder is GalleryFolder & { id: number } => folder.id !== null);
+  const grouped = new Map<number | null, (GalleryFolder & { id: number })[]>();
+
+  concreteFolders.forEach((folder) => {
+    const ownerId = folder.ownerId ?? null;
+    const existing = grouped.get(ownerId);
+    if (existing) {
+      existing.push(folder);
+    } else {
+      grouped.set(ownerId, [folder]);
+    }
+  });
+
+  if (!canViewAll && currentUserId !== null && !grouped.has(currentUserId)) {
+    grouped.set(currentUserId, []);
+  }
+
+  const buildHierarchy = (
+    items: (GalleryFolder & { id: number })[],
+    parentId: number | null,
+    depth: number
+  ): FolderTreeNode[] => {
+    const children = items.filter((item) => (item.parentId ?? null) === parentId);
+    children.sort((a, b) => a.name.localeCompare(b.name));
+    return children.map((child) => ({
+      key: `folder-${child.id}`,
+      label: child.name,
+      folderId: child.id,
+      ownerId: child.ownerId ?? null,
+      depth,
+      description: undefined,
+      isSynthetic: false,
+      children: buildHierarchy(items, child.id, depth + 1)
+    }));
+  };
+
+  const nodes: FolderTreeNode[] = [];
+  grouped.forEach((items, ownerId) => {
+    const sample = items[0];
+    const hasOwner = ownerId !== null;
+    const ownerLabel = (() => {
+      if (!hasOwner) {
+        return canViewAll ? 'Unassigned' : 'My Library';
+      }
+      if (!canViewAll && currentUserId !== null && ownerId === currentUserId) {
+        return 'My Library';
+      }
+      return sample?.ownerKey ?? sample?.ownerEmail ?? sample?.ownerName ?? `User ${ownerId}`;
+    })();
+    const ownerDescription = (() => {
+      if (!sample) {
+        return undefined;
+      }
+      if (!canViewAll && currentUserId !== null && ownerId === currentUserId) {
+        return sample.ownerEmail ?? undefined;
+      }
+      return sample.ownerEmail ?? sample.ownerName ?? undefined;
+    })();
+    nodes.push({
+      key: hasOwner ? `owner-${ownerId}` : 'owner-unknown',
+      label: ownerLabel,
+      folderId: null,
+      ownerId,
+      depth: 0,
+      description: ownerDescription,
+      isSynthetic: true,
+      children: buildHierarchy(items, null, 1)
+    });
+  });
+
+  nodes.sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: 'base' }));
+  return nodes;
+};
+
 const GalleryPage = () => {
   const queryClient = useQueryClient();
   const { notify } = useToast();
@@ -64,12 +180,18 @@ const GalleryPage = () => {
   const [pageSize, setPageSize] = useState(20);
   const [sortValue, setSortValue] = useState<SortOptionValue>('newest');
   const [folderFilter, setFolderFilter] = useState<number | null>(null);
+  const [ownerFilter, setOwnerFilter] = useState<number | null>(null);
   const [searchDraft, setSearchDraft] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [uploaderFilter, setUploaderFilter] = useState('');
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [editModal, setEditModal] = useState<EditModalState | null>(null);
   const [folderModal, setFolderModal] = useState<FolderModalState | null>(null);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [expandedNodes, setExpandedNodes] = useState<Set<string>>(() => new Set());
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [activeMenuId, setActiveMenuId] = useState<number | null>(null);
+  const [detailsModal, setDetailsModal] = useState<DetailsModalState | null>(null);
 
   const granted = (grantedPermissions as PermissionKey[]) ?? [];
   const currentUserId = user?.id ?? null;
@@ -89,8 +211,19 @@ const GalleryPage = () => {
   }, [searchDraft]);
 
   useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    const handleDocumentClick = () => setActiveMenuId(null);
+    document.addEventListener('click', handleDocumentClick);
+    return () => {
+      document.removeEventListener('click', handleDocumentClick);
+    };
+  }, []);
+
+  useEffect(() => {
     setPage(0);
-  }, [pageSize, sortValue, folderFilter, uploaderFilter]);
+  }, [pageSize, sortValue, folderFilter, ownerFilter, uploaderFilter]);
 
   const foldersQuery = useQuery<GalleryFolder[]>({
     queryKey: ['gallery', 'folders'],
@@ -104,7 +237,15 @@ const GalleryPage = () => {
     queryKey: [
       'gallery',
       'files',
-      { page, pageSize, sortValue, folderFilter, uploaderFilter: canViewAll ? uploaderFilter : '', searchTerm }
+      {
+        page,
+        pageSize,
+        sortValue,
+        folderFilter,
+        ownerFilter: canViewAll ? ownerFilter : currentUserId,
+        uploaderFilter: canViewAll ? uploaderFilter : '',
+        searchTerm
+      }
     ],
     queryFn: async () => {
       const sortOption = SORT_OPTIONS.find((option) => option.value === sortValue) ?? SORT_OPTIONS[0];
@@ -116,6 +257,8 @@ const GalleryPage = () => {
       };
       if (folderFilter !== null) {
         params.folderId = folderFilter;
+      } else if (canViewAll && ownerFilter !== null) {
+        params.uploaderId = ownerFilter;
       }
       if (searchTerm) {
         params.search = searchTerm;
@@ -250,33 +393,370 @@ const GalleryPage = () => {
 
   const openEditModal = (file: GalleryFile) => {
     setEditModal({ file, name: file.displayName, folderId: file.folderId ?? null });
+    setActiveMenuId(null);
   };
 
   const openFolderModal = () => {
     setFolderModal({ name: '', parentId: folderFilter });
   };
 
-  const renderFolderOptions = () => {
-    const data = foldersQuery.data ?? [
-      { id: null, name: 'All Files', path: '/', parentId: null, root: true }
-    ];
-    return data.map((folder) => (
-      <option key={`folder-${folder.id ?? 'root'}`} value={folder.id ?? ''}>
-        {folder.name}
-      </option>
-    ));
+  const handleOpenDetails = (file: GalleryFile) => {
+    setDetailsModal({ file });
   };
 
-  const resolvedFolders = foldersQuery.data ?? [];
-  const resolveFolderName = (folderId?: number | null) => {
+  const renderFileMenu = (file: GalleryFile, canDeleteFile: boolean) => (
+    <>
+      <a
+        href={resolveFileUrl(file.id)}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={() => setActiveMenuId(null)}
+        className="flex items-center justify-between rounded-lg px-3 py-2 text-left text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-primary"
+      >
+        Open in new tab
+        <span>↗</span>
+      </a>
+      <button
+        type="button"
+        onClick={() => {
+          setActiveMenuId(null);
+          handleOpenDetails(file);
+        }}
+        className="w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-primary"
+      >
+        View details
+      </button>
+      {canEdit && (
+        <button
+          type="button"
+          onClick={() => {
+            openEditModal(file);
+          }}
+          className="w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-primary"
+        >
+          Rename
+        </button>
+      )}
+      {canDeleteFile && (
+        <button
+          type="button"
+          onClick={() => {
+            setActiveMenuId(null);
+            handleDeleteSingle(file.id);
+          }}
+          className="w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-rose-600 transition hover:bg-rose-50"
+        >
+          Delete
+        </button>
+      )}
+    </>
+  );
+
+  const foldersData = foldersQuery.data ?? [];
+  const folderMap = useMemo(() => {
+    const map = new Map<number, GalleryFolder & { id: number }>();
+    foldersData.forEach((folder) => {
+      if (folder.id !== null) {
+        map.set(folder.id, folder as GalleryFolder & { id: number });
+      }
+    });
+    return map;
+  }, [foldersData]);
+
+  const resolveFolderName = useCallback((folderId?: number | null) => {
     if (folderId === null || folderId === undefined) {
       return 'All Files';
     }
-    const folder = resolvedFolders.find((item) => item.id === folderId);
-    return folder?.name ?? 'All Files';
+    const stack: string[] = [];
+    let current = folderId !== null ? folderMap.get(folderId) : undefined;
+    while (current) {
+      stack.unshift(current.name);
+      if (current.parentId === null) {
+        if (canViewAll) {
+          const ownerLabel = current.ownerKey ?? current.ownerEmail ?? current.ownerName ?? `User ${current.ownerId ?? ''}`;
+          stack.unshift(ownerLabel);
+        }
+        break;
+      }
+      const parentId = current.parentId;
+      current = parentId !== null ? folderMap.get(parentId) : undefined;
+    }
+    return stack.length > 0 ? stack.join(' / ') : 'All Files';
+  }, [folderMap, canViewAll]);
+
+  const folderSelectOptions = useMemo(() => {
+    const options: { id: string; label: string }[] = [
+      { id: '', label: 'All Files' }
+    ];
+    const concrete = Array.from(folderMap.values());
+    concrete
+      .sort((a, b) => resolveFolderName(a.id).localeCompare(resolveFolderName(b.id)))
+      .forEach((folder) => {
+        options.push({ id: String(folder.id), label: resolveFolderName(folder.id) });
+      });
+    return options;
+  }, [folderMap, resolveFolderName]);
+
+  const renderFolderOptions = () =>
+    folderSelectOptions.map((option) => (
+      <option key={`folder-${option.id || 'root'}`} value={option.id}>
+        {option.label}
+      </option>
+    ));
+
+  const folderTree = useMemo(() => buildFolderTree(foldersData, currentUserId, canViewAll), [foldersData, currentUserId, canViewAll]);
+
+  useEffect(() => {
+    setExpandedNodes((previous) => {
+      const next = new Set(previous);
+      const expandInitial = (nodes: FolderTreeNode[]) => {
+        nodes.forEach((node) => {
+          if (node.children.length > 0 && node.depth <= 1) {
+            next.add(node.key);
+          }
+          if (node.children.length > 0) {
+            expandInitial(node.children);
+          }
+        });
+      };
+      expandInitial(folderTree);
+      return next;
+    });
+  }, [folderTree]);
+
+  useEffect(() => {
+    setIsSidebarOpen(false);
+  }, [folderFilter, ownerFilter]);
+
+  useEffect(() => {
+    setActiveMenuId(null);
+  }, [viewMode, files]);
+
+  const activeOwnerId = useMemo(() => {
+    if (folderFilter !== null) {
+      const folder = folderMap.get(folderFilter);
+      return folder?.ownerId ?? null;
+    }
+    if (canViewAll) {
+      return ownerFilter ?? null;
+    }
+    return currentUserId;
+  }, [folderFilter, folderMap, canViewAll, ownerFilter, currentUserId]);
+
+  const shouldFilterByOwner = useMemo(() => {
+    if (folderFilter !== null) {
+      return true;
+    }
+    if (!canViewAll) {
+      return true;
+    }
+    return ownerFilter !== null;
+  }, [folderFilter, canViewAll, ownerFilter]);
+
+  const visibleFolders = useMemo(() => {
+    const targetParentId = folderFilter ?? null;
+    return foldersData
+      .filter(
+        (folder): folder is GalleryFolder & { id: number } =>
+          folder.id !== null &&
+          (folder.parentId ?? null) === targetParentId &&
+          (!shouldFilterByOwner || (folder.ownerId ?? null) === (activeOwnerId ?? null))
+      )
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [foldersData, folderFilter, shouldFilterByOwner, activeOwnerId]);
+
+  const resolveOwnerLabel = useCallback(
+    (ownerId: number | null) => {
+      if (ownerId === null) {
+        return canViewAll ? 'Unassigned' : 'My Drive';
+      }
+      if (!canViewAll && ownerId === currentUserId) {
+        return 'My Drive';
+      }
+      const match = foldersData.find(
+        (candidate): candidate is GalleryFolder & { id: number } => candidate.id !== null && candidate.ownerId === ownerId
+      );
+      return match?.ownerKey ?? match?.ownerEmail ?? match?.ownerName ?? `User ${ownerId}`;
+    },
+    [canViewAll, currentUserId, foldersData]
+  );
+
+  const headerTitle = useMemo(() => {
+    if (folderFilter !== null) {
+      const folder = folderMap.get(folderFilter);
+      return folder?.name ?? 'Folder';
+    }
+    if (canViewAll) {
+      if (ownerFilter !== null) {
+        return `${resolveOwnerLabel(ownerFilter)}'s Drive`;
+      }
+      return 'All Files';
+    }
+    return 'My Drive';
+  }, [folderFilter, folderMap, canViewAll, ownerFilter, resolveOwnerLabel]);
+
+  const headerSubtitle = useMemo(() => {
+    if (folderFilter !== null) {
+      return resolveFolderName(folderFilter);
+    }
+    if (canViewAll) {
+      return ownerFilter !== null ? 'Viewing files for a specific user' : 'Everything that has been uploaded across the workspace';
+    }
+    return 'Quick access to the files and folders you own';
+  }, [folderFilter, resolveFolderName, canViewAll, ownerFilter]);
+
+  const breadcrumbs = useMemo(() => {
+    const crumbs: { label: string; folderId: number | null; ownerId: number | null }[] = [
+      { label: 'All Files', folderId: null, ownerId: null }
+    ];
+
+    if (folderFilter !== null) {
+      const stack: (GalleryFolder & { id: number })[] = [];
+      let current = folderMap.get(folderFilter);
+      const ownerId = current?.ownerId ?? null;
+      while (current) {
+        stack.unshift(current);
+        if (current.parentId === null) {
+          break;
+        }
+        const parentId = current.parentId;
+        current = parentId !== null ? folderMap.get(parentId) : undefined;
+      }
+      if (canViewAll && ownerId !== null) {
+        const ownerLabel = stack[0]?.ownerKey ?? stack[0]?.ownerEmail ?? stack[0]?.ownerName ?? `User ${ownerId}`;
+        crumbs.push({ label: ownerLabel, folderId: null, ownerId });
+      }
+      stack.forEach((folder) => {
+        crumbs.push({ label: folder.name, folderId: folder.id, ownerId: folder.ownerId ?? null });
+      });
+      return crumbs;
+    }
+
+    if (canViewAll && ownerFilter !== null) {
+      const ownerSample = foldersData.find(
+        (folder): folder is GalleryFolder & { id: number } => folder.id !== null && folder.ownerId === ownerFilter
+      );
+      const ownerLabel = ownerSample?.ownerKey ?? ownerSample?.ownerEmail ?? ownerSample?.ownerName ?? `User ${ownerFilter}`;
+      crumbs.push({ label: ownerLabel, folderId: null, ownerId: ownerFilter });
+    }
+
+    return crumbs;
+  }, [folderFilter, ownerFilter, folderMap, foldersData, canViewAll]);
+
+  const isAllScopeSelected = folderFilter === null && ownerFilter === null;
+
+  const handleFolderOpen = (id: number) => {
+    setFolderFilter(id);
+    setOwnerFilter(null);
+    setSelectedIds([]);
   };
 
+  const handleNodeSelection = (node: FolderTreeNode) => {
+    if (node.folderId !== null) {
+      setFolderFilter(node.folderId);
+      setOwnerFilter(null);
+    } else {
+      setOwnerFilter(canViewAll ? node.ownerId ?? null : null);
+      setFolderFilter(null);
+    }
+    setSelectedIds([]);
+    setIsSidebarOpen(false);
+  };
+
+  const toggleNodeExpansion = (node: FolderTreeNode) => {
+    if (!node.children.length) {
+      return;
+    }
+    setExpandedNodes((previous) => {
+      const next = new Set(previous);
+      if (next.has(node.key)) {
+        next.delete(node.key);
+      } else {
+        next.add(node.key);
+      }
+      return next;
+    });
+  };
+
+  const renderTreeNodes = (nodes: FolderTreeNode[]) =>
+    nodes.map((node) => {
+      const isFolder = node.folderId !== null;
+      const isSelected = isFolder
+        ? folderFilter === node.folderId
+        : folderFilter === null && (canViewAll ? ownerFilter === (node.ownerId ?? null) : isAllScopeSelected);
+      const hasChildren = node.children.length > 0;
+      const isExpanded = !hasChildren || expandedNodes.has(node.key);
+
+      return (
+        <div key={node.key} className="flex flex-col" style={{ marginLeft: `${node.depth * 12}px` }}>
+          <div className="flex items-center gap-1">
+            {hasChildren ? (
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  toggleNodeExpansion(node);
+                }}
+                className="flex h-6 w-6 items-center justify-center rounded-md text-xs text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+                aria-label={isExpanded ? 'Collapse' : 'Expand'}
+              >
+                {isExpanded ? '▾' : '▸'}
+              </button>
+            ) : (
+              <span className="h-6 w-6" />
+            )}
+            <button
+              type="button"
+              onClick={() => handleNodeSelection(node)}
+              className={`flex min-h-[2.5rem] flex-1 items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition ${
+                isSelected ? 'bg-primary/10 text-primary' : 'text-slate-600 hover:bg-slate-100'
+              }`}
+            >
+              <span className="flex flex-col">
+                <span className="inline-flex items-center gap-2">
+                  <span className="text-lg">{isFolder ? '📁' : '👤'}</span>
+                  <span className="font-medium">{node.label}</span>
+                </span>
+                {node.description && <span className="ml-6 text-xs text-slate-400">{node.description}</span>}
+              </span>
+              {hasChildren && <span className="text-xs text-slate-400">{node.children.length}</span>}
+            </button>
+          </div>
+          {hasChildren && isExpanded && <div className="ml-7 mt-1 flex flex-col gap-1">{renderTreeNodes(node.children)}</div>}
+        </div>
+      );
+    });
+
+  const handleBreadcrumbClick = (folderId: number | null, ownerId: number | null, isLast: boolean) => {
+    if (isLast) {
+      return;
+    }
+    if (folderId !== null) {
+      setFolderFilter(folderId);
+      setOwnerFilter(null);
+    } else if (ownerId !== null) {
+      setOwnerFilter(ownerId);
+      setFolderFilter(null);
+    } else {
+      setOwnerFilter(null);
+      setFolderFilter(null);
+    }
+    setSelectedIds([]);
+  };
+
+  const handleResetSelection = () => {
+    setOwnerFilter(null);
+    setFolderFilter(null);
+    setSelectedIds([]);
+    setIsSidebarOpen(false);
+  };
+
+
   const canDelete = canDeleteAll || canDeleteOwn;
+
+  const isLoadingFiles = filesQuery.isFetching;
+
+  const showEmptyState = !visibleFolders.length && !files.length && !isLoadingFiles;
 
   return (
     <div className="space-y-6">
@@ -289,108 +769,201 @@ const GalleryPage = () => {
         disabled={!canUpload || uploadFiles.isPending}
       />
 
-      <div className="flex flex-col gap-4 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <h1 className="text-xl font-semibold text-slate-900">Gallery</h1>
-            <p className="text-sm text-slate-500">Upload, organize, and manage files across your workspace.</p>
-          </div>
-          <div className="flex flex-wrap gap-3">
-            {canUpload && (
-              <button
-                type="button"
-                onClick={handleUploadButtonClick}
-                disabled={uploadFiles.isPending}
-                className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-primary/60"
-              >
-                <span className="text-lg">⬆️</span>
-                Upload
-              </button>
-            )}
-            {canUpload && (
-              <button
-                type="button"
-                onClick={openFolderModal}
-                className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-primary hover:text-primary"
-              >
-                <span className="text-lg">📁</span>
-                New Folder
-              </button>
-            )}
-            {canDelete && (
-              <button
-                type="button"
-                onClick={handleDeleteSelected}
-                disabled={!selectedIds.length || deleteFiles.isPending}
-                className="inline-flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700 shadow-sm transition hover:border-rose-300 hover:bg-rose-100 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
-              >
-                <span className="text-lg">🗑️</span>
-                Delete Selected
-              </button>
-            )}
-          </div>
-        </div>
-
-        <div className="grid gap-4 lg:grid-cols-4">
-          <div className="lg:col-span-2">
-            <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Search</label>
-            <input
-              type="search"
-              value={searchDraft}
-              onChange={(event) => setSearchDraft(event.target.value)}
-              placeholder="Search by name or extension"
-              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none"
-            />
-          </div>
-          <div>
-            <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Folder</label>
-            <select
-              value={folderFilter ?? ''}
-              onChange={(event) => {
-                const value = event.target.value;
-                setFolderFilter(value === '' ? null : Number(value));
-              }}
-              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none"
-            >
-              {renderFolderOptions()}
-            </select>
-          </div>
-          <div>
-            <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Sort by</label>
-            <select
-              value={sortValue}
-              onChange={(event) => setSortValue(event.target.value as SortOptionValue)}
-              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none"
-            >
-              {SORT_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        {canViewAll && (
-          <div>
-            <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Filter by uploader</label>
-            <input
-              type="text"
-              value={uploaderFilter}
-              onChange={(event) => setUploaderFilter(event.target.value)}
-              placeholder="Enter email or name"
-              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none"
-            />
-          </div>
-        )}
+      <div className="lg:hidden">
+        <button
+          type="button"
+          onClick={() => setIsSidebarOpen(true)}
+          className="flex w-full items-center justify-between rounded-3xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-primary hover:text-primary"
+        >
+          <span>Browse folders</span>
+          <span className="text-lg">📁</span>
+        </button>
       </div>
 
-      <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-slate-200 text-sm">
-            <thead className="bg-slate-50">
-              <tr>
-                <th className="w-12 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+      <div className="relative flex flex-col gap-6 lg:flex-row">
+        {isSidebarOpen && (
+          <button
+            type="button"
+            aria-label="Close navigation"
+            className="fixed inset-0 z-30 bg-slate-900/40 lg:hidden"
+            onClick={() => setIsSidebarOpen(false)}
+          />
+        )}
+        <aside
+          className={`transform ${
+            isSidebarOpen
+              ? 'translate-x-0 opacity-100 pointer-events-auto'
+              : '-translate-x-full opacity-0 pointer-events-none lg:translate-x-0 lg:opacity-100 lg:pointer-events-auto'
+          } fixed inset-y-6 left-4 right-4 z-40 flex max-h-[80vh] flex-col gap-4 overflow-hidden overflow-y-auto rounded-3xl border border-slate-200 bg-white p-4 shadow-xl transition-all duration-200 lg:static lg:h-full lg:min-h-[26rem] lg:w-72 lg:max-h-none lg:overflow-visible lg:p-4 lg:shadow-sm`}
+        >
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-sm font-semibold text-slate-800">Navigation</h2>
+            <div className="flex items-center gap-2">
+              {canUpload && (
+                <button
+                  type="button"
+                  onClick={openFolderModal}
+                  className="inline-flex items-center rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 transition hover:border-primary hover:text-primary"
+                >
+                  New
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setIsSidebarOpen(false)}
+                className="inline-flex items-center rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-500 transition hover:border-primary hover:text-primary lg:hidden"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={handleResetSelection}
+            className={`flex items-center gap-3 rounded-2xl px-3 py-2 text-left text-sm transition ${
+              isAllScopeSelected ? 'bg-primary/10 font-semibold text-primary' : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            <span className="text-xl">🗂️</span>
+            <span>All files</span>
+          </button>
+          <div className="flex flex-1 flex-col gap-1 overflow-y-auto pr-1">
+            {folderTree.length ? (
+              renderTreeNodes(folderTree)
+            ) : (
+              <p className="px-3 py-6 text-sm text-slate-400">No folders yet. Create one to get started.</p>
+            )}
+          </div>
+        </aside>
+
+        <div className="flex-1 space-y-6">
+          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+              <div>
+                <h1 className="text-2xl font-semibold text-slate-900">{headerTitle}</h1>
+                <p className="text-sm text-slate-500">{headerSubtitle}</p>
+              </div>
+              <div className="flex flex-wrap items-center gap-3">
+                {canUpload && (
+                  <button
+                    type="button"
+                    onClick={handleUploadButtonClick}
+                    disabled={uploadFiles.isPending}
+                    className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-primary/60"
+                  >
+                    <span className="text-lg">⬆️</span>
+                    Upload
+                  </button>
+                )}
+                {canUpload && (
+                  <button
+                    type="button"
+                    onClick={openFolderModal}
+                    className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-primary hover:text-primary"
+                  >
+                    <span className="text-lg">📁</span>
+                    New folder
+                  </button>
+                )}
+                {canDelete && (
+                  <button
+                    type="button"
+                    onClick={handleDeleteSelected}
+                    disabled={!selectedIds.length || deleteFiles.isPending}
+                    className="inline-flex items-center gap-2 rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700 shadow-sm transition hover:border-rose-300 hover:bg-rose-100 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
+                  >
+                    <span className="text-lg">🗑️</span>
+                    Delete selected
+                  </button>
+                )}
+                <div className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 p-1 text-xs font-semibold text-slate-500">
+                  <button
+                    type="button"
+                    onClick={() => setViewMode('grid')}
+                    className={`rounded-full px-3 py-1 transition ${viewMode === 'grid' ? 'bg-white text-primary shadow-sm' : 'hover:text-slate-700'}`}
+                  >
+                    Grid
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setViewMode('list')}
+                    className={`rounded-full px-3 py-1 transition ${viewMode === 'list' ? 'bg-white text-primary shadow-sm' : 'hover:text-slate-700'}`}
+                  >
+                    List
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 flex flex-col gap-4 lg:flex-row">
+              <div className="flex-1">
+                <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Search in drive</label>
+                <div className="mt-1 flex items-center rounded-2xl border border-slate-300 bg-white px-3 py-2 text-sm focus-within:border-primary">
+                  <span className="mr-2 text-lg text-slate-400">🔍</span>
+                  <input
+                    type="search"
+                    value={searchDraft}
+                    onChange={(event) => setSearchDraft(event.target.value)}
+                    placeholder="Search by file name, type, or owner"
+                    className="w-full border-none text-sm outline-none"
+                  />
+                </div>
+              </div>
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
+                <div className="sm:w-48">
+                  <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Sort by</label>
+                  <select
+                    value={sortValue}
+                    onChange={(event) => setSortValue(event.target.value as SortOptionValue)}
+                    className="mt-1 w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                  >
+                    {SORT_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {canViewAll && (
+                  <div className="sm:w-64">
+                    <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Filter by uploader</label>
+                    <input
+                      type="text"
+                      value={uploaderFilter}
+                      onChange={(event) => setUploaderFilter(event.target.value)}
+                      placeholder="Enter email or name"
+                      className="mt-1 w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <nav className="flex flex-wrap items-center gap-2 text-sm text-slate-600">
+                {breadcrumbs.map((crumb, index) => {
+                  const isLast = index === breadcrumbs.length - 1;
+                  return (
+                    <div key={`${crumb.label}-${index}`} className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleBreadcrumbClick(crumb.folderId, crumb.ownerId, isLast)}
+                        className={`rounded-full px-3 py-1 transition ${
+                          isLast ? 'bg-primary/10 font-semibold text-primary' : 'hover:bg-slate-100'
+                        }`}
+                        disabled={isLast}
+                      >
+                        {crumb.label}
+                      </button>
+                      {!isLast && <span className="text-slate-300">›</span>}
+                    </div>
+                  );
+                })}
+              </nav>
+              {files.length > 0 && (
+                <label className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
                   <input
                     type="checkbox"
                     checked={allSelected}
@@ -401,129 +974,403 @@ const GalleryPage = () => {
                     }}
                     onChange={toggleSelectAll}
                   />
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">File</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Type</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Size</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Folder</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Uploaded</th>
-                <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-200">
-              {files.map((file) => {
-                const isOwner = currentUserId !== null && currentUserId === (file.uploadedById ?? null);
-                const canDeleteFile = canDeleteAll || (canDeleteOwn && isOwner);
-                return (
-                  <tr key={file.id} className="hover:bg-slate-50/60">
-                    <td className="px-4 py-3">
-                      <input
-                        type="checkbox"
-                        checked={selectedIds.includes(file.id)}
-                        onChange={() => toggleSelect(file.id)}
-                      />
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-xs font-semibold uppercase text-slate-600">
-                          {file.extension.slice(0, 4)}
-                        </div>
-                        <div>
-                          <div className="font-medium text-slate-800">{file.displayName}</div>
-                          <div className="text-xs text-slate-500">{file.originalFilename}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-slate-600">{file.extension.toUpperCase()}</td>
-                    <td className="px-4 py-3 text-slate-600">{formatFileSize(file.sizeBytes)}</td>
-                    <td className="px-4 py-3 text-slate-600">{resolveFolderName(file.folderId)}</td>
-                    <td className="px-4 py-3 text-slate-600">
-                      <div className="flex flex-col">
-                        <span>{file.uploadedByName ?? file.uploadedByEmail ?? '—'}</span>
-                        <span className="text-xs text-slate-400">{formatDateTime(file.uploadedAt)}</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center justify-end gap-3">
-                        <a
-                          href={resolveFileUrl(file.id)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-sm font-semibold text-primary hover:text-primary/80"
-                        >
-                          View
-                        </a>
-                        {canEdit && (
-                          <button
-                            type="button"
-                            onClick={() => openEditModal(file)}
-                            className="text-sm font-semibold text-slate-600 hover:text-primary"
-                          >
-                            Edit
-                          </button>
-                        )}
-                        {canDeleteFile && (
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteSingle(file.id)}
-                            className="text-sm font-semibold text-rose-600 hover:text-rose-500"
-                          >
-                            Delete
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-              {!files.length && (
-                <tr>
-                  <td colSpan={7} className="px-4 py-16 text-center text-sm text-slate-500">
-                    {filesQuery.isFetching ? 'Loading files…' : 'No files found for the selected filters.'}
-                  </td>
-                </tr>
+                  Select all
+                </label>
               )}
-            </tbody>
-          </table>
-        </div>
-        <div className="flex flex-col gap-4 border-t border-slate-200 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3 text-sm text-slate-600">
-            <span>Rows per page</span>
-            <select
-              value={pageSize}
-              onChange={(event) => setPageSize(Number(event.target.value))}
-              className="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none"
-            >
-              {PAGE_SIZE_OPTIONS.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
+            </div>
+
+            {viewMode === 'grid' && (
+              <div className="mt-6 space-y-3">
+                <div className="flex items-center justify-between text-sm font-semibold text-slate-700">
+                  <h2>Folders</h2>
+                  <span className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                    {visibleFolders.length} item{visibleFolders.length === 1 ? '' : 's'}
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+                  {visibleFolders.length ? (
+                    visibleFolders.map((folder) => (
+                      <button
+                        key={folder.id}
+                        type="button"
+                        onClick={() => handleFolderOpen(folder.id)}
+                        className="group flex h-full flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-left transition hover:-translate-y-1 hover:border-primary hover:bg-white hover:shadow-lg"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-3xl">📁</span>
+                          <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-500 shadow-sm">
+                            {resolveOwnerLabel(folder.ownerId ?? null)}
+                          </span>
+                        </div>
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-slate-900">{folder.name}</p>
+                          <p className="truncate text-xs text-slate-500">{folder.path}</p>
+                        </div>
+                        <span className="text-xs font-semibold text-primary opacity-0 transition group-hover:opacity-100">
+                          Open folder →
+                        </span>
+                      </button>
+                    ))
+                  ) : (
+                    <div className="col-span-full rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 p-10 text-center text-sm text-slate-500">
+                      No folders yet. Use the navigation tree or create a new folder to organise uploads.
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <div className="mt-6">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h2 className="text-sm font-semibold text-slate-700">Files</h2>
+                <span className="text-xs uppercase tracking-wide text-slate-400">
+                  {files.length} item{files.length === 1 ? '' : 's'}
+                </span>
+              </div>
+
+              {viewMode === 'grid' ? (
+                <div className="mt-4 grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+                  {files.map((file) => {
+                    const isOwner = currentUserId !== null && currentUserId === (file.uploadedById ?? null);
+                    const canDeleteFile = canDeleteAll || (canDeleteOwn && isOwner);
+                    const isSelected = selectedIds.includes(file.id);
+                    const extension = file.extension.toLowerCase();
+                    const isImage = IMAGE_EXTENSIONS.has(extension);
+                    const icon = EXTENSION_ICONS[extension] ?? '📄';
+                    return (
+                      <div
+                        key={file.id}
+                        className={`group relative flex h-full flex-col rounded-2xl border bg-white p-4 shadow-sm transition hover:-translate-y-1 hover:shadow-lg ${
+                          isSelected ? 'border-primary ring-2 ring-primary/20' : 'border-slate-200'
+                        }`}
+                      >
+                        <div className={`relative overflow-hidden rounded-xl ${isImage ? 'bg-slate-900/5' : 'bg-slate-900/90'}`}>
+                          <div className="aspect-[4/3] w-full">
+                            {isImage ? (
+                              <img
+                                src={resolveFileUrl(file.id)}
+                                alt={file.displayName}
+                                className="h-full w-full object-cover"
+                              />
+                            ) : (
+                              <div className="flex h-full w-full items-center justify-center text-5xl text-white">
+                                {icon}
+                              </div>
+                            )}
+                          </div>
+                          <span className="absolute left-3 top-3 rounded-full bg-white/90 px-2 py-1 text-xs font-semibold text-slate-700">
+                            {file.extension.toUpperCase()}
+                          </span>
+                          <span className="absolute bottom-3 left-3 rounded-full bg-slate-900/70 px-2 py-1 text-xs font-semibold text-white">
+                            {formatFileSize(file.sizeBytes)}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setActiveMenuId((previous) => (previous === file.id ? null : file.id));
+                            }}
+                            className="absolute right-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-lg text-slate-600 shadow-sm transition hover:bg-white"
+                          >
+                            ⋮
+                          </button>
+                          {activeMenuId === file.id && (
+                            <div
+                              className="absolute right-3 top-12 z-20 w-48 rounded-xl border border-slate-200 bg-white p-2 shadow-xl"
+                              onClick={(event) => event.stopPropagation()}
+                            >
+                              {renderFileMenu(file, canDeleteFile)}
+                            </div>
+                          )}
+                        </div>
+                        <div className="mt-3 flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-semibold text-slate-900">{file.displayName}</p>
+                            <p className="truncate text-xs text-slate-500">{file.originalFilename}</p>
+                          </div>
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleSelect(file.id)}
+                            className="mt-1"
+                          />
+                        </div>
+                        <p className="mt-2 truncate text-xs uppercase tracking-wide text-slate-400">{resolveFolderName(file.folderId)}</p>
+                      </div>
+                    );
+                  })}
+                  {!files.length && (
+                    <div className="col-span-full flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-slate-200 bg-slate-50/50 p-12 text-center text-sm text-slate-500">
+                      {isLoadingFiles ? 'Loading files…' : 'Drop files here or use the upload button to get started.'}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="mt-4 overflow-x-auto">
+                  <table className="min-w-full divide-y divide-slate-200 text-sm">
+                    <thead className="bg-slate-50">
+                      <tr>
+                        <th className="w-12 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                          <input
+                            type="checkbox"
+                            checked={allSelected}
+                            ref={(element) => {
+                              if (element) {
+                                element.indeterminate = partiallySelected;
+                              }
+                            }}
+                            onChange={toggleSelectAll}
+                          />
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">File</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Type</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Size</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Folder</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Uploaded</th>
+                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200">
+                      {visibleFolders.map((folder) => (
+                        <tr key={`folder-${folder.id}`} className="hover:bg-slate-50/60">
+                          <td className="px-4 py-3 text-center text-slate-400">—</td>
+                          <td className="max-w-[18rem] px-4 py-3">
+                            <button
+                              type="button"
+                              onClick={() => handleFolderOpen(folder.id)}
+                              className="flex w-full items-center gap-3 text-left"
+                            >
+                              <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-2xl">📁</span>
+                              <span className="min-w-0">
+                                <span className="block truncate font-semibold text-slate-800">{folder.name}</span>
+                                <span className="block truncate text-xs text-slate-500">{folder.path}</span>
+                              </span>
+                            </button>
+                          </td>
+                          <td className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-400">Folder</td>
+                          <td className="px-4 py-3 text-slate-500">—</td>
+                          <td className="px-4 py-3 text-slate-600">{resolveOwnerLabel(folder.ownerId ?? null)}</td>
+                          <td className="px-4 py-3 text-slate-500">—</td>
+                          <td className="px-4 py-3 text-right">
+                            <button
+                              type="button"
+                              onClick={() => handleFolderOpen(folder.id)}
+                              className="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 transition hover:border-primary hover:text-primary"
+                            >
+                              Open
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                      {files.map((file) => {
+                        const isOwner = currentUserId !== null && currentUserId === (file.uploadedById ?? null);
+                        const canDeleteFile = canDeleteAll || (canDeleteOwn && isOwner);
+                        const isSelected = selectedIds.includes(file.id);
+                        const extension = file.extension.toLowerCase();
+                        const isImage = IMAGE_EXTENSIONS.has(extension);
+                        const icon = EXTENSION_ICONS[extension] ?? '📄';
+                        return (
+                          <tr
+                            key={`file-${file.id}`}
+                            className={`${isSelected ? 'bg-primary/5' : ''} hover:bg-slate-50/60`}
+                          >
+                            <td className="px-4 py-3">
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => toggleSelect(file.id)}
+                              />
+                            </td>
+                            <td className="max-w-[18rem] px-4 py-3">
+                              <div className="flex items-center gap-3">
+                                <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-100">
+                                  {isImage ? (
+                                    <img
+                                      src={resolveFileUrl(file.id)}
+                                      alt={file.displayName}
+                                      className="h-full w-full object-cover"
+                                    />
+                                  ) : (
+                                    <span className="text-xl">{icon}</span>
+                                  )}
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="truncate font-medium text-slate-800">{file.displayName}</div>
+                                  <div className="truncate text-xs text-slate-500">{file.originalFilename}</div>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                              {file.extension.toUpperCase()}
+                            </td>
+                            <td className="px-4 py-3 text-slate-600">{formatFileSize(file.sizeBytes)}</td>
+                            <td className="px-4 py-3 text-slate-600">{resolveFolderName(file.folderId)}</td>
+                            <td className="px-4 py-3 text-slate-600">
+                              <div className="min-w-0">
+                                <p className="truncate">{file.uploadedByName ?? file.uploadedByEmail ?? '—'}</p>
+                                <p className="text-xs text-slate-400">{formatDateTime(file.uploadedAt)}</p>
+                              </div>
+                            </td>
+                            <td className="relative px-4 py-3 text-right">
+                              <button
+                                type="button"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  setActiveMenuId((previous) => (previous === file.id ? null : file.id));
+                                }}
+                                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-lg text-slate-500 transition hover:border-primary hover:text-primary"
+                              >
+                                ⋮
+                              </button>
+                              {activeMenuId === file.id && (
+                                <div
+                                  className="absolute right-4 top-12 z-20 w-48 rounded-xl border border-slate-200 bg-white p-2 shadow-xl"
+                                  onClick={(event) => event.stopPropagation()}
+                                >
+                                  {renderFileMenu(file, canDeleteFile)}
+                                </div>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                      {!visibleFolders.length && !files.length && (
+                        <tr>
+                          <td colSpan={7} className="px-4 py-16 text-center text-sm text-slate-500">
+                            {isLoadingFiles ? 'Loading files…' : 'No files found for the selected filters.'}
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-6 flex flex-col gap-4 border-t border-slate-200 pt-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-3 text-sm text-slate-600">
+                <span>Rows per page</span>
+                <select
+                  value={pageSize}
+                  onChange={(event) => setPageSize(Number(event.target.value))}
+                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                >
+                  {PAGE_SIZE_OPTIONS.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex items-center gap-4 text-sm text-slate-600">
+                <button
+                  type="button"
+                  onClick={() => setPage((previous) => Math.max(previous - 1, 0))}
+                  disabled={page === 0}
+                  className="rounded-lg border border-slate-300 px-3 py-1 font-semibold text-slate-700 transition hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"
+                >
+                  Previous
+                </button>
+                <span>
+                  Page {Math.min(page + 1, totalPages || 1)} of {totalPages || 1}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setPage((previous) => (previous + 1 < totalPages ? previous + 1 : previous))}
+                  disabled={page + 1 >= totalPages}
+                  className="rounded-lg border border-slate-300 px-3 py-1 font-semibold text-slate-700 transition hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
           </div>
-          <div className="flex items-center gap-4 text-sm text-slate-600">
-            <button
-              type="button"
-              onClick={() => setPage((previous) => Math.max(previous - 1, 0))}
-              disabled={page === 0}
-              className="rounded-lg border border-slate-300 px-3 py-1 font-semibold text-slate-700 transition hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"
-            >
-              Previous
-            </button>
-            <span>
-              Page {Math.min(page + 1, totalPages || 1)} of {totalPages || 1}
-            </span>
-            <button
-              type="button"
-              onClick={() => setPage((previous) => (previous + 1 < totalPages ? previous + 1 : previous))}
-              disabled={page + 1 >= totalPages}
-              className="rounded-lg border border-slate-300 px-3 py-1 font-semibold text-slate-700 transition hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"
-            >
-              Next
-            </button>
-          </div>
+
+          {showEmptyState && (
+            <div className="rounded-3xl border-2 border-dashed border-slate-200 bg-slate-50 p-12 text-center text-sm text-slate-500">
+              Nothing to show here yet. Create a folder or upload a file to start building your drive.
+            </div>
+          )}
         </div>
       </div>
+      {detailsModal && (() => {
+        const file = detailsModal.file;
+        const extension = file.extension.toLowerCase();
+        const isImage = IMAGE_EXTENSIONS.has(extension);
+        const icon = EXTENSION_ICONS[extension] ?? '📄';
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4">
+            <div className="w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-xl">
+              <div className={`relative ${isImage ? 'bg-slate-900/5' : 'bg-slate-900/90'}`}>
+                <div className="aspect-[4/3] w-full">
+                  {isImage ? (
+                    <img src={resolveFileUrl(file.id)} alt={file.displayName} className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-6xl text-white">{icon}</div>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setDetailsModal(null)}
+                  className="absolute right-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/30 bg-slate-900/30 text-lg text-white backdrop-blur transition hover:bg-slate-900/60"
+                >
+                  ✕
+                </button>
+                <span className="absolute left-3 top-3 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-slate-700">
+                  {file.extension.toUpperCase()}
+                </span>
+                <span className="absolute bottom-3 left-3 rounded-full bg-slate-900/70 px-3 py-1 text-xs font-semibold text-white">
+                  {formatFileSize(file.sizeBytes)}
+                </span>
+              </div>
+              <div className="space-y-4 p-6 text-sm text-slate-600">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <h2 className="truncate text-lg font-semibold text-slate-900">{file.displayName}</h2>
+                    <p className="truncate text-xs uppercase tracking-wide text-slate-400">{resolveFolderName(file.folderId)}</p>
+                  </div>
+                  <a
+                    href={resolveFileUrl(file.id)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 transition hover:border-primary hover:text-primary"
+                  >
+                    Open
+                    <span>↗</span>
+                  </a>
+                </div>
+                <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div>
+                    <dt className="text-xs font-semibold uppercase tracking-wide text-slate-400">Original filename</dt>
+                    <dd className="mt-1 truncate text-sm text-slate-700">{file.originalFilename}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs font-semibold uppercase tracking-wide text-slate-400">File type</dt>
+                    <dd className="mt-1 text-sm text-slate-700">{file.mimeType ?? file.extension.toUpperCase()}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs font-semibold uppercase tracking-wide text-slate-400">Uploaded by</dt>
+                    <dd className="mt-1 text-sm text-slate-700">{file.uploadedByName ?? file.uploadedByEmail ?? '—'}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs font-semibold uppercase tracking-wide text-slate-400">Uploaded on</dt>
+                    <dd className="mt-1 text-sm text-slate-700">{formatDateTime(file.uploadedAt)}</dd>
+                  </div>
+                </dl>
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setDetailsModal(null)}
+                    className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-primary hover:text-primary"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {editModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4">
