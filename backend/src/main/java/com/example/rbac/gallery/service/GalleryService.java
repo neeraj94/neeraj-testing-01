@@ -58,8 +58,11 @@ public class GalleryService {
         boolean canViewAll = hasAuthority(principal, "GALLERY_VIEW_ALL");
         Long currentUserId = resolveUserId(principal);
 
+        GalleryFolder selectedFolder = resolveFolder(folderId, principal);
+        Long effectiveFolderId = selectedFolder != null ? selectedFolder.getId() : null;
+
         Specification<GalleryFile> specification = Specification.where(null);
-        specification = GalleryFileSpecifications.and(specification, GalleryFileSpecifications.belongsToFolder(folderId));
+        specification = GalleryFileSpecifications.and(specification, GalleryFileSpecifications.belongsToFolder(effectiveFolderId));
         specification = GalleryFileSpecifications.and(specification, GalleryFileSpecifications.search(search));
 
         if (uploaderId != null && canViewAll) {
@@ -83,7 +86,7 @@ public class GalleryService {
             throw new ApiException(HttpStatus.BAD_REQUEST, "No files provided for upload");
         }
         User uploader = resolveUser(principal);
-        GalleryFolder folder = resolveFolder(folderId);
+        GalleryFolder folder = resolveFolder(folderId, principal);
         List<String> allowedExtensions = settingsService.resolveAllowedExtensions();
         List<GalleryFileDto> uploaded = new ArrayList<>();
         List<Long> fileIds = new ArrayList<>();
@@ -109,7 +112,7 @@ public class GalleryService {
         GalleryFile file = fileRepository.findById(id)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "File not found"));
         String displayName = request.getDisplayName().trim();
-        GalleryFolder targetFolder = resolveFolder(request.getTargetFolderId());
+        GalleryFolder targetFolder = findFolderById(request.getTargetFolderId());
         boolean changed = false;
 
         if (!displayName.equals(file.getDisplayName())) {
@@ -183,10 +186,22 @@ public class GalleryService {
     }
 
     @Transactional(readOnly = true)
-    public List<GalleryFolderDto> listFolders() {
-        List<GalleryFolder> folders = folderRepository.findAll(Sort.by(Sort.Direction.ASC, "path"));
+    public List<GalleryFolderDto> listFolders(UserPrincipal principal) {
+        boolean canViewAll = hasAuthority(principal, "GALLERY_VIEW_ALL");
+        User currentUser = resolveUser(principal);
+        Sort sort = Sort.by(Sort.Order.asc("owner.id"), Sort.Order.asc("path"));
+
+        List<GalleryFolder> folders;
+        if (canViewAll) {
+            folders = folderRepository.findAll(sort);
+        } else if (currentUser != null && currentUser.getId() != null) {
+            folders = folderRepository.findByOwnerId(currentUser.getId(), sort);
+        } else {
+            folders = Collections.emptyList();
+        }
+
         List<GalleryFolderDto> result = new ArrayList<>();
-        result.add(new GalleryFolderDto(null, "All Files", "/", null, true));
+        result.add(new GalleryFolderDto(null, "All Files", "/", null, true, null, null, null, null));
         for (GalleryFolder folder : folders) {
             result.add(toDto(folder));
         }
@@ -194,10 +209,17 @@ public class GalleryService {
     }
 
     @Transactional
-    public GalleryFolderDto createFolder(GalleryFolderCreateRequest request) {
+    public GalleryFolderDto createFolder(GalleryFolderCreateRequest request, UserPrincipal principal) {
+        GalleryFolder parent = resolveFolder(request.getParentId(), principal);
+        User owner = parent != null ? parent.getOwner() : resolveUser(principal);
+        if (owner == null) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "Unable to determine folder owner");
+        }
+
         GalleryFolder folder = new GalleryFolder();
         folder.setName(request.getName().trim());
-        folder.setParent(resolveFolder(request.getParentId()));
+        folder.setParent(parent);
+        folder.setOwner(owner);
         folder.refreshComputedFields();
         ensureFolderPathUnique(folder);
         GalleryFolder saved = folderRepository.save(folder);
@@ -334,14 +356,6 @@ public class GalleryService {
         throw new ApiException(HttpStatus.FORBIDDEN, "Not authorized to view this file");
     }
 
-    private GalleryFolder resolveFolder(Long folderId) {
-        if (folderId == null) {
-            return null;
-        }
-        return folderRepository.findById(folderId)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Folder not found"));
-    }
-
     private GalleryFileDto toDto(GalleryFile file) {
         GalleryFileDto dto = new GalleryFileDto();
         dto.setId(file.getId());
@@ -368,7 +382,54 @@ public class GalleryService {
 
     private GalleryFolderDto toDto(GalleryFolder folder) {
         Long parentId = folder.getParent() != null ? folder.getParent().getId() : null;
-        return new GalleryFolderDto(folder.getId(), folder.getName(), folder.getPath(), parentId, false);
+        User owner = folder.getOwner();
+        Long ownerId = owner != null ? owner.getId() : null;
+        String ownerName = owner != null ? owner.getFullName() : null;
+        String ownerEmail = owner != null ? owner.getEmail() : null;
+        String ownerKey = buildOwnerKey(owner);
+        boolean isRoot = folder.getParent() == null;
+        return new GalleryFolderDto(folder.getId(), folder.getName(), folder.getPath(), parentId, isRoot, ownerId, ownerName, ownerEmail, ownerKey);
+    }
+
+    private String buildOwnerKey(User owner) {
+        if (owner == null || owner.getId() == null) {
+            return null;
+        }
+        return String.format(Locale.ROOT, "USR-%04d", owner.getId());
+    }
+
+    private GalleryFolder resolveFolder(Long folderId, UserPrincipal principal) {
+        if (folderId == null) {
+            return null;
+        }
+        GalleryFolder folder = findFolderById(folderId);
+        if (!canAccessFolder(folder, principal)) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "Not authorized to access this folder");
+        }
+        return folder;
+    }
+
+    private GalleryFolder findFolderById(Long folderId) {
+        if (folderId == null) {
+            return null;
+        }
+        return folderRepository.findById(folderId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Folder not found"));
+    }
+
+    private boolean canAccessFolder(GalleryFolder folder, UserPrincipal principal) {
+        if (folder == null) {
+            return true;
+        }
+        if (hasAuthority(principal, "GALLERY_VIEW_ALL") || hasAuthority(principal, "GALLERY_EDIT_ALL")) {
+            return true;
+        }
+        User owner = folder.getOwner();
+        if (owner == null || owner.getId() == null) {
+            return false;
+        }
+        User currentUser = resolveUser(principal);
+        return currentUser != null && owner.getId().equals(currentUser.getId());
     }
 
     private Map<String, Object> buildFileContext(GalleryFile file) {
@@ -387,6 +448,10 @@ public class GalleryService {
         context.put("name", folder.getName());
         context.put("path", folder.getPath());
         context.put("parentId", folder.getParent() != null ? folder.getParent().getId() : null);
+        if (folder.getOwner() != null) {
+            context.put("ownerId", folder.getOwner().getId());
+            context.put("ownerEmail", folder.getOwner().getEmail());
+        }
         return context;
     }
 }
