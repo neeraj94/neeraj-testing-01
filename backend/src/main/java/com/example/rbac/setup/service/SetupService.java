@@ -51,8 +51,9 @@ public class SetupService {
         this.activityRecorder = activityRecorder;
     }
 
-    public NavigationMenuResponse getNavigationMenu() {
-        List<MenuNodeConfig> stored = loadStoredLayout();
+    public NavigationMenuResponse getNavigationMenu(UserPrincipal principal) {
+        Long userId = principal != null && principal.getUser() != null ? principal.getUser().getId() : null;
+        List<MenuNodeConfig> stored = loadStoredLayout(userId);
         List<MenuNodeDto> applied = mergeLayout(stored, DEFAULT_MENU);
         List<MenuNodeDto> defaults = mergeLayout(Collections.emptyList(), DEFAULT_MENU);
 
@@ -62,8 +63,9 @@ public class SetupService {
         return response;
     }
 
-    public MenuLayoutResponse getSetupLayout() {
-        List<MenuNodeConfig> stored = loadStoredLayout();
+    public MenuLayoutResponse getSetupLayout(UserPrincipal principal) {
+        Long userId = principal != null && principal.getUser() != null ? principal.getUser().getId() : null;
+        List<MenuNodeConfig> stored = loadStoredLayout(userId);
         List<MenuNodeDto> applied = mergeLayout(stored, DEFAULT_MENU);
         List<MenuNodeDto> defaults = mergeLayout(Collections.emptyList(), DEFAULT_MENU);
 
@@ -71,7 +73,9 @@ public class SetupService {
         response.setLayout(applied);
         response.setDefaults(defaults);
 
-        menuLayoutRepository.findByLayoutKey(LAYOUT_KEY).ifPresent(layout -> {
+        menuLayoutRepository.findByLayoutKeyAndUserId(LAYOUT_KEY, userId)
+                .or(() -> userId == null ? Optional.empty() : menuLayoutRepository.findByLayoutKeyAndUserIdIsNull(LAYOUT_KEY))
+                .ifPresent(layout -> {
             response.setUpdatedAt(layout.getUpdatedAt());
             if (layout.getUpdatedByUserId() != null) {
                 Optional<User> user = userRepository.findById(layout.getUpdatedByUserId());
@@ -84,22 +88,26 @@ public class SetupService {
 
     @Transactional
     public MenuLayoutResponse updateLayout(MenuLayoutUpdateRequest request, UserPrincipal principal) {
+        if (principal == null || principal.getUser() == null) {
+            throw new IllegalArgumentException("Authenticated user is required to update menu layout");
+        }
+        Long userId = principal.getUser().getId();
         List<MenuNodeConfig> sanitized = sanitize(request != null ? request.getLayout() : null, DEFAULT_MENU);
         String serialized = writeLayout(sanitized);
 
-        MenuLayout layout = menuLayoutRepository.findByLayoutKey(LAYOUT_KEY)
+        MenuLayout layout = menuLayoutRepository.findByLayoutKeyAndUserId(LAYOUT_KEY, userId)
                 .orElseGet(() -> {
                     MenuLayout created = new MenuLayout();
                     created.setLayoutKey(LAYOUT_KEY);
+                    created.setUserId(userId);
                     created.setStructureJson("[]");
                     return created;
                 });
 
         boolean changed = !serialized.equals(layout.getStructureJson());
         layout.setStructureJson(serialized);
-        if (principal != null) {
-            layout.setUpdatedByUserId(principal.getUser().getId());
-        }
+        layout.setUserId(userId);
+        layout.setUpdatedByUserId(userId);
         MenuLayout saved = menuLayoutRepository.save(layout);
 
         if (changed) {
@@ -126,8 +134,15 @@ public class SetupService {
         return response;
     }
 
-    private List<MenuNodeConfig> loadStoredLayout() {
-        return menuLayoutRepository.findByLayoutKey(LAYOUT_KEY)
+    private List<MenuNodeConfig> loadStoredLayout(Long userId) {
+        Optional<MenuLayout> layout = Optional.empty();
+        if (userId != null) {
+            layout = menuLayoutRepository.findByLayoutKeyAndUserId(LAYOUT_KEY, userId);
+        }
+        if (layout.isEmpty()) {
+            layout = menuLayoutRepository.findByLayoutKeyAndUserIdIsNull(LAYOUT_KEY);
+        }
+        return layout
                 .map(MenuLayout::getStructureJson)
                 .map(this::parseLayout)
                 .orElse(Collections.emptyList());

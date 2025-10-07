@@ -39,6 +39,7 @@ const SetupPage = () => {
   const [updatedBy, setUpdatedBy] = useState<string | null>(null);
   const [dragInfo, setDragInfo] = useState<DragInfo | null>(null);
   const [activeDropZone, setActiveDropZone] = useState<string | null>(null);
+  const [dragging, setDragging] = useState<DragInfo | null>(null);
   const { notify } = useToast();
 
   useEffect(() => {
@@ -122,6 +123,7 @@ const SetupPage = () => {
     (event: DragEvent<HTMLDivElement>) => {
       event.preventDefault();
       setActiveDropZone(null);
+      setDragging(null);
 
       let payload = dragInfo;
       if (!payload) {
@@ -156,11 +158,13 @@ const SetupPage = () => {
     event.dataTransfer.effectAllowed = 'move';
     event.dataTransfer.setData('application/x-setup-node', JSON.stringify(info));
     setDragInfo(info);
+    setDragging(info);
   };
 
   const handleDragEnd = () => {
     setDragInfo(null);
     setActiveDropZone(null);
+    setDragging(null);
   };
 
   const handleSave = async () => {
@@ -211,10 +215,13 @@ const SetupPage = () => {
     index: number
   ) => {
     const dropId = `${level}-${parentKey ?? 'root'}-${index}`;
+    const isActive = activeDropZone === dropId;
     return (
       <div
         key={`drop-${dropId}`}
-        className={`h-2 w-full rounded transition ${activeDropZone === dropId ? 'bg-primary/40' : 'bg-transparent'}`}
+        className={`my-1 w-full rounded border border-dashed transition-all ${
+          isActive ? 'h-12 border-primary bg-primary/10' : 'h-3 border-transparent bg-transparent'
+        }`}
         onDragOver={(event) => {
           if (!dragInfo) {
             return;
@@ -227,7 +234,10 @@ const SetupPage = () => {
           }
           event.preventDefault();
           event.dataTransfer.dropEffect = 'move';
-          if (activeDropZone !== dropId) {
+          setActiveDropZone(dropId);
+        }}
+        onDragEnter={() => {
+          if (dragInfo && dragInfo.level === level && (dragInfo.parentKey ?? null) === (parentKey ?? null)) {
             setActiveDropZone(dropId);
           }
         }}
@@ -254,7 +264,11 @@ const SetupPage = () => {
             draggable
             onDragStart={handleDragStart({ level, parentKey, index })}
             onDragEnd={handleDragEnd}
-            className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-sm transition-shadow hover:shadow-md"
+            className={`flex items-center justify-between rounded-lg border bg-white px-4 py-3 shadow-sm transition-all hover:shadow-md ${
+              dragging && dragging.level === level && dragging.parentKey === parentKey && dragging.index === index
+                ? 'cursor-grabbing border-primary/60 shadow-lg'
+                : 'cursor-grab border-slate-200'
+            }`}
           >
             <div className="flex items-center gap-3">
               <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 text-base">
@@ -295,7 +309,7 @@ const SetupPage = () => {
       <div className="flex flex-col gap-2">
         <h1 className="text-2xl font-semibold text-slate-800">Setup</h1>
         <p className="text-sm text-slate-500">
-          Reorder top-level menus and their children. Changes are saved per account and apply to all users with matching permissions.
+          Reorder top-level menus and their children. Your changes only update your personal navigation order and stay in sync with new features automatically.
         </p>
         {error && <p className="text-sm text-amber-600">{error}</p>}
         {(updatedAt || updatedBy) && (

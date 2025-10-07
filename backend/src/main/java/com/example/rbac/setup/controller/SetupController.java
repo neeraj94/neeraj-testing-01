@@ -24,8 +24,8 @@ public class SetupController {
 
     @GetMapping("/menu")
     @PreAuthorize("hasAuthority('SETUP_MANAGE')")
-    public MenuLayoutResponse getMenuLayout() {
-        return setupService.getSetupLayout();
+    public MenuLayoutResponse getMenuLayout(@AuthenticationPrincipal UserPrincipal principal) {
+        return setupService.getSetupLayout(principal);
     }
 
     @PutMapping("/menu")

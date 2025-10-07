@@ -12,8 +12,11 @@ public class MenuLayout {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "layout_key", nullable = false, unique = true, length = 100)
+    @Column(name = "layout_key", nullable = false, length = 100)
     private String layoutKey;
+
+    @Column(name = "user_id")
+    private Long userId;
 
     @Column(name = "structure_json", nullable = false, columnDefinition = "TEXT")
     private String structureJson;
@@ -41,6 +44,14 @@ public class MenuLayout {
 
     public void setLayoutKey(String layoutKey) {
         this.layoutKey = layoutKey;
+    }
+
+    public Long getUserId() {
+        return userId;
+    }
+
+    public void setUserId(Long userId) {
+        this.userId = userId;
     }
 
     public String getStructureJson() {
