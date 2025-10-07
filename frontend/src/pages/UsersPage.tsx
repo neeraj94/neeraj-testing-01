@@ -52,20 +52,34 @@ type DetailTab = 'profile' | 'access';
 type UserSortField = 'name' | 'email' | 'status' | 'audience' | 'groups';
 
 type UserFormState = {
-  fullName: string;
+  firstName: string;
+  lastName: string;
   email: string;
   password: string;
   active: boolean;
+  phoneNumber: string;
+  whatsappNumber: string;
+  facebookUrl: string;
+  linkedinUrl: string;
+  skypeId: string;
+  emailSignature: string;
   roleIds: number[];
   directPermissions: string[];
   revokedPermissions: string[];
 };
 
 const emptyForm: UserFormState = {
-  fullName: '',
+  firstName: '',
+  lastName: '',
   email: '',
   password: '',
   active: true,
+  phoneNumber: '',
+  whatsappNumber: '',
+  facebookUrl: '',
+  linkedinUrl: '',
+  skypeId: '',
+  emailSignature: '',
   roleIds: [],
   directPermissions: [],
   revokedPermissions: []
@@ -233,10 +247,17 @@ const UsersPage = () => {
         .map(normalizePermissionKey)
         .filter((permissionKey) => roleDerivedPermissions.has(permissionKey));
       setForm({
-        fullName: detail.fullName,
+        firstName: detail.firstName ?? '',
+        lastName: detail.lastName ?? '',
         email: detail.email,
         password: '',
         active: detail.active,
+        phoneNumber: detail.phoneNumber ?? '',
+        whatsappNumber: detail.whatsappNumber ?? '',
+        facebookUrl: detail.facebookUrl ?? '',
+        linkedinUrl: detail.linkedinUrl ?? '',
+        skypeId: detail.skypeId ?? '',
+        emailSignature: detail.emailSignature ?? '',
         roleIds: assignedRoleIds,
         directPermissions: sanitizedDirect,
         revokedPermissions: sanitizedRevoked
@@ -258,10 +279,17 @@ const UsersPage = () => {
         throw new Error('Password must be at least 8 characters long.');
       }
       const { data } = await api.post<User>('/users', {
-        email: form.email,
-        fullName: form.fullName,
+        email: form.email.trim(),
+        firstName: form.firstName.trim(),
+        lastName: form.lastName.trim(),
         password: trimmedPassword,
         active: form.active,
+        phoneNumber: form.phoneNumber.trim() || undefined,
+        whatsappNumber: form.whatsappNumber.trim() || undefined,
+        facebookUrl: form.facebookUrl.trim() || undefined,
+        linkedinUrl: form.linkedinUrl.trim() || undefined,
+        skypeId: form.skypeId.trim() || undefined,
+        emailSignature: form.emailSignature.trim() || undefined,
         roleIds: form.roleIds,
         permissionKeys: form.directPermissions,
         revokedPermissionKeys: form.revokedPermissions
@@ -275,10 +303,17 @@ const UsersPage = () => {
       setPanelMode('detail');
       setActiveTab('profile');
       setForm({
-        fullName: data.fullName,
+        firstName: data.firstName ?? '',
+        lastName: data.lastName ?? '',
         email: data.email,
         password: '',
         active: data.active,
+        phoneNumber: data.phoneNumber ?? '',
+        whatsappNumber: data.whatsappNumber ?? '',
+        facebookUrl: data.facebookUrl ?? '',
+        linkedinUrl: data.linkedinUrl ?? '',
+        skypeId: data.skypeId ?? '',
+        emailSignature: data.emailSignature ?? '',
         roleIds: data.roles
           .map((roleKey) => roleIdByKey.get(roleKey.toUpperCase()))
           .filter((value): value is number => typeof value === 'number'),
@@ -304,9 +339,16 @@ const UsersPage = () => {
         throw new Error('Password must be at least 8 characters long.');
       }
       const { data } = await api.put<User>(`/users/${selectedUserId}`, {
-        email: form.email,
-        fullName: form.fullName,
+        email: form.email.trim(),
+        firstName: form.firstName.trim(),
+        lastName: form.lastName.trim(),
         active: form.active,
+        phoneNumber: form.phoneNumber.trim() || undefined,
+        whatsappNumber: form.whatsappNumber.trim() || undefined,
+        facebookUrl: form.facebookUrl.trim() || undefined,
+        linkedinUrl: form.linkedinUrl.trim() || undefined,
+        skypeId: form.skypeId.trim() || undefined,
+        emailSignature: form.emailSignature.trim() || undefined,
         password: trimmedPassword || undefined,
         roleIds: form.roleIds,
         permissionKeys: form.directPermissions,
@@ -321,10 +363,17 @@ const UsersPage = () => {
       notify({ type: 'success', message: 'User updated successfully.' });
       invalidateUsers();
       setForm({
-        fullName: data.fullName,
+        firstName: data.firstName ?? '',
+        lastName: data.lastName ?? '',
         email: data.email,
         password: '',
         active: data.active,
+        phoneNumber: data.phoneNumber ?? '',
+        whatsappNumber: data.whatsappNumber ?? '',
+        facebookUrl: data.facebookUrl ?? '',
+        linkedinUrl: data.linkedinUrl ?? '',
+        skypeId: data.skypeId ?? '',
+        emailSignature: data.emailSignature ?? '',
         roleIds: data.roles
           .map((roleKey) => roleIdByKey.get(roleKey.toUpperCase()))
           .filter((value): value is number => typeof value === 'number'),
@@ -937,16 +986,26 @@ const UsersPage = () => {
   );
 
   const renderProfileTab = (isEditable: boolean, isCreate: boolean) => (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <div className="grid gap-4 md:grid-cols-2">
         <div>
-          <label className="block text-sm font-medium text-slate-600">Full name</label>
+          <label className="block text-sm font-medium text-slate-600">First name</label>
           <input
             type="text"
-            value={form.fullName}
-            onChange={(event) => handleFieldChange('fullName', event.target.value)}
+            value={form.firstName}
+            onChange={(event) => handleFieldChange('firstName', event.target.value)}
             required
-            minLength={2}
+            disabled={!isEditable}
+            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none disabled:bg-slate-100 disabled:text-slate-500"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-600">Last name</label>
+          <input
+            type="text"
+            value={form.lastName}
+            onChange={(event) => handleFieldChange('lastName', event.target.value)}
+            required
             disabled={!isEditable}
             className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none disabled:bg-slate-100 disabled:text-slate-500"
           />
@@ -963,20 +1022,6 @@ const UsersPage = () => {
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-slate-600">Password</label>
-          <input
-            type="password"
-            value={form.password}
-            onChange={(event) => handleFieldChange('password', event.target.value)}
-            required={isCreate}
-            minLength={isCreate ? 8 : 0}
-            placeholder={isCreate ? 'At least 8 characters' : 'Leave blank to keep the current password'}
-            disabled={!isEditable}
-            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none disabled:bg-slate-100 disabled:text-slate-500"
-          />
-          <p className="mt-1 text-xs text-slate-500">Passwords must contain at least 8 characters.</p>
-        </div>
-        <div>
           <label className="block text-sm font-medium text-slate-600">Status</label>
           <select
             value={form.active ? 'true' : 'false'}
@@ -988,6 +1033,86 @@ const UsersPage = () => {
             <option value="false">Inactive</option>
           </select>
         </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-600">Phone number</label>
+          <input
+            type="tel"
+            value={form.phoneNumber}
+            onChange={(event) => handleFieldChange('phoneNumber', event.target.value)}
+            placeholder="Optional"
+            disabled={!isEditable}
+            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none disabled:bg-slate-100 disabled:text-slate-500"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-600">WhatsApp number</label>
+          <input
+            type="tel"
+            value={form.whatsappNumber}
+            onChange={(event) => handleFieldChange('whatsappNumber', event.target.value)}
+            placeholder="Optional"
+            disabled={!isEditable}
+            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none disabled:bg-slate-100 disabled:text-slate-500"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-600">Skype</label>
+          <input
+            type="text"
+            value={form.skypeId}
+            onChange={(event) => handleFieldChange('skypeId', event.target.value)}
+            placeholder="Optional"
+            disabled={!isEditable}
+            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none disabled:bg-slate-100 disabled:text-slate-500"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-600">LinkedIn</label>
+          <input
+            type="url"
+            value={form.linkedinUrl}
+            onChange={(event) => handleFieldChange('linkedinUrl', event.target.value)}
+            placeholder="https://linkedin.com/in/username"
+            disabled={!isEditable}
+            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none disabled:bg-slate-100 disabled:text-slate-500"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-600">Facebook</label>
+          <input
+            type="url"
+            value={form.facebookUrl}
+            onChange={(event) => handleFieldChange('facebookUrl', event.target.value)}
+            placeholder="https://facebook.com/username"
+            disabled={!isEditable}
+            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none disabled:bg-slate-100 disabled:text-slate-500"
+          />
+        </div>
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-slate-600">Email signature</label>
+        <textarea
+          value={form.emailSignature}
+          onChange={(event) => handleFieldChange('emailSignature', event.target.value)}
+          placeholder="Optional signature shown on outbound email"
+          disabled={!isEditable}
+          rows={4}
+          className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none disabled:bg-slate-100 disabled:text-slate-500"
+        />
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-slate-600">Password</label>
+        <input
+          type="password"
+          value={form.password}
+          onChange={(event) => handleFieldChange('password', event.target.value)}
+          required={isCreate}
+          minLength={isCreate ? 8 : 0}
+          placeholder={isCreate ? 'At least 8 characters' : 'Leave blank to keep the current password'}
+          disabled={!isEditable}
+          className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none disabled:bg-slate-100 disabled:text-slate-500"
+        />
+        <p className="mt-1 text-xs text-slate-500">Passwords must contain at least 8 characters.</p>
       </div>
       <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
         Customer accounts are represented as users holding the <span className="font-semibold">CUSTOMER</span> role. Assign or
@@ -1351,10 +1476,17 @@ const UsersPage = () => {
                 onClick={() => {
                   const detail = selectedUserQuery.data;
                   setForm({
-                    fullName: detail.fullName,
+                    firstName: detail.firstName ?? '',
+                    lastName: detail.lastName ?? '',
                     email: detail.email,
                     password: '',
                     active: detail.active,
+                    phoneNumber: detail.phoneNumber ?? '',
+                    whatsappNumber: detail.whatsappNumber ?? '',
+                    facebookUrl: detail.facebookUrl ?? '',
+                    linkedinUrl: detail.linkedinUrl ?? '',
+                    skypeId: detail.skypeId ?? '',
+                    emailSignature: detail.emailSignature ?? '',
                     roleIds: detail.roles
                       .map((roleKey) => roleIdByKey.get(roleKey.toUpperCase()))
                       .filter((value): value is number => typeof value === 'number'),

@@ -50,7 +50,7 @@ export const login = createAsyncThunk<
   }
 });
 
-export const signup = createAsyncThunk<AuthResponse, { email: string; password: string; fullName: string }>(
+export const signup = createAsyncThunk<AuthResponse, { email: string; password: string; firstName: string; lastName: string }>(
   'auth/signup',
   async (payload) => {
     const { data } = await api.post<AuthResponse>('/auth/signup', payload);
