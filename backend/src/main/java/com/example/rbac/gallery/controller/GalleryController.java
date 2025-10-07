@@ -87,14 +87,15 @@ public class GalleryController {
 
     @GetMapping("/folders")
     @PreAuthorize("hasAnyAuthority('GALLERY_VIEW_ALL','GALLERY_VIEW_OWN','GALLERY_CREATE','GALLERY_EDIT_ALL')")
-    public List<GalleryFolderDto> listFolders() {
-        return galleryService.listFolders();
+    public List<GalleryFolderDto> listFolders(@AuthenticationPrincipal UserPrincipal principal) {
+        return galleryService.listFolders(principal);
     }
 
     @PostMapping("/folders")
     @PreAuthorize("hasAuthority('GALLERY_CREATE')")
-    public GalleryFolderDto createFolder(@Valid @RequestBody GalleryFolderCreateRequest request) {
-        return galleryService.createFolder(request);
+    public GalleryFolderDto createFolder(@Valid @RequestBody GalleryFolderCreateRequest request,
+                                         @AuthenticationPrincipal UserPrincipal principal) {
+        return galleryService.createFolder(request, principal);
     }
 
     @PatchMapping("/folders/{id}")

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../services/http';
 import { useToast } from '../components/ToastProvider';
@@ -32,6 +32,17 @@ type FolderModalState = {
   parentId: number | null;
 };
 
+type FolderTreeNode = {
+  key: string;
+  label: string;
+  folderId: number | null;
+  ownerId: number | null;
+  depth: number;
+  children: FolderTreeNode[];
+  description?: string;
+  isSynthetic: boolean;
+};
+
 const formatDateTime = (value: string) => {
   if (!value) {
     return '—';
@@ -54,6 +65,85 @@ const resolveFileUrl = (id: number) => {
   return `${baseUrl.replace(/\/$/, '')}/gallery/files/${id}/content`;
 };
 
+const buildFolderTree = (
+  folders: GalleryFolder[],
+  currentUserId: number | null,
+  canViewAll: boolean
+): FolderTreeNode[] => {
+  const concreteFolders = folders.filter((folder): folder is GalleryFolder & { id: number } => folder.id !== null);
+  const grouped = new Map<number | null, (GalleryFolder & { id: number })[]>();
+
+  concreteFolders.forEach((folder) => {
+    const ownerId = folder.ownerId ?? null;
+    const existing = grouped.get(ownerId);
+    if (existing) {
+      existing.push(folder);
+    } else {
+      grouped.set(ownerId, [folder]);
+    }
+  });
+
+  if (!canViewAll && currentUserId !== null && !grouped.has(currentUserId)) {
+    grouped.set(currentUserId, []);
+  }
+
+  const buildHierarchy = (
+    items: (GalleryFolder & { id: number })[],
+    parentId: number | null,
+    depth: number
+  ): FolderTreeNode[] => {
+    const children = items.filter((item) => (item.parentId ?? null) === parentId);
+    children.sort((a, b) => a.name.localeCompare(b.name));
+    return children.map((child) => ({
+      key: `folder-${child.id}`,
+      label: child.name,
+      folderId: child.id,
+      ownerId: child.ownerId ?? null,
+      depth,
+      description: undefined,
+      isSynthetic: false,
+      children: buildHierarchy(items, child.id, depth + 1)
+    }));
+  };
+
+  const nodes: FolderTreeNode[] = [];
+  grouped.forEach((items, ownerId) => {
+    const sample = items[0];
+    const hasOwner = ownerId !== null;
+    const ownerLabel = (() => {
+      if (!hasOwner) {
+        return canViewAll ? 'Unassigned' : 'My Library';
+      }
+      if (!canViewAll && currentUserId !== null && ownerId === currentUserId) {
+        return 'My Library';
+      }
+      return sample?.ownerKey ?? sample?.ownerEmail ?? sample?.ownerName ?? `User ${ownerId}`;
+    })();
+    const ownerDescription = (() => {
+      if (!sample) {
+        return undefined;
+      }
+      if (!canViewAll && currentUserId !== null && ownerId === currentUserId) {
+        return sample.ownerEmail ?? undefined;
+      }
+      return sample.ownerEmail ?? sample.ownerName ?? undefined;
+    })();
+    nodes.push({
+      key: hasOwner ? `owner-${ownerId}` : 'owner-unknown',
+      label: ownerLabel,
+      folderId: null,
+      ownerId,
+      depth: 0,
+      description: ownerDescription,
+      isSynthetic: true,
+      children: buildHierarchy(items, null, 1)
+    });
+  });
+
+  nodes.sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: 'base' }));
+  return nodes;
+};
+
 const GalleryPage = () => {
   const queryClient = useQueryClient();
   const { notify } = useToast();
@@ -64,6 +154,7 @@ const GalleryPage = () => {
   const [pageSize, setPageSize] = useState(20);
   const [sortValue, setSortValue] = useState<SortOptionValue>('newest');
   const [folderFilter, setFolderFilter] = useState<number | null>(null);
+  const [ownerFilter, setOwnerFilter] = useState<number | null>(null);
   const [searchDraft, setSearchDraft] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [uploaderFilter, setUploaderFilter] = useState('');
@@ -90,7 +181,7 @@ const GalleryPage = () => {
 
   useEffect(() => {
     setPage(0);
-  }, [pageSize, sortValue, folderFilter, uploaderFilter]);
+  }, [pageSize, sortValue, folderFilter, ownerFilter, uploaderFilter]);
 
   const foldersQuery = useQuery<GalleryFolder[]>({
     queryKey: ['gallery', 'folders'],
@@ -104,7 +195,15 @@ const GalleryPage = () => {
     queryKey: [
       'gallery',
       'files',
-      { page, pageSize, sortValue, folderFilter, uploaderFilter: canViewAll ? uploaderFilter : '', searchTerm }
+      {
+        page,
+        pageSize,
+        sortValue,
+        folderFilter,
+        ownerFilter: canViewAll ? ownerFilter : currentUserId,
+        uploaderFilter: canViewAll ? uploaderFilter : '',
+        searchTerm
+      }
     ],
     queryFn: async () => {
       const sortOption = SORT_OPTIONS.find((option) => option.value === sortValue) ?? SORT_OPTIONS[0];
@@ -116,6 +215,8 @@ const GalleryPage = () => {
       };
       if (folderFilter !== null) {
         params.folderId = folderFilter;
+      } else if (canViewAll && ownerFilter !== null) {
+        params.uploaderId = ownerFilter;
       }
       if (searchTerm) {
         params.search = searchTerm;
@@ -256,25 +357,164 @@ const GalleryPage = () => {
     setFolderModal({ name: '', parentId: folderFilter });
   };
 
-  const renderFolderOptions = () => {
-    const data = foldersQuery.data ?? [
-      { id: null, name: 'All Files', path: '/', parentId: null, root: true }
-    ];
-    return data.map((folder) => (
-      <option key={`folder-${folder.id ?? 'root'}`} value={folder.id ?? ''}>
-        {folder.name}
-      </option>
-    ));
-  };
+  const foldersData = foldersQuery.data ?? [];
+  const folderMap = useMemo(() => {
+    const map = new Map<number, GalleryFolder & { id: number }>();
+    foldersData.forEach((folder) => {
+      if (folder.id !== null) {
+        map.set(folder.id, folder as GalleryFolder & { id: number });
+      }
+    });
+    return map;
+  }, [foldersData]);
 
-  const resolvedFolders = foldersQuery.data ?? [];
-  const resolveFolderName = (folderId?: number | null) => {
+  const resolveFolderName = useCallback((folderId?: number | null) => {
     if (folderId === null || folderId === undefined) {
       return 'All Files';
     }
-    const folder = resolvedFolders.find((item) => item.id === folderId);
-    return folder?.name ?? 'All Files';
+    const stack: string[] = [];
+    let current = folderId !== null ? folderMap.get(folderId) : undefined;
+    while (current) {
+      stack.unshift(current.name);
+      if (current.parentId === null) {
+        if (canViewAll) {
+          const ownerLabel = current.ownerKey ?? current.ownerEmail ?? current.ownerName ?? `User ${current.ownerId ?? ''}`;
+          stack.unshift(ownerLabel);
+        }
+        break;
+      }
+      const parentId = current.parentId;
+      current = parentId !== null ? folderMap.get(parentId) : undefined;
+    }
+    return stack.length > 0 ? stack.join(' / ') : 'All Files';
+  }, [folderMap, canViewAll]);
+
+  const folderSelectOptions = useMemo(() => {
+    const options: { id: string; label: string }[] = [
+      { id: '', label: 'All Files' }
+    ];
+    const concrete = Array.from(folderMap.values());
+    concrete
+      .sort((a, b) => resolveFolderName(a.id).localeCompare(resolveFolderName(b.id)))
+      .forEach((folder) => {
+        options.push({ id: String(folder.id), label: resolveFolderName(folder.id) });
+      });
+    return options;
+  }, [folderMap, resolveFolderName]);
+
+  const renderFolderOptions = () =>
+    folderSelectOptions.map((option) => (
+      <option key={`folder-${option.id || 'root'}`} value={option.id}>
+        {option.label}
+      </option>
+    ));
+
+  const folderTree = useMemo(() => buildFolderTree(foldersData, currentUserId, canViewAll), [foldersData, currentUserId, canViewAll]);
+
+  const breadcrumbs = useMemo(() => {
+    const crumbs: { label: string; folderId: number | null; ownerId: number | null }[] = [
+      { label: 'All Files', folderId: null, ownerId: null }
+    ];
+
+    if (folderFilter !== null) {
+      const stack: (GalleryFolder & { id: number })[] = [];
+      let current = folderMap.get(folderFilter);
+      const ownerId = current?.ownerId ?? null;
+      while (current) {
+        stack.unshift(current);
+        if (current.parentId === null) {
+          break;
+        }
+        const parentId = current.parentId;
+        current = parentId !== null ? folderMap.get(parentId) : undefined;
+      }
+      if (canViewAll && ownerId !== null) {
+        const ownerLabel = stack[0]?.ownerKey ?? stack[0]?.ownerEmail ?? stack[0]?.ownerName ?? `User ${ownerId}`;
+        crumbs.push({ label: ownerLabel, folderId: null, ownerId });
+      }
+      stack.forEach((folder) => {
+        crumbs.push({ label: folder.name, folderId: folder.id, ownerId: folder.ownerId ?? null });
+      });
+      return crumbs;
+    }
+
+    if (canViewAll && ownerFilter !== null) {
+      const ownerSample = foldersData.find(
+        (folder): folder is GalleryFolder & { id: number } => folder.id !== null && folder.ownerId === ownerFilter
+      );
+      const ownerLabel = ownerSample?.ownerKey ?? ownerSample?.ownerEmail ?? ownerSample?.ownerName ?? `User ${ownerFilter}`;
+      crumbs.push({ label: ownerLabel, folderId: null, ownerId: ownerFilter });
+    }
+
+    return crumbs;
+  }, [folderFilter, ownerFilter, folderMap, foldersData, canViewAll]);
+
+  const handleNodeSelection = (node: FolderTreeNode) => {
+    if (node.folderId !== null) {
+      setFolderFilter(node.folderId);
+      setOwnerFilter(null);
+    } else {
+      setOwnerFilter(canViewAll ? node.ownerId ?? null : null);
+      setFolderFilter(null);
+    }
+    setSelectedIds([]);
   };
+
+  const renderTreeNodes = (nodes: FolderTreeNode[]) =>
+    nodes.map((node) => {
+      const isFolder = node.folderId !== null;
+      const isSelected = isFolder
+        ? folderFilter === node.folderId
+        : folderFilter === null && (canViewAll ? ownerFilter === (node.ownerId ?? null) : isAllScopeSelected);
+      const hasChildren = node.children.length > 0;
+      return (
+        <div key={node.key} className="flex flex-col">
+          <button
+            type="button"
+            onClick={() => handleNodeSelection(node)}
+            className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition ${
+              isSelected ? 'bg-primary/10 text-primary' : 'text-slate-600 hover:bg-slate-100'
+            }`}
+            style={{ paddingLeft: `${node.depth * 12 + 8}px` }}
+          >
+            <span className="flex flex-col">
+              <span className="inline-flex items-center gap-2">
+                <span className="text-lg">{isFolder ? '📁' : '👤'}</span>
+                <span className="font-medium">{node.label}</span>
+              </span>
+              {node.description && <span className="ml-6 text-xs text-slate-400">{node.description}</span>}
+            </span>
+            {hasChildren && <span className="text-xs text-slate-400">{node.children.length}</span>}
+          </button>
+          {hasChildren && <div className="mt-1 flex flex-col gap-1">{renderTreeNodes(node.children)}</div>}
+        </div>
+      );
+    });
+
+  const handleBreadcrumbClick = (folderId: number | null, ownerId: number | null, isLast: boolean) => {
+    if (isLast) {
+      return;
+    }
+    if (folderId !== null) {
+      setFolderFilter(folderId);
+      setOwnerFilter(null);
+    } else if (ownerId !== null) {
+      setOwnerFilter(ownerId);
+      setFolderFilter(null);
+    } else {
+      setOwnerFilter(null);
+      setFolderFilter(null);
+    }
+    setSelectedIds([]);
+  };
+
+  const handleResetSelection = () => {
+    setOwnerFilter(null);
+    setFolderFilter(null);
+    setSelectedIds([]);
+  };
+
+  const isAllScopeSelected = folderFilter === null && ownerFilter === null;
 
   const canDelete = canDeleteAll || canDeleteOwn;
 
@@ -331,7 +571,28 @@ const GalleryPage = () => {
           </div>
         </div>
 
-        <div className="grid gap-4 lg:grid-cols-4">
+        <nav className="flex flex-wrap items-center gap-2 text-sm text-slate-600">
+          {breadcrumbs.map((crumb, index) => {
+            const isLast = index === breadcrumbs.length - 1;
+            return (
+              <div key={`${crumb.label}-${index}`} className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleBreadcrumbClick(crumb.folderId, crumb.ownerId, isLast)}
+                  className={`rounded-lg px-2 py-1 transition ${
+                    isLast ? 'bg-slate-100 font-semibold text-slate-800' : 'hover:bg-slate-100'
+                  }`}
+                  disabled={isLast}
+                >
+                  {crumb.label}
+                </button>
+                {!isLast && <span className="text-slate-400">/</span>}
+              </div>
+            );
+          })}
+        </nav>
+
+        <div className="grid gap-4 lg:grid-cols-3">
           <div className="lg:col-span-2">
             <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Search</label>
             <input
@@ -341,19 +602,6 @@ const GalleryPage = () => {
               placeholder="Search by name or extension"
               className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none"
             />
-          </div>
-          <div>
-            <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Folder</label>
-            <select
-              value={folderFilter ?? ''}
-              onChange={(event) => {
-                const value = event.target.value;
-                setFolderFilter(value === '' ? null : Number(value));
-              }}
-              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none"
-            >
-              {renderFolderOptions()}
-            </select>
           </div>
           <div>
             <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Sort by</label>
@@ -385,9 +633,41 @@ const GalleryPage = () => {
         )}
       </div>
 
-      <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-slate-200 text-sm">
+      <div className="grid gap-6 lg:grid-cols-[280px,1fr]">
+        <aside className="flex h-full flex-col gap-3 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-slate-800">Folders</h2>
+            {canUpload && (
+              <button
+                type="button"
+                onClick={openFolderModal}
+                className="inline-flex items-center rounded-md border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-600 transition hover:border-primary hover:text-primary"
+              >
+                + New
+              </button>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={handleResetSelection}
+            className={`flex items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition ${
+              isAllScopeSelected ? 'bg-primary/10 text-primary' : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            <span className="text-lg">🗂️</span>
+            <span className="font-medium">All files</span>
+          </button>
+          <div className="flex flex-1 flex-col gap-1 overflow-y-auto">
+            {folderTree.length ? (
+              renderTreeNodes(folderTree)
+            ) : (
+              <p className="px-3 py-6 text-sm text-slate-400">No folders yet. Create one to get started.</p>
+            )}
+          </div>
+        </aside>
+        <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-slate-200 text-sm">
             <thead className="bg-slate-50">
               <tr>
                 <th className="w-12 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -523,6 +803,7 @@ const GalleryPage = () => {
             </button>
           </div>
         </div>
+      </div>
       </div>
 
       {editModal && (
