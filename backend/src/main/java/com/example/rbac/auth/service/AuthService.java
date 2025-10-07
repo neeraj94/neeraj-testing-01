@@ -26,6 +26,10 @@ import org.springframework.util.StringUtils;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
+
+import org.hibernate.exception.ConstraintViolationException;
+import org.springframework.dao.DataIntegrityViolationException;
 
 @Service
 public class AuthService {
@@ -127,13 +131,42 @@ public class AuthService {
     }
 
     private String createRefreshToken(User user) {
-        String tokenValue = jwtService.generateRefreshToken(user);
-        RefreshToken refreshToken = new RefreshToken();
-        refreshToken.setToken(tokenValue);
-        refreshToken.setUser(user);
-        refreshToken.setExpiresAt(jwtService.calculateRefreshExpiry());
-        refreshTokenRepository.save(refreshToken);
-        return tokenValue;
+        DataIntegrityViolationException lastViolation = null;
+        for (int attempt = 0; attempt < 5; attempt++) {
+            String tokenValue = jwtService.generateRefreshToken(user);
+            RefreshToken refreshToken = new RefreshToken();
+            refreshToken.setToken(tokenValue);
+            refreshToken.setUser(user);
+            refreshToken.setExpiresAt(jwtService.calculateRefreshExpiry());
+            try {
+                refreshTokenRepository.saveAndFlush(refreshToken);
+                return tokenValue;
+            } catch (DataIntegrityViolationException ex) {
+                lastViolation = ex;
+                if (!isDuplicateRefreshTokenViolation(ex)) {
+                    throw ex;
+                }
+            }
+        }
+        throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "Unable to issue refresh token", lastViolation);
+    }
+
+    private boolean isDuplicateRefreshTokenViolation(DataIntegrityViolationException ex) {
+        Throwable cause = ex;
+        while (cause != null) {
+            if (cause instanceof ConstraintViolationException violation) {
+                String constraintName = Optional.ofNullable(violation.getConstraintName()).orElse("");
+                if (constraintName.contains("refresh_tokens") && constraintName.contains("token")) {
+                    return true;
+                }
+            }
+            String message = cause.getMessage();
+            if (message != null && message.contains("refresh_tokens") && message.contains("token") && message.contains("Duplicate")) {
+                return true;
+            }
+            cause = cause.getCause();
+        }
+        return false;
     }
 
     private AuthResponse buildAuthResponse(User user, String refreshTokenValue) {

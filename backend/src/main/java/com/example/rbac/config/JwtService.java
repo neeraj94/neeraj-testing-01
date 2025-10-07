@@ -12,6 +12,7 @@ import java.time.Instant;
 import java.util.Date;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Component
@@ -45,6 +46,7 @@ public class JwtService {
         Instant now = Instant.now();
         Instant expiry = now.plusSeconds(properties.getRefreshTokenTtlSeconds());
         return Jwts.builder()
+                .setId(UUID.randomUUID().toString())
                 .setSubject(user.getId().toString())
                 .setIssuedAt(Date.from(now))
                 .setExpiration(Date.from(expiry))
