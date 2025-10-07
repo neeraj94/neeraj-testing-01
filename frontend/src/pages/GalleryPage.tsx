@@ -43,6 +43,32 @@ type FolderTreeNode = {
   isSynthetic: boolean;
 };
 
+type DetailsModalState = {
+  file: GalleryFile;
+};
+
+const IMAGE_EXTENSIONS = new Set(['png', 'jpg', 'jpeg', 'gif', 'bmp', 'svg', 'webp', 'heic', 'heif', 'tiff']);
+
+const EXTENSION_ICONS: Record<string, string> = {
+  pdf: '📕',
+  doc: '📄',
+  docx: '📄',
+  xls: '📊',
+  xlsx: '📊',
+  csv: '📈',
+  txt: '📝',
+  ppt: '📊',
+  pptx: '📊',
+  zip: '🗜️',
+  rar: '🗜️',
+  mp4: '🎞️',
+  mov: '🎞️',
+  avi: '🎞️',
+  mp3: '🎵',
+  wav: '🎵',
+  json: '🧾'
+};
+
 const formatDateTime = (value: string) => {
   if (!value) {
     return '—';
@@ -162,6 +188,10 @@ const GalleryPage = () => {
   const [editModal, setEditModal] = useState<EditModalState | null>(null);
   const [folderModal, setFolderModal] = useState<FolderModalState | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [expandedNodes, setExpandedNodes] = useState<Set<string>>(() => new Set());
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [activeMenuId, setActiveMenuId] = useState<number | null>(null);
+  const [detailsModal, setDetailsModal] = useState<DetailsModalState | null>(null);
 
   const granted = (grantedPermissions as PermissionKey[]) ?? [];
   const currentUserId = user?.id ?? null;
@@ -179,6 +209,17 @@ const GalleryPage = () => {
     }, 300);
     return () => window.clearTimeout(timer);
   }, [searchDraft]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    const handleDocumentClick = () => setActiveMenuId(null);
+    document.addEventListener('click', handleDocumentClick);
+    return () => {
+      document.removeEventListener('click', handleDocumentClick);
+    };
+  }, []);
 
   useEffect(() => {
     setPage(0);
@@ -352,11 +393,64 @@ const GalleryPage = () => {
 
   const openEditModal = (file: GalleryFile) => {
     setEditModal({ file, name: file.displayName, folderId: file.folderId ?? null });
+    setActiveMenuId(null);
   };
 
   const openFolderModal = () => {
     setFolderModal({ name: '', parentId: folderFilter });
   };
+
+  const handleOpenDetails = (file: GalleryFile) => {
+    setDetailsModal({ file });
+  };
+
+  const renderFileMenu = (file: GalleryFile, canDeleteFile: boolean) => (
+    <>
+      <a
+        href={resolveFileUrl(file.id)}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={() => setActiveMenuId(null)}
+        className="flex items-center justify-between rounded-lg px-3 py-2 text-left text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-primary"
+      >
+        Open in new tab
+        <span>↗</span>
+      </a>
+      <button
+        type="button"
+        onClick={() => {
+          setActiveMenuId(null);
+          handleOpenDetails(file);
+        }}
+        className="w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-primary"
+      >
+        View details
+      </button>
+      {canEdit && (
+        <button
+          type="button"
+          onClick={() => {
+            openEditModal(file);
+          }}
+          className="w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-primary"
+        >
+          Rename
+        </button>
+      )}
+      {canDeleteFile && (
+        <button
+          type="button"
+          onClick={() => {
+            setActiveMenuId(null);
+            handleDeleteSingle(file.id);
+          }}
+          className="w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-rose-600 transition hover:bg-rose-50"
+        >
+          Delete
+        </button>
+      )}
+    </>
+  );
 
   const foldersData = foldersQuery.data ?? [];
   const folderMap = useMemo(() => {
@@ -411,6 +505,32 @@ const GalleryPage = () => {
     ));
 
   const folderTree = useMemo(() => buildFolderTree(foldersData, currentUserId, canViewAll), [foldersData, currentUserId, canViewAll]);
+
+  useEffect(() => {
+    setExpandedNodes((previous) => {
+      const next = new Set(previous);
+      const expandInitial = (nodes: FolderTreeNode[]) => {
+        nodes.forEach((node) => {
+          if (node.children.length > 0 && node.depth <= 1) {
+            next.add(node.key);
+          }
+          if (node.children.length > 0) {
+            expandInitial(node.children);
+          }
+        });
+      };
+      expandInitial(folderTree);
+      return next;
+    });
+  }, [folderTree]);
+
+  useEffect(() => {
+    setIsSidebarOpen(false);
+  }, [folderFilter, ownerFilter]);
+
+  useEffect(() => {
+    setActiveMenuId(null);
+  }, [viewMode, files]);
 
   const activeOwnerId = useMemo(() => {
     if (folderFilter !== null) {
@@ -523,6 +643,8 @@ const GalleryPage = () => {
     return crumbs;
   }, [folderFilter, ownerFilter, folderMap, foldersData, canViewAll]);
 
+  const isAllScopeSelected = folderFilter === null && ownerFilter === null;
+
   const handleFolderOpen = (id: number) => {
     setFolderFilter(id);
     setOwnerFilter(null);
@@ -538,6 +660,22 @@ const GalleryPage = () => {
       setFolderFilter(null);
     }
     setSelectedIds([]);
+    setIsSidebarOpen(false);
+  };
+
+  const toggleNodeExpansion = (node: FolderTreeNode) => {
+    if (!node.children.length) {
+      return;
+    }
+    setExpandedNodes((previous) => {
+      const next = new Set(previous);
+      if (next.has(node.key)) {
+        next.delete(node.key);
+      } else {
+        next.add(node.key);
+      }
+      return next;
+    });
   };
 
   const renderTreeNodes = (nodes: FolderTreeNode[]) =>
@@ -547,26 +685,44 @@ const GalleryPage = () => {
         ? folderFilter === node.folderId
         : folderFilter === null && (canViewAll ? ownerFilter === (node.ownerId ?? null) : isAllScopeSelected);
       const hasChildren = node.children.length > 0;
+      const isExpanded = !hasChildren || expandedNodes.has(node.key);
+
       return (
-        <div key={node.key} className="flex flex-col">
-          <button
-            type="button"
-            onClick={() => handleNodeSelection(node)}
-            className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition ${
-              isSelected ? 'bg-primary/10 text-primary' : 'text-slate-600 hover:bg-slate-100'
-            }`}
-            style={{ paddingLeft: `${node.depth * 12 + 8}px` }}
-          >
-            <span className="flex flex-col">
-              <span className="inline-flex items-center gap-2">
-                <span className="text-lg">{isFolder ? '📁' : '👤'}</span>
-                <span className="font-medium">{node.label}</span>
+        <div key={node.key} className="flex flex-col" style={{ marginLeft: `${node.depth * 12}px` }}>
+          <div className="flex items-center gap-1">
+            {hasChildren ? (
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  toggleNodeExpansion(node);
+                }}
+                className="flex h-6 w-6 items-center justify-center rounded-md text-xs text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+                aria-label={isExpanded ? 'Collapse' : 'Expand'}
+              >
+                {isExpanded ? '▾' : '▸'}
+              </button>
+            ) : (
+              <span className="h-6 w-6" />
+            )}
+            <button
+              type="button"
+              onClick={() => handleNodeSelection(node)}
+              className={`flex min-h-[2.5rem] flex-1 items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition ${
+                isSelected ? 'bg-primary/10 text-primary' : 'text-slate-600 hover:bg-slate-100'
+              }`}
+            >
+              <span className="flex flex-col">
+                <span className="inline-flex items-center gap-2">
+                  <span className="text-lg">{isFolder ? '📁' : '👤'}</span>
+                  <span className="font-medium">{node.label}</span>
+                </span>
+                {node.description && <span className="ml-6 text-xs text-slate-400">{node.description}</span>}
               </span>
-              {node.description && <span className="ml-6 text-xs text-slate-400">{node.description}</span>}
-            </span>
-            {hasChildren && <span className="text-xs text-slate-400">{node.children.length}</span>}
-          </button>
-          {hasChildren && <div className="mt-1 flex flex-col gap-1">{renderTreeNodes(node.children)}</div>}
+              {hasChildren && <span className="text-xs text-slate-400">{node.children.length}</span>}
+            </button>
+          </div>
+          {hasChildren && isExpanded && <div className="ml-7 mt-1 flex flex-col gap-1">{renderTreeNodes(node.children)}</div>}
         </div>
       );
     });
@@ -592,10 +748,9 @@ const GalleryPage = () => {
     setOwnerFilter(null);
     setFolderFilter(null);
     setSelectedIds([]);
+    setIsSidebarOpen(false);
   };
 
-
-  const isAllScopeSelected = folderFilter === null && ownerFilter === null;
 
   const canDelete = canDeleteAll || canDeleteOwn;
 
@@ -614,19 +769,53 @@ const GalleryPage = () => {
         disabled={!canUpload || uploadFiles.isPending}
       />
 
-      <div className="flex flex-col gap-6 lg:flex-row">
-        <aside className="flex h-full min-h-[26rem] w-full flex-col gap-4 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm lg:w-72">
-          <div className="flex items-center justify-between">
+      <div className="lg:hidden">
+        <button
+          type="button"
+          onClick={() => setIsSidebarOpen(true)}
+          className="flex w-full items-center justify-between rounded-3xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-primary hover:text-primary"
+        >
+          <span>Browse folders</span>
+          <span className="text-lg">📁</span>
+        </button>
+      </div>
+
+      <div className="relative flex flex-col gap-6 lg:flex-row">
+        {isSidebarOpen && (
+          <button
+            type="button"
+            aria-label="Close navigation"
+            className="fixed inset-0 z-30 bg-slate-900/40 lg:hidden"
+            onClick={() => setIsSidebarOpen(false)}
+          />
+        )}
+        <aside
+          className={`transform ${
+            isSidebarOpen
+              ? 'translate-x-0 opacity-100 pointer-events-auto'
+              : '-translate-x-full opacity-0 pointer-events-none lg:translate-x-0 lg:opacity-100 lg:pointer-events-auto'
+          } fixed inset-y-6 left-4 right-4 z-40 flex max-h-[80vh] flex-col gap-4 overflow-hidden overflow-y-auto rounded-3xl border border-slate-200 bg-white p-4 shadow-xl transition-all duration-200 lg:static lg:h-full lg:min-h-[26rem] lg:w-72 lg:max-h-none lg:overflow-visible lg:p-4 lg:shadow-sm`}
+        >
+          <div className="flex items-center justify-between gap-3">
             <h2 className="text-sm font-semibold text-slate-800">Navigation</h2>
-            {canUpload && (
+            <div className="flex items-center gap-2">
+              {canUpload && (
+                <button
+                  type="button"
+                  onClick={openFolderModal}
+                  className="inline-flex items-center rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 transition hover:border-primary hover:text-primary"
+                >
+                  New
+                </button>
+              )}
               <button
                 type="button"
-                onClick={openFolderModal}
-                className="inline-flex items-center rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 transition hover:border-primary hover:text-primary"
+                onClick={() => setIsSidebarOpen(false)}
+                className="inline-flex items-center rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-500 transition hover:border-primary hover:text-primary lg:hidden"
               >
-                New
+                Close
               </button>
-            )}
+            </div>
           </div>
           <button
             type="button"
@@ -790,32 +979,43 @@ const GalleryPage = () => {
               )}
             </div>
 
-            {visibleFolders.length > 0 && (
-              <div className="mt-6">
-                <h2 className="mb-3 text-sm font-semibold text-slate-700">Folders</h2>
-                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-                  {visibleFolders.map((folder) => (
-                    <button
-                      key={folder.id}
-                      type="button"
-                      onClick={() => handleFolderOpen(folder.id)}
-                      className="group flex h-full flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-left transition hover:border-primary hover:bg-white hover:shadow-md"
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-3xl">📁</span>
-                        <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-500 shadow-sm">
-                          {resolveOwnerLabel(folder.ownerId ?? null)}
+            {viewMode === 'grid' && (
+              <div className="mt-6 space-y-3">
+                <div className="flex items-center justify-between text-sm font-semibold text-slate-700">
+                  <h2>Folders</h2>
+                  <span className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                    {visibleFolders.length} item{visibleFolders.length === 1 ? '' : 's'}
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+                  {visibleFolders.length ? (
+                    visibleFolders.map((folder) => (
+                      <button
+                        key={folder.id}
+                        type="button"
+                        onClick={() => handleFolderOpen(folder.id)}
+                        className="group flex h-full flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-left transition hover:-translate-y-1 hover:border-primary hover:bg-white hover:shadow-lg"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-3xl">📁</span>
+                          <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-500 shadow-sm">
+                            {resolveOwnerLabel(folder.ownerId ?? null)}
+                          </span>
+                        </div>
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-slate-900">{folder.name}</p>
+                          <p className="truncate text-xs text-slate-500">{folder.path}</p>
+                        </div>
+                        <span className="text-xs font-semibold text-primary opacity-0 transition group-hover:opacity-100">
+                          Open folder →
                         </span>
-                      </div>
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-slate-900">{folder.name}</p>
-                        <p className="truncate text-xs text-slate-500">{folder.path}</p>
-                      </div>
-                      <span className="text-xs font-semibold text-primary opacity-0 transition group-hover:opacity-100">
-                        Open folder →
-                      </span>
-                    </button>
-                  ))}
+                      </button>
+                    ))
+                  ) : (
+                    <div className="col-span-full rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 p-10 text-center text-sm text-slate-500">
+                      No folders yet. Use the navigation tree or create a new folder to organise uploads.
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -829,27 +1029,64 @@ const GalleryPage = () => {
               </div>
 
               {viewMode === 'grid' ? (
-                <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+                <div className="mt-4 grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
                   {files.map((file) => {
                     const isOwner = currentUserId !== null && currentUserId === (file.uploadedById ?? null);
                     const canDeleteFile = canDeleteAll || (canDeleteOwn && isOwner);
                     const isSelected = selectedIds.includes(file.id);
+                    const extension = file.extension.toLowerCase();
+                    const isImage = IMAGE_EXTENSIONS.has(extension);
+                    const icon = EXTENSION_ICONS[extension] ?? '📄';
                     return (
                       <div
                         key={file.id}
-                        className={`group relative flex h-full flex-col justify-between rounded-2xl border bg-white p-4 transition hover:shadow-lg ${
+                        className={`group relative flex h-full flex-col rounded-2xl border bg-white p-4 shadow-sm transition hover:-translate-y-1 hover:shadow-lg ${
                           isSelected ? 'border-primary ring-2 ring-primary/20' : 'border-slate-200'
                         }`}
                       >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex min-w-0 items-center gap-3">
-                            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-sm font-semibold uppercase text-primary">
-                              {file.extension.slice(0, 4)}
+                        <div className={`relative overflow-hidden rounded-xl ${isImage ? 'bg-slate-900/5' : 'bg-slate-900/90'}`}>
+                          <div className="aspect-[4/3] w-full">
+                            {isImage ? (
+                              <img
+                                src={resolveFileUrl(file.id)}
+                                alt={file.displayName}
+                                className="h-full w-full object-cover"
+                              />
+                            ) : (
+                              <div className="flex h-full w-full items-center justify-center text-5xl text-white">
+                                {icon}
+                              </div>
+                            )}
+                          </div>
+                          <span className="absolute left-3 top-3 rounded-full bg-white/90 px-2 py-1 text-xs font-semibold text-slate-700">
+                            {file.extension.toUpperCase()}
+                          </span>
+                          <span className="absolute bottom-3 left-3 rounded-full bg-slate-900/70 px-2 py-1 text-xs font-semibold text-white">
+                            {formatFileSize(file.sizeBytes)}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setActiveMenuId((previous) => (previous === file.id ? null : file.id));
+                            }}
+                            className="absolute right-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-lg text-slate-600 shadow-sm transition hover:bg-white"
+                          >
+                            ⋮
+                          </button>
+                          {activeMenuId === file.id && (
+                            <div
+                              className="absolute right-3 top-12 z-20 w-48 rounded-xl border border-slate-200 bg-white p-2 shadow-xl"
+                              onClick={(event) => event.stopPropagation()}
+                            >
+                              {renderFileMenu(file, canDeleteFile)}
                             </div>
-                            <div className="min-w-0">
-                              <p className="truncate text-sm font-semibold text-slate-900">{file.displayName}</p>
-                              <p className="truncate text-xs text-slate-500">{file.originalFilename}</p>
-                            </div>
+                          )}
+                        </div>
+                        <div className="mt-3 flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-semibold text-slate-900">{file.displayName}</p>
+                            <p className="truncate text-xs text-slate-500">{file.originalFilename}</p>
                           </div>
                           <input
                             type="checkbox"
@@ -858,47 +1095,7 @@ const GalleryPage = () => {
                             className="mt-1"
                           />
                         </div>
-                        <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
-                          <span>{formatFileSize(file.sizeBytes)}</span>
-                          <span>•</span>
-                          <span>{file.extension.toUpperCase()}</span>
-                          <span>•</span>
-                          <span className="truncate">{resolveFolderName(file.folderId)}</span>
-                        </div>
-                        <div className="mt-4 flex items-end justify-between gap-3 text-xs text-slate-500">
-                          <div className="flex flex-col">
-                            <span className="truncate">{file.uploadedByName ?? file.uploadedByEmail ?? '—'}</span>
-                            <span>{formatDateTime(file.uploadedAt)}</span>
-                          </div>
-                          <div className="flex items-center gap-3 text-sm font-semibold">
-                            <a
-                              href={resolveFileUrl(file.id)}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-primary hover:text-primary/80"
-                            >
-                              Open
-                            </a>
-                            {canEdit && (
-                              <button
-                                type="button"
-                                onClick={() => openEditModal(file)}
-                                className="text-slate-600 hover:text-primary"
-                              >
-                                Rename
-                              </button>
-                            )}
-                            {canDeleteFile && (
-                              <button
-                                type="button"
-                                onClick={() => handleDeleteSingle(file.id)}
-                                className="text-rose-600 hover:text-rose-500"
-                              >
-                                Delete
-                              </button>
-                            )}
-                          </div>
-                        </div>
+                        <p className="mt-2 truncate text-xs uppercase tracking-wide text-slate-400">{resolveFolderName(file.folderId)}</p>
                       </div>
                     );
                   })}
@@ -934,72 +1131,110 @@ const GalleryPage = () => {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200">
+                      {visibleFolders.map((folder) => (
+                        <tr key={`folder-${folder.id}`} className="hover:bg-slate-50/60">
+                          <td className="px-4 py-3 text-center text-slate-400">—</td>
+                          <td className="max-w-[18rem] px-4 py-3">
+                            <button
+                              type="button"
+                              onClick={() => handleFolderOpen(folder.id)}
+                              className="flex w-full items-center gap-3 text-left"
+                            >
+                              <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-2xl">📁</span>
+                              <span className="min-w-0">
+                                <span className="block truncate font-semibold text-slate-800">{folder.name}</span>
+                                <span className="block truncate text-xs text-slate-500">{folder.path}</span>
+                              </span>
+                            </button>
+                          </td>
+                          <td className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-400">Folder</td>
+                          <td className="px-4 py-3 text-slate-500">—</td>
+                          <td className="px-4 py-3 text-slate-600">{resolveOwnerLabel(folder.ownerId ?? null)}</td>
+                          <td className="px-4 py-3 text-slate-500">—</td>
+                          <td className="px-4 py-3 text-right">
+                            <button
+                              type="button"
+                              onClick={() => handleFolderOpen(folder.id)}
+                              className="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 transition hover:border-primary hover:text-primary"
+                            >
+                              Open
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
                       {files.map((file) => {
                         const isOwner = currentUserId !== null && currentUserId === (file.uploadedById ?? null);
                         const canDeleteFile = canDeleteAll || (canDeleteOwn && isOwner);
+                        const isSelected = selectedIds.includes(file.id);
+                        const extension = file.extension.toLowerCase();
+                        const isImage = IMAGE_EXTENSIONS.has(extension);
+                        const icon = EXTENSION_ICONS[extension] ?? '📄';
                         return (
-                          <tr key={file.id} className="hover:bg-slate-50/60">
+                          <tr
+                            key={`file-${file.id}`}
+                            className={`${isSelected ? 'bg-primary/5' : ''} hover:bg-slate-50/60`}
+                          >
                             <td className="px-4 py-3">
                               <input
                                 type="checkbox"
-                                checked={selectedIds.includes(file.id)}
+                                checked={isSelected}
                                 onChange={() => toggleSelect(file.id)}
                               />
                             </td>
-                            <td className="px-4 py-3">
+                            <td className="max-w-[18rem] px-4 py-3">
                               <div className="flex items-center gap-3">
-                                <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-xs font-semibold uppercase text-slate-600">
-                                  {file.extension.slice(0, 4)}
+                                <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-100">
+                                  {isImage ? (
+                                    <img
+                                      src={resolveFileUrl(file.id)}
+                                      alt={file.displayName}
+                                      className="h-full w-full object-cover"
+                                    />
+                                  ) : (
+                                    <span className="text-xl">{icon}</span>
+                                  )}
                                 </div>
-                                <div>
-                                  <div className="font-medium text-slate-800">{file.displayName}</div>
-                                  <div className="text-xs text-slate-500">{file.originalFilename}</div>
+                                <div className="min-w-0">
+                                  <div className="truncate font-medium text-slate-800">{file.displayName}</div>
+                                  <div className="truncate text-xs text-slate-500">{file.originalFilename}</div>
                                 </div>
                               </div>
                             </td>
-                            <td className="px-4 py-3 text-slate-600">{file.extension.toUpperCase()}</td>
+                            <td className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                              {file.extension.toUpperCase()}
+                            </td>
                             <td className="px-4 py-3 text-slate-600">{formatFileSize(file.sizeBytes)}</td>
                             <td className="px-4 py-3 text-slate-600">{resolveFolderName(file.folderId)}</td>
                             <td className="px-4 py-3 text-slate-600">
-                              <div className="flex flex-col">
-                                <span>{file.uploadedByName ?? file.uploadedByEmail ?? '—'}</span>
-                                <span className="text-xs text-slate-400">{formatDateTime(file.uploadedAt)}</span>
+                              <div className="min-w-0">
+                                <p className="truncate">{file.uploadedByName ?? file.uploadedByEmail ?? '—'}</p>
+                                <p className="text-xs text-slate-400">{formatDateTime(file.uploadedAt)}</p>
                               </div>
                             </td>
-                            <td className="px-4 py-3">
-                              <div className="flex items-center justify-end gap-3">
-                                <a
-                                  href={resolveFileUrl(file.id)}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-sm font-semibold text-primary hover:text-primary/80"
+                            <td className="relative px-4 py-3 text-right">
+                              <button
+                                type="button"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  setActiveMenuId((previous) => (previous === file.id ? null : file.id));
+                                }}
+                                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-lg text-slate-500 transition hover:border-primary hover:text-primary"
+                              >
+                                ⋮
+                              </button>
+                              {activeMenuId === file.id && (
+                                <div
+                                  className="absolute right-4 top-12 z-20 w-48 rounded-xl border border-slate-200 bg-white p-2 shadow-xl"
+                                  onClick={(event) => event.stopPropagation()}
                                 >
-                                  Open
-                                </a>
-                                {canEdit && (
-                                  <button
-                                    type="button"
-                                    onClick={() => openEditModal(file)}
-                                    className="text-sm font-semibold text-slate-600 hover:text-primary"
-                                  >
-                                    Rename
-                                  </button>
-                                )}
-                                {canDeleteFile && (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleDeleteSingle(file.id)}
-                                    className="text-sm font-semibold text-rose-600 hover:text-rose-500"
-                                  >
-                                    Delete
-                                  </button>
-                                )}
-                              </div>
+                                  {renderFileMenu(file, canDeleteFile)}
+                                </div>
+                              )}
                             </td>
                           </tr>
                         );
                       })}
-                      {!files.length && (
+                      {!visibleFolders.length && !files.length && (
                         <tr>
                           <td colSpan={7} className="px-4 py-16 text-center text-sm text-slate-500">
                             {isLoadingFiles ? 'Loading files…' : 'No files found for the selected filters.'}
@@ -1058,6 +1293,85 @@ const GalleryPage = () => {
           )}
         </div>
       </div>
+      {detailsModal && (() => {
+        const file = detailsModal.file;
+        const extension = file.extension.toLowerCase();
+        const isImage = IMAGE_EXTENSIONS.has(extension);
+        const icon = EXTENSION_ICONS[extension] ?? '📄';
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4">
+            <div className="w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-xl">
+              <div className={`relative ${isImage ? 'bg-slate-900/5' : 'bg-slate-900/90'}`}>
+                <div className="aspect-[4/3] w-full">
+                  {isImage ? (
+                    <img src={resolveFileUrl(file.id)} alt={file.displayName} className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-6xl text-white">{icon}</div>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setDetailsModal(null)}
+                  className="absolute right-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/30 bg-slate-900/30 text-lg text-white backdrop-blur transition hover:bg-slate-900/60"
+                >
+                  ✕
+                </button>
+                <span className="absolute left-3 top-3 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-slate-700">
+                  {file.extension.toUpperCase()}
+                </span>
+                <span className="absolute bottom-3 left-3 rounded-full bg-slate-900/70 px-3 py-1 text-xs font-semibold text-white">
+                  {formatFileSize(file.sizeBytes)}
+                </span>
+              </div>
+              <div className="space-y-4 p-6 text-sm text-slate-600">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <h2 className="truncate text-lg font-semibold text-slate-900">{file.displayName}</h2>
+                    <p className="truncate text-xs uppercase tracking-wide text-slate-400">{resolveFolderName(file.folderId)}</p>
+                  </div>
+                  <a
+                    href={resolveFileUrl(file.id)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 transition hover:border-primary hover:text-primary"
+                  >
+                    Open
+                    <span>↗</span>
+                  </a>
+                </div>
+                <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div>
+                    <dt className="text-xs font-semibold uppercase tracking-wide text-slate-400">Original filename</dt>
+                    <dd className="mt-1 truncate text-sm text-slate-700">{file.originalFilename}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs font-semibold uppercase tracking-wide text-slate-400">File type</dt>
+                    <dd className="mt-1 text-sm text-slate-700">{file.mimeType ?? file.extension.toUpperCase()}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs font-semibold uppercase tracking-wide text-slate-400">Uploaded by</dt>
+                    <dd className="mt-1 text-sm text-slate-700">{file.uploadedByName ?? file.uploadedByEmail ?? '—'}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs font-semibold uppercase tracking-wide text-slate-400">Uploaded on</dt>
+                    <dd className="mt-1 text-sm text-slate-700">{formatDateTime(file.uploadedAt)}</dd>
+                  </div>
+                </dl>
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setDetailsModal(null)}
+                    className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-primary hover:text-primary"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {editModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4">
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
