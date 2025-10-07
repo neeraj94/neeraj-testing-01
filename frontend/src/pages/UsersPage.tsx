@@ -362,6 +362,7 @@ const UsersPage = () => {
       }
       notify({ type: 'success', message: 'User updated successfully.' });
       invalidateUsers();
+      setFormError(null);
       setForm({
         firstName: data.firstName ?? '',
         lastName: data.lastName ?? '',
@@ -386,6 +387,53 @@ const UsersPage = () => {
     },
     onError: (error) => {
       const message = error instanceof Error ? error.message : extractErrorMessage(error, 'Unable to update user.');
+      setFormError(message);
+      notify({ type: 'error', message });
+    }
+  });
+
+  const updatePermissions = useMutation({
+    mutationFn: async () => {
+      if (!selectedUserId) {
+        return null;
+      }
+      const { data } = await api.put<User>(`/users/${selectedUserId}/permissions`, {
+        grantedPermissionKeys: form.directPermissions,
+        revokedPermissionKeys: form.revokedPermissions
+      });
+      return data;
+    },
+    onSuccess: (data) => {
+      if (!data) {
+        return;
+      }
+      notify({ type: 'success', message: 'Permissions updated successfully.' });
+      invalidateUsers();
+      setFormError(null);
+      setForm({
+        firstName: data.firstName ?? '',
+        lastName: data.lastName ?? '',
+        email: data.email,
+        password: '',
+        active: data.active,
+        phoneNumber: data.phoneNumber ?? '',
+        whatsappNumber: data.whatsappNumber ?? '',
+        facebookUrl: data.facebookUrl ?? '',
+        linkedinUrl: data.linkedinUrl ?? '',
+        skypeId: data.skypeId ?? '',
+        emailSignature: data.emailSignature ?? '',
+        roleIds: data.roles
+          .map((roleKey) => roleIdByKey.get(roleKey.toUpperCase()))
+          .filter((value): value is number => typeof value === 'number'),
+        directPermissions: (data.directPermissions ?? []).map(normalizePermissionKey),
+        revokedPermissions: (data.revokedPermissions ?? []).map(normalizePermissionKey)
+      });
+      if (selectedUserId) {
+        queryClient.invalidateQueries({ queryKey: ['users', 'detail', selectedUserId] });
+      }
+    },
+    onError: (error) => {
+      const message = extractErrorMessage(error, 'Unable to update permissions.');
       setFormError(message);
       notify({ type: 'error', message });
     }
@@ -1361,7 +1409,11 @@ const UsersPage = () => {
   const renderPanel = () => {
     const isCreate = panelMode === 'create';
     const isEditable = isCreate ? canCreateUser : canManageUsers;
-    const isSaving = isCreate ? createUser.isPending : updateUser.isPending;
+    const isSaving = isCreate
+      ? createUser.isPending
+      : activeTab === 'access'
+      ? updatePermissions.isPending
+      : updateUser.isPending;
     const isLoadingDetail = panelMode === 'detail' && selectedUserQuery.isLoading;
 
     const headerTitle = isCreate
@@ -1382,6 +1434,8 @@ const UsersPage = () => {
           setFormError(null);
           if (isCreate) {
             createUser.mutate();
+          } else if (activeTab === 'access') {
+            updatePermissions.mutate();
           } else {
             updateUser.mutate();
           }

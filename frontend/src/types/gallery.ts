@@ -21,6 +21,10 @@ export interface GalleryFolder {
   path: string;
   parentId: number | null;
   root: boolean;
+  ownerId: number | null;
+  ownerName?: string | null;
+  ownerEmail?: string | null;
+  ownerKey?: string | null;
 }
 
 export type GalleryFilePage = Pagination<GalleryFile>;
