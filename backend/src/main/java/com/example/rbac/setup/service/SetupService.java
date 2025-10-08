@@ -248,13 +248,13 @@ public class SetupService {
     }
 
     private static final List<MenuDefinition> DEFAULT_MENU = List.of(
-            MenuDefinition.item("dashboard", "Dashboard", "🏠", "/dashboard", List.of()),
+            MenuDefinition.item("dashboard", "Dashboard", "🏠", "/admin/dashboard", List.of()),
             MenuDefinition.group("sales", "Sales", "⚡", List.of(
                     MenuDefinition.item(
                             "invoices",
                             "Invoices",
                             "📄",
-                            "/invoices",
+                            "/admin/invoices",
                             List.of("INVOICE_VIEW", "INVOICE_VIEW_GLOBAL", "INVOICE_VIEW_OWN", "INVOICE_CREATE", "INVOICE_UPDATE", "INVOICE_DELETE")
                     )
             )),
@@ -263,29 +263,45 @@ public class SetupService {
                             "users",
                             "Users",
                             "👥",
-                            "/users",
+                            "/admin/users",
                             List.of("USER_VIEW", "USER_VIEW_GLOBAL", "USER_VIEW_OWN", "USER_CREATE", "USER_UPDATE", "USER_DELETE")
                     ),
                     MenuDefinition.item(
                             "roles",
                             "Roles",
                             "🧩",
-                            "/roles",
+                            "/admin/roles",
                             List.of("ROLE_VIEW", "ROLE_VIEW_GLOBAL", "ROLE_VIEW_OWN")
                     ),
                     MenuDefinition.item(
                             "permissions",
                             "Permissions",
                             "🛡️",
-                            "/permissions",
+                            "/admin/permissions",
                             List.of("PERMISSION_VIEW")
                     )
             )),
-            MenuDefinition.item("gallery", "Gallery", "🖼️", "/gallery", List.of("GALLERY_VIEW_ALL", "GALLERY_VIEW_OWN", "GALLERY_CREATE")),
-            MenuDefinition.item("activity", "Activity", "📝", "/activity", List.of("ACTIVITY_VIEW")),
-            MenuDefinition.item("settings", "Settings", "⚙️", "/settings", List.of("SETTINGS_VIEW")),
-            MenuDefinition.item("setup", "Setup", "🧭", "/setup", List.of("SETUP_MANAGE")),
-            MenuDefinition.item("profile", "Profile", "👤", "/profile", List.of())
+            MenuDefinition.group("content", "Content", "📰", List.of(
+                    MenuDefinition.item(
+                            "blogCategories",
+                            "Categories",
+                            "🗂️",
+                            "/admin/blog/categories",
+                            List.of("BLOG_CATEGORY_VIEW")
+                    ),
+                    MenuDefinition.item(
+                            "blogPosts",
+                            "All Posts",
+                            "✍️",
+                            "/admin/blog/posts",
+                            List.of("BLOG_POST_VIEW")
+                    )
+            )),
+            MenuDefinition.item("gallery", "Gallery", "🖼️", "/admin/gallery", List.of("GALLERY_VIEW_ALL", "GALLERY_VIEW_OWN", "GALLERY_CREATE")),
+            MenuDefinition.item("activity", "Activity", "📝", "/admin/activity", List.of("ACTIVITY_VIEW")),
+            MenuDefinition.item("settings", "Settings", "⚙️", "/admin/settings", List.of("SETTINGS_VIEW")),
+            MenuDefinition.item("setup", "Setup", "🧭", "/admin/setup", List.of("SETUP_MANAGE")),
+            MenuDefinition.item("profile", "Profile", "👤", "/admin/profile", List.of())
     );
 
     private record MenuDefinition(String key, String label, String icon, String path,
