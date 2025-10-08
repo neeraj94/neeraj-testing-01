@@ -1,27 +1,28 @@
 CREATE TABLE blog_categories (
-    id BIGSERIAL PRIMARY KEY,
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
     name VARCHAR(150) NOT NULL,
     slug VARCHAR(160) NOT NULL UNIQUE,
     description TEXT,
-    created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT NOW()
+    created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)
 );
 
 CREATE TABLE blog_posts (
-    id BIGSERIAL PRIMARY KEY,
-    category_id BIGINT NOT NULL REFERENCES blog_categories(id) ON DELETE RESTRICT,
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    category_id BIGINT NOT NULL,
     title VARCHAR(200) NOT NULL,
     slug VARCHAR(210) NOT NULL UNIQUE,
-    description TEXT NOT NULL,
+    description LONGTEXT NOT NULL,
     banner_image VARCHAR(255),
     meta_title VARCHAR(200),
     meta_description TEXT,
     meta_keywords TEXT,
     meta_image VARCHAR(255),
-    published BOOLEAN NOT NULL DEFAULT FALSE,
-    published_at TIMESTAMP WITHOUT TIME ZONE,
-    created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT NOW()
+    published TINYINT(1) NOT NULL DEFAULT 0,
+    published_at DATETIME(6),
+    created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+    CONSTRAINT fk_blog_posts_category FOREIGN KEY (category_id) REFERENCES blog_categories(id) ON DELETE RESTRICT
 );
 
 CREATE INDEX idx_blog_posts_category ON blog_posts(category_id);
