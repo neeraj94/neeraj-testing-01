@@ -143,18 +143,6 @@ const GalleryPage = () => {
   }, [canViewAll, currentUserId, ownerFilter]);
 
   useEffect(() => {
-    if (!canViewAll) {
-      if (ownerFilter !== currentUserId) {
-        setOwnerFilter(currentUserId);
-      }
-      return;
-    }
-    if (ownerFilter === null && currentUserId !== null) {
-      setOwnerFilter(currentUserId);
-    }
-  }, [canViewAll, currentUserId, ownerFilter]);
-
-  useEffect(() => {
     const timer = window.setTimeout(() => {
       setSearchTerm(searchDraft.trim());
       setPage(0);
