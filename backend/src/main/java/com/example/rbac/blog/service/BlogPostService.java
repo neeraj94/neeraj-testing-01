@@ -45,6 +45,7 @@ public class BlogPostService {
         this.blogMediaStorageService = blogMediaStorageService;
     }
 
+    @Transactional(readOnly = true)
     public PageResponse<BlogPostDto> list(int page,
                                           int size,
                                           String sort,
@@ -78,6 +79,7 @@ public class BlogPostService {
         return PageResponse.from(result.map(blogPostMapper::toDto));
     }
 
+    @Transactional(readOnly = true)
     public PageResponse<PublicBlogPostDto> listPublished(int page, int size, String categorySlug, String search) {
         Pageable pageable = PageRequest.of(Math.max(page, 0), Math.max(size, 1), Sort.by(Sort.Direction.DESC, "publishedAt"));
         Specification<BlogPost> specification = Specification.where((root, query, builder) -> builder.isTrue(root.get("published")));
@@ -97,12 +99,14 @@ public class BlogPostService {
         return PageResponse.from(result.map(blogPostMapper::toPublicDto));
     }
 
+    @Transactional(readOnly = true)
     public BlogPostDto get(Long id) {
         BlogPost post = blogPostRepository.findById(id)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Post not found"));
         return blogPostMapper.toDto(post);
     }
 
+    @Transactional(readOnly = true)
     public PublicBlogPostDto getPublishedPost(String slug) {
         if (slug == null || slug.isBlank()) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "Post slug is required");
