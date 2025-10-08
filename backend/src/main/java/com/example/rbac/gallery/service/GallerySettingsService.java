@@ -25,7 +25,7 @@ public class GallerySettingsService {
         Optional<Setting> setting = settingRepository.findByCode(ALLOWED_EXTENSIONS_CODE);
         String configured = setting.map(Setting::getValue).orElse(null);
         if (configured == null || configured.isBlank()) {
-            return List.of("png", "jpg", "jpeg", "pdf", "docx", "xlsx", "mp4");
+            return List.of("png", "jpg", "jpeg", "gif", "pdf", "docx", "xlsx", "mp4");
         }
         return Arrays.stream(configured.split(","))
                 .map(String::trim)

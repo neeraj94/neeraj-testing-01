@@ -51,6 +51,7 @@ public class GalleryService {
                                              String sort,
                                              String direction,
                                              Long folderId,
+                                             Long ownerId,
                                              Long uploaderId,
                                              String uploaderEmail,
                                              String search,
@@ -65,14 +66,21 @@ public class GalleryService {
         specification = GalleryFileSpecifications.and(specification, GalleryFileSpecifications.belongsToFolder(effectiveFolderId));
         specification = GalleryFileSpecifications.and(specification, GalleryFileSpecifications.search(search));
 
+        if (canViewAll && ownerId != null) {
+            specification = GalleryFileSpecifications.and(specification, GalleryFileSpecifications.ownedByOrUploadedBy(ownerId));
+        }
         if (uploaderId != null && canViewAll) {
             specification = GalleryFileSpecifications.and(specification, GalleryFileSpecifications.uploadedBy(uploaderId));
         }
         if (uploaderEmail != null && canViewAll) {
             specification = GalleryFileSpecifications.and(specification, GalleryFileSpecifications.uploaderEmailContains(uploaderEmail));
         }
-        if (!canViewAll && currentUserId != null) {
-            specification = GalleryFileSpecifications.and(specification, GalleryFileSpecifications.uploadedBy(currentUserId));
+        if (!canViewAll) {
+            if (currentUserId == null) {
+                specification = GalleryFileSpecifications.and(specification, GalleryFileSpecifications.none());
+            } else {
+                specification = GalleryFileSpecifications.and(specification, GalleryFileSpecifications.ownedByOrUploadedBy(currentUserId));
+            }
         }
 
         Pageable pageable = PageRequest.of(Math.max(page, 0), Math.max(size, 1), resolveSort(sort, direction));
@@ -349,7 +357,11 @@ public class GalleryService {
         if (hasAuthority(principal, "GALLERY_VIEW_OWN")) {
             Long currentUserId = resolveUserId(principal);
             Long uploaderId = file.getUploader() != null ? file.getUploader().getId() : null;
-            if (currentUserId != null && currentUserId.equals(uploaderId)) {
+            Long ownerId = null;
+            if (file.getFolder() != null && file.getFolder().getOwner() != null) {
+                ownerId = file.getFolder().getOwner().getId();
+            }
+            if (currentUserId != null && (currentUserId.equals(uploaderId) || currentUserId.equals(ownerId))) {
                 return;
             }
         }
