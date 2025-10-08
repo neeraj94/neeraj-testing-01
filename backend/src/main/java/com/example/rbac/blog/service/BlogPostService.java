@@ -111,9 +111,11 @@ public class BlogPostService {
         if (slug == null || slug.isBlank()) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "Post slug is required");
         }
-        BlogPost post = blogPostRepository.findBySlugIgnoreCase(slug.trim())
-                .filter(BlogPost::isPublished)
+        BlogPost post = blogPostRepository.findBySlugIgnoreCaseAndPublishedTrue(slug.trim())
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Post not found"));
+        if (post.getPublishedAt() == null) {
+            throw new ApiException(HttpStatus.NOT_FOUND, "Post not found");
+        }
         return blogPostMapper.toPublicDto(post);
     }
 

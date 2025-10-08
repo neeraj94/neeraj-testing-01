@@ -14,6 +14,9 @@ public interface BlogPostRepository extends JpaRepository<BlogPost, Long>, JpaSp
 
     Optional<BlogPost> findBySlugIgnoreCase(String slug);
 
+    @EntityGraph(attributePaths = "category")
+    Optional<BlogPost> findBySlugIgnoreCaseAndPublishedTrue(String slug);
+
     boolean existsBySlugIgnoreCase(String slug);
 
     boolean existsBySlugIgnoreCaseAndIdNot(String slug, Long id);
