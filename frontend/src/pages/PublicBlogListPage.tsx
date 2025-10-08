@@ -6,7 +6,11 @@ import type { BlogCategory, PublicBlogPost, PublicBlogPostPage } from '../types/
 
 const DEFAULT_PAGE_SIZE = 9;
 
-const stripHtml = (value: string) => value.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
+const stripHtml = (value?: string | null) =>
+  (value ?? '')
+    .replace(/<[^>]*>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .trim();
 
 const PublicBlogListPage = () => {
   const [page, setPage] = useState(0);

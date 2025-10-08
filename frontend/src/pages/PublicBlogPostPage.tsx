@@ -4,7 +4,11 @@ import { useQuery } from '@tanstack/react-query';
 import api from '../services/http';
 import type { PublicBlogPost } from '../types/blog';
 
-const stripHtml = (value: string) => value.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
+const stripHtml = (value?: string | null) =>
+  (value ?? '')
+    .replace(/<[^>]*>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .trim();
 
 const PublicBlogPostPage = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -121,7 +125,7 @@ const PublicBlogPostPage = () => {
         <article className="mx-auto max-w-none py-10">
           <div
             className="space-y-4 text-base leading-relaxed text-slate-700"
-            dangerouslySetInnerHTML={{ __html: post.description }}
+            dangerouslySetInnerHTML={{ __html: post.description ?? '' }}
           />
         </article>
         <aside className="mb-12 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
