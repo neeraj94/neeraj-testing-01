@@ -112,9 +112,11 @@ const GalleryPage = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [activeMenuId, setActiveMenuId] = useState<number | null>(null);
+  const [activeFolderMenuId, setActiveFolderMenuId] = useState<number | null>(null);
   const [detailsModal, setDetailsModal] = useState<DetailsModalState | null>(null);
   const [isSharedExpanded, setIsSharedExpanded] = useState(false);
   const [sharedSearch, setSharedSearch] = useState('');
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
 
   const granted = (grantedPermissions as PermissionKey[]) ?? [];
   const currentUserId = user?.id ?? null;
@@ -126,6 +128,19 @@ const GalleryPage = () => {
   const canDeleteAll = useMemo(() => hasAnyPermission(granted, ['GALLERY_DELETE_ALL']), [granted]);
   const canDeleteOwn = useMemo(() => hasAnyPermission(granted, ['GALLERY_DELETE_OWN']), [granted]);
   const canViewAll = useMemo(() => hasAnyPermission(granted, ['GALLERY_VIEW_ALL']), [granted]);
+  const canManageFolders = useMemo(() => canUpload || canEdit, [canUpload, canEdit]);
+
+  useEffect(() => {
+    if (!canViewAll) {
+      if (ownerFilter !== currentUserId) {
+        setOwnerFilter(currentUserId);
+      }
+      return;
+    }
+    if (ownerFilter === null && currentUserId !== null) {
+      setOwnerFilter(currentUserId);
+    }
+  }, [canViewAll, currentUserId, ownerFilter]);
 
   useEffect(() => {
     if (!canViewAll) {
@@ -151,7 +166,10 @@ const GalleryPage = () => {
     if (typeof window === 'undefined') {
       return;
     }
-    const handleDocumentClick = () => setActiveMenuId(null);
+    const handleDocumentClick = () => {
+      setActiveMenuId(null);
+      setActiveFolderMenuId(null);
+    };
     document.addEventListener('click', handleDocumentClick);
     return () => {
       document.removeEventListener('click', handleDocumentClick);
@@ -217,13 +235,22 @@ const GalleryPage = () => {
 
   const uploadFiles = useMutation({
     mutationFn: async (files: File[]) => {
+      setUploadProgress(0);
       const formData = new FormData();
       files.forEach((file) => formData.append('files', file));
       if (folderFilter !== null) {
         formData.append('folderId', folderFilter.toString());
       }
       const { data } = await api.post<GalleryFile[]>('/gallery/files', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
+        headers: { 'Content-Type': 'multipart/form-data' },
+        onUploadProgress: (event) => {
+          if (!event.total) {
+            setUploadProgress((previous) => (previous === null ? 0 : previous));
+            return;
+          }
+          const progress = Math.round((event.loaded / event.total) * 100);
+          setUploadProgress(progress);
+        }
       });
       return data;
     },
@@ -231,9 +258,11 @@ const GalleryPage = () => {
       notify({ type: 'success', message: uploaded.length === 1 ? 'File uploaded successfully.' : 'Files uploaded successfully.' });
       invalidateGallery();
       setSelectedIds([]);
+      setUploadProgress(null);
     },
     onError: () => {
       notify({ type: 'error', message: 'Unable to upload files. Please check the allowed file types.' });
+      setUploadProgress(null);
     }
   });
 
@@ -288,7 +317,40 @@ const GalleryPage = () => {
     }
   });
 
-  const files = filesQuery.data?.content ?? [];
+  const deleteFolder = useMutation({
+    mutationFn: async (folderId: number) => {
+      await api.delete(`/gallery/folders/${folderId}`);
+    },
+    onSuccess: () => {
+      notify({ type: 'success', message: 'Folder deleted successfully.' });
+      queryClient.invalidateQueries({ queryKey: ['gallery', 'folders'] });
+      invalidateGallery();
+      setSelectedIds([]);
+      setActiveFolderMenuId(null);
+    },
+    onError: (error: unknown) => {
+      let message: string | undefined;
+      if (typeof error === 'object' && error !== null && 'response' in error) {
+        const response = (error as { response?: unknown }).response;
+        if (response && typeof response === 'object' && 'data' in response) {
+          const data = (response as { data?: unknown }).data;
+          if (data && typeof data === 'object' && 'message' in data && typeof (data as { message?: unknown }).message === 'string') {
+            message = (data as { message: string }).message;
+          }
+        }
+      }
+      notify({ type: 'error', message: message ?? 'Unable to delete the folder. Ensure it is empty first.' });
+      setActiveFolderMenuId(null);
+    }
+  });
+
+  const queryFiles = filesQuery.data?.content ?? [];
+  const files = useMemo(() => {
+    if (folderFilter === null) {
+      return queryFiles;
+    }
+    return queryFiles.filter((file) => (file.folderId ?? null) === folderFilter);
+  }, [queryFiles, folderFilter]);
   const totalPages = filesQuery.data?.totalPages ?? 0;
 
   const allSelected = files.length > 0 && selectedIds.length === files.length;
@@ -323,10 +385,13 @@ const GalleryPage = () => {
     if (!selectedIds.length) {
       return;
     }
+    setActiveMenuId(null);
+    setActiveFolderMenuId(null);
     deleteFiles.mutate(selectedIds);
   };
 
   const handleDeleteSingle = (id: number) => {
+    setActiveMenuId(null);
     deleteFiles.mutate([id]);
   };
 
@@ -392,6 +457,42 @@ const GalleryPage = () => {
       )}
     </>
   );
+
+  const renderFolderMenu = (folder: GalleryFolder & { id: number }) => {
+    const canDeleteFolder = canManageFolders && !folder.root;
+    const isDeleting = deleteFolder.isPending && activeFolderMenuId === folder.id;
+    return (
+      <>
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            setActiveFolderMenuId(null);
+            setActiveMenuId(null);
+            handleFolderOpen(folder.id);
+          }}
+          className="w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-primary"
+        >
+          Open
+        </button>
+        {canDeleteFolder && (
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              setActiveFolderMenuId(null);
+              setActiveMenuId(null);
+              deleteFolder.mutate(folder.id);
+            }}
+            disabled={isDeleting}
+            className="w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-rose-600 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isDeleting ? 'Deleting…' : 'Delete'}
+          </button>
+        )}
+      </>
+    );
+  };
 
   const foldersData = foldersQuery.data ?? [];
   const folderMap = useMemo(() => {
@@ -509,6 +610,7 @@ const GalleryPage = () => {
 
   useEffect(() => {
     setActiveMenuId(null);
+    setActiveFolderMenuId(null);
   }, [viewMode, files]);
 
   const activeOwnerId = useMemo(() => {
@@ -609,6 +711,8 @@ const GalleryPage = () => {
     setFolderFilter(null);
     setSelectedIds([]);
     setIsSidebarOpen(false);
+    setActiveFolderMenuId(null);
+    setActiveMenuId(null);
   };
 
   const handleSelectSharedOwner = (ownerId: number) => {
@@ -616,6 +720,8 @@ const GalleryPage = () => {
     setFolderFilter(null);
     setSelectedIds([]);
     setIsSidebarOpen(false);
+    setActiveFolderMenuId(null);
+    setActiveMenuId(null);
   };
 
   const handleFolderOpen = (id: number) => {
@@ -624,6 +730,7 @@ const GalleryPage = () => {
     const ownerIdForFolder = folder?.ownerId ?? (canViewAll ? ownerFilter : currentUserId) ?? null;
     setOwnerFilter(ownerIdForFolder);
     setSelectedIds([]);
+    setActiveFolderMenuId(null);
   };
 
   const handleBreadcrumbClick = (folderId: number | null, ownerId: number | null, isLast: boolean) => {
@@ -647,6 +754,7 @@ const GalleryPage = () => {
       return;
     }
     setSelectedIds([]);
+    setActiveFolderMenuId(null);
   };
 
 
@@ -667,6 +775,21 @@ const GalleryPage = () => {
         onChange={handleFileInputChange}
         disabled={!canUpload || uploadFiles.isPending}
       />
+
+      {uploadProgress !== null && (
+        <div className="rounded-3xl border border-primary/30 bg-primary/5 p-4 shadow-sm">
+          <div className="flex items-center justify-between text-sm font-semibold text-primary">
+            <span>Uploading files…</span>
+            <span>{Math.max(0, Math.min(uploadProgress, 100))}%</span>
+          </div>
+          <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-primary/10">
+            <div
+              className="h-full rounded-full bg-primary transition-all duration-200"
+              style={{ width: `${Math.max(0, Math.min(uploadProgress, 100))}%` }}
+            />
+          </div>
+        </div>
+      )}
 
       <div className="lg:hidden">
         <button
@@ -953,11 +1076,34 @@ const GalleryPage = () => {
                       onClick={() => handleFolderOpen(folder.id)}
                       className="group flex h-full flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-left transition hover:-translate-y-1 hover:border-primary hover:bg-white hover:shadow-lg"
                     >
-                      <div className="flex items-center justify-between">
+                      <div className="relative flex items-center justify-between gap-2">
                         <span className="text-3xl">📁</span>
-                        <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-500 shadow-sm">
-                          {resolveOwnerLabel(folder.ownerId ?? null)}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-500 shadow-sm">
+                            {resolveOwnerLabel(folder.ownerId ?? null)}
+                          </span>
+                          {canManageFolders && !folder.root && (
+                            <button
+                              type="button"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                setActiveMenuId(null);
+                                setActiveFolderMenuId((previous) => (previous === folder.id ? null : folder.id));
+                              }}
+                              className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-base text-slate-500 shadow-sm transition hover:border-primary hover:text-primary"
+                            >
+                              ⋮
+                            </button>
+                          )}
+                        </div>
+                        {activeFolderMenuId === folder.id && (
+                          <div
+                            className="absolute right-0 top-10 z-20 w-48 rounded-xl border border-slate-200 bg-white p-2 shadow-xl"
+                            onClick={(event) => event.stopPropagation()}
+                          >
+                            {renderFolderMenu(folder)}
+                          </div>
+                        )}
                       </div>
                       <div className="min-w-0">
                         <p className="truncate text-sm font-semibold text-slate-900">{folder.name}</p>
@@ -1090,17 +1236,42 @@ const GalleryPage = () => {
                           <td className="px-4 py-3 text-slate-500">—</td>
                           <td className="px-4 py-3 text-slate-600">{resolveOwnerLabel(folder.ownerId ?? null)}</td>
                           <td className="px-4 py-3 text-slate-500">—</td>
-                          <td className="px-4 py-3 text-right">
-                            <button
-                              type="button"
-                              onClick={() => handleFolderOpen(folder.id)}
-                              className="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 transition hover:border-primary hover:text-primary"
-                            >
-                              Open
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
+                      <td className="px-4 py-3 text-right">
+                        <div className="inline-flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleFolderOpen(folder.id)}
+                            className="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 transition hover:border-primary hover:text-primary"
+                          >
+                            Open
+                          </button>
+                          {canManageFolders && !folder.root && (
+                            <div className="relative">
+                              <button
+                                type="button"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  setActiveMenuId(null);
+                                  setActiveFolderMenuId((previous) => (previous === folder.id ? null : folder.id));
+                                }}
+                                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-lg text-slate-500 transition hover:border-primary hover:text-primary"
+                              >
+                                ⋮
+                              </button>
+                              {activeFolderMenuId === folder.id && (
+                                <div
+                                  className="absolute right-0 top-10 z-20 w-48 rounded-xl border border-slate-200 bg-white p-2 shadow-xl"
+                                  onClick={(event) => event.stopPropagation()}
+                                >
+                                  {renderFolderMenu(folder)}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
                       {files.map((file) => {
                         const isOwner = currentUserId !== null && currentUserId === (file.uploadedById ?? null);
                         const canDeleteFile = canDeleteAll || (canDeleteOwn && isOwner);

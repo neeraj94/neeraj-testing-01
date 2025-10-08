@@ -248,6 +248,28 @@ public class GalleryService {
         return toDto(saved);
     }
 
+    @Transactional
+    public void deleteFolder(Long id, UserPrincipal principal) {
+        if (id == null) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Folder id is required");
+        }
+        GalleryFolder folder = resolveFolder(id, principal);
+        enforceFolderDeletePermission(folder, principal);
+
+        List<GalleryFolder> children = folderRepository.findByParentId(folder.getId());
+        if (!children.isEmpty()) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Folder has subfolders and cannot be deleted");
+        }
+
+        long fileCount = fileRepository.countByFolderId(folder.getId());
+        if (fileCount > 0) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Folder contains files and cannot be deleted");
+        }
+
+        folderRepository.delete(folder);
+        activityRecorder.record(MODULE_NAME, "DELETE_FOLDER", "Deleted folder " + folder.getName(), "SUCCESS", buildFolderContext(folder));
+    }
+
     private void refreshChildPaths(GalleryFolder folder) {
         List<GalleryFolder> children = folderRepository.findByParentId(folder.getId());
         for (GalleryFolder child : children) {
@@ -348,6 +370,20 @@ public class GalleryService {
             }
         }
         throw new ApiException(HttpStatus.FORBIDDEN, "Not authorized to delete this file");
+    }
+
+    private void enforceFolderDeletePermission(GalleryFolder folder, UserPrincipal principal) {
+        if (hasAuthority(principal, "GALLERY_EDIT_ALL")) {
+            return;
+        }
+        if (hasAuthority(principal, "GALLERY_CREATE")) {
+            User currentUser = resolveUser(principal);
+            User owner = folder.getOwner();
+            if (currentUser != null && owner != null && Objects.equals(currentUser.getId(), owner.getId())) {
+                return;
+            }
+        }
+        throw new ApiException(HttpStatus.FORBIDDEN, "Not authorized to delete this folder");
     }
 
     private void enforceViewPermission(GalleryFile file, UserPrincipal principal) {

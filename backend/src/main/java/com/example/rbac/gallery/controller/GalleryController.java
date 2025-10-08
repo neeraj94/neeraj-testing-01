@@ -106,6 +106,13 @@ public class GalleryController {
         return galleryService.renameFolder(id, request);
     }
 
+    @DeleteMapping("/folders/{id}")
+    @PreAuthorize("hasAnyAuthority('GALLERY_EDIT_ALL','GALLERY_CREATE')")
+    public void deleteFolder(@PathVariable("id") Long id,
+                             @AuthenticationPrincipal UserPrincipal principal) {
+        galleryService.deleteFolder(id, principal);
+    }
+
     private String encodeFilename(String filename) {
         if (filename == null || filename.isBlank()) {
             return "file";
