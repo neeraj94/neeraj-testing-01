@@ -36,11 +36,12 @@ public class GalleryController {
                                                   @RequestParam(name = "sort", required = false) String sort,
                                                   @RequestParam(name = "direction", required = false) String direction,
                                                   @RequestParam(name = "folderId", required = false) Long folderId,
+                                                  @RequestParam(name = "ownerId", required = false) Long ownerId,
                                                   @RequestParam(name = "uploaderId", required = false) Long uploaderId,
                                                   @RequestParam(name = "uploader", required = false) String uploaderEmail,
                                                   @RequestParam(name = "search", required = false) String search,
                                                   @AuthenticationPrincipal UserPrincipal principal) {
-        return galleryService.list(page, size, sort, direction, folderId, uploaderId, uploaderEmail, search, principal);
+        return galleryService.list(page, size, sort, direction, folderId, ownerId, uploaderId, uploaderEmail, search, principal);
     }
 
     @PostMapping("/files")
