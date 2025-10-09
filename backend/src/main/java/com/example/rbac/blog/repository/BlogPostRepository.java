@@ -12,6 +12,7 @@ import java.util.Optional;
 
 public interface BlogPostRepository extends JpaRepository<BlogPost, Long>, JpaSpecificationExecutor<BlogPost> {
 
+    @EntityGraph(attributePaths = "category")
     Optional<BlogPost> findBySlugIgnoreCase(String slug);
 
     @EntityGraph(attributePaths = "category")

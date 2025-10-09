@@ -10,6 +10,17 @@ const stripHtml = (value?: string | null) =>
     .replace(/&nbsp;/g, ' ')
     .trim();
 
+const formatDisplayDate = (value?: string | null) => {
+  if (!value) {
+    return null;
+  }
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+  return parsed.toLocaleDateString();
+};
+
 const PublicBlogPostPage = () => {
   const { slug } = useParams<{ slug: string }>();
 
@@ -93,6 +104,8 @@ const PublicBlogPostPage = () => {
     };
   }, [metaImage]);
 
+  const publishedLabel = formatDisplayDate(post.publishedAt);
+
   return (
     <div className="min-h-screen bg-slate-50">
       <header className="bg-white shadow-sm">
@@ -112,8 +125,8 @@ const PublicBlogPostPage = () => {
           </Link>
           <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-primary/80">{post.category}</p>
           <h1 className="mt-2 text-4xl font-bold text-slate-900">{post.title}</h1>
-          {post.publishedAt && (
-            <p className="mt-2 text-sm text-slate-500">Published on {new Date(post.publishedAt).toLocaleDateString()}</p>
+          {publishedLabel && (
+            <p className="mt-2 text-sm text-slate-500">Published on {publishedLabel}</p>
           )}
         </div>
       </header>

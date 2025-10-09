@@ -107,13 +107,20 @@ public class BlogPostService {
         return blogPostMapper.toDto(post);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public PublicBlogPostDto getPublishedPost(String slug) {
         if (slug == null || slug.isBlank()) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "Post slug is required");
         }
-        BlogPost post = blogPostRepository.findBySlugIgnoreCaseAndPublishedTrueAndPublishedAtIsNotNull(slug.trim())
+        BlogPost post = blogPostRepository.findBySlugIgnoreCase(slug.trim())
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Post not found"));
+        if (!post.isPublished()) {
+            throw new ApiException(HttpStatus.NOT_FOUND, "Post not found");
+        }
+        if (post.getPublishedAt() == null) {
+            Instant fallback = Optional.ofNullable(post.getUpdatedAt()).orElse(post.getCreatedAt());
+            post.setPublishedAt(fallback != null ? fallback : Instant.now());
+        }
         return blogPostMapper.toPublicDto(post);
     }
 

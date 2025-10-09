@@ -12,6 +12,17 @@ const stripHtml = (value?: string | null) =>
     .replace(/&nbsp;/g, ' ')
     .trim();
 
+const formatDisplayDate = (value?: string | null) => {
+  if (!value) {
+    return null;
+  }
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+  return parsed.toLocaleDateString();
+};
+
 const PublicBlogListPage = () => {
   const [page, setPage] = useState(0);
   const [searchDraft, setSearchDraft] = useState('');
@@ -133,6 +144,7 @@ const PublicBlogListPage = () => {
           <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
             {cards.map((post) => {
               const banner = buildMediaUrl(post.bannerImage) ?? 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1200&q=80';
+              const publishedLabel = formatDisplayDate(post.publishedAt);
               return (
                 <article
                   key={post.slug}
@@ -144,7 +156,7 @@ const PublicBlogListPage = () => {
                   <div className="flex flex-1 flex-col px-5 py-4">
                     <div className="flex items-center justify-between text-xs text-slate-400">
                       <span className="font-semibold uppercase tracking-wide text-primary/80">{post.category}</span>
-                      {post.publishedAt && <time dateTime={post.publishedAt}>{new Date(post.publishedAt).toLocaleDateString()}</time>}
+                      {publishedLabel && <time dateTime={post.publishedAt ?? undefined}>{publishedLabel}</time>}
                     </div>
                     <h2 className="mt-3 text-lg font-semibold text-slate-900">
                       <Link to={`/blog/${post.slug}`} className="hover:text-primary">
