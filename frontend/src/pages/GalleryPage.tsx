@@ -32,16 +32,11 @@ type FolderModalState = {
   parentId: number | null;
 };
 
-type FolderTreeNode = {
-  key: string;
+type OwnerSummary = {
+  ownerId: number;
   label: string;
-  folderId: number | null;
-  ownerId: number | null;
-  depth: number;
-  children: FolderTreeNode[];
   description?: string;
-  isSynthetic: boolean;
-  isSelectable: boolean;
+  ownerKey?: string | null;
 };
 
 type DetailsModalState = {
@@ -97,140 +92,6 @@ const resolveFileUrl = (id: number, token?: string | null) => {
   return url.toString();
 };
 
-const buildFolderTree = (
-  folders: GalleryFolder[],
-  currentUserId: number | null,
-  canViewAll: boolean
-): FolderTreeNode[] => {
-  const concreteFolders = folders.filter((folder): folder is GalleryFolder & { id: number } => folder.id !== null);
-  const grouped = new Map<number | null, (GalleryFolder & { id: number })[]>();
-
-  concreteFolders.forEach((folder) => {
-    const ownerId = folder.ownerId ?? null;
-    const existing = grouped.get(ownerId);
-    if (existing) {
-      existing.push(folder);
-    } else {
-      grouped.set(ownerId, [folder]);
-    }
-  });
-
-  if (currentUserId !== null && !grouped.has(currentUserId)) {
-    grouped.set(currentUserId, []);
-  }
-
-  const buildHierarchy = (
-    items: (GalleryFolder & { id: number })[],
-    parentId: number | null,
-    depth: number
-  ): FolderTreeNode[] => {
-    const children = items.filter((item) => (item.parentId ?? null) === parentId);
-    children.sort((a, b) => a.name.localeCompare(b.name));
-    return children.map((child) => ({
-      key: `folder-${child.id}`,
-      label: child.name,
-      folderId: child.id,
-      ownerId: child.ownerId ?? null,
-      depth,
-      description: undefined,
-      isSynthetic: false,
-      isSelectable: true,
-      children: buildHierarchy(items, child.id, depth + 1)
-    }));
-  };
-
-  const resolveOwnerMeta = (ownerId: number | null) => {
-    const items = grouped.get(ownerId) ?? [];
-    const sample = items[0];
-    if (ownerId === null) {
-      return {
-        label: canViewAll ? 'Shared Files' : 'My Files',
-        description: canViewAll ? 'Files without a specific owner' : undefined
-      };
-    }
-    if (currentUserId !== null && ownerId === currentUserId) {
-      return {
-        label: 'My Files',
-        description: sample?.ownerEmail ?? sample?.ownerName ?? undefined
-      };
-    }
-    return {
-      label: sample?.ownerKey ?? sample?.ownerEmail ?? sample?.ownerName ?? `User ${ownerId}`,
-      description: sample?.ownerEmail ?? sample?.ownerName ?? undefined
-    };
-  };
-
-  const createOwnerNode = (ownerId: number | null, depth: number): FolderTreeNode => {
-    const meta = resolveOwnerMeta(ownerId);
-    const items = grouped.get(ownerId) ?? [];
-    return {
-      key: ownerId === null ? 'owner-unassigned' : `owner-${ownerId}`,
-      label: meta.label,
-      folderId: null,
-      ownerId,
-      depth,
-      description: meta.description,
-      isSynthetic: true,
-      isSelectable: ownerId !== null,
-      children: buildHierarchy(items, null, depth + 1)
-    };
-  };
-
-  const rootNode: FolderTreeNode = {
-    key: 'scope-all-files',
-    label: 'All Files',
-    folderId: null,
-    ownerId: null,
-    depth: 0,
-    description: canViewAll ? 'Everything that has been uploaded' : 'Your personal workspace',
-    isSynthetic: true,
-    isSelectable: true,
-    children: []
-  };
-
-  const rootChildren: FolderTreeNode[] = [];
-
-  if (currentUserId !== null || !canViewAll) {
-    const myItems = grouped.get(currentUserId ?? null) ?? [];
-    rootChildren.push({
-      key: 'scope-my-files',
-      label: 'My Files',
-      folderId: null,
-      ownerId: currentUserId ?? null,
-      depth: 1,
-      description: canViewAll ? 'Files that belong to you' : undefined,
-      isSynthetic: true,
-      isSelectable: true,
-      children: buildHierarchy(myItems, null, 2)
-    });
-  }
-
-  if (canViewAll) {
-    const otherOwnerIds = Array.from(grouped.keys()).filter((ownerId) => ownerId !== currentUserId);
-    const otherNodes = otherOwnerIds.map((ownerId) => createOwnerNode(ownerId, 2));
-    otherNodes.sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: 'base' }));
-    if (otherNodes.length > 0) {
-      rootChildren.push({
-        key: 'scope-all-users',
-        label: 'All Users Files',
-        folderId: null,
-        ownerId: null,
-        depth: 1,
-        description: 'All other users',
-        isSynthetic: true,
-        isSelectable: false,
-        children: otherNodes.map((node) => ({
-          ...node,
-          depth: 2
-        }))
-      });
-    }
-  }
-
-  rootNode.children = rootChildren;
-  return [rootNode];
-};
-
 const GalleryPage = () => {
   const queryClient = useQueryClient();
   const { notify } = useToast();
@@ -241,7 +102,7 @@ const GalleryPage = () => {
   const [pageSize, setPageSize] = useState(20);
   const [sortValue, setSortValue] = useState<SortOptionValue>('newest');
   const [folderFilter, setFolderFilter] = useState<number | null>(null);
-  const [ownerFilter, setOwnerFilter] = useState<number | null>(null);
+  const [ownerFilter, setOwnerFilter] = useState<number | null>(user?.id ?? null);
   const [searchDraft, setSearchDraft] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [uploaderFilter, setUploaderFilter] = useState('');
@@ -249,19 +110,37 @@ const GalleryPage = () => {
   const [editModal, setEditModal] = useState<EditModalState | null>(null);
   const [folderModal, setFolderModal] = useState<FolderModalState | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [expandedNodes, setExpandedNodes] = useState<Set<string>>(() => new Set());
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [activeMenuId, setActiveMenuId] = useState<number | null>(null);
+  const [activeFolderMenuId, setActiveFolderMenuId] = useState<number | null>(null);
   const [detailsModal, setDetailsModal] = useState<DetailsModalState | null>(null);
+  const [isSharedExpanded, setIsSharedExpanded] = useState(false);
+  const [sharedSearch, setSharedSearch] = useState('');
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
 
   const granted = (grantedPermissions as PermissionKey[]) ?? [];
   const currentUserId = user?.id ?? null;
+  const currentUserName = user?.fullName ?? null;
+  const currentUserEmail = user?.email ?? null;
 
   const canUpload = useMemo(() => hasAnyPermission(granted, ['GALLERY_CREATE']), [granted]);
   const canEdit = useMemo(() => hasAnyPermission(granted, ['GALLERY_EDIT_ALL']), [granted]);
   const canDeleteAll = useMemo(() => hasAnyPermission(granted, ['GALLERY_DELETE_ALL']), [granted]);
   const canDeleteOwn = useMemo(() => hasAnyPermission(granted, ['GALLERY_DELETE_OWN']), [granted]);
   const canViewAll = useMemo(() => hasAnyPermission(granted, ['GALLERY_VIEW_ALL']), [granted]);
+  const canManageFolders = useMemo(() => canUpload || canEdit, [canUpload, canEdit]);
+
+  useEffect(() => {
+    if (!canViewAll) {
+      if (ownerFilter !== currentUserId) {
+        setOwnerFilter(currentUserId);
+      }
+      return;
+    }
+    if (ownerFilter === null && currentUserId !== null) {
+      setOwnerFilter(currentUserId);
+    }
+  }, [canViewAll, currentUserId, ownerFilter]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -275,7 +154,10 @@ const GalleryPage = () => {
     if (typeof window === 'undefined') {
       return;
     }
-    const handleDocumentClick = () => setActiveMenuId(null);
+    const handleDocumentClick = () => {
+      setActiveMenuId(null);
+      setActiveFolderMenuId(null);
+    };
     document.addEventListener('click', handleDocumentClick);
     return () => {
       document.removeEventListener('click', handleDocumentClick);
@@ -318,8 +200,10 @@ const GalleryPage = () => {
       };
       if (folderFilter !== null) {
         params.folderId = folderFilter;
-      } else if (canViewAll && ownerFilter !== null) {
-        params.uploaderId = ownerFilter;
+      }
+      const effectiveOwnerId = canViewAll ? ownerFilter : currentUserId;
+      if (effectiveOwnerId !== null) {
+        params.ownerId = effectiveOwnerId;
       }
       if (searchTerm) {
         params.search = searchTerm;
@@ -339,13 +223,22 @@ const GalleryPage = () => {
 
   const uploadFiles = useMutation({
     mutationFn: async (files: File[]) => {
+      setUploadProgress(0);
       const formData = new FormData();
       files.forEach((file) => formData.append('files', file));
       if (folderFilter !== null) {
         formData.append('folderId', folderFilter.toString());
       }
       const { data } = await api.post<GalleryFile[]>('/gallery/files', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
+        headers: { 'Content-Type': 'multipart/form-data' },
+        onUploadProgress: (event) => {
+          if (!event.total) {
+            setUploadProgress((previous) => (previous === null ? 0 : previous));
+            return;
+          }
+          const progress = Math.round((event.loaded / event.total) * 100);
+          setUploadProgress(progress);
+        }
       });
       return data;
     },
@@ -353,9 +246,11 @@ const GalleryPage = () => {
       notify({ type: 'success', message: uploaded.length === 1 ? 'File uploaded successfully.' : 'Files uploaded successfully.' });
       invalidateGallery();
       setSelectedIds([]);
+      setUploadProgress(null);
     },
     onError: () => {
       notify({ type: 'error', message: 'Unable to upload files. Please check the allowed file types.' });
+      setUploadProgress(null);
     }
   });
 
@@ -410,7 +305,40 @@ const GalleryPage = () => {
     }
   });
 
-  const files = filesQuery.data?.content ?? [];
+  const deleteFolder = useMutation({
+    mutationFn: async (folderId: number) => {
+      await api.delete(`/gallery/folders/${folderId}`);
+    },
+    onSuccess: () => {
+      notify({ type: 'success', message: 'Folder deleted successfully.' });
+      queryClient.invalidateQueries({ queryKey: ['gallery', 'folders'] });
+      invalidateGallery();
+      setSelectedIds([]);
+      setActiveFolderMenuId(null);
+    },
+    onError: (error: unknown) => {
+      let message: string | undefined;
+      if (typeof error === 'object' && error !== null && 'response' in error) {
+        const response = (error as { response?: unknown }).response;
+        if (response && typeof response === 'object' && 'data' in response) {
+          const data = (response as { data?: unknown }).data;
+          if (data && typeof data === 'object' && 'message' in data && typeof (data as { message?: unknown }).message === 'string') {
+            message = (data as { message: string }).message;
+          }
+        }
+      }
+      notify({ type: 'error', message: message ?? 'Unable to delete the folder. Ensure it is empty first.' });
+      setActiveFolderMenuId(null);
+    }
+  });
+
+  const queryFiles = filesQuery.data?.content ?? [];
+  const files = useMemo(() => {
+    if (folderFilter === null) {
+      return queryFiles;
+    }
+    return queryFiles.filter((file) => (file.folderId ?? null) === folderFilter);
+  }, [queryFiles, folderFilter]);
   const totalPages = filesQuery.data?.totalPages ?? 0;
 
   const allSelected = files.length > 0 && selectedIds.length === files.length;
@@ -445,10 +373,13 @@ const GalleryPage = () => {
     if (!selectedIds.length) {
       return;
     }
+    setActiveMenuId(null);
+    setActiveFolderMenuId(null);
     deleteFiles.mutate(selectedIds);
   };
 
   const handleDeleteSingle = (id: number) => {
+    setActiveMenuId(null);
     deleteFiles.mutate([id]);
   };
 
@@ -515,6 +446,42 @@ const GalleryPage = () => {
     </>
   );
 
+  const renderFolderMenu = (folder: GalleryFolder & { id: number }) => {
+    const canDeleteFolder = canManageFolders && !folder.root;
+    const isDeleting = deleteFolder.isPending && activeFolderMenuId === folder.id;
+    return (
+      <>
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            setActiveFolderMenuId(null);
+            setActiveMenuId(null);
+            handleFolderOpen(folder.id);
+          }}
+          className="w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-primary"
+        >
+          Open
+        </button>
+        {canDeleteFolder && (
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              setActiveFolderMenuId(null);
+              setActiveMenuId(null);
+              deleteFolder.mutate(folder.id);
+            }}
+            disabled={isDeleting}
+            className="w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-rose-600 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isDeleting ? 'Deleting…' : 'Delete'}
+          </button>
+        )}
+      </>
+    );
+  };
+
   const foldersData = foldersQuery.data ?? [];
   const folderMap = useMemo(() => {
     const map = new Map<number, GalleryFolder & { id: number }>();
@@ -526,6 +493,51 @@ const GalleryPage = () => {
     return map;
   }, [foldersData]);
 
+  const ownerSummaryMap = useMemo(() => {
+    const map = new Map<number, OwnerSummary>();
+    foldersData.forEach((folder) => {
+      if (folder.ownerId === null) {
+        return;
+      }
+      if (!map.has(folder.ownerId)) {
+        map.set(folder.ownerId, {
+          ownerId: folder.ownerId,
+          label: folder.ownerName ?? folder.ownerEmail ?? folder.ownerKey ?? `User ${folder.ownerId}`,
+          description: folder.ownerEmail ?? folder.ownerName ?? undefined,
+          ownerKey: folder.ownerKey ?? null
+        });
+      }
+    });
+    if (currentUserId !== null && !map.has(currentUserId)) {
+      map.set(currentUserId, {
+        ownerId: currentUserId,
+        label: currentUserName ?? currentUserEmail ?? `User ${currentUserId}`,
+        description: currentUserEmail ?? undefined,
+        ownerKey: null
+      });
+    }
+    return map;
+  }, [foldersData, currentUserId, currentUserName, currentUserEmail]);
+
+  const sharedOwners = useMemo(() => {
+    const owners = Array.from(ownerSummaryMap.values()).filter((summary) => summary.ownerId !== currentUserId);
+    owners.sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: 'base' }));
+    return owners;
+  }, [ownerSummaryMap, currentUserId]);
+
+  const filteredSharedOwners = useMemo(() => {
+    const term = sharedSearch.trim().toLowerCase();
+    if (!term) {
+      return sharedOwners;
+    }
+    return sharedOwners.filter((owner) => {
+      const values = [owner.label, owner.description ?? '', owner.ownerKey ?? '', owner.ownerId.toString()].map((value) =>
+        value.toLowerCase()
+      );
+      return values.some((value) => value.includes(term));
+    });
+  }, [sharedOwners, sharedSearch]);
+
   const resolveOwnerLabel = useCallback(
     (ownerId: number | null) => {
       if (ownerId === null) {
@@ -534,12 +546,10 @@ const GalleryPage = () => {
       if (currentUserId !== null && ownerId === currentUserId) {
         return 'My Files';
       }
-      const match = foldersData.find(
-        (candidate): candidate is GalleryFolder & { id: number } => candidate.id !== null && candidate.ownerId === ownerId
-      );
-      return match?.ownerKey ?? match?.ownerEmail ?? match?.ownerName ?? `User ${ownerId}`;
+      const summary = ownerSummaryMap.get(ownerId);
+      return summary?.label ?? `User ${ownerId}`;
     },
-    [canViewAll, currentUserId, foldersData]
+    [canViewAll, currentUserId, ownerSummaryMap]
   );
 
   const resolveFolderName = useCallback((folderId?: number | null) => {
@@ -582,32 +592,13 @@ const GalleryPage = () => {
       </option>
     ));
 
-  const folderTree = useMemo(() => buildFolderTree(foldersData, currentUserId, canViewAll), [foldersData, currentUserId, canViewAll]);
-
-  useEffect(() => {
-    setExpandedNodes((previous) => {
-      const next = new Set(previous);
-      const expandInitial = (nodes: FolderTreeNode[]) => {
-        nodes.forEach((node) => {
-          if (node.children.length > 0 && node.depth <= 1) {
-            next.add(node.key);
-          }
-          if (node.children.length > 0) {
-            expandInitial(node.children);
-          }
-        });
-      };
-      expandInitial(folderTree);
-      return next;
-    });
-  }, [folderTree]);
-
   useEffect(() => {
     setIsSidebarOpen(false);
   }, [folderFilter, ownerFilter]);
 
   useEffect(() => {
     setActiveMenuId(null);
+    setActiveFolderMenuId(null);
   }, [viewMode, files]);
 
   const activeOwnerId = useMemo(() => {
@@ -621,15 +612,8 @@ const GalleryPage = () => {
     return currentUserId;
   }, [folderFilter, folderMap, canViewAll, ownerFilter, currentUserId]);
 
-  const shouldFilterByOwner = useMemo(() => {
-    if (folderFilter !== null) {
-      return true;
-    }
-    if (!canViewAll) {
-      return true;
-    }
-    return ownerFilter !== null;
-  }, [folderFilter, canViewAll, ownerFilter]);
+  const isViewingMyFiles = currentUserId !== null ? activeOwnerId === currentUserId : activeOwnerId === null;
+  const selectedSharedOwnerId = currentUserId !== null && activeOwnerId === currentUserId ? null : activeOwnerId;
 
   const visibleFolders = useMemo(() => {
     const targetParentId = folderFilter ?? null;
@@ -638,184 +622,104 @@ const GalleryPage = () => {
         (folder): folder is GalleryFolder & { id: number } =>
           folder.id !== null &&
           (folder.parentId ?? null) === targetParentId &&
-          (!shouldFilterByOwner || (folder.ownerId ?? null) === (activeOwnerId ?? null))
+          (activeOwnerId === null || (folder.ownerId ?? null) === activeOwnerId)
       )
       .sort((a, b) => a.name.localeCompare(b.name));
-  }, [foldersData, folderFilter, shouldFilterByOwner, activeOwnerId]);
+  }, [foldersData, folderFilter, activeOwnerId]);
 
   const headerTitle = useMemo(() => {
     if (folderFilter !== null) {
       const folder = folderMap.get(folderFilter);
       return folder?.name ?? 'Folder';
     }
-    if (canViewAll) {
-      if (ownerFilter !== null) {
-        if (currentUserId !== null && ownerFilter === currentUserId) {
-          return 'My Files';
-        }
-        const ownerName = resolveOwnerLabel(ownerFilter);
-        return `${ownerName}'s Files`;
+    if (activeOwnerId !== null) {
+      if (currentUserId !== null && activeOwnerId === currentUserId) {
+        return 'My Files';
       }
-      return 'All Files';
+      const ownerName = resolveOwnerLabel(activeOwnerId);
+      return `${ownerName}'s Files`;
     }
-    return 'My Files';
-  }, [folderFilter, folderMap, canViewAll, ownerFilter, resolveOwnerLabel, currentUserId]);
+    return canViewAll ? 'Shared Files' : 'My Files';
+  }, [folderFilter, folderMap, activeOwnerId, currentUserId, canViewAll, resolveOwnerLabel]);
 
   const headerSubtitle = useMemo(() => {
     if (folderFilter !== null) {
       return resolveFolderName(folderFilter);
     }
-    if (canViewAll) {
-      if (ownerFilter !== null) {
-        return currentUserId !== null && ownerFilter === currentUserId
-          ? 'Your personal workspace'
-          : 'Files owned by the selected user';
-      }
-      return 'Everything that has been uploaded across the workspace';
+    if (activeOwnerId !== null) {
+      return currentUserId !== null && activeOwnerId === currentUserId
+        ? 'Your personal workspace'
+        : 'Files owned by the selected user';
     }
-    return 'All of the files and folders you own';
-  }, [folderFilter, resolveFolderName, canViewAll, ownerFilter, currentUserId]);
+    return canViewAll
+      ? 'Everything that has been uploaded across the workspace'
+      : 'All of the files and folders you own';
+  }, [folderFilter, resolveFolderName, activeOwnerId, currentUserId, canViewAll]);
 
   const breadcrumbs = useMemo(() => {
-    const crumbs: { label: string; folderId: number | null; ownerId: number | null }[] = [
-      { label: 'All Files', folderId: null, ownerId: null }
-    ];
+    const crumbs: { label: string; folderId: number | null; ownerId: number | null }[] = [];
+    crumbs.push({ label: 'My Files', folderId: null, ownerId: currentUserId });
 
-    if (folderFilter !== null) {
+    const appendFolderTrail = (startId: number) => {
       const stack: (GalleryFolder & { id: number })[] = [];
-      let current = folderMap.get(folderFilter);
-      const ownerId = current?.ownerId ?? null;
+      let current = folderMap.get(startId);
       while (current) {
         stack.unshift(current);
         if (current.parentId === null) {
           break;
         }
-        const parentId = current.parentId;
-        current = parentId !== null ? folderMap.get(parentId) : undefined;
-      }
-      if (canViewAll && ownerId !== null) {
-        crumbs.push({ label: resolveOwnerLabel(ownerId), folderId: null, ownerId });
+        current = current.parentId !== null ? folderMap.get(current.parentId) : undefined;
       }
       stack.forEach((folder) => {
         crumbs.push({ label: folder.name, folderId: folder.id, ownerId: folder.ownerId ?? null });
       });
+    };
+
+    if (folderFilter !== null) {
+      const folder = folderMap.get(folderFilter);
+      const ownerId = folder?.ownerId ?? null;
+      if (canViewAll && ownerId !== null && (currentUserId === null || ownerId !== currentUserId)) {
+        crumbs.push({ label: resolveOwnerLabel(ownerId), folderId: null, ownerId });
+      } else if (canViewAll && activeOwnerId !== null && (currentUserId === null || activeOwnerId !== currentUserId)) {
+        crumbs.push({ label: resolveOwnerLabel(activeOwnerId), folderId: null, ownerId: activeOwnerId });
+      }
+      appendFolderTrail(folderFilter);
       return crumbs;
     }
 
-    if (canViewAll && ownerFilter !== null) {
-      crumbs.push({ label: resolveOwnerLabel(ownerFilter), folderId: null, ownerId: ownerFilter });
+    if (canViewAll && activeOwnerId !== null && (currentUserId === null || activeOwnerId !== currentUserId)) {
+      crumbs.push({ label: resolveOwnerLabel(activeOwnerId), folderId: null, ownerId: activeOwnerId });
     }
 
     return crumbs;
-  }, [folderFilter, ownerFilter, folderMap, canViewAll, resolveOwnerLabel]);
+  }, [folderFilter, folderMap, canViewAll, activeOwnerId, resolveOwnerLabel, currentUserId]);
 
-  const isAllScopeSelected = folderFilter === null && ownerFilter === null;
+  const handleSelectMyFiles = () => {
+    setOwnerFilter(currentUserId);
+    setFolderFilter(null);
+    setSelectedIds([]);
+    setIsSidebarOpen(false);
+    setActiveFolderMenuId(null);
+    setActiveMenuId(null);
+  };
+
+  const handleSelectSharedOwner = (ownerId: number) => {
+    setOwnerFilter(ownerId);
+    setFolderFilter(null);
+    setSelectedIds([]);
+    setIsSidebarOpen(false);
+    setActiveFolderMenuId(null);
+    setActiveMenuId(null);
+  };
 
   const handleFolderOpen = (id: number) => {
     setFolderFilter(id);
-    setOwnerFilter(null);
+    const folder = folderMap.get(id);
+    const ownerIdForFolder = folder?.ownerId ?? (canViewAll ? ownerFilter : currentUserId) ?? null;
+    setOwnerFilter(ownerIdForFolder);
     setSelectedIds([]);
+    setActiveFolderMenuId(null);
   };
-
-  const handleNodeSelection = (node: FolderTreeNode) => {
-    if (node.isSelectable === false) {
-      return;
-    }
-    if (node.folderId !== null) {
-      setFolderFilter(node.folderId);
-      setOwnerFilter(null);
-    } else {
-      setOwnerFilter(canViewAll ? node.ownerId ?? null : null);
-      setFolderFilter(null);
-    }
-    setSelectedIds([]);
-    setIsSidebarOpen(false);
-  };
-
-  const toggleNodeExpansion = (node: FolderTreeNode) => {
-    if (!node.children.length) {
-      return;
-    }
-    setExpandedNodes((previous) => {
-      const next = new Set(previous);
-      if (next.has(node.key)) {
-        next.delete(node.key);
-      } else {
-        next.add(node.key);
-      }
-      return next;
-    });
-  };
-
-  const renderTreeNodes = (nodes: FolderTreeNode[]) =>
-    nodes.map((node) => {
-      const isFolder = node.folderId !== null;
-      const isSelectable = node.isSelectable !== false;
-      const ownerSelectionMatches = (() => {
-        if (isFolder) {
-          return false;
-        }
-        if (!canViewAll) {
-          return node.key === 'scope-my-files';
-        }
-        if (node.key === 'scope-all-files') {
-          return ownerFilter === null;
-        }
-        if (node.ownerId === null) {
-          return false;
-        }
-        return ownerFilter === node.ownerId;
-      })();
-      const isSelected =
-        isSelectable && (isFolder ? folderFilter === node.folderId : folderFilter === null && ownerSelectionMatches);
-      const hasChildren = node.children.length > 0;
-      const isExpanded = !hasChildren || expandedNodes.has(node.key);
-
-      return (
-        <div key={node.key} className="flex flex-col" style={{ marginLeft: `${node.depth * 12}px` }}>
-          <div className="flex items-center gap-1">
-            {hasChildren ? (
-              <button
-                type="button"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  toggleNodeExpansion(node);
-                }}
-                className="flex h-6 w-6 items-center justify-center rounded-md text-xs text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
-                aria-label={isExpanded ? 'Collapse' : 'Expand'}
-              >
-                {isExpanded ? '▾' : '▸'}
-              </button>
-            ) : (
-              <span className="h-6 w-6" />
-            )}
-            <button
-              type="button"
-              onClick={() => handleNodeSelection(node)}
-              disabled={!isSelectable}
-              aria-disabled={!isSelectable}
-              className={`flex min-h-[2.5rem] flex-1 items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition ${
-                isSelected
-                  ? 'bg-primary/10 text-primary'
-                  : isSelectable
-                    ? 'text-slate-600 hover:bg-slate-100'
-                    : 'cursor-default text-slate-400'
-              }`}
-            >
-              <span className="flex flex-col">
-                <span className="inline-flex items-center gap-2">
-                  <span className="text-lg">{isFolder ? '📁' : '👤'}</span>
-                  <span className="font-medium">{node.label}</span>
-                </span>
-                {node.description && <span className="ml-6 text-xs text-slate-400">{node.description}</span>}
-              </span>
-              {hasChildren && <span className="text-xs text-slate-400">{node.children.length}</span>}
-            </button>
-          </div>
-          {hasChildren && isExpanded && <div className="ml-7 mt-1 flex flex-col gap-1">{renderTreeNodes(node.children)}</div>}
-        </div>
-      );
-    });
 
   const handleBreadcrumbClick = (folderId: number | null, ownerId: number | null, isLast: boolean) => {
     if (isLast) {
@@ -823,22 +727,22 @@ const GalleryPage = () => {
     }
     if (folderId !== null) {
       setFolderFilter(folderId);
-      setOwnerFilter(null);
+      const folder = folderMap.get(folderId);
+      const ownerIdForFolder = folder?.ownerId ?? (canViewAll ? ownerFilter : currentUserId) ?? null;
+      setOwnerFilter(ownerIdForFolder);
     } else if (ownerId !== null) {
+      if (currentUserId !== null && ownerId === currentUserId) {
+        handleSelectMyFiles();
+        return;
+      }
       setOwnerFilter(ownerId);
       setFolderFilter(null);
     } else {
-      setOwnerFilter(null);
-      setFolderFilter(null);
+      handleSelectMyFiles();
+      return;
     }
     setSelectedIds([]);
-  };
-
-  const handleResetSelection = () => {
-    setOwnerFilter(null);
-    setFolderFilter(null);
-    setSelectedIds([]);
-    setIsSidebarOpen(false);
+    setActiveFolderMenuId(null);
   };
 
 
@@ -859,6 +763,21 @@ const GalleryPage = () => {
         onChange={handleFileInputChange}
         disabled={!canUpload || uploadFiles.isPending}
       />
+
+      {uploadProgress !== null && (
+        <div className="rounded-3xl border border-primary/30 bg-primary/5 p-4 shadow-sm">
+          <div className="flex items-center justify-between text-sm font-semibold text-primary">
+            <span>Uploading files…</span>
+            <span>{Math.max(0, Math.min(uploadProgress, 100))}%</span>
+          </div>
+          <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-primary/10">
+            <div
+              className="h-full rounded-full bg-primary transition-all duration-200"
+              style={{ width: `${Math.max(0, Math.min(uploadProgress, 100))}%` }}
+            />
+          </div>
+        </div>
+      )}
 
       <div className="lg:hidden">
         <button
@@ -908,21 +827,79 @@ const GalleryPage = () => {
               </button>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={handleResetSelection}
-            className={`flex items-center gap-3 rounded-2xl px-3 py-2 text-left text-sm transition ${
-              isAllScopeSelected ? 'bg-primary/10 font-semibold text-primary' : 'text-slate-600 hover:bg-slate-100'
-            }`}
-          >
-            <span className="text-xl">🗂️</span>
-            <span>All files</span>
-          </button>
-          <div className="flex flex-1 flex-col gap-1 overflow-y-auto pr-1">
-            {folderTree.length ? (
-              renderTreeNodes(folderTree)
-            ) : (
-              <p className="px-3 py-6 text-sm text-slate-400">No folders yet. Create one to get started.</p>
+          <div className="flex flex-1 flex-col gap-3 overflow-y-auto pr-1">
+            <button
+              type="button"
+              onClick={handleSelectMyFiles}
+              className={`flex items-center justify-between rounded-2xl px-3 py-2 text-left text-sm transition ${
+                isViewingMyFiles ? 'bg-primary/10 font-semibold text-primary' : 'text-slate-600 hover:bg-slate-100'
+              }`}
+            >
+              <span className="inline-flex items-center gap-3">
+                <span className="text-xl">📁</span>
+                <span>My Files</span>
+              </span>
+              {isViewingMyFiles && <span className="text-xs uppercase tracking-wide text-primary">Active</span>}
+            </button>
+            {canViewAll && (
+              <div className="rounded-2xl border border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => setIsSharedExpanded((previous) => !previous)}
+                  className={`flex w-full items-center justify-between rounded-2xl px-3 py-2 text-left text-sm font-medium transition ${
+                    selectedSharedOwnerId !== null ? 'text-primary' : 'text-slate-600 hover:bg-slate-100'
+                  }`}
+                >
+                  <span className="inline-flex items-center gap-3">
+                    <span className="text-xl">🤝</span>
+                    <span>Shared with me</span>
+                  </span>
+                  <span className="text-sm text-slate-400">{isSharedExpanded ? '▾' : '▸'}</span>
+                </button>
+                {isSharedExpanded && (
+                  <div className="space-y-3 border-t border-slate-200 px-3 py-3">
+                    <div>
+                      <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Search users</label>
+                      <input
+                        type="search"
+                        value={sharedSearch}
+                        onChange={(event) => setSharedSearch(event.target.value)}
+                        placeholder="Search by user ID"
+                        className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                      />
+                    </div>
+                    <div className="flex max-h-64 flex-col gap-1 overflow-y-auto pr-1">
+                      {filteredSharedOwners.length ? (
+                        filteredSharedOwners.map((owner) => {
+                          const isSelected = selectedSharedOwnerId === owner.ownerId;
+                          return (
+                            <button
+                              key={owner.ownerId}
+                              type="button"
+                              onClick={() => handleSelectSharedOwner(owner.ownerId)}
+                              className={`flex items-center justify-between rounded-xl px-3 py-2 text-left text-sm transition ${
+                                isSelected ? 'bg-primary/10 text-primary' : 'text-slate-600 hover:bg-slate-100'
+                              }`}
+                            >
+                              <span className="flex flex-col">
+                                <span className="font-medium">{owner.label}</span>
+                                {(owner.ownerKey || owner.description) && (
+                                  <span className="text-xs text-slate-400">
+                                    {[owner.ownerKey, owner.description].filter(Boolean).join(' • ')}
+                                  </span>
+                                )}
+                              </span>
+                              {isSelected && <span className="text-xs uppercase tracking-wide text-primary">Active</span>}
+                            </button>
+                          );
+                        })
+                      ) : (
+                        <p className="px-2 py-4 text-sm text-slate-400">No users found.</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
           </div>
         </aside>
@@ -1087,11 +1064,34 @@ const GalleryPage = () => {
                       onClick={() => handleFolderOpen(folder.id)}
                       className="group flex h-full flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-left transition hover:-translate-y-1 hover:border-primary hover:bg-white hover:shadow-lg"
                     >
-                      <div className="flex items-center justify-between">
+                      <div className="relative flex items-center justify-between gap-2">
                         <span className="text-3xl">📁</span>
-                        <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-500 shadow-sm">
-                          {resolveOwnerLabel(folder.ownerId ?? null)}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-500 shadow-sm">
+                            {resolveOwnerLabel(folder.ownerId ?? null)}
+                          </span>
+                          {canManageFolders && !folder.root && (
+                            <button
+                              type="button"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                setActiveMenuId(null);
+                                setActiveFolderMenuId((previous) => (previous === folder.id ? null : folder.id));
+                              }}
+                              className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-base text-slate-500 shadow-sm transition hover:border-primary hover:text-primary"
+                            >
+                              ⋮
+                            </button>
+                          )}
+                        </div>
+                        {activeFolderMenuId === folder.id && (
+                          <div
+                            className="absolute right-0 top-10 z-20 w-48 rounded-xl border border-slate-200 bg-white p-2 shadow-xl"
+                            onClick={(event) => event.stopPropagation()}
+                          >
+                            {renderFolderMenu(folder)}
+                          </div>
+                        )}
                       </div>
                       <div className="min-w-0">
                         <p className="truncate text-sm font-semibold text-slate-900">{folder.name}</p>
@@ -1224,17 +1224,42 @@ const GalleryPage = () => {
                           <td className="px-4 py-3 text-slate-500">—</td>
                           <td className="px-4 py-3 text-slate-600">{resolveOwnerLabel(folder.ownerId ?? null)}</td>
                           <td className="px-4 py-3 text-slate-500">—</td>
-                          <td className="px-4 py-3 text-right">
-                            <button
-                              type="button"
-                              onClick={() => handleFolderOpen(folder.id)}
-                              className="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 transition hover:border-primary hover:text-primary"
-                            >
-                              Open
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
+                      <td className="px-4 py-3 text-right">
+                        <div className="inline-flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleFolderOpen(folder.id)}
+                            className="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 transition hover:border-primary hover:text-primary"
+                          >
+                            Open
+                          </button>
+                          {canManageFolders && !folder.root && (
+                            <div className="relative">
+                              <button
+                                type="button"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  setActiveMenuId(null);
+                                  setActiveFolderMenuId((previous) => (previous === folder.id ? null : folder.id));
+                                }}
+                                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-lg text-slate-500 transition hover:border-primary hover:text-primary"
+                              >
+                                ⋮
+                              </button>
+                              {activeFolderMenuId === folder.id && (
+                                <div
+                                  className="absolute right-0 top-10 z-20 w-48 rounded-xl border border-slate-200 bg-white p-2 shadow-xl"
+                                  onClick={(event) => event.stopPropagation()}
+                                >
+                                  {renderFolderMenu(folder)}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
                       {files.map((file) => {
                         const isOwner = currentUserId !== null && currentUserId === (file.uploadedById ?? null);
                         const canDeleteFile = canDeleteAll || (canDeleteOwn && isOwner);
