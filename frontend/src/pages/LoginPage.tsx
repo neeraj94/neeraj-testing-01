@@ -31,7 +31,7 @@ const LoginPage = () => {
     const result = await dispatch(login({ email, password }));
     if (login.fulfilled.match(result)) {
       notify({ type: 'success', message: 'Signed in successfully.' });
-      navigate('/dashboard');
+      navigate('/admin');
     } else if (login.rejected.match(result)) {
       const message = result.payload ?? 'Unable to sign in right now.';
       setErrorMessage(message);
