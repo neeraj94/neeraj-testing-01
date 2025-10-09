@@ -238,6 +238,8 @@ const UsersPage = () => {
     enabled: panelMode === 'detail' && selectedUserId !== null
   });
 
+  const detailUser = selectedUserQuery.data;
+
   useEffect(() => {
     if (panelMode === 'detail' && selectedUserQuery.data) {
       const detail = selectedUserQuery.data;
@@ -489,6 +491,36 @@ const UsersPage = () => {
     },
     onSettled: () => {
       setStatusUpdateId(null);
+    }
+  });
+
+  const verifyUser = useMutation({
+    mutationFn: async (userId: number) => {
+      const { data } = await api.post<User>(`/users/${userId}/verify`);
+      return data;
+    },
+    onSuccess: (data) => {
+      notify({ type: 'success', message: 'Verification status updated.' });
+      invalidateUsers();
+      queryClient.invalidateQueries({ queryKey: ['users', 'detail', data.id] });
+    },
+    onError: (error) => {
+      notify({ type: 'error', message: extractErrorMessage(error, 'Unable to verify user.') });
+    }
+  });
+
+  const unlockUser = useMutation({
+    mutationFn: async (userId: number) => {
+      const { data } = await api.post<User>(`/users/${userId}/unlock`);
+      return data;
+    },
+    onSuccess: (data) => {
+      notify({ type: 'success', message: 'User account unlocked.' });
+      invalidateUsers();
+      queryClient.invalidateQueries({ queryKey: ['users', 'detail', data.id] });
+    },
+    onError: (error) => {
+      notify({ type: 'error', message: extractErrorMessage(error, 'Unable to unlock user account.') });
     }
   });
 
@@ -908,10 +940,33 @@ const UsersPage = () => {
                     </td>
                     <td className="px-4 py-3 text-sm text-slate-600">{user.email}</td>
                     <td className="px-4 py-3">
-                      <div className="flex items-center gap-3 text-xs font-semibold">
-                        <span className={user.active ? 'text-emerald-600' : 'text-slate-500'}>
+                      <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
+                        <span
+                          className={`inline-flex items-center gap-2 rounded-full px-2 py-1 uppercase tracking-wide ${
+                            user.active ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-500'
+                          }`}
+                        >
                           {user.active ? 'Active' : 'Inactive'}
                         </span>
+                        <span
+                          className={`inline-flex items-center gap-2 rounded-full px-2 py-1 uppercase tracking-wide ${
+                            user.emailVerifiedAt ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'
+                          }`}
+                        >
+                          {user.emailVerifiedAt ? 'Verified' : 'Unverified'}
+                        </span>
+                        {user.lockedAt && (
+                          <span className="inline-flex items-center gap-2 rounded-full bg-rose-50 px-2 py-1 uppercase tracking-wide text-rose-600">
+                            Locked
+                          </span>
+                        )}
+                        {!user.lockedAt && user.loginAttempts > 0 && (
+                          <span className="inline-flex items-center gap-2 rounded-full bg-amber-50 px-2 py-1 uppercase tracking-wide text-amber-600">
+                            {user.loginAttempts} failed
+                          </span>
+                        )}
+                      </div>
+                      <div className="mt-2 flex items-center gap-3 text-xs font-semibold">
                         <button
                           type="button"
                           onClick={(event) => {
@@ -1159,6 +1214,46 @@ const UsersPage = () => {
         Customer accounts are represented as users holding the <span className="font-semibold">CUSTOMER</span> role. Assign or
         revoke that role here to control access.
       </div>
+      {!isCreate && detailUser && (
+        <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h3 className="text-sm font-semibold text-slate-800">Account security</h3>
+          <p className="mt-1 text-xs text-slate-500">
+            Track verification and lock status for this user. Accounts lock automatically after five failed sign-in attempts.
+          </p>
+          <dl className="mt-4 space-y-3 text-sm text-slate-600">
+            <div className="flex items-center justify-between gap-4">
+              <dt className="text-slate-500">Verification status</dt>
+              <dd
+                className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide ${
+                  detailUser.emailVerifiedAt ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'
+                }`}
+              >
+                {detailUser.emailVerifiedAt ? 'Verified' : 'Pending verification'}
+              </dd>
+            </div>
+            <div className="flex items-center justify-between gap-4">
+              <dt className="text-slate-500">Failed login attempts</dt>
+              <dd className="font-semibold text-slate-700">{detailUser.loginAttempts}</dd>
+            </div>
+            <div className="flex items-center justify-between gap-4">
+              <dt className="text-slate-500">Account lock</dt>
+              <dd className="font-semibold text-slate-700">
+                {detailUser.lockedAt
+                  ? new Date(detailUser.lockedAt).toLocaleString()
+                  : 'Not locked'}
+              </dd>
+            </div>
+            <div className="flex items-center justify-between gap-4">
+              <dt className="text-slate-500">Verified on</dt>
+              <dd className="font-semibold text-slate-700">
+                {detailUser.emailVerifiedAt
+                  ? new Date(detailUser.emailVerifiedAt).toLocaleString()
+                  : 'Awaiting verification'}
+              </dd>
+            </div>
+          </dl>
+        </section>
+      )}
     </div>
   );
 
@@ -1408,13 +1503,12 @@ const UsersPage = () => {
       ? updatePermissions.isPending
       : updateUser.isPending;
     const isLoadingDetail = panelMode === 'detail' && selectedUserQuery.isLoading;
-
     const headerTitle = isCreate
       ? 'Create user or customer'
-      : selectedUserQuery.data?.fullName ?? 'Loading user…';
+      : detailUser?.fullName ?? 'Loading user…';
     const headerSubtitle = isCreate
       ? 'Provision access for an internal teammate or customer contact.'
-      : selectedUserQuery.data?.email ?? '';
+      : detailUser?.email ?? '';
 
     return (
       <form
@@ -1452,17 +1546,64 @@ const UsersPage = () => {
               {headerSubtitle && <p className="text-sm text-slate-500">{headerSubtitle}</p>}
             </div>
           </div>
-          {!isCreate && selectedUserQuery.data && (
-            <div className="flex flex-wrap gap-3 text-xs text-slate-500">
-              <span className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 font-semibold uppercase tracking-wide text-slate-600">
-                <span className={`h-2 w-2 rounded-full ${selectedUserQuery.data.active ? 'bg-emerald-500' : 'bg-slate-400'}`} />
-                {selectedUserQuery.data.active ? 'Active' : 'Inactive'}
-              </span>
-              {selectedUserQuery.data.roles.map((role) => (
-                <span key={role} className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 font-semibold uppercase tracking-wide text-slate-600">
-                  {role}
+          {!isCreate && detailUser && (
+            <div className="flex flex-col items-end gap-3">
+              <div className="flex flex-wrap items-center gap-3 text-xs font-semibold text-slate-600">
+                <span className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 uppercase tracking-wide">
+                  <span className={`h-2 w-2 rounded-full ${detailUser.active ? 'bg-emerald-500' : 'bg-slate-400'}`} />
+                  {detailUser.active ? 'Active' : 'Inactive'}
                 </span>
-              ))}
+                <span
+                  className={`inline-flex items-center gap-2 rounded-full px-3 py-1 uppercase tracking-wide ${
+                    detailUser.emailVerifiedAt ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'
+                  }`}
+                >
+                  {detailUser.emailVerifiedAt ? 'Verified' : 'Unverified'}
+                </span>
+                {detailUser.lockedAt && (
+                  <span className="inline-flex items-center gap-2 rounded-full bg-rose-50 px-3 py-1 uppercase tracking-wide text-rose-600">
+                    Locked
+                  </span>
+                )}
+                {!detailUser.lockedAt && detailUser.loginAttempts > 0 && (
+                  <span className="inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1 uppercase tracking-wide text-amber-600">
+                    {detailUser.loginAttempts} failed
+                  </span>
+                )}
+              </div>
+              {(detailUser.roles?.length ?? 0) > 0 && (
+                <div className="flex flex-wrap justify-end gap-3 text-xs font-semibold uppercase tracking-wide text-slate-600">
+                  {detailUser.roles?.map((role) => (
+                    <span key={role} className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1">
+                      {role}
+                    </span>
+                  ))}
+                </div>
+              )}
+              {canManageUsers && (
+                <div className="flex flex-wrap justify-end gap-2">
+                  {!detailUser.emailVerifiedAt && (
+                    <button
+                      type="button"
+                      onClick={() => verifyUser.mutate(detailUser.id)}
+                      disabled={verifyUser.isPending}
+                      className="inline-flex items-center justify-center rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {verifyUser.isPending ? 'Verifying…' : 'Mark as verified'}
+                    </button>
+                  )}
+                  {detailUser.lockedAt && (
+                    <button
+                      type="button"
+                      onClick={() => unlockUser.mutate(detailUser.id)}
+                      disabled={unlockUser.isPending}
+                      className="inline-flex items-center justify-center rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {unlockUser.isPending ? 'Unlocking…' : 'Unlock account'}
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </header>

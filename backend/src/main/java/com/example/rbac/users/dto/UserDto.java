@@ -16,6 +16,8 @@ public class UserDto {
     private String skypeId;
     private String emailSignature;
     private Instant emailVerifiedAt;
+    private int loginAttempts;
+    private Instant lockedAt;
     private boolean active;
     private Set<String> roles;
     private Set<String> permissions;
@@ -118,6 +120,22 @@ public class UserDto {
 
     public void setEmailVerifiedAt(Instant emailVerifiedAt) {
         this.emailVerifiedAt = emailVerifiedAt;
+    }
+
+    public int getLoginAttempts() {
+        return loginAttempts;
+    }
+
+    public void setLoginAttempts(int loginAttempts) {
+        this.loginAttempts = loginAttempts;
+    }
+
+    public Instant getLockedAt() {
+        return lockedAt;
+    }
+
+    public void setLockedAt(Instant lockedAt) {
+        this.lockedAt = lockedAt;
     }
 
     public boolean isActive() {

@@ -52,6 +52,12 @@ public class User {
     @Column(name = "email_verified_at")
     private Instant emailVerifiedAt;
 
+    @Column(name = "login_attempts", nullable = false)
+    private int loginAttempts = 0;
+
+    @Column(name = "locked_at")
+    private Instant lockedAt;
+
     @Column(name = "is_active", nullable = false)
     private boolean active = true;
 
@@ -91,6 +97,9 @@ public class User {
         createdAt = now;
         updatedAt = now;
         refreshFullName();
+        if (loginAttempts < 0) {
+            loginAttempts = 0;
+        }
     }
 
     @PreUpdate
@@ -210,6 +219,22 @@ public class User {
 
     public void setEmailVerifiedAt(Instant emailVerifiedAt) {
         this.emailVerifiedAt = emailVerifiedAt;
+    }
+
+    public int getLoginAttempts() {
+        return loginAttempts;
+    }
+
+    public void setLoginAttempts(int loginAttempts) {
+        this.loginAttempts = Math.max(loginAttempts, 0);
+    }
+
+    public Instant getLockedAt() {
+        return lockedAt;
+    }
+
+    public void setLockedAt(Instant lockedAt) {
+        this.lockedAt = lockedAt;
     }
 
     public boolean isActive() {

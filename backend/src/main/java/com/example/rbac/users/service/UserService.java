@@ -118,6 +118,8 @@ public class UserService {
         user.setLinkedinUrl(normalize(request.getLinkedinUrl()));
         user.setSkypeId(normalize(request.getSkypeId()));
         user.setEmailSignature(normalizeMultiline(request.getEmailSignature()));
+        user.setLoginAttempts(0);
+        user.setLockedAt(null);
         if (request.getRoleIds() != null && !request.getRoleIds().isEmpty()) {
             Set<Role> roles = new HashSet<>(roleRepository.findAllById(request.getRoleIds()));
             if (roles.size() != request.getRoleIds().size()) {
@@ -286,7 +288,7 @@ public class UserService {
             throw new ApiException(HttpStatus.BAD_REQUEST, "New password is required when updating your password");
         }
         user = userRepository.save(user);
-        UserDto dto = userMapper.toDto(user);
+        UserDto dto = userMapper.toDto(userRepository.findDetailedById(user.getId()).orElseThrow());
         HashMap<String, Object> context = new HashMap<>(buildUserContext(user));
         context.put("profileUpdated", true);
         activityRecorder.record("Users", "PROFILE_UPDATE", "Updated profile for user " + user.getEmail(), "SUCCESS", context);
@@ -309,6 +311,41 @@ public class UserService {
         context.put("grantedPermissions", request.getGrantedPermissionKeys());
         context.put("revokedPermissions", request.getRevokedPermissionKeys());
         activityRecorder.record("Users", "PERMISSIONS_UPDATE", "Updated direct permissions for user " + user.getEmail(), "SUCCESS", context);
+        return dto;
+    }
+
+    @PreAuthorize(USER_UPDATE_AUTHORITY)
+    @Transactional
+    public UserDto verifyUser(Long id) {
+        User user = userRepository.findDetailedById(id)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "User not found"));
+        boolean wasVerified = user.getEmailVerifiedAt() != null;
+        boolean welcomeSent = userVerificationService.markVerifiedByAdmin(user);
+        user = userRepository.save(user);
+        UserDto dto = userMapper.toDto(userRepository.findDetailedById(user.getId()).orElseThrow());
+        HashMap<String, Object> context = new HashMap<>(buildUserContext(user));
+        context.put("verified", true);
+        context.put("wasVerified", wasVerified);
+        context.put("welcomeEmailSent", welcomeSent);
+        context.put("loginAttempts", user.getLoginAttempts());
+        context.put("lockedAt", user.getLockedAt());
+        activityRecorder.record("Users", "VERIFY", "Verified user " + user.getEmail(), "SUCCESS", context);
+        return dto;
+    }
+
+    @PreAuthorize(USER_UPDATE_AUTHORITY)
+    @Transactional
+    public UserDto unlockUser(Long id) {
+        User user = userRepository.findDetailedById(id)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "User not found"));
+        user.setLockedAt(null);
+        user.setLoginAttempts(0);
+        user = userRepository.save(user);
+        UserDto dto = userMapper.toDto(user);
+        HashMap<String, Object> context = new HashMap<>(buildUserContext(user));
+        context.put("locked", false);
+        context.put("loginAttempts", user.getLoginAttempts());
+        activityRecorder.record("Users", "UNLOCK", "Unlocked user " + user.getEmail(), "SUCCESS", context);
         return dto;
     }
 
@@ -362,6 +399,9 @@ public class UserService {
             context.put("email", user.getEmail());
         }
         context.put("active", user.isActive());
+        context.put("locked", user.getLockedAt() != null);
+        context.put("loginAttempts", user.getLoginAttempts());
+        context.put("verified", user.getEmailVerifiedAt() != null);
         return context;
     }
 

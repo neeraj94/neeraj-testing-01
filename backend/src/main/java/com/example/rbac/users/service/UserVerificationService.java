@@ -66,6 +66,10 @@ public class UserVerificationService {
 
         if (token.isVerified()) {
             User user = token.getUser();
+            if (user != null) {
+                user.setLockedAt(null);
+                user.setLoginAttempts(0);
+            }
             return new VerificationResult(true, "Account already verified.", false, user != null ? user.getEmail() : null);
         }
 
@@ -74,6 +78,8 @@ public class UserVerificationService {
         User user = token.getUser();
         if (user != null) {
             user.setEmailVerifiedAt(now);
+            user.setLockedAt(null);
+            user.setLoginAttempts(0);
         }
         tokenRepository.save(token);
         if (user != null) {
@@ -86,6 +92,26 @@ public class UserVerificationService {
                 welcomeSent ? "Email verified successfully. Welcome email sent." : "Email verified successfully.",
                 welcomeSent,
                 user != null ? user.getEmail() : null);
+    }
+
+    @Transactional
+    public boolean markVerifiedByAdmin(User user) {
+        if (user == null || user.getId() == null) {
+            throw new ApiException(HttpStatus.NOT_FOUND, "User not found");
+        }
+        boolean alreadyVerified = user.getEmailVerifiedAt() != null;
+        if (!alreadyVerified) {
+            user.setEmailVerifiedAt(Instant.now());
+        }
+        user.setLockedAt(null);
+        user.setLoginAttempts(0);
+        tokenRepository.deleteByUserIdAndVerifiedAtIsNull(user.getId());
+        boolean welcomeSent = false;
+        if (!alreadyVerified) {
+            welcomeSent = emailSender.sendWelcomeEmail(user, null);
+        }
+        recordEvent("EMAIL_VERIFIED_ADMIN", user, null, alreadyVerified ? "IGNORED" : "SUCCESS", welcomeSent);
+        return welcomeSent;
     }
 
     private boolean requiresVerification(User user) {
@@ -111,7 +137,9 @@ public class UserVerificationService {
             context.put("userId", user.getId());
             context.put("email", user.getEmail());
         }
-        context.put("tokenId", token.getId());
+        if (token != null && token.getId() != null) {
+            context.put("tokenId", token.getId());
+        }
         context.put("emailSent", emailSent);
         activityRecorder.recordForUser(user, "Users", activityType, "Processed user email verification", status, context);
     }
