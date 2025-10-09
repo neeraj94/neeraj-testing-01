@@ -3,7 +3,6 @@ package com.example.rbac.settings.dto;
 public class EmailSettingsDto {
 
     private String driver;
-    private String sendmailPath;
     private String host;
     private Integer port;
     private String username;
@@ -23,14 +22,6 @@ public class EmailSettingsDto {
 
     public void setDriver(String driver) {
         this.driver = driver;
-    }
-
-    public String getSendmailPath() {
-        return sendmailPath;
-    }
-
-    public void setSendmailPath(String sendmailPath) {
-        this.sendmailPath = sendmailPath;
     }
 
     public String getHost() {

@@ -489,7 +489,6 @@ const SettingsPage = () => {
     if (section.key === 'email-smtp') {
       const driverSetting = resolveSetting('email.driver');
       const encryptionSetting = resolveSetting('email.smtp_encryption');
-      const sendmailPathSetting = resolveSetting('email.sendmail_path');
       const hostSetting = resolveSetting('email.smtp_host');
       const portSetting = resolveSetting('email.smtp_port');
       const usernameSetting = resolveSetting('email.smtp_username');
@@ -498,8 +497,6 @@ const SettingsPage = () => {
       const fromAddressSetting = resolveSetting('email.from_address');
       const replyToSetting = resolveSetting('email.reply_to');
       const bccSetting = resolveSetting('email.bcc_all');
-
-      const driverValue = driverSetting ? getStringValueForSetting(driverSetting) : 'smtp';
 
       return (
         <div className="space-y-6">
@@ -518,6 +515,9 @@ const SettingsPage = () => {
                     <p className="text-sm text-slate-500">{driverSetting.description}</p>
                   )}
                   {renderOptionButtons(driverSetting)}
+                  {!driverSetting.editable && (
+                    <p className="text-xs text-slate-500">Only SMTP transport is available for this deployment.</p>
+                  )}
                 </div>
               )}
               {encryptionSetting && (
@@ -529,16 +529,12 @@ const SettingsPage = () => {
                   {renderOptionButtons(encryptionSetting)}
                 </div>
               )}
-              {driverValue === 'sendmail' ? (
-                renderInputField(sendmailPathSetting)
-              ) : (
-                <div className="grid gap-5 md:grid-cols-2">
-                  {renderInputField(hostSetting)}
-                  {renderInputField(portSetting, 'number')}
-                  {renderInputField(usernameSetting)}
-                  {renderInputField(passwordSetting, 'password')}
-                </div>
-              )}
+              <div className="grid gap-5 md:grid-cols-2">
+                {renderInputField(hostSetting)}
+                {renderInputField(portSetting, 'number')}
+                {renderInputField(usernameSetting)}
+                {renderInputField(passwordSetting, 'password')}
+              </div>
               <div className="grid gap-5 md:grid-cols-2">
                 {renderInputField(fromNameSetting)}
                 {renderInputField(fromAddressSetting)}

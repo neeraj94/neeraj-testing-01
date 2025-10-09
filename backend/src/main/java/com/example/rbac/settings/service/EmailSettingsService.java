@@ -37,7 +37,6 @@ public class EmailSettingsService {
     private static final Logger log = LoggerFactory.getLogger(EmailSettingsService.class);
     private static final List<String> EMAIL_SETTING_CODES = List.of(
             "email.driver",
-            "email.sendmail_path",
             "email.smtp_host",
             "email.smtp_port",
             "email.smtp_username",
@@ -68,7 +67,6 @@ public class EmailSettingsService {
 
         EmailSettingsDto dto = new EmailSettingsDto();
         dto.setDriver(normalizeDriver(rawValue(byCode, "email.driver")));
-        dto.setSendmailPath(trimmedValue(byCode, "email.sendmail_path"));
         dto.setHost(trimmedValue(byCode, "email.smtp_host"));
         dto.setPort(integerValue(byCode, "email.smtp_port"));
         dto.setUsername(trimmedValue(byCode, "email.smtp_username"));
@@ -160,8 +158,8 @@ public class EmailSettingsService {
                 .map(String::trim)
                 .map(value -> value.toLowerCase(Locale.ROOT))
                 .orElse("smtp");
-        if (!"smtp".equals(driver) && !"phpmailer".equals(driver)) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "Test emails are only supported when the SMTP driver is selected.");
+        if (!"smtp".equals(driver)) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Test emails are only supported when SMTP is enabled.");
         }
 
         String host = Optional.ofNullable(settings.getHost()).map(String::trim).orElse("");
@@ -288,7 +286,11 @@ public class EmailSettingsService {
         if (value == null || value.isBlank()) {
             return "smtp";
         }
-        return value.trim();
+        String normalized = value.trim().toLowerCase(Locale.ROOT);
+        if (!"smtp".equals(normalized)) {
+            return "smtp";
+        }
+        return normalized;
     }
 
     private String normalizeEncryption(String value) {
