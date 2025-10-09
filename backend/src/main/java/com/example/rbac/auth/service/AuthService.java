@@ -123,13 +123,18 @@ public class AuthService {
                 throw new ApiException(HttpStatus.UNAUTHORIZED, "Invalid credentials");
             }
         } catch (BadCredentialsException ex) {
-            boolean locked = registerFailedLogin(user);
-            String message = locked
-                    ? "Your account has been locked after too many failed attempts. Please contact an administrator."
-                    : "Invalid credentials";
-            throw new ApiException(locked ? HttpStatus.FORBIDDEN : HttpStatus.UNAUTHORIZED, message, ex);
+            FailedLoginAttempt failure = registerFailedLogin(user);
+            if (failure.locked()) {
+                throw new ApiException(HttpStatus.FORBIDDEN,
+                        "Your account has been locked after too many failed attempts. Please contact an administrator.", ex);
+            }
+            String message = buildRemainingAttemptsMessage(failure.attemptsRemaining());
+            throw new ApiException(HttpStatus.UNAUTHORIZED, message, ex);
         } catch (LockedException ex) {
-            registerFailedLogin(user);
+            HashMap<String, Object> context = new HashMap<>(buildAuthContext(user));
+            context.put("reason", "LOCKED");
+            context.put("loginAttempts", user != null ? user.getLoginAttempts() : null);
+            activityRecorder.recordForUser(user, "Authentication", "LOGIN_BLOCKED", "Login blocked for locked account", "BLOCKED", context);
             throw new ApiException(HttpStatus.FORBIDDEN, "Your account is locked. Please contact an administrator.", ex);
         } catch (DisabledException ex) {
             HashMap<String, Object> context = new HashMap<>(buildAuthContext(user));
@@ -233,16 +238,16 @@ public class AuthService {
         return false;
     }
 
-    private boolean registerFailedLogin(User user) {
+    private FailedLoginAttempt registerFailedLogin(User user) {
         if (user == null) {
-            return false;
+            return new FailedLoginAttempt(false, 0, MAX_FAILED_LOGIN_ATTEMPTS);
         }
         if (user.getLockedAt() != null) {
             HashMap<String, Object> context = new HashMap<>(buildAuthContext(user));
             context.put("loginAttempts", user.getLoginAttempts());
             context.put("locked", true);
             activityRecorder.recordForUser(user, "Authentication", "LOGIN_FAILED", "Attempted sign-in while account is locked", "LOCKED", context);
-            return true;
+            return new FailedLoginAttempt(true, user.getLoginAttempts(), 0);
         }
         int attempts = user.getLoginAttempts() + 1;
         user.setLoginAttempts(attempts);
@@ -253,13 +258,28 @@ public class AuthService {
         userRepository.save(user);
         HashMap<String, Object> context = new HashMap<>(buildAuthContext(user));
         context.put("loginAttempts", attempts);
+        int attemptsRemaining = Math.max(MAX_FAILED_LOGIN_ATTEMPTS - attempts, 0);
+        context.put("attemptsRemaining", attemptsRemaining);
         if (locked) {
             context.put("locked", true);
             activityRecorder.recordForUser(user, "Authentication", "LOGIN_FAILED", "Account locked after failed sign-in attempt", "LOCKED", context);
         } else {
             activityRecorder.recordForUser(user, "Authentication", "LOGIN_FAILED", "Failed sign-in attempt", "FAILURE", context);
         }
-        return locked;
+        return new FailedLoginAttempt(locked, attempts, attemptsRemaining);
+    }
+
+    private String buildRemainingAttemptsMessage(int attemptsRemaining) {
+        if (attemptsRemaining <= 0) {
+            return "Invalid credentials.";
+        }
+        String attemptLabel = attemptsRemaining == 1 ? "attempt" : "attempts";
+        return String.format("Invalid credentials. You have %d %s remaining before your account is locked.",
+                attemptsRemaining,
+                attemptLabel);
+    }
+
+    private record FailedLoginAttempt(boolean locked, int attempts, int attemptsRemaining) {
     }
 
     private void resetLoginState(User user) {

@@ -5,6 +5,7 @@ import com.example.rbac.common.exception.ApiException;
 import com.example.rbac.settings.service.TemplatedEmailSender;
 import com.example.rbac.users.model.User;
 import com.example.rbac.users.model.UserVerificationToken;
+import com.example.rbac.users.repository.UserRepository;
 import com.example.rbac.users.repository.UserVerificationTokenRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -22,14 +23,17 @@ public class UserVerificationService {
 
     private static final Duration TOKEN_TTL = Duration.ofDays(2);
     private final UserVerificationTokenRepository tokenRepository;
+    private final UserRepository userRepository;
     private final TemplatedEmailSender emailSender;
     private final ActivityRecorder activityRecorder;
     private final SecureRandom secureRandom = new SecureRandom();
 
     public UserVerificationService(UserVerificationTokenRepository tokenRepository,
+                                   UserRepository userRepository,
                                    TemplatedEmailSender emailSender,
                                    ActivityRecorder activityRecorder) {
         this.tokenRepository = tokenRepository;
+        this.userRepository = userRepository;
         this.emailSender = emailSender;
         this.activityRecorder = activityRecorder;
     }
@@ -69,6 +73,7 @@ public class UserVerificationService {
             if (user != null) {
                 user.setLockedAt(null);
                 user.setLoginAttempts(0);
+                userRepository.save(user);
             }
             return new VerificationResult(true, "Account already verified.", false, user != null ? user.getEmail() : null);
         }
@@ -83,6 +88,7 @@ public class UserVerificationService {
         }
         tokenRepository.save(token);
         if (user != null) {
+            userRepository.save(user);
             tokenRepository.deleteByUserIdAndVerifiedAtIsNull(user.getId());
         }
 
@@ -105,6 +111,7 @@ public class UserVerificationService {
         }
         user.setLockedAt(null);
         user.setLoginAttempts(0);
+        userRepository.save(user);
         tokenRepository.deleteByUserIdAndVerifiedAtIsNull(user.getId());
         boolean welcomeSent = false;
         if (!alreadyVerified) {

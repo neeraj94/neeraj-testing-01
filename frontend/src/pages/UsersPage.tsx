@@ -501,6 +501,16 @@ const UsersPage = () => {
     },
     onSuccess: (data) => {
       notify({ type: 'success', message: 'Verification status updated.' });
+      queryClient.setQueryData<User>(['users', 'detail', data.id], data);
+      queryClient.setQueriesData<Pagination<User>>({ queryKey: ['users', 'list'] }, (existing) => {
+        if (!existing) {
+          return existing;
+        }
+        return {
+          ...existing,
+          content: existing.content.map((entry) => (entry.id === data.id ? { ...entry, ...data } : entry))
+        };
+      });
       invalidateUsers();
       queryClient.invalidateQueries({ queryKey: ['users', 'detail', data.id] });
     },
