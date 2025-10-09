@@ -90,9 +90,28 @@ const SettingsPage = () => {
     [categories, activeCategoryKey]
   );
 
+  const shouldUseSectionNav = useMemo(() => {
+    if (!activeCategory) {
+      return false;
+    }
+    if (activeCategory.key === 'email') {
+      return false;
+    }
+    return activeCategory.sections.length > 1;
+  }, [activeCategory]);
+
   useEffect(() => {
     if (!activeCategory) {
-      setActiveSectionKey(null);
+      if (activeSectionKey !== null) {
+        setActiveSectionKey(null);
+      }
+      return;
+    }
+
+    if (!shouldUseSectionNav) {
+      if (activeSectionKey !== null) {
+        setActiveSectionKey(null);
+      }
       return;
     }
 
@@ -102,7 +121,7 @@ const SettingsPage = () => {
     ) {
       setActiveSectionKey(activeCategory.sections[0]?.key ?? null);
     }
-  }, [activeCategory, activeSectionKey]);
+  }, [activeCategory, activeSectionKey, shouldUseSectionNav]);
 
   useEffect(() => {
     if (!categories.length) {
@@ -200,10 +219,14 @@ const SettingsPage = () => {
 
   const handleSelectCategory = (category: SettingsCategory) => {
     setActiveCategoryKey(category.key);
-    setActiveSectionKey(category.sections[0]?.key ?? null);
+    const useNav = category.key !== 'email' && category.sections.length > 1;
+    setActiveSectionKey(useNav ? category.sections[0]?.key ?? null : null);
   };
 
   const handleSelectSection = (section: SettingsSection) => {
+    if (!shouldUseSectionNav) {
+      return;
+    }
     setActiveSectionKey(section.key);
   };
 
@@ -717,39 +740,47 @@ const SettingsPage = () => {
                   </button>
                 </div>
               </div>
-              <div className="flex flex-col gap-6 lg:flex-row">
-                <div className="w-full lg:w-64">
-                  <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
-                    <nav className="space-y-1">
-                      {activeCategory.sections.map((section) => {
-                        const isActive = section.key === activeSectionKey;
-                        return (
-                          <button
-                            key={section.key}
-                            type="button"
-                            onClick={() => handleSelectSection(section)}
-                            className={`w-full rounded-xl px-4 py-3 text-left transition ${
-                              isActive
-                                ? 'bg-primary/10 text-primary'
-                                : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                            }`}
-                          >
-                            <p className="text-sm font-semibold">{section.label}</p>
-                            {section.description && (
-                              <p className="mt-1 text-xs text-slate-500">{section.description}</p>
-                            )}
-                          </button>
-                        );
-                      })}
-                    </nav>
+              <div
+                className={`flex flex-col gap-6 ${shouldUseSectionNav ? 'lg:flex-row' : ''}`}
+              >
+                {shouldUseSectionNav && (
+                  <div className="w-full lg:w-64">
+                    <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+                      <nav className="space-y-1">
+                        {activeCategory.sections.map((section) => {
+                          const isActive = section.key === activeSectionKey;
+                          return (
+                            <button
+                              key={section.key}
+                              type="button"
+                              onClick={() => handleSelectSection(section)}
+                              className={`w-full rounded-xl px-4 py-3 text-left transition ${
+                                isActive
+                                  ? 'bg-primary/10 text-primary'
+                                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                              }`}
+                            >
+                              <p className="text-sm font-semibold">{section.label}</p>
+                              {section.description && (
+                                <p className="mt-1 text-xs text-slate-500">{section.description}</p>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </nav>
+                    </div>
                   </div>
-                </div>
-                <div className="flex-1">
-                  {activeCategory.sections.map((section) => (
-                    <Fragment key={section.key}>
-                      {section.key === activeSectionKey && renderSectionContent(section)}
-                    </Fragment>
-                  ))}
+                )}
+                <div className="flex-1 space-y-6">
+                  {shouldUseSectionNav
+                    ? activeCategory.sections.map((section) => (
+                        <Fragment key={section.key}>
+                          {section.key === activeSectionKey && renderSectionContent(section)}
+                        </Fragment>
+                      ))
+                    : activeCategory.sections.map((section) => (
+                        <Fragment key={section.key}>{renderSectionContent(section)}</Fragment>
+                      ))}
                 </div>
               </div>
             </div>
