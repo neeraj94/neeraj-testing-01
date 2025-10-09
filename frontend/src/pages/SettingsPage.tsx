@@ -11,6 +11,7 @@ import type { SettingItem, SettingsCategory, SettingsSection, SettingUpdatePaylo
 import { useToast } from '../components/ToastProvider';
 import { normalizeHexColor } from '../utils/colors';
 import { extractErrorMessage } from '../utils/errors';
+import api from '../services/http';
 
 type SettingFormValue = string | boolean;
 
@@ -59,6 +60,10 @@ const SettingsPage = () => {
   const [initialValues, setInitialValues] = useState<DraftMap>({});
   const [draftValues, setDraftValues] = useState<DraftMap>({});
   const [isSaving, setIsSaving] = useState(false);
+  const [testEmail, setTestEmail] = useState('');
+  const [testEmailTouched, setTestEmailTouched] = useState(false);
+  const [isSendingTest, setIsSendingTest] = useState(false);
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
   useEffect(() => {
     if (status === 'idle') {
@@ -113,6 +118,8 @@ const SettingsPage = () => {
     });
     setInitialValues(nextInitial);
     setDraftValues({ ...nextInitial });
+    setTestEmail('');
+    setTestEmailTouched(false);
   }, [categories]);
 
   const settingIndex = useMemo(() => {
@@ -126,6 +133,57 @@ const SettingsPage = () => {
     });
     return map;
   }, [categories]);
+
+  const getDraftValueForSetting = (setting: SettingItem): SettingFormValue => {
+    if (Object.prototype.hasOwnProperty.call(draftValues, setting.code)) {
+      return draftValues[setting.code];
+    }
+    if (Object.prototype.hasOwnProperty.call(initialValues, setting.code)) {
+      return initialValues[setting.code];
+    }
+    return parseInitialValue(setting);
+  };
+
+  const getStringValueForSetting = (setting: SettingItem): string => {
+    const value = getDraftValueForSetting(setting);
+    if (typeof value === 'boolean') {
+      return value ? 'true' : 'false';
+    }
+    if (value === null || value === undefined) {
+      return '';
+    }
+    return String(value);
+  };
+
+  useEffect(() => {
+    if (activeCategoryKey !== 'email') {
+      return;
+    }
+    const fromSetting = settingIndex.get('email.from_address');
+    if (!fromSetting) {
+      return;
+    }
+    const draft = draftValues['email.from_address'];
+    const initial = initialValues['email.from_address'];
+    const candidate =
+      typeof draft === 'string' && draft.trim().length
+        ? draft.trim()
+        : typeof initial === 'string' && initial.trim().length
+          ? initial.trim()
+          : fromSetting.value && fromSetting.value.trim().length
+            ? fromSetting.value.trim()
+            : '';
+    if (!testEmailTouched && candidate && candidate !== testEmail) {
+      setTestEmail(candidate);
+    }
+  }, [
+    activeCategoryKey,
+    settingIndex,
+    draftValues,
+    initialValues,
+    testEmailTouched,
+    testEmail
+  ]);
 
   const dirtyCodes = useMemo(() => {
     const codes: string[] = [];
@@ -156,6 +214,8 @@ const SettingsPage = () => {
 
   const handleReset = () => {
     setDraftValues({ ...initialValues });
+    setTestEmail('');
+    setTestEmailTouched(false);
   };
 
   const handleSave = async () => {
@@ -184,6 +244,39 @@ const SettingsPage = () => {
       });
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleSendTestEmail = async () => {
+    if (!canUpdateSettings || isSendingTest) {
+      return;
+    }
+    const recipient = testEmail.trim();
+    setTestEmail(recipient);
+    if (!recipient.length) {
+      notify({ type: 'error', message: 'Enter an email address to send a test message.' });
+      return;
+    }
+    if (!emailRegex.test(recipient)) {
+      notify({ type: 'error', message: 'Enter a valid email address before sending a test message.' });
+      return;
+    }
+    if (dirtyCodes.length) {
+      notify({ type: 'error', message: 'Save your email settings before sending a test email.' });
+      return;
+    }
+
+    setIsSendingTest(true);
+    try {
+      await api.post('/settings/email/test', { recipient });
+      notify({ type: 'success', message: 'Test email sent successfully.' });
+    } catch (error) {
+      notify({
+        type: 'error',
+        message: extractErrorMessage(error, 'Unable to send test email.')
+      });
+    } finally {
+      setIsSendingTest(false);
     }
   };
 
@@ -281,7 +374,7 @@ const SettingsPage = () => {
     );
   };
 
-  const renderSection = (section: SettingsSection) => {
+  const renderGenericSection = (section: SettingsSection) => {
     return (
       <div className="space-y-4">
         {section.settings.map((setting) => (
@@ -307,6 +400,222 @@ const SettingsPage = () => {
         ))}
       </div>
     );
+  };
+
+  const renderOptionButtons = (setting?: SettingItem) => {
+    if (!setting || !setting.options.length) {
+      return null;
+    }
+    const currentValue = getStringValueForSetting(setting);
+    const disabled = !setting.editable || isSaving || !canUpdateSettings;
+    return (
+      <div className="flex flex-wrap gap-2">
+        {setting.options.map((option) => {
+          const isActive = currentValue === option.value;
+          return (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => handleValueChange(setting, option.value)}
+              disabled={disabled}
+              className={`rounded-lg border px-3 py-2 text-sm font-medium transition ${
+                isActive
+                  ? 'border-primary bg-primary/10 text-primary'
+                  : 'border-slate-300 text-slate-600 hover:border-primary/50 hover:text-primary'
+              } ${disabled ? 'cursor-not-allowed opacity-60 hover:border-slate-300 hover:text-slate-600' : ''}`}
+            >
+              {option.label}
+            </button>
+          );
+        })}
+      </div>
+    );
+  };
+
+  const renderInputField = (
+    setting?: SettingItem,
+    type: 'text' | 'number' | 'password' = 'text'
+  ) => {
+    if (!setting) {
+      return null;
+    }
+    const value = getStringValueForSetting(setting);
+    const disabled = !setting.editable || isSaving || !canUpdateSettings;
+    const inputType = type === 'number' ? 'number' : type === 'password' ? 'password' : 'text';
+    return (
+      <div className="space-y-2">
+        <label className="text-sm font-semibold text-slate-900">{setting.label}</label>
+        {setting.description && <p className="text-sm text-slate-500">{setting.description}</p>}
+        <input
+          type={inputType}
+          value={value}
+          onChange={(event) => handleValueChange(setting, event.target.value)}
+          disabled={disabled}
+          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:bg-slate-100"
+        />
+      </div>
+    );
+  };
+
+  const renderTextareaField = (
+    setting?: SettingItem,
+    rows = 4,
+    extraClass = ''
+  ) => {
+    if (!setting) {
+      return null;
+    }
+    const value = getStringValueForSetting(setting);
+    const disabled = !setting.editable || isSaving || !canUpdateSettings;
+    return (
+      <div className="space-y-2">
+        <label className="text-sm font-semibold text-slate-900">{setting.label}</label>
+        {setting.description && <p className="text-sm text-slate-500">{setting.description}</p>}
+        <textarea
+          value={value}
+          onChange={(event) => handleValueChange(setting, event.target.value)}
+          disabled={disabled}
+          rows={rows}
+          className={`w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:bg-slate-100 ${extraClass}`}
+        />
+      </div>
+    );
+  };
+
+  const renderEmailSection = (section: SettingsSection) => {
+    const map = new Map(section.settings.map((setting) => [setting.code, setting]));
+    const resolveSetting = (code: string) => map.get(code) ?? settingIndex.get(code);
+
+    if (section.key === 'email-smtp') {
+      const driverSetting = resolveSetting('email.driver');
+      const encryptionSetting = resolveSetting('email.smtp_encryption');
+      const hostSetting = resolveSetting('email.smtp_host');
+      const portSetting = resolveSetting('email.smtp_port');
+      const usernameSetting = resolveSetting('email.smtp_username');
+      const passwordSetting = resolveSetting('email.smtp_password');
+      const fromNameSetting = resolveSetting('email.from_name');
+      const fromAddressSetting = resolveSetting('email.from_address');
+      const replyToSetting = resolveSetting('email.reply_to');
+      const bccSetting = resolveSetting('email.bcc_all');
+
+      return (
+        <div className="space-y-6">
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="mb-6 space-y-1">
+              <h3 className="text-base font-semibold text-slate-900">{section.label}</h3>
+              {section.description && (
+                <p className="text-sm text-slate-500">{section.description}</p>
+              )}
+            </div>
+            <div className="space-y-6">
+              {driverSetting && (
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-slate-900">{driverSetting.label}</label>
+                  {driverSetting.description && (
+                    <p className="text-sm text-slate-500">{driverSetting.description}</p>
+                  )}
+                  {renderOptionButtons(driverSetting)}
+                  {!driverSetting.editable && (
+                    <p className="text-xs text-slate-500">Only SMTP transport is available for this deployment.</p>
+                  )}
+                </div>
+              )}
+              {encryptionSetting && (
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-slate-900">{encryptionSetting.label}</label>
+                  {encryptionSetting.description && (
+                    <p className="text-sm text-slate-500">{encryptionSetting.description}</p>
+                  )}
+                  {renderOptionButtons(encryptionSetting)}
+                </div>
+              )}
+              <div className="grid gap-5 md:grid-cols-2">
+                {renderInputField(hostSetting)}
+                {renderInputField(portSetting, 'number')}
+                {renderInputField(usernameSetting)}
+                {renderInputField(passwordSetting, 'password')}
+              </div>
+              <div className="grid gap-5 md:grid-cols-2">
+                {renderInputField(fromNameSetting)}
+                {renderInputField(fromAddressSetting)}
+                {renderInputField(replyToSetting)}
+                {renderInputField(bccSetting)}
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (section.key === 'email-templates') {
+      const signatureSetting = resolveSetting('email.signature');
+      const headerSetting = resolveSetting('email.header_html');
+      const footerSetting = resolveSetting('email.footer_html');
+
+      return (
+        <div className="space-y-6">
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="mb-6 space-y-1">
+              <h3 className="text-base font-semibold text-slate-900">{section.label}</h3>
+              {section.description && (
+                <p className="text-sm text-slate-500">{section.description}</p>
+              )}
+            </div>
+            <div className="space-y-6">
+              {renderTextareaField(signatureSetting, 4)}
+              {renderTextareaField(headerSetting, 8, 'font-mono')}
+              {renderTextareaField(footerSetting, 8, 'font-mono')}
+            </div>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="space-y-2">
+              <h3 className="text-base font-semibold text-slate-900">Send Test Email</h3>
+              <p className="text-sm text-slate-500">
+                Use the saved SMTP configuration to send yourself a quick test message.
+              </p>
+            </div>
+            <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end">
+              <div className="w-full sm:flex-1">
+                <label className="text-sm font-semibold text-slate-900" htmlFor="email-test-recipient">
+                  Recipient email
+                </label>
+                <input
+                  id="email-test-recipient"
+                  type="email"
+                  value={testEmail}
+                  onChange={(event) => {
+                    setTestEmailTouched(true);
+                    setTestEmail(event.target.value);
+                  }}
+                  disabled={!canUpdateSettings || isSendingTest}
+                  className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:bg-slate-100"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={handleSendTestEmail}
+                disabled={!canUpdateSettings || isSendingTest}
+                className="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white shadow transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isSendingTest ? 'Sending…' : 'Send Test Email'}
+              </button>
+            </div>
+            <p className="mt-2 text-xs text-slate-500">
+              Save changes above before sending a test message.
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    return renderGenericSection(section);
+  };
+
+  const renderSectionContent = (section: SettingsSection) => {
+    if (section.key.startsWith('email-')) {
+      return renderEmailSection(section);
+    }
+    return renderGenericSection(section);
   };
 
   const isLoading = status === 'loading' && categories.length === 0;
@@ -438,7 +747,7 @@ const SettingsPage = () => {
                 <div className="flex-1">
                   {activeCategory.sections.map((section) => (
                     <Fragment key={section.key}>
-                      {section.key === activeSectionKey && renderSection(section)}
+                      {section.key === activeSectionKey && renderSectionContent(section)}
                     </Fragment>
                   ))}
                 </div>

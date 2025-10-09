@@ -36,11 +36,12 @@ public class GalleryController {
                                                   @RequestParam(name = "sort", required = false) String sort,
                                                   @RequestParam(name = "direction", required = false) String direction,
                                                   @RequestParam(name = "folderId", required = false) Long folderId,
+                                                  @RequestParam(name = "ownerId", required = false) Long ownerId,
                                                   @RequestParam(name = "uploaderId", required = false) Long uploaderId,
                                                   @RequestParam(name = "uploader", required = false) String uploaderEmail,
                                                   @RequestParam(name = "search", required = false) String search,
                                                   @AuthenticationPrincipal UserPrincipal principal) {
-        return galleryService.list(page, size, sort, direction, folderId, uploaderId, uploaderEmail, search, principal);
+        return galleryService.list(page, size, sort, direction, folderId, ownerId, uploaderId, uploaderEmail, search, principal);
     }
 
     @PostMapping("/files")
@@ -103,6 +104,13 @@ public class GalleryController {
     public GalleryFolderDto renameFolder(@PathVariable("id") Long id,
                                          @Valid @RequestBody GalleryFolderRenameRequest request) {
         return galleryService.renameFolder(id, request);
+    }
+
+    @DeleteMapping("/folders/{id}")
+    @PreAuthorize("hasAnyAuthority('GALLERY_EDIT_ALL','GALLERY_CREATE')")
+    public void deleteFolder(@PathVariable("id") Long id,
+                             @AuthenticationPrincipal UserPrincipal principal) {
+        galleryService.deleteFolder(id, principal);
     }
 
     private String encodeFilename(String filename) {
