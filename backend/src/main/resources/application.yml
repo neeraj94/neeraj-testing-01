@@ -4,6 +4,10 @@ spring:
     username: rbac
     password: rbac
     driver-class-name: com.mysql.cj.jdbc.Driver
+  servlet:
+    multipart:
+      max-file-size: 5GB
+      max-request-size: 5GB
   jpa:
     hibernate:
       ddl-auto: none
