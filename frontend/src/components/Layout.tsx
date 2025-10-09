@@ -178,7 +178,7 @@ const Layout = () => {
 
   const handleProfileNavigate = () => {
     setProfileMenuOpen(false);
-    navigate('/profile');
+    navigate('/admin/profile');
   };
 
   return (
@@ -327,7 +327,7 @@ const Layout = () => {
               <NavLink
                 key={item.key}
                 to={item.to ?? '#'}
-                end={item.to === '/dashboard'}
+                end={item.to === '/admin/dashboard'}
                 title={sidebarCollapsed ? item.label : undefined}
                 className={({ isActive }) =>
                   `group flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
