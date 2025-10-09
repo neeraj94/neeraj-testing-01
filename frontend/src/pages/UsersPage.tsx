@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../services/http';
 import type { Pagination, Permission, Role, User, UserSummaryMetrics } from '../types/models';
@@ -114,6 +114,15 @@ const UsersPage = () => {
   const [statusUpdateId, setStatusUpdateId] = useState<number | null>(null);
   const [sort, setSort] = useState<{ field: UserSortField; direction: 'asc' | 'desc' }>({ field: 'name', direction: 'asc' });
   const [isExporting, setIsExporting] = useState(false);
+
+  const openUserDetail = useCallback(
+    (userId: number) => {
+      setSelectedUserId(userId);
+      setPanelMode('detail');
+      setActiveTab('profile');
+    },
+    [setActiveTab, setPanelMode, setSelectedUserId]
+  );
   const currentUserId = currentUser?.id ?? null;
   const isSuperAdmin = useMemo(
     () => (currentRoles ?? []).some((role) => role.toUpperCase() === 'SUPER_ADMIN'),
@@ -881,7 +890,18 @@ const UsersPage = () => {
                 return (
                   <tr
                     key={user.id}
-                    className={`transition hover:bg-blue-50/40 ${isSelected ? 'bg-blue-50/60' : ''}`}
+                    onClick={() => openUserDetail(user.id)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        openUserDetail(user.id);
+                      }
+                    }}
+                    tabIndex={0}
+                    aria-selected={isSelected}
+                    className={`cursor-pointer transition hover:bg-blue-50/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2 ${
+                      isSelected ? 'bg-blue-50/60' : ''
+                    }`}
                   >
                     <td className="px-4 py-3 text-sm font-medium text-slate-800">
                       <div>{user.fullName}</div>
@@ -944,8 +964,7 @@ const UsersPage = () => {
                             if (isSelfSuperAdmin) {
                               return;
                             }
-                            setSelectedUserId(user.id);
-                            setPanelMode('detail');
+                            openUserDetail(user.id);
                           }}
                           className="rounded-full border border-slate-200 p-2 text-slate-500 transition hover:border-slate-300 hover:text-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
                           aria-label={`Edit ${user.fullName}`}

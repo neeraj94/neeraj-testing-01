@@ -1,4 +1,4 @@
-import { Dispatch, FormEvent, SetStateAction, useEffect, useMemo, useState } from 'react';
+import { Dispatch, FormEvent, SetStateAction, useCallback, useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import type { AxiosError } from 'axios';
 import api from '../services/http';
@@ -250,6 +250,15 @@ const RolesPage = () => {
   const [createError, setCreateError] = useState<string | null>(null);
   const [editError, setEditError] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
+
+  const openRoleForEditing = useCallback(
+    (role: Role) => {
+      setEditingRole(role);
+      setView('edit');
+      setEditError(null);
+    },
+    [setEditError, setEditingRole, setView]
+  );
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -771,8 +780,23 @@ const RolesPage = () => {
                 </td>
               </tr>
             ) : (
-              sortedRoles.map((role) => (
-                <tr key={role.id} className="transition hover:bg-blue-50/40">
+              sortedRoles.map((role) => {
+                const isActive = view === 'edit' && editingRole?.id === role.id;
+                return (
+                  <tr
+                    key={role.id}
+                    onClick={() => openRoleForEditing(role)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        openRoleForEditing(role);
+                      }
+                    }}
+                    tabIndex={0}
+                    className={`cursor-pointer transition hover:bg-blue-50/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2 ${
+                      isActive ? 'bg-blue-50/60' : ''
+                    }`}
+                  >
                   <td className="px-4 py-3">
                     <div className="text-sm font-semibold text-slate-800">{role.name}</div>
                   </td>
@@ -783,9 +807,9 @@ const RolesPage = () => {
                     <div className="flex justify-end gap-2">
                       <button
                         type="button"
-                        onClick={() => {
-                          setEditingRole(role);
-                          setView('edit');
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          openRoleForEditing(role);
                         }}
                         className="rounded-full border border-slate-200 p-2 text-slate-500 transition hover:border-slate-300 hover:text-slate-800"
                         aria-label={`Edit ${role.name}`}
@@ -794,7 +818,10 @@ const RolesPage = () => {
                       </button>
                       <button
                         type="button"
-                        onClick={() => handleDelete(role)}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          handleDelete(role);
+                        }}
                         className="rounded-full border border-rose-200 p-2 text-rose-500 transition hover:border-rose-300 hover:text-rose-600"
                         aria-label={`Delete ${role.name}`}
                         disabled={deleteRole.isPending}
@@ -803,8 +830,9 @@ const RolesPage = () => {
                       </button>
                     </div>
                   </td>
-                </tr>
-              ))
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>
