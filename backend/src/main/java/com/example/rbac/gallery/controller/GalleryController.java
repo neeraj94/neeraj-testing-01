@@ -44,6 +44,12 @@ public class GalleryController {
         return galleryService.list(page, size, sort, direction, folderId, ownerId, uploaderId, uploaderEmail, search, principal);
     }
 
+    @GetMapping("/settings")
+    @PreAuthorize("hasAnyAuthority('GALLERY_VIEW_ALL','GALLERY_VIEW_OWN','GALLERY_CREATE','GALLERY_EDIT_ALL')")
+    public GallerySettingsDto getSettings(@AuthenticationPrincipal UserPrincipal principal) {
+        return galleryService.loadSettings(principal);
+    }
+
     @PostMapping("/files")
     @PreAuthorize("hasAuthority('GALLERY_CREATE')")
     public List<GalleryFileDto> uploadFiles(@RequestParam(name = "folderId", required = false) Long folderId,
