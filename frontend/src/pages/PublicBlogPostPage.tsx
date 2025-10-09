@@ -37,6 +37,11 @@ const PublicBlogPostPage = () => {
   });
 
   const originalTitleRef = useRef<string>(document.title);
+  const metaRef = useRef<HTMLMetaElement | null>(null);
+  const base = api.defaults.baseURL ?? '';
+  const metaImage = postQuery.data?.metaImage
+    ? `${base.replace(/\/$/, '')}/blog/media/${postQuery.data.metaImage}`
+    : undefined;
 
   useEffect(() => {
     if (postQuery.data?.metaTitle) {
@@ -48,6 +53,25 @@ const PublicBlogPostPage = () => {
       document.title = originalTitleRef.current;
     };
   }, [postQuery.data?.metaTitle, postQuery.data?.title]);
+
+  useEffect(() => {
+    if (!metaImage) {
+      if (metaRef.current) {
+        metaRef.current.remove();
+        metaRef.current = null;
+      }
+      return;
+    }
+    const element = document.createElement('meta');
+    element.setAttribute('property', 'og:image');
+    element.setAttribute('content', metaImage);
+    document.head.appendChild(element);
+    metaRef.current = element;
+    return () => {
+      element.remove();
+      metaRef.current = null;
+    };
+  }, [metaImage]);
 
   if (postQuery.isLoading) {
     return (
@@ -77,32 +101,9 @@ const PublicBlogPostPage = () => {
   }
 
   const post = postQuery.data;
-  const base = api.defaults.baseURL ?? '';
   const hero = post.bannerImage
     ? `${base.replace(/\/$/, '')}/blog/media/${post.bannerImage}`
     : 'https://images.unsplash.com/photo-1454165205744-3b78555e5572?auto=format&fit=crop&w=1600&q=80';
-  const metaImage = post.metaImage ? `${base.replace(/\/$/, '')}/blog/media/${post.metaImage}` : undefined;
-
-  const metaRef = useRef<HTMLMetaElement | null>(null);
-
-  useEffect(() => {
-    if (!metaImage) {
-      if (metaRef.current) {
-        metaRef.current.remove();
-        metaRef.current = null;
-      }
-      return;
-    }
-    const element = document.createElement('meta');
-    element.setAttribute('property', 'og:image');
-    element.setAttribute('content', metaImage);
-    document.head.appendChild(element);
-    metaRef.current = element;
-    return () => {
-      element.remove();
-      metaRef.current = null;
-    };
-  }, [metaImage]);
 
   const publishedLabel = formatDisplayDate(post.publishedAt);
 
