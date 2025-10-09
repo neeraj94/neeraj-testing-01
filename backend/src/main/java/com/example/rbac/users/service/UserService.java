@@ -59,19 +59,22 @@ public class UserService {
     private final PermissionRepository permissionRepository;
     private final UserMapper userMapper;
     private final ActivityRecorder activityRecorder;
+    private final UserVerificationService userVerificationService;
 
     public UserService(UserRepository userRepository,
                        RoleRepository roleRepository,
                        PasswordEncoder passwordEncoder,
                        PermissionRepository permissionRepository,
                        UserMapper userMapper,
-                       ActivityRecorder activityRecorder) {
+                       ActivityRecorder activityRecorder,
+                       UserVerificationService userVerificationService) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
         this.permissionRepository = permissionRepository;
         this.userMapper = userMapper;
         this.activityRecorder = activityRecorder;
+        this.userVerificationService = userVerificationService;
     }
 
     @PreAuthorize(USER_VIEW_AUTHORITY)
@@ -127,9 +130,12 @@ public class UserService {
         Set<Permission> revoked = fetchPermissions(request.getRevokedPermissionKeys());
         removeOverlap(direct, revoked);
         user.setRevokedPermissions(revoked);
+        user.setEmailVerifiedAt(null);
         user = userRepository.save(user);
-        UserDto dto = userMapper.toDto(userRepository.findDetailedById(user.getId()).orElseThrow());
-        activityRecorder.record("Users", "CREATE", "Created user " + user.getEmail(), "SUCCESS", buildUserContext(user));
+        User detailed = userRepository.findDetailedById(user.getId()).orElseThrow();
+        userVerificationService.initiateVerification(detailed);
+        UserDto dto = userMapper.toDto(detailed);
+        activityRecorder.record("Users", "CREATE", "Created user " + detailed.getEmail(), "SUCCESS", buildUserContext(detailed));
         return dto;
     }
 

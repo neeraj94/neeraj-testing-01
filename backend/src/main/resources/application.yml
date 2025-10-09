@@ -36,6 +36,9 @@ app:
       - http://localhost:*
       - http://127.0.0.1:*
       - http://0.0.0.0:*
+  urls:
+    login: http://localhost:3000/login
+    verification: http://localhost:8080/api/v1/auth/verify
 
 springdoc:
   swagger-ui:

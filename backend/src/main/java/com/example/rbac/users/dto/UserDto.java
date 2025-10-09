@@ -15,6 +15,7 @@ public class UserDto {
     private String linkedinUrl;
     private String skypeId;
     private String emailSignature;
+    private Instant emailVerifiedAt;
     private boolean active;
     private Set<String> roles;
     private Set<String> permissions;
@@ -109,6 +110,14 @@ public class UserDto {
 
     public void setEmailSignature(String emailSignature) {
         this.emailSignature = emailSignature;
+    }
+
+    public Instant getEmailVerifiedAt() {
+        return emailVerifiedAt;
+    }
+
+    public void setEmailVerifiedAt(Instant emailVerifiedAt) {
+        this.emailVerifiedAt = emailVerifiedAt;
     }
 
     public boolean isActive() {

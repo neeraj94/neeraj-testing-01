@@ -34,8 +34,10 @@ public class SettingsService {
     private static final Logger log = LoggerFactory.getLogger(SettingsService.class);
     private static final String PRIMARY_COLOR_CODE = "appearance.primary_color";
     private static final String APPLICATION_NAME_CODE = "general.site_name";
+    private static final String SUPPORT_EMAIL_CODE = "general.support_email";
     private static final String DEFAULT_PRIMARY_COLOR = "#2563EB";
     private static final String DEFAULT_APPLICATION_NAME = "RBAC Portal";
+    private static final String DEFAULT_SUPPORT_EMAIL = "support@demo.io";
     private static final String BASE_CURRENCY_CODE = "finance.base_currency";
     private static final String DEFAULT_BASE_CURRENCY = "USD";
 
@@ -124,6 +126,14 @@ public class SettingsService {
                 .map(String::trim)
                 .filter(value -> !value.isBlank())
                 .orElse(DEFAULT_APPLICATION_NAME);
+    }
+
+    public String resolveSupportEmail() {
+        return settingRepository.findByCode(SUPPORT_EMAIL_CODE)
+                .map(Setting::getValue)
+                .map(String::trim)
+                .filter(value -> !value.isBlank())
+                .orElse(DEFAULT_SUPPORT_EMAIL);
     }
 
     public String resolveBaseCurrency() {
