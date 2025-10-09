@@ -5,6 +5,7 @@ import com.example.rbac.settings.repository.SettingRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.Arrays;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -25,14 +26,15 @@ public class GallerySettingsService {
         Optional<Setting> setting = settingRepository.findByCode(ALLOWED_EXTENSIONS_CODE);
         String configured = setting.map(Setting::getValue).orElse(null);
         if (configured == null || configured.isBlank()) {
-            return List.of("png", "jpg", "jpeg", "pdf", "docx", "xlsx", "mp4");
+            return List.of("png", "jpg", "jpeg", "gif", "pdf", "docx", "xlsx", "mp4", "zip");
         }
-        return Arrays.stream(configured.split(","))
+        LinkedHashSet<String> normalized = Arrays.stream(configured.split(","))
                 .map(String::trim)
                 .filter(value -> !value.isBlank())
-                .map(value -> normalizeExtension(value))
-                .distinct()
-                .collect(Collectors.toList());
+                .map(this::normalizeExtension)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+        normalized.add("zip");
+        return normalized.stream().collect(Collectors.toList());
     }
 
     private String normalizeExtension(String value) {
