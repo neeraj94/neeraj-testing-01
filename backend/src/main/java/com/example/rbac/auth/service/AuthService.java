@@ -5,6 +5,8 @@ import com.example.rbac.auth.dto.AuthResponse;
 import com.example.rbac.auth.dto.LoginRequest;
 import com.example.rbac.auth.dto.RefreshTokenRequest;
 import com.example.rbac.auth.dto.SignupRequest;
+import com.example.rbac.auth.dto.VerificationRequest;
+import com.example.rbac.auth.dto.VerificationResponse;
 import com.example.rbac.auth.token.RefreshToken;
 import com.example.rbac.auth.token.RefreshTokenRepository;
 import com.example.rbac.common.exception.ApiException;
@@ -14,6 +16,7 @@ import com.example.rbac.users.dto.UserDto;
 import com.example.rbac.users.mapper.UserMapper;
 import com.example.rbac.users.model.User;
 import com.example.rbac.users.repository.UserRepository;
+import com.example.rbac.users.service.UserVerificationService;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -42,6 +45,7 @@ public class AuthService {
     private final UserMapper userMapper;
     private final SettingsService settingsService;
     private final ActivityRecorder activityRecorder;
+    private final UserVerificationService userVerificationService;
 
     public AuthService(UserRepository userRepository,
                        RefreshTokenRepository refreshTokenRepository,
@@ -50,7 +54,8 @@ public class AuthService {
                        JwtService jwtService,
                        UserMapper userMapper,
                        SettingsService settingsService,
-                       ActivityRecorder activityRecorder) {
+                       ActivityRecorder activityRecorder,
+                       UserVerificationService userVerificationService) {
         this.userRepository = userRepository;
         this.refreshTokenRepository = refreshTokenRepository;
         this.passwordEncoder = passwordEncoder;
@@ -59,6 +64,7 @@ public class AuthService {
         this.userMapper = userMapper;
         this.settingsService = settingsService;
         this.activityRecorder = activityRecorder;
+        this.userVerificationService = userVerificationService;
     }
 
     @Transactional
@@ -75,11 +81,13 @@ public class AuthService {
         user.setLastName(lastName);
         user.setFullName(buildFullName(firstName, lastName));
         user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
+        user.setEmailVerifiedAt(null);
         user = userRepository.save(user);
         user = userRepository.findDetailedById(user.getId()).orElseThrow();
         String refreshTokenValue = createRefreshToken(user);
         AuthResponse response = buildAuthResponse(user, refreshTokenValue);
         activityRecorder.recordForUser(user, "Authentication", "SIGNUP", "User registered", "SUCCESS", buildAuthContext(user));
+        userVerificationService.initiateVerification(user);
         return response;
     }
 
@@ -96,6 +104,12 @@ public class AuthService {
         AuthResponse response = buildAuthResponse(user, refreshTokenValue);
         activityRecorder.recordForUser(user, "Authentication", "LOGIN", "User logged in", "SUCCESS", buildAuthContext(user));
         return response;
+    }
+
+    @Transactional
+    public VerificationResponse verifyEmail(VerificationRequest request) {
+        UserVerificationService.VerificationResult result = userVerificationService.verifyToken(request.getToken());
+        return new VerificationResponse(result.isSuccess(), result.getMessage(), result.isWelcomeEmailSent(), result.getEmail());
     }
 
     @Transactional

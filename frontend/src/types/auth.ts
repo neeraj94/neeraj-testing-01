@@ -21,6 +21,7 @@ export interface UserSummary {
   linkedinUrl?: string | null;
   skypeId?: string | null;
   emailSignature?: string | null;
+  emailVerifiedAt?: string | null;
   active: boolean;
   roles: string[];
   permissions: PermissionKey[];
