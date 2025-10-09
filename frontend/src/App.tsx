@@ -24,6 +24,10 @@ import ActivityPage from './pages/ActivityPage';
 import ActivityDetailPage from './pages/ActivityDetailPage';
 import SetupPage from './pages/SetupPage';
 import GalleryPage from './pages/GalleryPage';
+import BlogCategoriesPage from './pages/BlogCategoriesPage';
+import BlogPostsPage from './pages/BlogPostsPage';
+import PublicBlogListPage from './pages/PublicBlogListPage';
+import PublicBlogPostPage from './pages/PublicBlogPostPage';
 
 const App = () => {
   const dispatch = useAppDispatch();
@@ -112,10 +116,12 @@ const App = () => {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/signup" element={<SignupPage />} />
+      <Route path="/blog" element={<PublicBlogListPage />} />
+      <Route path="/blog/:slug" element={<PublicBlogPostPage />} />
       <Route element={<ProtectedRoute />}>
-        <Route element={<Layout />}>
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
-          <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/admin" element={<Layout />}>
+          <Route index element={<Navigate to="dashboard" replace />} />
+          <Route path="dashboard" element={<DashboardPage />} />
           <Route
             element={
               <PermissionRoute
@@ -130,13 +136,13 @@ const App = () => {
               />
             }
           >
-            <Route path="/users" element={<UsersPage />} />
+            <Route path="users" element={<UsersPage />} />
           </Route>
           <Route element={<PermissionRoute required={['ROLE_VIEW', 'ROLE_VIEW_GLOBAL', 'ROLE_VIEW_OWN']} />}>
-            <Route path="/roles" element={<RolesPage />} />
+            <Route path="roles" element={<RolesPage />} />
           </Route>
           <Route element={<PermissionRoute required={['PERMISSION_VIEW']} />}>
-            <Route path="/permissions" element={<PermissionsPage />} />
+            <Route path="permissions" element={<PermissionsPage />} />
           </Route>
           <Route
             element={
@@ -152,30 +158,37 @@ const App = () => {
               />
             }
           >
-            <Route path="/invoices" element={<InvoicesPage />} />
+            <Route path="invoices" element={<InvoicesPage />} />
+          </Route>
+          <Route element={<PermissionRoute required={['BLOG_CATEGORY_VIEW']} />}>
+            <Route path="blog/categories" element={<BlogCategoriesPage />} />
+          </Route>
+          <Route element={<PermissionRoute required={['BLOG_POST_VIEW']} />}>
+            <Route path="blog/posts" element={<BlogPostsPage />} />
           </Route>
           <Route element={<PermissionRoute required={['ACTIVITY_VIEW']} />}>
-            <Route path="/activity" element={<ActivityPage />} />
-            <Route path="/activity/:id" element={<ActivityDetailPage />} />
+            <Route path="activity" element={<ActivityPage />} />
+            <Route path="activity/:id" element={<ActivityDetailPage />} />
           </Route>
           <Route element={<PermissionRoute required={['SETTINGS_VIEW']} />}>
-            <Route path="/settings" element={<SettingsPage />} />
+            <Route path="settings" element={<SettingsPage />} />
           </Route>
           <Route
             element={
               <PermissionRoute required={['GALLERY_VIEW_ALL', 'GALLERY_VIEW_OWN', 'GALLERY_CREATE']} />
             }
           >
-            <Route path="/gallery" element={<GalleryPage />} />
+            <Route path="gallery" element={<GalleryPage />} />
           </Route>
           <Route element={<PermissionRoute required={['SETUP_MANAGE']} />}>
-            <Route path="/setup" element={<SetupPage />} />
+            <Route path="setup" element={<SetupPage />} />
           </Route>
-          <Route path="/profile" element={<ProfilePage />} />
-          <Route path="/403" element={<ForbiddenPage />} />
+          <Route path="profile" element={<ProfilePage />} />
+          <Route path="403" element={<ForbiddenPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Route>
+      <Route path="/" element={<Navigate to="/admin" replace />} />
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   );

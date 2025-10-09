@@ -11,6 +11,9 @@ import { useAppSelector } from '../app/hooks';
 import { hasAnyPermission } from '../utils/permissions';
 import ExportMenu from '../components/ExportMenu';
 import { exportDataset, type ExportFormat } from '../utils/exporters';
+import PageHeader from '../components/PageHeader';
+import PageSection from '../components/PageSection';
+import PaginationControls from '../components/PaginationControls';
 
 const CUSTOMER_ROLE_KEY = 'CUSTOMER';
 
@@ -710,31 +713,19 @@ const RolesPage = () => {
             <option value="without">No permissions</option>
           </select>
         </div>
-        <div>
-          <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Rows</label>
-          <select
-            value={pageSize}
-            onChange={(event) => setPageSize(Number(event.target.value))}
-            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none"
-          >
-            {[10, 25, 50, 100].map((size) => (
-              <option key={size} value={size}>
-                {size}
-              </option>
-            ))}
-          </select>
-        </div>
       </div>
     </div>
   );
 
-  const renderTable = () => (
-    <div className="flex flex-col">
-      {renderFilters()}
-      <div className="flex-1 overflow-x-auto">
-        <table className="min-w-full divide-y divide-slate-200">
-          <thead className="bg-slate-50">
-            <tr>
+  const renderTable = () => {
+    const total = rolesResponse.data?.totalElements ?? sortedRoles.length;
+    return (
+      <PageSection padded={false} bodyClassName="flex flex-col">
+        {renderFilters()}
+        <div className="flex-1 overflow-x-auto">
+          <table className="min-w-full divide-y divide-slate-200">
+            <thead className="bg-slate-50">
+              <tr>
               <SortableColumnHeader
                 label="Role"
                 field="name"
@@ -816,104 +807,83 @@ const RolesPage = () => {
               ))
             )}
           </tbody>
-          <tfoot className="bg-slate-50">
-            <tr>
-              <td colSpan={5} className="px-4 py-3">
-                <div className="flex flex-col gap-3 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between">
-                  <span>
-                    Showing {sortedRoles.length} of {totalElements} role{totalElements === 1 ? '' : 's'}
-                  </span>
-                  <div className="flex items-center gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setPage((prev) => Math.max(prev - 1, 0))}
-                      className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-600 transition hover:border-slate-400 hover:text-slate-800 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"
-                      disabled={page === 0}
-                    >
-                      Previous
-                    </button>
-                    <span>
-                      Page {page + 1} of {totalPages}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setPage((prev) => (prev + 1 < totalPages ? prev + 1 : prev))}
-                      className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-600 transition hover:border-slate-400 hover:text-slate-800 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"
-                      disabled={page + 1 >= totalPages}
-                    >
-                      Next
-                    </button>
-                  </div>
-                </div>
-              </td>
-            </tr>
-          </tfoot>
         </table>
-      </div>
-    </div>
-  );
+        </div>
+        <PaginationControls
+          page={page}
+          pageSize={pageSize}
+          totalElements={total}
+          onPageChange={setPage}
+          onPageSizeChange={(size) => {
+            setPageSize(size);
+            setPage(0);
+          }}
+          pageSizeOptions={[10, 25, 50, 100]}
+          isLoading={rolesResponse.isLoading}
+        />
+      </PageSection>
+    );
+  };
 
   const isListView = view === 'list';
   const isCreateView = view === 'create';
   const isEditView = view === 'edit';
 
   return (
-    <div className="flex min-h-full flex-col gap-6 px-6 py-6">
-      <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
-        <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Roles</h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Design and manage reusable permission bundles to keep access aligned with your operating model.
-          </p>
-        </div>
-        {isListView ? (
-          <div className="flex flex-wrap items-center gap-3">
-            {canExportRoles && (
-              <ExportMenu
-                onSelect={handleExportRoles}
-                disabled={rolesResponse.isLoading}
-                isBusy={isExporting}
-              />
-            )}
+    <div className="space-y-6 px-6 py-6">
+      <PageHeader
+        title="Roles"
+        description="Design and manage reusable permission bundles to keep access aligned with your operating model."
+        actions={
+          isListView ? (
+            <>
+              {canExportRoles && (
+                <ExportMenu
+                  onSelect={handleExportRoles}
+                  disabled={rolesResponse.isLoading}
+                  isBusy={isExporting}
+                />
+              )}
+              <button
+                type="button"
+                onClick={() => setView('create')}
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-600"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={1.6}
+                  className="h-4 w-4"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m6-6H6" />
+                </svg>
+                New role
+              </button>
+            </>
+          ) : (
             <button
               type="button"
-              onClick={() => setView('create')}
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-600"
+              onClick={() => {
+                setView('list');
+                setEditingRole(null);
+              }}
+              className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-800"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={1.6}
-                className="h-4 w-4"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m6-6H6" />
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-4 w-4">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
               </svg>
-              New role
+              Back to roles
             </button>
-          </div>
-        ) : (
-          <button
-            type="button"
-            onClick={() => {
-              setView('list');
-              setEditingRole(null);
-            }}
-            className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-800"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-4 w-4">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
-            </svg>
-            Back to roles
-          </button>
-        )}
-      </div>
+          )
+        }
+      />
 
       {isListView ? (
         <>
           {renderSummaryCards()}
-          <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">{renderTable()}</div>
+          {renderTable()}
         </>
       ) : isCreateView ? (
         <form onSubmit={handleCreate} className="rounded-2xl border border-slate-200 bg-white shadow-sm">
