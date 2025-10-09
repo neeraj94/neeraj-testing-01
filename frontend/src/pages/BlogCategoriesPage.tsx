@@ -7,6 +7,9 @@ import { hasAnyPermission } from '../utils/permissions';
 import type { PermissionKey } from '../types/auth';
 import { useToast } from '../components/ToastProvider';
 import { extractErrorMessage } from '../utils/errors';
+import PageHeader from '../components/PageHeader';
+import PageSection from '../components/PageSection';
+import PaginationControls from '../components/PaginationControls';
 
 interface CategoryFormState {
   name: string;
@@ -17,6 +20,7 @@ interface CategoryFormState {
 type FormMode = 'create' | 'edit';
 
 const DEFAULT_PAGE_SIZE = 10;
+const PAGE_SIZE_OPTIONS = [10, 25, 50];
 
 const BlogCategoriesPage = () => {
   const queryClient = useQueryClient();
@@ -24,6 +28,7 @@ const BlogCategoriesPage = () => {
   const permissions = useAppSelector((state) => state.auth.permissions);
 
   const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [searchDraft, setSearchDraft] = useState('');
   const [search, setSearch] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -54,15 +59,16 @@ const BlogCategoriesPage = () => {
   }, [searchDraft]);
 
   const categoriesQuery = useQuery<BlogCategoryPage>({
-    queryKey: ['blog', 'categories', { page, search }],
+    queryKey: ['blog', 'categories', { page, pageSize, search }],
     queryFn: async () => {
       const { data } = await api.get<BlogCategoryPage>('/blog/categories', {
-        params: { page, size: DEFAULT_PAGE_SIZE, search }
+        params: { page, size: pageSize, search }
       });
       return data;
     }
   });
 
+  const categories = categoriesQuery.data?.content ?? [];
   const createMutation = useMutation({
     mutationFn: async (payload: CategoryFormState) => {
       const { data } = await api.post<BlogCategory>('/blog/categories', payload);
@@ -162,32 +168,30 @@ const BlogCategoriesPage = () => {
     await deleteMutation.mutateAsync(category.id);
   };
 
-  const totalPages = categoriesQuery.data?.totalPages ?? 0;
   const totalElements = categoriesQuery.data?.totalElements ?? 0;
-  const pageCount = categoriesQuery.data?.content.length ?? 0;
-  const showingFrom = totalElements === 0 ? 0 : page * DEFAULT_PAGE_SIZE + 1;
-  const showingTo = totalElements === 0 ? 0 : page * DEFAULT_PAGE_SIZE + pageCount;
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-slate-800">Blog Categories</h1>
-          <p className="text-sm text-slate-500">Organize posts into meaningful categories to keep content discoverable.</p>
-        </div>
-        {canCreate && (
-          <button
-            type="button"
-            onClick={openCreateModal}
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white shadow hover:bg-blue-600"
-          >
-            New Category
-          </button>
-        )}
-      </div>
+    <div className="space-y-6 px-6 py-6">
+      <PageHeader
+        title="Blog Categories"
+        description="Organize posts into meaningful categories to keep content discoverable."
+        actions={
+          canCreate
+            ? (
+                <button
+                  type="button"
+                  onClick={openCreateModal}
+                  className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white shadow hover:bg-blue-600"
+                >
+                  New category
+                </button>
+              )
+            : undefined
+        }
+      />
 
-      <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
-        <div className="flex flex-col gap-4 border-b border-slate-200 p-4 sm:flex-row sm:items-center sm:justify-between">
+      <PageSection padded={false} bodyClassName="flex flex-col">
+        <div className="flex flex-col gap-4 border-b border-slate-200 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
           <input
             type="search"
             value={searchDraft}
@@ -195,93 +199,97 @@ const BlogCategoriesPage = () => {
             placeholder="Search categories"
             className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:max-w-xs"
           />
-          <div className="text-sm text-slate-500">
-            Page {page + 1} of {Math.max(totalPages, 1)}
-          </div>
         </div>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-slate-200 text-sm">
             <thead className="bg-slate-50">
               <tr>
-                <th className="px-4 py-3 text-left font-medium text-slate-600">Name</th>
-                <th className="px-4 py-3 text-left font-medium text-slate-600">Slug</th>
-                <th className="px-4 py-3 text-left font-medium text-slate-600">Description</th>
-                {(canUpdate || canDelete) && <th className="px-4 py-3 text-right font-medium text-slate-600">Actions</th>}
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Name</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Slug</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Description</th>
+                {(canUpdate || canDelete) && (
+                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Actions</th>
+                )}
               </tr>
             </thead>
-            <tbody>
-              {categoriesQuery.isLoading && (
+            <tbody className="divide-y divide-slate-100 bg-white">
+              {categoriesQuery.isLoading ? (
                 <tr>
-                  <td colSpan={4} className="px-4 py-8 text-center text-slate-500">
+                  <td colSpan={4} className="px-4 py-6 text-center text-sm text-slate-500">
                     Loading categories…
                   </td>
                 </tr>
-              )}
-              {!categoriesQuery.isLoading && categoriesQuery.data?.content.length === 0 && (
+              ) : categories.length > 0 ? (
+                categories.map((category) => (
+                  <tr key={category.id} className="transition hover:bg-blue-50/40">
+                    <td className="px-4 py-3 font-medium text-slate-800">{category.name}</td>
+                    <td className="px-4 py-3 text-slate-600">{category.slug}</td>
+                    <td className="px-4 py-3 text-slate-600">{category.description ?? '—'}</td>
+                    {(canUpdate || canDelete) && (
+                      <td className="px-4 py-3">
+                        <div className="flex justify-end gap-2">
+                          {canUpdate && (
+                            <button
+                              type="button"
+                              onClick={() => openEditModal(category)}
+                              className="rounded-full border border-slate-200 p-2 text-slate-500 transition hover:border-slate-300 hover:text-slate-800"
+                              aria-label={`Edit ${category.name}`}
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+                                <path d="M15.414 2.586a2 2 0 0 0-2.828 0L3 12.172V17h4.828l9.586-9.586a2 2 0 0 0 0-2.828l-2-2Zm-2.121 1.415 2 2L13 8.293l-2-2 2.293-2.292ZM5 13.414 11.293 7.12l1.586 1.586L6.586 15H5v-1.586Z" />
+                              </svg>
+                            </button>
+                          )}
+                          {canDelete && (
+                            <button
+                              type="button"
+                              onClick={() => handleDelete(category)}
+                              className="rounded-full border border-rose-200 p-2 text-rose-500 transition hover:border-rose-300 hover:text-rose-600"
+                              aria-label={`Delete ${category.name}`}
+                            >
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth={1.5}
+                                className="h-4 w-4"
+                              >
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M6 7h12" />
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M10 11v6" />
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M14 11v6" />
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M9 7V4h6v3m2 0v12a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V7h12Z" />
+                              </svg>
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    )}
+                  </tr>
+                ))
+              ) : (
                 <tr>
-                  <td colSpan={4} className="px-4 py-10 text-center text-slate-500">
+                  <td colSpan={4} className="px-4 py-6 text-center text-sm text-slate-500">
                     No categories found.
                   </td>
                 </tr>
               )}
-              {categoriesQuery.data?.content.map((category) => (
-                <tr key={category.id} className="divide-x divide-slate-100">
-                  <td className="px-4 py-3 text-slate-700">{category.name}</td>
-                  <td className="px-4 py-3 text-slate-500">{category.slug}</td>
-                  <td className="px-4 py-3 text-slate-500">
-                    {category.description ? category.description : <span className="italic text-slate-400">No description</span>}
-                  </td>
-                  {(canUpdate || canDelete) && (
-                    <td className="px-4 py-3 text-right">
-                      <div className="flex justify-end gap-2">
-                        {canUpdate && (
-                          <button
-                            type="button"
-                            onClick={() => openEditModal(category)}
-                            className="rounded-lg border border-slate-200 px-3 py-1 text-xs font-medium text-slate-600 transition hover:border-primary hover:text-primary"
-                          >
-                            Edit
-                          </button>
-                        )}
-                        {canDelete && (
-                          <button
-                            type="button"
-                            onClick={() => handleDelete(category)}
-                            className="rounded-lg border border-rose-200 px-3 py-1 text-xs font-medium text-rose-500 transition hover:bg-rose-50"
-                          >
-                            Delete
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  )}
-                </tr>
-              ))}
             </tbody>
           </table>
         </div>
-        <div className="flex items-center justify-between border-t border-slate-200 px-4 py-3 text-sm text-slate-600">
-          <button
-            type="button"
-            onClick={() => setPage((prev) => Math.max(prev - 1, 0))}
-            disabled={page === 0 || categoriesQuery.isLoading}
-            className="rounded-lg border border-slate-200 px-3 py-1 transition disabled:cursor-not-allowed disabled:opacity-40 hover:border-primary hover:text-primary"
-          >
-            Previous
-          </button>
-          <span>
-            Showing {showingFrom}-{showingTo} of {totalElements}
-          </span>
-          <button
-            type="button"
-            onClick={() => setPage((prev) => (categoriesQuery.data && prev < categoriesQuery.data.totalPages - 1 ? prev + 1 : prev))}
-            disabled={categoriesQuery.isLoading || (categoriesQuery.data ? page >= categoriesQuery.data.totalPages - 1 : true)}
-            className="rounded-lg border border-slate-200 px-3 py-1 transition disabled:cursor-not-allowed disabled:opacity-40 hover:border-primary hover:text-primary"
-          >
-            Next
-          </button>
-        </div>
-      </div>
+        <PaginationControls
+          page={page}
+          pageSize={pageSize}
+          totalElements={totalElements}
+          pageSizeOptions={PAGE_SIZE_OPTIONS}
+          onPageChange={setPage}
+          onPageSizeChange={(size) => {
+            setPageSize(size);
+            setPage(0);
+          }}
+          isLoading={categoriesQuery.isLoading}
+        />
+      </PageSection>
 
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4">

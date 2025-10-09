@@ -13,6 +13,8 @@ import { normalizeHexColor } from '../utils/colors';
 import { extractErrorMessage } from '../utils/errors';
 import api from '../services/http';
 import EmailTemplatesPanel from '../components/settings/EmailTemplatesPanel';
+import PageHeader from '../components/PageHeader';
+import PageSection from '../components/PageSection';
 
 type SettingFormValue = string | boolean;
 
@@ -676,20 +678,16 @@ const SettingsPage = () => {
   const saveDisabled = !canUpdateSettings || !dirtyCodes.length || isSaving;
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-2xl font-semibold text-slate-900">Settings</h1>
-        <p className="max-w-3xl text-sm text-slate-500">
-          Manage global preferences, company details, integrations, and the appearance of the
-          dashboard.
-        </p>
-        {!canUpdateSettings && (
-          <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
-            You have read-only access to settings. Contact an administrator to request edit
-            permissions.
-          </div>
-        )}
-      </div>
+    <div className="space-y-6 px-6 py-6">
+      <PageHeader
+        title="Settings"
+        description="Manage company preferences, integrations, email delivery, and lifecycle automation templates."
+      />
+      {!canUpdateSettings && (
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+          You have read-only access to settings. Contact an administrator to request edit permissions.
+        </div>
+      )}
       <div className="flex flex-col gap-6 lg:flex-row">
         <aside className="w-full lg:w-72">
           <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
@@ -774,7 +772,7 @@ const SettingsPage = () => {
             </nav>
           </div>
         </aside>
-        <section className="flex-1">
+        <section className="flex-1 space-y-6">
           {isLoading && (
             <div className="flex min-h-[320px] items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-white">
               <span className="text-sm text-slate-500">Loading settings…</span>
@@ -794,32 +792,26 @@ const SettingsPage = () => {
             </div>
           )}
           {!isLoading && !hasError && activeCategory && (
-            <div className="space-y-6">
+            <>
               {isEmailTemplatesView ? (
-                <>
-                  <div className="flex flex-col gap-2 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                    <h2 className="text-lg font-semibold text-slate-900">Email templates</h2>
-                    <p className="text-sm text-slate-500">
-                      Enable and customise lifecycle emails such as user welcome messages and staff verification requests.
-                    </p>
-                  </div>
+                <PageSection
+                  title="Email templates"
+                  description="Enable and customise lifecycle emails such as user welcome messages and staff verification requests."
+                >
                   <EmailTemplatesPanel />
-                </>
+                </PageSection>
               ) : (
-                <>
-                  <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                    <div className="flex flex-col gap-2">
-                      <h2 className="text-lg font-semibold text-slate-900">{activeCategory.label}</h2>
-                      {activeCategory.description && (
-                        <p className="text-sm text-slate-500">{activeCategory.description}</p>
-                      )}
-                    </div>
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
+                <PageSection
+                  title={activeCategory.label}
+                  description={activeCategory.description ?? undefined}
+                  bodyClassName={shouldUseSectionNav ? 'flex flex-col gap-6 lg:flex-row' : undefined}
+                  footer={
+                    <>
                       <button
                         type="button"
                         onClick={handleReset}
                         disabled={!canUpdateSettings || !dirtyCodes.length || isSaving}
-                        className="inline-flex items-center justify-center rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 transition disabled:cursor-not-allowed disabled:opacity-60 hover:bg-slate-100"
+                        className="inline-flex items-center justify-center rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         Reset
                       </button>
@@ -827,59 +819,56 @@ const SettingsPage = () => {
                         type="button"
                         onClick={handleSave}
                         disabled={saveDisabled}
-                        title={
-                          !canUpdateSettings ? 'You do not have permission to update settings.' : undefined
-                        }
+                        title={!canUpdateSettings ? 'You do not have permission to update settings.' : undefined}
                         className="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white shadow transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         {isSaving ? 'Saving…' : 'Save changes'}
                       </button>
-                    </div>
-                  </div>
-                  <div className={`flex flex-col gap-6 ${shouldUseSectionNav ? 'lg:flex-row' : ''}`}>
-                    {shouldUseSectionNav && (
-                      <div className="w-full lg:w-64">
-                        <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
-                          <nav className="space-y-1">
-                            {activeCategory.sections.map((section) => {
-                              const isActive = section.key === activeSectionKey;
-                              return (
-                                <button
-                                  key={section.key}
-                                  type="button"
-                                  onClick={() => handleSelectSection(section)}
-                                  className={`w-full rounded-xl px-4 py-3 text-left transition ${
-                                    isActive
-                                      ? 'bg-primary/10 text-primary'
-                                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                                  }`}
-                                >
-                                  <p className="text-sm font-semibold">{section.label}</p>
-                                  {section.description && (
-                                    <p className="mt-1 text-xs text-slate-500">{section.description}</p>
-                                  )}
-                                </button>
-                              );
-                            })}
-                          </nav>
-                        </div>
+                    </>
+                  }
+                >
+                  {shouldUseSectionNav && (
+                    <div className="w-full lg:w-64">
+                      <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+                        <nav className="space-y-1">
+                          {activeCategory.sections.map((section) => {
+                            const isActive = section.key === activeSectionKey;
+                            return (
+                              <button
+                                key={section.key}
+                                type="button"
+                                onClick={() => handleSelectSection(section)}
+                                className={`w-full rounded-xl px-4 py-3 text-left transition ${
+                                  isActive
+                                    ? 'bg-primary/10 text-primary'
+                                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                                }`}
+                              >
+                                <p className="text-sm font-semibold">{section.label}</p>
+                                {section.description && (
+                                  <p className="mt-1 text-xs text-slate-500">{section.description}</p>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </nav>
                       </div>
-                    )}
-                    <div className="flex-1 space-y-6">
-                      {shouldUseSectionNav
-                        ? activeCategory.sections.map((section) => (
-                            <Fragment key={section.key}>
-                              {section.key === activeSectionKey && renderSectionContent(section)}
-                            </Fragment>
-                          ))
-                        : activeCategory.sections.map((section) => (
-                            <Fragment key={section.key}>{renderSectionContent(section)}</Fragment>
-                          ))}
                     </div>
+                  )}
+                  <div className="flex-1 space-y-6">
+                    {shouldUseSectionNav
+                      ? activeCategory.sections.map((section) => (
+                          <Fragment key={section.key}>
+                            {section.key === activeSectionKey && renderSectionContent(section)}
+                          </Fragment>
+                        ))
+                      : activeCategory.sections.map((section) => (
+                          <Fragment key={section.key}>{renderSectionContent(section)}</Fragment>
+                        ))}
                   </div>
-                </>
+                </PageSection>
               )}
-            </div>
+            </>
           )}
         </section>
       </div>

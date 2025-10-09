@@ -8,6 +8,9 @@ import { hasAnyPermission } from '../utils/permissions';
 import type { PermissionKey } from '../types/auth';
 import { extractErrorMessage } from '../utils/errors';
 import RichTextEditor from '../components/RichTextEditor';
+import PageHeader from '../components/PageHeader';
+import PageSection from '../components/PageSection';
+import PaginationControls from '../components/PaginationControls';
 
 interface PostFormState {
   title: string;
@@ -27,6 +30,7 @@ type FormMode = 'create' | 'edit';
 type BlogPostPayload = Omit<PostFormState, 'categoryId'> & { categoryId: number };
 
 const DEFAULT_PAGE_SIZE = 10;
+const PAGE_SIZE_OPTIONS = [10, 25, 50];
 const EMPTY_FORM: PostFormState = {
   title: '',
   slug: '',
@@ -56,6 +60,7 @@ const BlogPostsPage = () => {
   const permissions = useAppSelector((state) => state.auth.permissions);
 
   const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [searchDraft, setSearchDraft] = useState('');
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<number | 'all'>('all');
@@ -108,9 +113,9 @@ const BlogPostsPage = () => {
   });
 
   const postsQuery = useQuery<BlogPostPage>({
-    queryKey: ['blog', 'posts', { page, search, categoryFilter, statusFilter }],
+    queryKey: ['blog', 'posts', { page, pageSize, search, categoryFilter, statusFilter }],
     queryFn: async () => {
-      const params: Record<string, unknown> = { page, size: DEFAULT_PAGE_SIZE, search };
+      const params: Record<string, unknown> = { page, size: pageSize, search };
       if (categoryFilter !== 'all') {
         params.categoryId = categoryFilter;
       }
@@ -293,34 +298,31 @@ const BlogPostsPage = () => {
     await deleteMutation.mutateAsync(post.id);
   };
 
-  const totalPages = postsQuery.data?.totalPages ?? 0;
+  const posts = postsQuery.data?.content ?? [];
   const totalElements = postsQuery.data?.totalElements ?? 0;
-  const pageCount = postsQuery.data?.content.length ?? 0;
-  const showingFrom = totalElements === 0 ? 0 : page * DEFAULT_PAGE_SIZE + 1;
-  const showingTo = totalElements === 0 ? 0 : page * DEFAULT_PAGE_SIZE + pageCount;
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-        <div>
-          <h1 className="text-2xl font-semibold text-slate-800">Blog Posts</h1>
-          <p className="text-sm text-slate-500">
-            Manage rich blog content with SEO metadata and visual assets.
-          </p>
-        </div>
-        {canCreate && (
-          <button
-            type="button"
-            onClick={openCreateModal}
-            className="self-start rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white shadow hover:bg-blue-600"
-          >
-            New Post
-          </button>
-        )}
-      </div>
+    <div className="space-y-6 px-6 py-6">
+      <PageHeader
+        title="Blog Posts"
+        description="Manage rich blog content with SEO metadata and visual assets."
+        actions={
+          canCreate
+            ? (
+                <button
+                  type="button"
+                  onClick={openCreateModal}
+                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white shadow hover:bg-blue-600"
+                >
+                  New post
+                </button>
+              )
+            : undefined
+        }
+      />
 
-      <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
-        <div className="flex flex-col gap-4 border-b border-slate-200 p-4 md:flex-row md:items-center md:justify-between">
+      <PageSection padded={false} bodyClassName="flex flex-col">
+        <div className="flex flex-col gap-4 border-b border-slate-200 px-6 py-4 md:flex-row md:items-center md:justify-between">
           <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center">
             <input
               type="search"
@@ -354,115 +356,117 @@ const BlogPostsPage = () => {
               <option value="draft">Draft</option>
             </select>
           </div>
-          <div className="text-sm text-slate-500">Page {page + 1} of {Math.max(totalPages, 1)}</div>
         </div>
 
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-slate-200 text-sm">
             <thead className="bg-slate-50">
               <tr>
-                <th className="px-4 py-3 text-left font-medium text-slate-600">Title</th>
-                <th className="px-4 py-3 text-left font-medium text-slate-600">Category</th>
-                <th className="px-4 py-3 text-left font-medium text-slate-600">Status</th>
-                <th className="px-4 py-3 text-left font-medium text-slate-600">Updated</th>
-                {(canUpdate || canDelete) && <th className="px-4 py-3 text-right font-medium text-slate-600">Actions</th>}
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Title</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Category</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Status</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Updated</th>
+                {(canUpdate || canDelete) && (
+                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Actions</th>
+                )}
               </tr>
             </thead>
-            <tbody>
-              {postsQuery.isLoading && (
+            <tbody className="divide-y divide-slate-100 bg-white">
+              {postsQuery.isLoading ? (
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
+                  <td colSpan={5} className="px-4 py-6 text-center text-sm text-slate-500">
                     Loading posts…
                   </td>
                 </tr>
-              )}
-              {!postsQuery.isLoading && postsQuery.data?.content.length === 0 && (
+              ) : posts.length > 0 ? (
+                posts.map((post) => (
+                  <tr key={post.id} className="transition hover:bg-blue-50/40">
+                    <td className="px-4 py-3">
+                      <div className="flex flex-col">
+                        <span className="font-medium text-slate-700">{post.title}</span>
+                        <span className="text-xs text-slate-400">/{post.slug}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-slate-600">{post.categoryName}</td>
+                    <td className="px-4 py-3">
+                      {post.published ? (
+                        <span className="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-600">
+                          Published
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+                          Draft
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-slate-500">
+                      {post.updatedAt ? new Date(post.updatedAt).toLocaleString() : '—'}
+                    </td>
+                    {(canUpdate || canDelete) && (
+                      <td className="px-4 py-3">
+                        <div className="flex justify-end gap-2">
+                          {canUpdate && (
+                            <button
+                              type="button"
+                              onClick={() => openEditModal(post)}
+                              className="rounded-full border border-slate-200 p-2 text-slate-500 transition hover:border-slate-300 hover:text-slate-800"
+                              aria-label={`Edit ${post.title}`}
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+                                <path d="M15.414 2.586a2 2 0 0 0-2.828 0L3 12.172V17h4.828l9.586-9.586a2 2 0 0 0 0-2.828l-2-2Zm-2.121 1.415 2 2L13 8.293l-2-2 2.293-2.292ZM5 13.414 11.293 7.12l1.586 1.586L6.586 15H5v-1.586Z" />
+                              </svg>
+                            </button>
+                          )}
+                          {canDelete && (
+                            <button
+                              type="button"
+                              onClick={() => handleDelete(post)}
+                              className="rounded-full border border-rose-200 p-2 text-rose-500 transition hover:border-rose-300 hover:text-rose-600"
+                              aria-label={`Delete ${post.title}`}
+                            >
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth={1.5}
+                                className="h-4 w-4"
+                              >
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M6 7h12" />
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M10 11v6" />
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M14 11v6" />
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M9 7V4h6v3m2 0v12a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V7h12Z" />
+                              </svg>
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    )}
+                  </tr>
+                ))
+              ) : (
                 <tr>
-                  <td colSpan={5} className="px-4 py-10 text-center text-slate-500">
+                  <td colSpan={5} className="px-4 py-6 text-center text-sm text-slate-500">
                     No posts match your filters.
                   </td>
                 </tr>
               )}
-              {postsQuery.data?.content.map((post) => (
-                <tr key={post.id} className="divide-x divide-slate-100">
-                  <td className="px-4 py-3">
-                    <div className="flex flex-col">
-                      <span className="font-medium text-slate-700">{post.title}</span>
-                      <span className="text-xs text-slate-400">/{post.slug}</span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-slate-500">{post.categoryName}</td>
-                  <td className="px-4 py-3">
-                    {post.published ? (
-                      <span className="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-600">
-                        Published
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
-                        Draft
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-slate-500">
-                    {post.updatedAt ? new Date(post.updatedAt).toLocaleString() : '—'}
-                  </td>
-                  {(canUpdate || canDelete) && (
-                    <td className="px-4 py-3 text-right">
-                      <div className="flex justify-end gap-2">
-                        {canUpdate && (
-                          <button
-                            type="button"
-                            onClick={() => openEditModal(post)}
-                            className="rounded-lg border border-slate-200 px-3 py-1 text-xs font-medium text-slate-600 transition hover:border-primary hover:text-primary"
-                          >
-                            Edit
-                          </button>
-                        )}
-                        {canDelete && (
-                          <button
-                            type="button"
-                            onClick={() => handleDelete(post)}
-                            className="rounded-lg border border-rose-200 px-3 py-1 text-xs font-medium text-rose-500 transition hover:bg-rose-50"
-                          >
-                            Delete
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  )}
-                </tr>
-              ))}
             </tbody>
           </table>
         </div>
-        <div className="flex items-center justify-between border-t border-slate-200 px-4 py-3 text-sm text-slate-600">
-          <button
-            type="button"
-            onClick={() => setPage((prev) => Math.max(prev - 1, 0))}
-            disabled={page === 0 || postsQuery.isLoading}
-            className="rounded-lg border border-slate-200 px-3 py-1 transition disabled:cursor-not-allowed disabled:opacity-40 hover:border-primary hover:text-primary"
-          >
-            Previous
-          </button>
-          <span>
-            Showing {showingFrom}-{showingTo} of {totalElements}
-          </span>
-          <button
-            type="button"
-            onClick={() =>
-              setPage((prev) =>
-                postsQuery.data && prev < postsQuery.data.totalPages - 1 ? prev + 1 : prev
-              )
-            }
-            disabled={
-              postsQuery.isLoading || (postsQuery.data ? page >= postsQuery.data.totalPages - 1 : true)
-            }
-            className="rounded-lg border border-slate-200 px-3 py-1 transition disabled:cursor-not-allowed disabled:opacity-40 hover:border-primary hover:text-primary"
-          >
-            Next
-          </button>
-        </div>
-      </div>
+        <PaginationControls
+          page={page}
+          pageSize={pageSize}
+          totalElements={totalElements}
+          pageSizeOptions={PAGE_SIZE_OPTIONS}
+          onPageChange={setPage}
+          onPageSizeChange={(size) => {
+            setPageSize(size);
+            setPage(0);
+          }}
+          isLoading={postsQuery.isLoading}
+        />
+      </PageSection>
 
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4">

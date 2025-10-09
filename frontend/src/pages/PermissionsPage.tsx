@@ -9,6 +9,11 @@ import { hasAnyPermission } from '../utils/permissions';
 import ExportMenu from '../components/ExportMenu';
 import { exportDataset, type ExportFormat } from '../utils/exporters';
 import { useToast } from '../components/ToastProvider';
+import PageHeader from '../components/PageHeader';
+import PageSection from '../components/PageSection';
+import PaginationControls from '../components/PaginationControls';
+
+const PAGE_SIZE_OPTIONS = [25, 50, 100];
 
 const PermissionsPage = () => {
   const { notify } = useToast();
@@ -22,6 +27,8 @@ const PermissionsPage = () => {
 
   const [searchDraft, setSearchDraft] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(PAGE_SIZE_OPTIONS[0]);
   const [sort, setSort] = useState<{ field: 'key' | 'name'; direction: 'asc' | 'desc' }>({
     field: 'key',
     direction: 'asc'
@@ -30,6 +37,7 @@ const PermissionsPage = () => {
   useEffect(() => {
     const timer = window.setTimeout(() => {
       setSearchTerm(searchDraft.trim());
+      setPage(0);
     }, 300);
     return () => window.clearTimeout(timer);
   }, [searchDraft]);
@@ -67,6 +75,20 @@ const PermissionsPage = () => {
     return list;
   }, [filteredPermissions, sort]);
 
+  useEffect(() => {
+    const totalPages = Math.max(Math.ceil(sortedPermissions.length / pageSize), 1);
+    if (page >= totalPages) {
+      setPage(totalPages - 1);
+    }
+  }, [sortedPermissions.length, pageSize, page]);
+
+  const totalElements = sortedPermissions.length;
+
+  const paginatedPermissions = useMemo(() => {
+    const start = page * pageSize;
+    return sortedPermissions.slice(start, start + pageSize);
+  }, [sortedPermissions, page, pageSize]);
+
   const handleSortChange = (field: 'key' | 'name') => {
     setSort((prev) => {
       if (prev.field === field) {
@@ -74,6 +96,7 @@ const PermissionsPage = () => {
       }
       return { field, direction: 'asc' };
     });
+    setPage(0);
   };
 
   const handleExportPermissions = (format: ExportFormat) => {
@@ -109,22 +132,16 @@ const PermissionsPage = () => {
   };
 
   return (
-    <div className="flex min-h-full flex-col gap-6 px-6 py-6">
-      <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
-        <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Permissions</h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Review every permission provisioned by the platform so you can assign the right capabilities to roles and users.
-          </p>
-        </div>
-        {canExportPermissions && (
-          <ExportMenu
-            onSelect={handleExportPermissions}
-            disabled={isLoading}
-            isBusy={isExporting}
-          />
-        )}
-      </div>
+    <div className="space-y-6 px-6 py-6">
+      <PageHeader
+        title="Permissions"
+        description="Review every permission provisioned by the platform so you can assign the right capabilities to roles and users."
+        actions={
+          canExportPermissions ? (
+            <ExportMenu onSelect={handleExportPermissions} disabled={isLoading} isBusy={isExporting} />
+          ) : undefined
+        }
+      />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -134,7 +151,7 @@ const PermissionsPage = () => {
         </div>
       </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <PageSection padded={false} bodyClassName="flex flex-col">
         <div className="flex flex-col gap-4 border-b border-slate-200 px-6 py-4 lg:flex-row lg:items-end">
           <div className="flex-1">
             <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Search</label>
@@ -174,14 +191,14 @@ const PermissionsPage = () => {
                     Loading permissions…
                   </td>
                 </tr>
-              ) : sortedPermissions.length === 0 ? (
+              ) : totalElements === 0 ? (
                 <tr>
                   <td colSpan={2} className="px-4 py-6 text-center text-sm text-slate-500">
                     No permissions match your search.
                   </td>
                 </tr>
               ) : (
-                sortedPermissions.map((permission) => (
+                paginatedPermissions.map((permission) => (
                   <tr key={permission.id} className="transition hover:bg-blue-50/40">
                     <td className="px-4 py-3 text-sm font-semibold uppercase tracking-wide text-slate-500">{permission.key}</td>
                     <td className="px-4 py-3 text-sm text-slate-600">{permission.name}</td>
@@ -191,7 +208,19 @@ const PermissionsPage = () => {
             </tbody>
           </table>
         </div>
-      </div>
+        <PaginationControls
+          page={page}
+          pageSize={pageSize}
+          totalElements={totalElements}
+          pageSizeOptions={PAGE_SIZE_OPTIONS}
+          onPageChange={setPage}
+          onPageSizeChange={(size) => {
+            setPageSize(size);
+            setPage(0);
+          }}
+          isLoading={isLoading}
+        />
+      </PageSection>
     </div>
   );
 };

@@ -11,6 +11,9 @@ import { buildPermissionGroups, CAPABILITY_COLUMNS, type PermissionGroup } from 
 import { useAppSelector } from '../app/hooks';
 import type { PermissionKey } from '../types/auth';
 import { hasAnyPermission } from '../utils/permissions';
+import PageHeader from '../components/PageHeader';
+import PageSection from '../components/PageSection';
+import PaginationControls from '../components/PaginationControls';
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100];
 const DEFAULT_PAGE_SIZE = 25;
@@ -624,7 +627,6 @@ const UsersPage = () => {
   };
 
   const users: User[] = usersQuery.data?.content ?? [];
-  const totalPages = usersQuery.data?.totalPages ?? 0;
   const filteredUsers = useMemo(() => applyFilters(users), [users, statusFilter, audienceFilter]);
   const sortedUsers = useMemo(() => sortUsersList(filteredUsers), [filteredUsers, sort]);
 
@@ -806,31 +808,19 @@ const UsersPage = () => {
             <option value="customer">Customers</option>
           </select>
         </div>
-        <div>
-          <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Rows</label>
-          <select
-            value={pageSize}
-            onChange={(event) => setPageSize(Number(event.target.value))}
-            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none"
-          >
-            {PAGE_SIZE_OPTIONS.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </select>
-        </div>
       </div>
     </div>
   );
 
-  const renderTable = () => (
-    <div className="flex flex-col">
-      {renderFilters()}
-      <div className="flex-1 overflow-x-auto">
-        <table className="min-w-full divide-y divide-slate-200">
-          <thead className="bg-slate-50">
-            <tr>
+  const renderTable = () => {
+    const totalElements = usersQuery.data?.totalElements ?? 0;
+    return (
+      <PageSection padded={false} bodyClassName="flex flex-col">
+        {renderFilters()}
+        <div className="flex-1 overflow-x-auto">
+          <table className="min-w-full divide-y divide-slate-200">
+            <thead className="bg-slate-50">
+              <tr>
               <SortableColumnHeader
                 label="Name"
                 field="name"
@@ -891,13 +881,7 @@ const UsersPage = () => {
                 return (
                   <tr
                     key={user.id}
-                    className={`cursor-pointer transition hover:bg-blue-50/40 ${
-                      isSelected ? 'bg-blue-50/60' : ''
-                    }`}
-                    onClick={() => {
-                      setSelectedUserId(user.id);
-                      setPanelMode('detail');
-                    }}
+                    className={`transition hover:bg-blue-50/40 ${isSelected ? 'bg-blue-50/60' : ''}`}
                   >
                     <td className="px-4 py-3 text-sm font-medium text-slate-800">
                       <div>{user.fullName}</div>
@@ -1006,32 +990,22 @@ const UsersPage = () => {
             )}
           </tbody>
         </table>
-      </div>
-      <div className="flex items-center justify-between border-t border-slate-200 px-6 py-3 text-sm text-slate-500">
-        <span>
-          Page {totalPages === 0 ? 0 : page + 1} of {Math.max(totalPages, 1)}
-        </span>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setPage((prev) => Math.max(prev - 1, 0))}
-            disabled={page === 0 || usersQuery.isLoading}
-            className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Previous
-          </button>
-          <button
-            type="button"
-            onClick={() => setPage((prev) => Math.min(prev + 1, Math.max(totalPages - 1, 0)))}
-            disabled={page >= totalPages - 1 || usersQuery.isLoading}
-            className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Next
-          </button>
         </div>
-      </div>
-    </div>
-  );
+        <PaginationControls
+          page={page}
+          pageSize={pageSize}
+          totalElements={totalElements}
+          pageSizeOptions={PAGE_SIZE_OPTIONS}
+          onPageChange={setPage}
+          onPageSizeChange={(size) => {
+            setPageSize(size);
+            setPage(0);
+          }}
+          isLoading={usersQuery.isLoading}
+        />
+      </PageSection>
+    );
+  };
 
   const renderProfileTab = (isEditable: boolean, isCreate: boolean) => (
     <div className="space-y-6">
@@ -1571,45 +1545,43 @@ const UsersPage = () => {
   const isDirectoryView = panelMode === 'empty';
 
   return (
-    <div className="flex min-h-full flex-col gap-6 px-6 py-6">
-      <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
-        <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Users &amp; customers</h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Manage internal teammates and customer contacts from a single, permission-aware workspace.
-          </p>
-        </div>
-        {isDirectoryView && (
-          <div className="flex flex-wrap items-center gap-3">
-            {canExportUsers && (
-              <ExportMenu onSelect={handleExportUsers} disabled={usersQuery.isLoading} isBusy={isExporting} />
-            )}
-            {canCreateUser && (
-              <button
-                type="button"
-                onClick={() => setPanelMode('create')}
-                className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-600"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth={1.6}
-                  className="h-4 w-4"
+    <div className="space-y-6 px-6 py-6">
+      <PageHeader
+        title="Users & customers"
+        description="Manage internal teammates and customer contacts from a single, permission-aware workspace."
+        actions={
+          isDirectoryView ? (
+            <>
+              {canExportUsers && (
+                <ExportMenu onSelect={handleExportUsers} disabled={usersQuery.isLoading} isBusy={isExporting} />
+              )}
+              {canCreateUser && (
+                <button
+                  type="button"
+                  onClick={() => setPanelMode('create')}
+                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-600"
                 >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m6-6H6" />
-                </svg>
-                New user
-              </button>
-            )}
-          </div>
-        )}
-      </div>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={1.6}
+                    className="h-4 w-4"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m6-6H6" />
+                  </svg>
+                  New user
+                </button>
+              )}
+            </>
+          ) : undefined
+        }
+      />
       {isDirectoryView ? (
         <>
           {renderSummaryCards()}
-          <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">{renderTable()}</div>
+          {renderTable()}
         </>
       ) : (
         renderPanel()
