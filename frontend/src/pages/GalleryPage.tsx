@@ -5,8 +5,9 @@ import { useToast } from '../components/ToastProvider';
 import { useAppSelector } from '../app/hooks';
 import { hasAnyPermission } from '../utils/permissions';
 import { formatFileSize } from '../utils/files';
-import type { GalleryFile, GalleryFilePage, GalleryFolder } from '../types/gallery';
+import type { GalleryFile, GalleryFilePage, GalleryFolder, GallerySettings } from '../types/gallery';
 import type { PermissionKey } from '../types/auth';
+import { extractErrorMessage } from '../utils/errors';
 
 const PAGE_SIZE_OPTIONS = [20, 50, 100];
 
@@ -217,6 +218,15 @@ const GalleryPage = () => {
     placeholderData: (previousData) => previousData
   });
 
+  const settingsQuery = useQuery<GallerySettings>({
+    queryKey: ['gallery', 'settings', 'preferences'],
+    queryFn: async () => {
+      const { data } = await api.get<GallerySettings>('/gallery/settings');
+      return data;
+    },
+    staleTime: 5 * 60 * 1000
+  });
+
   const invalidateGallery = () => {
     queryClient.invalidateQueries({ queryKey: ['gallery', 'files'] });
   };
@@ -248,8 +258,14 @@ const GalleryPage = () => {
       setSelectedIds([]);
       setUploadProgress(null);
     },
-    onError: () => {
-      notify({ type: 'error', message: 'Unable to upload files. Please check the allowed file types.' });
+    onError: (error) => {
+      notify({
+        type: 'error',
+        message: extractErrorMessage(
+          error,
+          'Unable to upload files. Please check the allowed file types and size limits.'
+        )
+      });
       setUploadProgress(null);
     }
   });
@@ -339,6 +355,18 @@ const GalleryPage = () => {
     }
     return queryFiles.filter((file) => (file.folderId ?? null) === folderFilter);
   }, [queryFiles, folderFilter]);
+
+  const gallerySettings = settingsQuery.data;
+  const maxFileSizeBytes = gallerySettings?.maxFileSizeBytes ?? null;
+  const allowedExtensions = gallerySettings?.allowedExtensions ?? [];
+  const maxFileSizeLabel = useMemo(
+    () => (maxFileSizeBytes && maxFileSizeBytes > 0 ? formatFileSize(maxFileSizeBytes) : null),
+    [maxFileSizeBytes]
+  );
+  const allowedExtensionsLabel = useMemo(
+    () => (allowedExtensions.length ? allowedExtensions.join(', ') : null),
+    [allowedExtensions]
+  );
   const totalPages = filesQuery.data?.totalPages ?? 0;
 
   const allSelected = files.length > 0 && selectedIds.length === files.length;
@@ -363,9 +391,27 @@ const GalleryPage = () => {
   const handleFileInputChange = (event: ChangeEvent<HTMLInputElement>) => {
     const inputFiles = Array.from(event.target.files ?? []);
     if (!inputFiles.length) {
+      event.target.value = '';
       return;
     }
-    uploadFiles.mutate(inputFiles);
+    let validFiles = inputFiles;
+    if (maxFileSizeBytes !== null && maxFileSizeBytes > 0) {
+      const rejected = inputFiles.filter((file) => file.size > maxFileSizeBytes);
+      if (rejected.length) {
+        const limitLabel = maxFileSizeLabel ?? formatFileSize(maxFileSizeBytes);
+        const message =
+          rejected.length === 1
+            ? `${rejected[0].name || 'This file'} exceeds the maximum allowed size of ${limitLabel}.`
+            : `${rejected.length} files exceed the maximum allowed size of ${limitLabel} and were skipped.`;
+        notify({ type: 'error', message });
+        validFiles = inputFiles.filter((file) => file.size <= maxFileSizeBytes);
+      }
+    }
+    if (!validFiles.length) {
+      event.target.value = '';
+      return;
+    }
+    uploadFiles.mutate(validFiles);
     event.target.value = '';
   };
 
@@ -960,6 +1006,14 @@ const GalleryPage = () => {
                     List
                   </button>
                 </div>
+                {(maxFileSizeLabel || allowedExtensionsLabel) && (
+                  <p className="w-full text-xs text-slate-400">
+                    {maxFileSizeLabel ? `Maximum file size ${maxFileSizeLabel}.` : ''}
+                    {allowedExtensionsLabel
+                      ? `${maxFileSizeLabel ? ' ' : ''}Allowed types: ${allowedExtensionsLabel}.`
+                      : ''}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -1205,12 +1259,27 @@ const GalleryPage = () => {
                     </thead>
                     <tbody className="divide-y divide-slate-200">
                       {visibleFolders.map((folder) => (
-                        <tr key={`folder-${folder.id}`} className="hover:bg-slate-50/60">
+                        <tr
+                          key={`folder-${folder.id}`}
+                          className="cursor-pointer hover:bg-slate-50/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                          onClick={() => handleFolderOpen(folder.id)}
+                          onKeyDown={(event) => {
+                            if (event.key === 'Enter' || event.key === ' ') {
+                              event.preventDefault();
+                              handleFolderOpen(folder.id);
+                            }
+                          }}
+                          tabIndex={0}
+                          role="button"
+                        >
                           <td className="px-4 py-3 text-center text-slate-400">—</td>
                           <td className="max-w-[18rem] px-4 py-3">
                             <button
                               type="button"
-                              onClick={() => handleFolderOpen(folder.id)}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                handleFolderOpen(folder.id);
+                              }}
                               className="flex w-full items-center gap-3 text-left"
                             >
                               <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-2xl">📁</span>
@@ -1224,16 +1293,19 @@ const GalleryPage = () => {
                           <td className="px-4 py-3 text-slate-500">—</td>
                           <td className="px-4 py-3 text-slate-600">{resolveOwnerLabel(folder.ownerId ?? null)}</td>
                           <td className="px-4 py-3 text-slate-500">—</td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="inline-flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => handleFolderOpen(folder.id)}
-                            className="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 transition hover:border-primary hover:text-primary"
-                          >
-                            Open
-                          </button>
-                          {canManageFolders && !folder.root && (
+                          <td className="px-4 py-3 text-right">
+                            <div className="inline-flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  handleFolderOpen(folder.id);
+                                }}
+                                className="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 transition hover:border-primary hover:text-primary"
+                              >
+                                Open
+                              </button>
+                              {canManageFolders && !folder.root && (
                             <div className="relative">
                               <button
                                 type="button"
@@ -1270,13 +1342,23 @@ const GalleryPage = () => {
                         return (
                           <tr
                             key={`file-${file.id}`}
-                            className={`${isSelected ? 'bg-primary/5' : ''} hover:bg-slate-50/60`}
+                            className={`${isSelected ? 'bg-primary/5' : ''} cursor-pointer hover:bg-slate-50/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50`}
+                            onClick={() => handleOpenDetails(file)}
+                            onKeyDown={(event) => {
+                              if (event.key === 'Enter' || event.key === ' ') {
+                                event.preventDefault();
+                                handleOpenDetails(file);
+                              }
+                            }}
+                            tabIndex={0}
+                            role="button"
                           >
                             <td className="px-4 py-3">
                               <input
                                 type="checkbox"
                                 checked={isSelected}
                                 onChange={() => toggleSelect(file.id)}
+                                onClick={(event) => event.stopPropagation()}
                               />
                             </td>
                             <td className="max-w-[18rem] px-4 py-3">
