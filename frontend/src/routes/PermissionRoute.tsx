@@ -11,7 +11,7 @@ const PermissionRoute = ({ required }: PermissionRouteProps) => {
   const { permissions } = useAppSelector((state) => state.auth);
   const allowed = hasAnyPermission(permissions as PermissionKey[], required);
   if (!allowed) {
-    return <Navigate to="/403" replace />;
+    return <Navigate to="/admin/403" replace />;
   }
   return <Outlet />;
 };

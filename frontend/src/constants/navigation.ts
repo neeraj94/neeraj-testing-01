@@ -5,7 +5,7 @@ export const DEFAULT_NAVIGATION_MENU: NavigationNode[] = [
     key: 'dashboard',
     label: 'Dashboard',
     icon: '🏠',
-    path: '/dashboard',
+    path: '/admin/dashboard',
     group: false,
     permissions: [],
     children: []
@@ -22,7 +22,7 @@ export const DEFAULT_NAVIGATION_MENU: NavigationNode[] = [
         key: 'invoices',
         label: 'Invoices',
         icon: '📄',
-        path: '/invoices',
+        path: '/admin/invoices',
         group: false,
         permissions: [
           'INVOICE_VIEW',
@@ -48,7 +48,7 @@ export const DEFAULT_NAVIGATION_MENU: NavigationNode[] = [
         key: 'users',
         label: 'Users',
         icon: '👥',
-        path: '/users',
+        path: '/admin/users',
         group: false,
         permissions: [
           'USER_VIEW',
@@ -64,7 +64,7 @@ export const DEFAULT_NAVIGATION_MENU: NavigationNode[] = [
         key: 'roles',
         label: 'Roles',
         icon: '🧩',
-        path: '/roles',
+        path: '/admin/roles',
         group: false,
         permissions: ['ROLE_VIEW', 'ROLE_VIEW_GLOBAL', 'ROLE_VIEW_OWN'],
         children: []
@@ -73,9 +73,37 @@ export const DEFAULT_NAVIGATION_MENU: NavigationNode[] = [
         key: 'permissions',
         label: 'Permissions',
         icon: '🛡️',
-        path: '/permissions',
+        path: '/admin/permissions',
         group: false,
         permissions: ['PERMISSION_VIEW'],
+        children: []
+      }
+    ]
+  },
+  {
+    key: 'content',
+    label: 'Content',
+    icon: '📰',
+    path: undefined,
+    group: true,
+    permissions: [],
+    children: [
+      {
+        key: 'blogCategories',
+        label: 'Categories',
+        icon: '🗂️',
+        path: '/admin/blog/categories',
+        group: false,
+        permissions: ['BLOG_CATEGORY_VIEW'],
+        children: []
+      },
+      {
+        key: 'blogPosts',
+        label: 'All Posts',
+        icon: '✍️',
+        path: '/admin/blog/posts',
+        group: false,
+        permissions: ['BLOG_POST_VIEW'],
         children: []
       }
     ]
@@ -84,7 +112,7 @@ export const DEFAULT_NAVIGATION_MENU: NavigationNode[] = [
     key: 'activity',
     label: 'Activity',
     icon: '📝',
-    path: '/activity',
+    path: '/admin/activity',
     group: false,
     permissions: ['ACTIVITY_VIEW'],
     children: []
@@ -93,7 +121,7 @@ export const DEFAULT_NAVIGATION_MENU: NavigationNode[] = [
     key: 'gallery',
     label: 'Gallery',
     icon: '🖼️',
-    path: '/gallery',
+    path: '/admin/gallery',
     group: false,
     permissions: ['GALLERY_VIEW_ALL', 'GALLERY_VIEW_OWN', 'GALLERY_CREATE'],
     children: []
@@ -102,7 +130,7 @@ export const DEFAULT_NAVIGATION_MENU: NavigationNode[] = [
     key: 'settings',
     label: 'Settings',
     icon: '⚙️',
-    path: '/settings',
+    path: '/admin/settings',
     group: false,
     permissions: ['SETTINGS_VIEW'],
     children: []
@@ -111,7 +139,7 @@ export const DEFAULT_NAVIGATION_MENU: NavigationNode[] = [
     key: 'setup',
     label: 'Setup',
     icon: '🧭',
-    path: '/setup',
+    path: '/admin/setup',
     group: false,
     permissions: ['SETUP_MANAGE'],
     children: []
@@ -120,7 +148,7 @@ export const DEFAULT_NAVIGATION_MENU: NavigationNode[] = [
     key: 'profile',
     label: 'Profile',
     icon: '👤',
-    path: '/profile',
+    path: '/admin/profile',
     group: false,
     permissions: [],
     children: []
