@@ -96,10 +96,12 @@ public class GalleryService {
         User uploader = resolveUser(principal);
         GalleryFolder folder = resolveFolder(folderId, principal);
         List<String> allowedExtensions = settingsService.resolveAllowedExtensions();
+        long maxFileSizeBytes = settingsService.resolveMaxFileSizeBytes();
         List<GalleryFileDto> uploaded = new ArrayList<>();
         List<Long> fileIds = new ArrayList<>();
 
         for (MultipartFile file : files) {
+            validateFileSize(file, maxFileSizeBytes);
             GalleryFile entity = storeFile(folder, uploader, file, allowedExtensions);
             uploaded.add(toDto(entity));
             fileIds.add(entity.getId());
@@ -113,6 +115,20 @@ public class GalleryService {
         }
         activityRecorder.record(MODULE_NAME, "UPLOAD", "Uploaded " + uploaded.size() + " file(s)", "SUCCESS", context);
         return uploaded;
+    }
+
+    @Transactional(readOnly = true)
+    public GallerySettingsDto loadSettings(UserPrincipal principal) {
+        boolean canView = hasAuthority(principal, "GALLERY_VIEW_ALL")
+                || hasAuthority(principal, "GALLERY_VIEW_OWN")
+                || hasAuthority(principal, "GALLERY_CREATE")
+                || hasAuthority(principal, "GALLERY_EDIT_ALL");
+        if (!canView) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "Not authorized to view gallery settings");
+        }
+        List<String> allowedExtensions = settingsService.resolveAllowedExtensions();
+        long maxFileSizeBytes = settingsService.resolveMaxFileSizeBytes();
+        return new GallerySettingsDto(allowedExtensions, maxFileSizeBytes);
     }
 
     @Transactional
@@ -288,7 +304,7 @@ public class GalleryService {
     }
 
     private GalleryFile storeFile(GalleryFolder folder, User uploader, MultipartFile file, List<String> allowedExtensions) {
-        String originalName = Optional.ofNullable(file.getOriginalFilename()).orElse("file");
+        String originalName = resolveOriginalFilename(file);
         String extension = extractExtension(originalName);
         if (extension.isBlank()) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "File " + originalName + " is missing an extension");
@@ -309,6 +325,20 @@ public class GalleryService {
         return fileRepository.save(entity);
     }
 
+    private void validateFileSize(MultipartFile file, long maxFileSizeBytes) {
+        if (maxFileSizeBytes <= 0) {
+            return;
+        }
+        long size = file.getSize();
+        if (size <= maxFileSizeBytes) {
+            return;
+        }
+        String fileName = resolveOriginalFilename(file);
+        String formattedLimit = formatFileSize(maxFileSizeBytes);
+        throw new ApiException(HttpStatus.BAD_REQUEST,
+                String.format(Locale.ROOT, "File %s exceeds the maximum allowed size of %s.", fileName, formattedLimit));
+    }
+
     private String deriveDisplayName(String originalName) {
         int dotIndex = originalName.lastIndexOf('.');
         String base = dotIndex > 0 ? originalName.substring(0, dotIndex) : originalName;
@@ -322,6 +352,29 @@ public class GalleryService {
             return "";
         }
         return name.substring(dotIndex + 1).trim();
+    }
+
+    private String resolveOriginalFilename(MultipartFile file) {
+        String originalName = file.getOriginalFilename();
+        if (originalName == null || originalName.isBlank()) {
+            return "file";
+        }
+        return originalName;
+    }
+
+    private String formatFileSize(long bytes) {
+        if (bytes <= 0) {
+            return "0 B";
+        }
+        String[] units = {"B", "KB", "MB", "GB", "TB"};
+        double value = bytes;
+        int unitIndex = 0;
+        while (value >= 1024 && unitIndex < units.length - 1) {
+            value = value / 1024;
+            unitIndex++;
+        }
+        String pattern = (value >= 10 || unitIndex == 0) ? "%.0f %s" : "%.1f %s";
+        return String.format(Locale.ROOT, pattern, value, units[unitIndex]);
     }
 
     private Sort resolveSort(String sort, String direction) {
