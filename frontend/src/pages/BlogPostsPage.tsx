@@ -1,4 +1,4 @@
-import { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ChangeEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../services/http';
 import type { BlogCategory, BlogMediaUploadResponse, BlogPost, BlogPostPage } from '../types/blog';
@@ -7,6 +7,7 @@ import { useAppSelector } from '../app/hooks';
 import { hasAnyPermission } from '../utils/permissions';
 import type { PermissionKey } from '../types/auth';
 import { extractErrorMessage } from '../utils/errors';
+import RichTextEditor from '../components/RichTextEditor';
 
 interface PostFormState {
   title: string;
@@ -48,93 +49,6 @@ const buildMediaUrl = (key?: string | null) => {
   const base = api.defaults.baseURL ?? '';
   return `${base.replace(/\/$/, '')}/blog/media/${key}`;
 };
-
-interface RichTextEditorProps {
-  value: string;
-  onChange: (value: string) => void;
-}
-
-const RichTextEditor = ({ value, onChange }: RichTextEditorProps) => {
-  const editorRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    if (!editorRef.current) {
-      return;
-    }
-    if (editorRef.current.innerHTML !== value) {
-      editorRef.current.innerHTML = value || '<p><br></p>';
-    }
-  }, [value]);
-
-  const exec = useCallback((command: string, argument?: string) => {
-    editorRef.current?.focus();
-    document.execCommand(command, false, argument);
-    onChange(editorRef.current?.innerHTML ?? '');
-  }, [onChange]);
-
-  const handleInput = useCallback(() => {
-    onChange(editorRef.current?.innerHTML ?? '');
-  }, [onChange]);
-
-  const handleInsertLink = () => {
-    const url = window.prompt('Enter link URL');
-    if (url) {
-      exec('createLink', url);
-    }
-  };
-
-  const handleInsertImage = () => {
-    const url = window.prompt('Enter image URL');
-    if (url) {
-      exec('insertImage', url);
-    }
-  };
-
-  return (
-    <div className="rounded-xl border border-slate-200">
-      <div className="flex flex-wrap gap-2 border-b border-slate-200 bg-slate-50 px-3 py-2">
-        <EditorButton label="Bold" onClick={() => exec('bold')} icon="B" />
-        <EditorButton label="Italic" onClick={() => exec('italic')} icon="I" italic />
-        <EditorButton label="Underline" onClick={() => exec('underline')} icon="U" underline />
-        <EditorButton label="Heading" onClick={() => exec('formatBlock', 'h2')} icon="H2" />
-        <EditorButton label="Paragraph" onClick={() => exec('formatBlock', 'p')} icon="P" />
-        <EditorButton label="Bullet list" onClick={() => exec('insertUnorderedList')} icon="•" />
-        <EditorButton label="Numbered list" onClick={() => exec('insertOrderedList')} icon="1." />
-        <EditorButton label="Quote" onClick={() => exec('formatBlock', 'blockquote')} icon="❝" />
-        <EditorButton label="Link" onClick={handleInsertLink} icon="🔗" />
-        <EditorButton label="Image" onClick={handleInsertImage} icon="🖼️" />
-        <EditorButton label="Clear formatting" onClick={() => exec('removeFormat')} icon="⌫" />
-      </div>
-      <div
-        ref={editorRef}
-        className="min-h-[240px] overflow-auto bg-white px-4 py-3 text-sm leading-relaxed text-slate-700 focus:outline-none"
-        contentEditable
-        suppressContentEditableWarning
-        onInput={handleInput}
-        onBlur={handleInput}
-      />
-    </div>
-  );
-};
-
-interface EditorButtonProps {
-  label: string;
-  icon: string;
-  onClick: () => void;
-  italic?: boolean;
-  underline?: boolean;
-}
-
-const EditorButton = ({ label, icon, onClick, italic, underline }: EditorButtonProps) => (
-  <button
-    type="button"
-    onClick={onClick}
-    title={label}
-    className="rounded-lg border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 transition hover:border-primary hover:text-primary"
-  >
-    <span className={italic ? 'italic' : underline ? 'underline' : undefined}>{icon}</span>
-  </button>
-);
 
 const BlogPostsPage = () => {
   const queryClient = useQueryClient();

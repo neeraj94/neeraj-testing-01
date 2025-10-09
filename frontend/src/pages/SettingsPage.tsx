@@ -12,6 +12,7 @@ import { useToast } from '../components/ToastProvider';
 import { normalizeHexColor } from '../utils/colors';
 import { extractErrorMessage } from '../utils/errors';
 import api from '../services/http';
+import EmailTemplatesPanel from '../components/settings/EmailTemplatesPanel';
 
 type SettingFormValue = string | boolean;
 
@@ -57,6 +58,8 @@ const SettingsPage = () => {
 
   const [activeCategoryKey, setActiveCategoryKey] = useState<string | null>(null);
   const [activeSectionKey, setActiveSectionKey] = useState<string | null>(null);
+  const [emailView, setEmailView] = useState<'configuration' | 'templates'>('configuration');
+  const [emailNavExpanded, setEmailNavExpanded] = useState(true);
   const [initialValues, setInitialValues] = useState<DraftMap>({});
   const [draftValues, setDraftValues] = useState<DraftMap>({});
   const [isSaving, setIsSaving] = useState(false);
@@ -85,20 +88,31 @@ const SettingsPage = () => {
     }
   }, [categories, activeCategoryKey]);
 
+  useEffect(() => {
+    if (activeCategoryKey === 'email') {
+      setEmailNavExpanded(true);
+    }
+  }, [activeCategoryKey]);
+
   const activeCategory: SettingsCategory | undefined = useMemo(
     () => categories.find((category) => category.key === activeCategoryKey),
     [categories, activeCategoryKey]
+  );
+
+  const isEmailTemplatesView = useMemo(
+    () => activeCategoryKey === 'email' && emailView === 'templates',
+    [activeCategoryKey, emailView]
   );
 
   const shouldUseSectionNav = useMemo(() => {
     if (!activeCategory) {
       return false;
     }
-    if (activeCategory.key === 'email') {
+    if (activeCategory.key === 'email' || isEmailTemplatesView) {
       return false;
     }
     return activeCategory.sections.length > 1;
-  }, [activeCategory]);
+  }, [activeCategory, isEmailTemplatesView]);
 
   useEffect(() => {
     if (!activeCategory) {
@@ -217,8 +231,17 @@ const SettingsPage = () => {
     return codes;
   }, [draftValues, initialValues, settingIndex]);
 
-  const handleSelectCategory = (category: SettingsCategory) => {
+  const handleSelectCategory = (
+    category: SettingsCategory,
+    view: 'configuration' | 'templates' = 'configuration'
+  ) => {
     setActiveCategoryKey(category.key);
+    if (category.key === 'email') {
+      setEmailNavExpanded(true);
+      setEmailView(view);
+    } else {
+      setEmailView('configuration');
+    }
     const useNav = category.key !== 'email' && category.sections.length > 1;
     setActiveSectionKey(useNav ? category.sections[0]?.key ?? null : null);
   };
@@ -228,6 +251,13 @@ const SettingsPage = () => {
       return;
     }
     setActiveSectionKey(section.key);
+  };
+
+  const handleSelectEmailTemplates = () => {
+    setActiveCategoryKey('email');
+    setEmailNavExpanded(true);
+    setEmailView('templates');
+    setActiveSectionKey(null);
   };
 
   const handleValueChange = (setting: SettingItem, nextValue: SettingFormValue) => {
@@ -665,6 +695,60 @@ const SettingsPage = () => {
           <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
             <nav className="space-y-1">
               {categories.map((category) => {
+                if (category.key === 'email') {
+                  const isParentActive = activeCategoryKey === 'email';
+                  const isConfigurationActive = isParentActive && emailView === 'configuration';
+                  const isTemplatesActive = isParentActive && emailView === 'templates';
+                  return (
+                    <div key={category.key} className="space-y-1">
+                      <button
+                        type="button"
+                        onClick={() => setEmailNavExpanded((previous) => !previous)}
+                        className={`w-full rounded-xl px-4 py-3 text-left transition ${
+                          isParentActive
+                            ? 'bg-primary/10 text-primary'
+                            : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <p className="text-sm font-semibold">{category.label}</p>
+                            {category.description && (
+                              <p className="mt-1 text-xs text-slate-500">{category.description}</p>
+                            )}
+                          </div>
+                          <span className="text-xs text-slate-500">{emailNavExpanded ? '▾' : '▸'}</span>
+                        </div>
+                      </button>
+                      {emailNavExpanded && (
+                        <div className="ml-4 space-y-1">
+                          <button
+                            type="button"
+                            onClick={() => handleSelectCategory(category, 'configuration')}
+                            className={`w-full rounded-lg px-4 py-2 text-left text-sm transition ${
+                              isConfigurationActive
+                                ? 'bg-primary/10 text-primary'
+                                : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                            }`}
+                          >
+                            Email delivery & wrappers
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleSelectEmailTemplates}
+                            className={`w-full rounded-lg px-4 py-2 text-left text-sm transition ${
+                              isTemplatesActive
+                                ? 'bg-primary/10 text-primary'
+                                : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                            }`}
+                          >
+                            Automation templates
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                }
                 const isActive = category.key === activeCategoryKey;
                 return (
                   <button
@@ -711,78 +795,90 @@ const SettingsPage = () => {
           )}
           {!isLoading && !hasError && activeCategory && (
             <div className="space-y-6">
-              <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                <div className="flex flex-col gap-2">
-                  <h2 className="text-lg font-semibold text-slate-900">{activeCategory.label}</h2>
-                  {activeCategory.description && (
-                    <p className="text-sm text-slate-500">{activeCategory.description}</p>
-                  )}
-                </div>
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
-                  <button
-                    type="button"
-                    onClick={handleReset}
-                    disabled={!canUpdateSettings || !dirtyCodes.length || isSaving}
-                    className="inline-flex items-center justify-center rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 transition disabled:cursor-not-allowed disabled:opacity-60 hover:bg-slate-100"
-                  >
-                    Reset
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleSave}
-                    disabled={saveDisabled}
-                    title={
-                      !canUpdateSettings ? 'You do not have permission to update settings.' : undefined
-                    }
-                    className="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white shadow transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {isSaving ? 'Saving…' : 'Save changes'}
-                  </button>
-                </div>
-              </div>
-              <div
-                className={`flex flex-col gap-6 ${shouldUseSectionNav ? 'lg:flex-row' : ''}`}
-              >
-                {shouldUseSectionNav && (
-                  <div className="w-full lg:w-64">
-                    <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
-                      <nav className="space-y-1">
-                        {activeCategory.sections.map((section) => {
-                          const isActive = section.key === activeSectionKey;
-                          return (
-                            <button
-                              key={section.key}
-                              type="button"
-                              onClick={() => handleSelectSection(section)}
-                              className={`w-full rounded-xl px-4 py-3 text-left transition ${
-                                isActive
-                                  ? 'bg-primary/10 text-primary'
-                                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                              }`}
-                            >
-                              <p className="text-sm font-semibold">{section.label}</p>
-                              {section.description && (
-                                <p className="mt-1 text-xs text-slate-500">{section.description}</p>
-                              )}
-                            </button>
-                          );
-                        })}
-                      </nav>
+              {isEmailTemplatesView ? (
+                <>
+                  <div className="flex flex-col gap-2 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                    <h2 className="text-lg font-semibold text-slate-900">Email templates</h2>
+                    <p className="text-sm text-slate-500">
+                      Enable and customise lifecycle emails such as user welcome messages and staff verification requests.
+                    </p>
+                  </div>
+                  <EmailTemplatesPanel />
+                </>
+              ) : (
+                <>
+                  <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                    <div className="flex flex-col gap-2">
+                      <h2 className="text-lg font-semibold text-slate-900">{activeCategory.label}</h2>
+                      {activeCategory.description && (
+                        <p className="text-sm text-slate-500">{activeCategory.description}</p>
+                      )}
+                    </div>
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
+                      <button
+                        type="button"
+                        onClick={handleReset}
+                        disabled={!canUpdateSettings || !dirtyCodes.length || isSaving}
+                        className="inline-flex items-center justify-center rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 transition disabled:cursor-not-allowed disabled:opacity-60 hover:bg-slate-100"
+                      >
+                        Reset
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleSave}
+                        disabled={saveDisabled}
+                        title={
+                          !canUpdateSettings ? 'You do not have permission to update settings.' : undefined
+                        }
+                        className="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white shadow transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {isSaving ? 'Saving…' : 'Save changes'}
+                      </button>
                     </div>
                   </div>
-                )}
-                <div className="flex-1 space-y-6">
-                  {shouldUseSectionNav
-                    ? activeCategory.sections.map((section) => (
-                        <Fragment key={section.key}>
-                          {section.key === activeSectionKey && renderSectionContent(section)}
-                        </Fragment>
-                      ))
-                    : activeCategory.sections.map((section) => (
-                        <Fragment key={section.key}>{renderSectionContent(section)}</Fragment>
-                      ))}
-                </div>
-              </div>
+                  <div className={`flex flex-col gap-6 ${shouldUseSectionNav ? 'lg:flex-row' : ''}`}>
+                    {shouldUseSectionNav && (
+                      <div className="w-full lg:w-64">
+                        <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+                          <nav className="space-y-1">
+                            {activeCategory.sections.map((section) => {
+                              const isActive = section.key === activeSectionKey;
+                              return (
+                                <button
+                                  key={section.key}
+                                  type="button"
+                                  onClick={() => handleSelectSection(section)}
+                                  className={`w-full rounded-xl px-4 py-3 text-left transition ${
+                                    isActive
+                                      ? 'bg-primary/10 text-primary'
+                                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                                  }`}
+                                >
+                                  <p className="text-sm font-semibold">{section.label}</p>
+                                  {section.description && (
+                                    <p className="mt-1 text-xs text-slate-500">{section.description}</p>
+                                  )}
+                                </button>
+                              );
+                            })}
+                          </nav>
+                        </div>
+                      </div>
+                    )}
+                    <div className="flex-1 space-y-6">
+                      {shouldUseSectionNav
+                        ? activeCategory.sections.map((section) => (
+                            <Fragment key={section.key}>
+                              {section.key === activeSectionKey && renderSectionContent(section)}
+                            </Fragment>
+                          ))
+                        : activeCategory.sections.map((section) => (
+                            <Fragment key={section.key}>{renderSectionContent(section)}</Fragment>
+                          ))}
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           )}
         </section>
