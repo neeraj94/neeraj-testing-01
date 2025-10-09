@@ -20,6 +20,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -111,11 +112,8 @@ public class BlogPostService {
         if (slug == null || slug.isBlank()) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "Post slug is required");
         }
-        BlogPost post = blogPostRepository.findBySlugIgnoreCaseAndPublishedTrue(slug.trim())
+        BlogPost post = blogPostRepository.findBySlugIgnoreCaseAndPublishedTrueAndPublishedAtIsNotNull(slug.trim())
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Post not found"));
-        if (post.getPublishedAt() == null) {
-            throw new ApiException(HttpStatus.NOT_FOUND, "Post not found");
-        }
         return blogPostMapper.toPublicDto(post);
     }
 
@@ -179,6 +177,7 @@ public class BlogPostService {
     }
 
     private void applyRequest(BlogPost post, BlogPostRequest request) {
+        boolean wasPublished = post.isPublished();
         post.setTitle(request.getTitle());
         post.setSlug(normalizeSlug(request.getSlug(), request.getTitle()));
         post.setDescription(request.getDescription());
@@ -190,6 +189,8 @@ public class BlogPostService {
         post.setPublished(request.isPublished());
         if (!request.isPublished()) {
             post.setPublishedAt(null);
+        } else if (!wasPublished || post.getPublishedAt() == null) {
+            post.setPublishedAt(Instant.now());
         }
     }
 
