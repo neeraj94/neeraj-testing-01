@@ -5,6 +5,8 @@ import com.example.rbac.auth.dto.AuthResponse;
 import com.example.rbac.auth.dto.LoginRequest;
 import com.example.rbac.auth.dto.RefreshTokenRequest;
 import com.example.rbac.auth.dto.SignupRequest;
+import com.example.rbac.auth.dto.VerificationRequest;
+import com.example.rbac.auth.dto.VerificationResponse;
 import com.example.rbac.auth.token.RefreshToken;
 import com.example.rbac.auth.token.RefreshTokenRepository;
 import com.example.rbac.common.exception.ApiException;
@@ -14,9 +16,13 @@ import com.example.rbac.users.dto.UserDto;
 import com.example.rbac.users.mapper.UserMapper;
 import com.example.rbac.users.model.User;
 import com.example.rbac.users.repository.UserRepository;
+import com.example.rbac.users.service.UserVerificationService;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.DisabledException;
+import org.springframework.security.authentication.LockedException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -34,6 +40,8 @@ import org.springframework.dao.DataIntegrityViolationException;
 @Service
 public class AuthService {
 
+    private static final int MAX_FAILED_LOGIN_ATTEMPTS = 5;
+
     private final UserRepository userRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final PasswordEncoder passwordEncoder;
@@ -42,6 +50,7 @@ public class AuthService {
     private final UserMapper userMapper;
     private final SettingsService settingsService;
     private final ActivityRecorder activityRecorder;
+    private final UserVerificationService userVerificationService;
 
     public AuthService(UserRepository userRepository,
                        RefreshTokenRepository refreshTokenRepository,
@@ -50,7 +59,8 @@ public class AuthService {
                        JwtService jwtService,
                        UserMapper userMapper,
                        SettingsService settingsService,
-                       ActivityRecorder activityRecorder) {
+                       ActivityRecorder activityRecorder,
+                       UserVerificationService userVerificationService) {
         this.userRepository = userRepository;
         this.refreshTokenRepository = refreshTokenRepository;
         this.passwordEncoder = passwordEncoder;
@@ -59,6 +69,7 @@ public class AuthService {
         this.userMapper = userMapper;
         this.settingsService = settingsService;
         this.activityRecorder = activityRecorder;
+        this.userVerificationService = userVerificationService;
     }
 
     @Transactional
@@ -75,27 +86,80 @@ public class AuthService {
         user.setLastName(lastName);
         user.setFullName(buildFullName(firstName, lastName));
         user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
+        user.setEmailVerifiedAt(null);
         user = userRepository.save(user);
         user = userRepository.findDetailedById(user.getId()).orElseThrow();
         String refreshTokenValue = createRefreshToken(user);
         AuthResponse response = buildAuthResponse(user, refreshTokenValue);
         activityRecorder.recordForUser(user, "Authentication", "SIGNUP", "User registered", "SUCCESS", buildAuthContext(user));
+        userVerificationService.initiateVerification(user);
         return response;
     }
 
     @Transactional
     public AuthResponse login(LoginRequest request) {
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
-        if (!authentication.isAuthenticated()) {
-            throw new ApiException(HttpStatus.UNAUTHORIZED, "Invalid credentials");
-        }
         User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "Invalid credentials"));
+
+        if (!user.isActive()) {
+            HashMap<String, Object> context = new HashMap<>(buildAuthContext(user));
+            context.put("reason", "INACTIVE");
+            activityRecorder.recordForUser(user, "Authentication", "LOGIN_BLOCKED", "Login blocked for inactive account", "BLOCKED", context);
+            throw new ApiException(HttpStatus.FORBIDDEN, "Your account is inactive. Please contact an administrator.");
+        }
+
+        if (user.getLockedAt() != null) {
+            HashMap<String, Object> context = new HashMap<>(buildAuthContext(user));
+            context.put("reason", "LOCKED");
+            context.put("loginAttempts", user.getLoginAttempts());
+            activityRecorder.recordForUser(user, "Authentication", "LOGIN_BLOCKED", "Login blocked for locked account", "BLOCKED", context);
+            throw new ApiException(HttpStatus.FORBIDDEN, "Your account is locked. Please contact an administrator.");
+        }
+
+        try {
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
+            if (!authentication.isAuthenticated()) {
+                throw new ApiException(HttpStatus.UNAUTHORIZED, "Invalid credentials");
+            }
+        } catch (BadCredentialsException ex) {
+            boolean locked = registerFailedLogin(user);
+            String message = locked
+                    ? "Your account has been locked after too many failed attempts. Please contact an administrator."
+                    : "Invalid credentials";
+            throw new ApiException(locked ? HttpStatus.FORBIDDEN : HttpStatus.UNAUTHORIZED, message, ex);
+        } catch (LockedException ex) {
+            registerFailedLogin(user);
+            throw new ApiException(HttpStatus.FORBIDDEN, "Your account is locked. Please contact an administrator.", ex);
+        } catch (DisabledException ex) {
+            HashMap<String, Object> context = new HashMap<>(buildAuthContext(user));
+            context.put("reason", "INACTIVE");
+            activityRecorder.recordForUser(user, "Authentication", "LOGIN_BLOCKED", "Login blocked for inactive account", "BLOCKED", context);
+            throw new ApiException(HttpStatus.FORBIDDEN, "Your account is inactive. Please contact an administrator.", ex);
+        }
+
+        resetLoginState(user);
+
+        if (user.getEmailVerifiedAt() == null) {
+            HashMap<String, Object> context = new HashMap<>(buildAuthContext(user));
+            context.put("reason", "UNVERIFIED");
+            context.put("loginAttempts", user.getLoginAttempts());
+            activityRecorder.recordForUser(user, "Authentication", "LOGIN_BLOCKED", "Login blocked for unverified account", "BLOCKED", context);
+            throw new ApiException(HttpStatus.FORBIDDEN, "Your account has not been verified yet. Please check your email for the verification link.");
+        }
+
+        user = userRepository.findDetailedById(user.getId())
                 .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "User not found"));
         String refreshTokenValue = createRefreshToken(user);
         AuthResponse response = buildAuthResponse(user, refreshTokenValue);
         activityRecorder.recordForUser(user, "Authentication", "LOGIN", "User logged in", "SUCCESS", buildAuthContext(user));
         return response;
+    }
+
+    @Transactional
+    public VerificationResponse verifyEmail(VerificationRequest request) {
+        UserVerificationService.VerificationResult result = userVerificationService.verifyToken(request.getToken());
+        return new VerificationResponse(result.isSuccess(), result.getMessage(), result.isWelcomeEmailSent(), result.getEmail());
     }
 
     @Transactional
@@ -167,6 +231,53 @@ public class AuthService {
             cause = cause.getCause();
         }
         return false;
+    }
+
+    private boolean registerFailedLogin(User user) {
+        if (user == null) {
+            return false;
+        }
+        if (user.getLockedAt() != null) {
+            HashMap<String, Object> context = new HashMap<>(buildAuthContext(user));
+            context.put("loginAttempts", user.getLoginAttempts());
+            context.put("locked", true);
+            activityRecorder.recordForUser(user, "Authentication", "LOGIN_FAILED", "Attempted sign-in while account is locked", "LOCKED", context);
+            return true;
+        }
+        int attempts = user.getLoginAttempts() + 1;
+        user.setLoginAttempts(attempts);
+        boolean locked = attempts >= MAX_FAILED_LOGIN_ATTEMPTS;
+        if (locked) {
+            user.setLockedAt(Instant.now());
+        }
+        userRepository.save(user);
+        HashMap<String, Object> context = new HashMap<>(buildAuthContext(user));
+        context.put("loginAttempts", attempts);
+        if (locked) {
+            context.put("locked", true);
+            activityRecorder.recordForUser(user, "Authentication", "LOGIN_FAILED", "Account locked after failed sign-in attempt", "LOCKED", context);
+        } else {
+            activityRecorder.recordForUser(user, "Authentication", "LOGIN_FAILED", "Failed sign-in attempt", "FAILURE", context);
+        }
+        return locked;
+    }
+
+    private void resetLoginState(User user) {
+        if (user == null) {
+            return;
+        }
+        boolean changed = false;
+        if (user.getLoginAttempts() != 0) {
+            user.setLoginAttempts(0);
+            changed = true;
+        }
+        if (user.getLockedAt() != null) {
+            user.setLockedAt(null);
+            changed = true;
+        }
+        if (changed) {
+            userRepository.save(user);
+        }
     }
 
     private AuthResponse buildAuthResponse(User user, String refreshTokenValue) {
