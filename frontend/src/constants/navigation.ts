@@ -117,6 +117,15 @@ export const DEFAULT_NAVIGATION_MENU: NavigationNode[] = [
     permissions: [],
     children: [
       {
+        key: 'attributes',
+        label: 'Attributes',
+        icon: '🎛️',
+        path: '/admin/attributes',
+        group: false,
+        permissions: ['ATTRIBUTE_VIEW'],
+        children: []
+      },
+      {
         key: 'brands',
         label: 'Brands',
         icon: '🏷️',

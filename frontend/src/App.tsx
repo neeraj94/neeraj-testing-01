@@ -12,6 +12,7 @@ import ProfilePage from './pages/ProfilePage';
 import ForbiddenPage from './pages/ForbiddenPage';
 import NotFoundPage from './pages/NotFoundPage';
 import BrandsPage from './pages/BrandsPage';
+import AttributesPage from './pages/AttributesPage';
 import EcommerceHomePage from './pages/EcommerceHomePage';
 import ProtectedRoute from './routes/ProtectedRoute';
 import PermissionRoute from './routes/PermissionRoute';
@@ -174,6 +175,9 @@ const App = () => {
           </Route>
           <Route element={<PermissionRoute required={['BLOG_POST_VIEW']} />}>
             <Route path="blog/posts" element={<BlogPostsPage />} />
+          </Route>
+          <Route element={<PermissionRoute required={['ATTRIBUTE_VIEW']} />}>
+            <Route path="attributes" element={<AttributesPage />} />
           </Route>
           <Route element={<PermissionRoute required={['BRAND_VIEW']} />}>
             <Route path="brands" element={<BrandsPage />} />
