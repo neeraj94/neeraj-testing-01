@@ -109,6 +109,61 @@ export const DEFAULT_NAVIGATION_MENU: NavigationNode[] = [
     ]
   },
   {
+    key: 'catalog',
+    label: 'Catalog',
+    icon: '🛍️',
+    path: undefined,
+    group: true,
+    permissions: [],
+    children: [
+      {
+        key: 'categories',
+        label: 'Categories',
+        icon: '🗃️',
+        path: '/admin/categories',
+        group: false,
+        permissions: ['CATEGORY_VIEW'],
+        children: []
+      },
+      {
+        key: 'badgeCategories',
+        label: 'Badge categories',
+        icon: '🗂️',
+        path: '/admin/badge-categories',
+        group: false,
+        permissions: ['BADGE_CATEGORY_VIEW'],
+        children: []
+      },
+      {
+        key: 'badges',
+        label: 'Badges',
+        icon: '🏅',
+        path: '/admin/badges',
+        group: false,
+        permissions: ['BADGE_VIEW'],
+        children: []
+      },
+      {
+        key: 'attributes',
+        label: 'Attributes',
+        icon: '🎛️',
+        path: '/admin/attributes',
+        group: false,
+        permissions: ['ATTRIBUTE_VIEW'],
+        children: []
+      },
+      {
+        key: 'brands',
+        label: 'Brands',
+        icon: '🏷️',
+        path: '/admin/brands',
+        group: false,
+        permissions: ['BRAND_VIEW'],
+        children: []
+      }
+    ]
+  },
+  {
     key: 'activity',
     label: 'Activity',
     icon: '📝',

@@ -1,8 +1,8 @@
 package com.example.rbac.users.model;
 
-import com.example.rbac.roles.model.Role;
-import com.example.rbac.permissions.model.Permission;
 import com.example.rbac.auth.token.RefreshToken;
+import com.example.rbac.permissions.model.Permission;
+import com.example.rbac.roles.model.Role;
 import jakarta.persistence.*;
 import java.time.Instant;
 import java.util.HashSet;
@@ -49,6 +49,15 @@ public class User {
     @Column(name = "email_signature")
     private String emailSignature;
 
+    @Column(name = "email_verified_at")
+    private Instant emailVerifiedAt;
+
+    @Column(name = "login_attempts", nullable = false)
+    private int loginAttempts = 0;
+
+    @Column(name = "locked_at")
+    private Instant lockedAt;
+
     @Column(name = "is_active", nullable = false)
     private boolean active = true;
 
@@ -73,6 +82,9 @@ public class User {
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<RefreshToken> refreshTokens = new HashSet<>();
 
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<UserVerificationToken> verificationTokens = new HashSet<>();
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -85,6 +97,9 @@ public class User {
         createdAt = now;
         updatedAt = now;
         refreshFullName();
+        if (loginAttempts < 0) {
+            loginAttempts = 0;
+        }
     }
 
     @PreUpdate
@@ -198,6 +213,30 @@ public class User {
         this.emailSignature = emailSignature;
     }
 
+    public Instant getEmailVerifiedAt() {
+        return emailVerifiedAt;
+    }
+
+    public void setEmailVerifiedAt(Instant emailVerifiedAt) {
+        this.emailVerifiedAt = emailVerifiedAt;
+    }
+
+    public int getLoginAttempts() {
+        return loginAttempts;
+    }
+
+    public void setLoginAttempts(int loginAttempts) {
+        this.loginAttempts = Math.max(loginAttempts, 0);
+    }
+
+    public Instant getLockedAt() {
+        return lockedAt;
+    }
+
+    public void setLockedAt(Instant lockedAt) {
+        this.lockedAt = lockedAt;
+    }
+
     public boolean isActive() {
         return active;
     }
@@ -236,6 +275,14 @@ public class User {
 
     public void setRefreshTokens(Set<RefreshToken> refreshTokens) {
         this.refreshTokens = refreshTokens;
+    }
+
+    public Set<UserVerificationToken> getVerificationTokens() {
+        return verificationTokens;
+    }
+
+    public void setVerificationTokens(Set<UserVerificationToken> verificationTokens) {
+        this.verificationTokens = verificationTokens;
     }
 
     public Instant getCreatedAt() {

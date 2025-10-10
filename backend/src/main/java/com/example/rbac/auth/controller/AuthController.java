@@ -4,6 +4,8 @@ import com.example.rbac.auth.dto.AuthResponse;
 import com.example.rbac.auth.dto.LoginRequest;
 import com.example.rbac.auth.dto.RefreshTokenRequest;
 import com.example.rbac.auth.dto.SignupRequest;
+import com.example.rbac.auth.dto.VerificationRequest;
+import com.example.rbac.auth.dto.VerificationResponse;
 import com.example.rbac.auth.service.AuthService;
 import com.example.rbac.users.dto.UserDto;
 import com.example.rbac.users.model.UserPrincipal;
@@ -44,5 +46,17 @@ public class AuthController {
     @GetMapping("/me")
     public UserDto me(@AuthenticationPrincipal UserPrincipal principal) {
         return authService.currentUser(principal.getUser());
+    }
+
+    @PostMapping("/verify")
+    public VerificationResponse verify(@Valid @RequestBody VerificationRequest request) {
+        return authService.verifyEmail(request);
+    }
+
+    @GetMapping("/verify")
+    public VerificationResponse verify(@RequestParam("token") String token) {
+        VerificationRequest request = new VerificationRequest();
+        request.setToken(token);
+        return authService.verifyEmail(request);
     }
 }
