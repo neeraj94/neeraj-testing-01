@@ -109,6 +109,25 @@ export const DEFAULT_NAVIGATION_MENU: NavigationNode[] = [
     ]
   },
   {
+    key: 'catalog',
+    label: 'Catalog',
+    icon: '🛍️',
+    path: undefined,
+    group: true,
+    permissions: [],
+    children: [
+      {
+        key: 'brands',
+        label: 'Brands',
+        icon: '🏷️',
+        path: '/admin/brands',
+        group: false,
+        permissions: ['BRAND_VIEW'],
+        children: []
+      }
+    ]
+  },
+  {
     key: 'activity',
     label: 'Activity',
     icon: '📝',
