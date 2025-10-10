@@ -29,7 +29,7 @@ public class BrandAssetController {
     @PreAuthorize("hasAnyAuthority('BRAND_CREATE','BRAND_UPDATE')")
     public BrandLogoUploadResponse uploadLogo(@RequestParam("file") MultipartFile file) {
         StoredLogo stored = storageService.store(file);
-        String url = "/api/v1/brands/assets/" + stored.key();
+        String url = storageService.publicUrlForKey(stored.key());
         return new BrandLogoUploadResponse(url, stored.originalFilename(), stored.mimeType(), stored.sizeBytes());
     }
 

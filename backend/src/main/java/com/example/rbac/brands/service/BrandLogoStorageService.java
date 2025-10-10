@@ -24,9 +24,13 @@ public class BrandLogoStorageService {
     private static final Set<String> ALLOWED_EXTENSIONS = Set.of("png", "jpg", "jpeg", "gif", "webp", "svg");
 
     private final Path storageRoot;
+    private final String publicBaseUrl;
 
-    public BrandLogoStorageService(@Value("${app.brand.logo-storage-path:storage/brands/logos}") String storagePath) {
+    public BrandLogoStorageService(
+            @Value("${app.brand.logo-storage-path:storage/brands/logos}") String storagePath,
+            @Value("${app.brand.public-base-url:http://localhost:8080}") String publicBaseUrl) {
         this.storageRoot = Paths.get(storagePath).toAbsolutePath().normalize();
+        this.publicBaseUrl = normalizeBaseUrl(publicBaseUrl);
         try {
             Files.createDirectories(this.storageRoot);
         } catch (IOException ex) {
@@ -99,5 +103,38 @@ public class BrandLogoStorageService {
     }
 
     public record StoredLogo(String key, String originalFilename, String mimeType, long sizeBytes) {
+    }
+
+    public String publicUrlForKey(String key) {
+        if (!StringUtils.hasText(key)) {
+            return null;
+        }
+        return resolvePublicUrl("/api/v1/brands/assets/" + key);
+    }
+
+    public String resolvePublicUrl(String value) {
+        if (!StringUtils.hasText(value)) {
+            return null;
+        }
+        String trimmed = value.trim();
+        if (trimmed.matches("(?i)^[a-z][a-z0-9+.-]*://.*")) {
+            return trimmed;
+        }
+        if (!StringUtils.hasText(publicBaseUrl)) {
+            return trimmed;
+        }
+        String normalizedPath = trimmed.startsWith("/") ? trimmed : "/" + trimmed;
+        return publicBaseUrl + normalizedPath;
+    }
+
+    private String normalizeBaseUrl(String baseUrl) {
+        if (!StringUtils.hasText(baseUrl)) {
+            return null;
+        }
+        String normalized = baseUrl.trim();
+        while (normalized.endsWith("/")) {
+            normalized = normalized.substring(0, normalized.length() - 1);
+        }
+        return normalized;
     }
 }

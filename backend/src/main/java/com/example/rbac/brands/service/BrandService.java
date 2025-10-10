@@ -27,13 +27,16 @@ public class BrandService {
     private final BrandRepository brandRepository;
     private final BrandMapper brandMapper;
     private final ActivityRecorder activityRecorder;
+    private final BrandLogoStorageService logoStorageService;
 
     public BrandService(BrandRepository brandRepository,
                         BrandMapper brandMapper,
-                        ActivityRecorder activityRecorder) {
+                        ActivityRecorder activityRecorder,
+                        BrandLogoStorageService logoStorageService) {
         this.brandRepository = brandRepository;
         this.brandMapper = brandMapper;
         this.activityRecorder = activityRecorder;
+        this.logoStorageService = logoStorageService;
     }
 
     public PageResponse<BrandDto> list(int page, int size, String search) {
@@ -45,13 +48,13 @@ public class BrandService {
         } else {
             result = brandRepository.findAll(pageable);
         }
-        return PageResponse.from(result.map(brandMapper::toDto));
+        return PageResponse.from(result.map(this::mapToDto));
     }
 
     public BrandDto get(Long id) {
         Brand brand = brandRepository.findById(id)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Brand not found"));
-        return brandMapper.toDto(brand);
+        return mapToDto(brand);
     }
 
     @Transactional
@@ -61,7 +64,7 @@ public class BrandService {
         ensureUniqueSlug(brand.getSlug(), null);
         Brand saved = brandRepository.save(brand);
         activityRecorder.record("Catalog", "BRAND_CREATED", "Created brand " + saved.getName(), "SUCCESS", buildContext(saved));
-        return brandMapper.toDto(saved);
+        return mapToDto(saved);
     }
 
     @Transactional
@@ -80,7 +83,7 @@ public class BrandService {
             context.put("newSlug", saved.getSlug());
             activityRecorder.record("Catalog", "BRAND_SLUG_CHANGED", "Brand slug updated", "SUCCESS", context);
         }
-        return brandMapper.toDto(saved);
+        return mapToDto(saved);
     }
 
     @Transactional
@@ -95,7 +98,7 @@ public class BrandService {
         brand.setName(request.getName().trim());
         brand.setSlug(normalizeSlug(request.getSlug(), request.getName()));
         brand.setDescription(trimToNull(request.getDescription()));
-        brand.setLogoUrl(trimToNull(request.getLogoUrl()));
+        brand.setLogoUrl(logoStorageService.resolvePublicUrl(trimToNull(request.getLogoUrl())));
         brand.setMetaTitle(trimToNull(request.getMetaTitle()));
         brand.setMetaDescription(trimToNull(request.getMetaDescription()));
         brand.setMetaKeywords(trimToNull(request.getMetaKeywords()));
@@ -145,5 +148,11 @@ public class BrandService {
         context.put("brandName", brand.getName());
         context.put("brandSlug", brand.getSlug());
         return context;
+    }
+
+    private BrandDto mapToDto(Brand brand) {
+        BrandDto dto = brandMapper.toDto(brand);
+        dto.setLogoUrl(logoStorageService.resolvePublicUrl(dto.getLogoUrl()));
+        return dto;
     }
 }
