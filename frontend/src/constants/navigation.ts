@@ -117,6 +117,15 @@ export const DEFAULT_NAVIGATION_MENU: NavigationNode[] = [
     permissions: [],
     children: [
       {
+        key: 'categories',
+        label: 'Categories',
+        icon: '🗃️',
+        path: '/admin/categories',
+        group: false,
+        permissions: ['CATEGORY_VIEW'],
+        children: []
+      },
+      {
         key: 'attributes',
         label: 'Attributes',
         icon: '🎛️',
