@@ -299,6 +299,13 @@ public class SetupService {
             )),
             MenuDefinition.group("catalog", "Catalog", "🛍️", List.of(
                     MenuDefinition.item(
+                            "attributes",
+                            "Attributes",
+                            "🎛️",
+                            "/admin/attributes",
+                            List.of("ATTRIBUTE_VIEW")
+                    ),
+                    MenuDefinition.item(
                             "brands",
                             "Brands",
                             "🏷️",
