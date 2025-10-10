@@ -73,7 +73,7 @@ public class UserVerificationService {
             if (user != null) {
                 user.setLockedAt(null);
                 user.setLoginAttempts(0);
-                userRepository.save(user);
+                userRepository.saveAndFlush(user);
             }
             return new VerificationResult(true, "Account already verified.", false, user != null ? user.getEmail() : null);
         }
@@ -88,7 +88,7 @@ public class UserVerificationService {
         }
         tokenRepository.save(token);
         if (user != null) {
-            userRepository.save(user);
+            userRepository.saveAndFlush(user);
             tokenRepository.deleteByUserIdAndVerifiedAtIsNull(user.getId());
         }
 
@@ -111,7 +111,7 @@ public class UserVerificationService {
         }
         user.setLockedAt(null);
         user.setLoginAttempts(0);
-        userRepository.save(user);
+        userRepository.saveAndFlush(user);
         tokenRepository.deleteByUserIdAndVerifiedAtIsNull(user.getId());
         boolean welcomeSent = false;
         if (!alreadyVerified) {

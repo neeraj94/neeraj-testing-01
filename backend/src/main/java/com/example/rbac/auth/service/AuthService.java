@@ -96,7 +96,7 @@ public class AuthService {
         return response;
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = ApiException.class)
     public AuthResponse login(LoginRequest request) {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "Invalid credentials"));
@@ -255,7 +255,7 @@ public class AuthService {
         if (locked) {
             user.setLockedAt(Instant.now());
         }
-        userRepository.save(user);
+        userRepository.saveAndFlush(user);
         HashMap<String, Object> context = new HashMap<>(buildAuthContext(user));
         context.put("loginAttempts", attempts);
         int attemptsRemaining = Math.max(MAX_FAILED_LOGIN_ATTEMPTS - attempts, 0);
@@ -296,7 +296,7 @@ public class AuthService {
             changed = true;
         }
         if (changed) {
-            userRepository.save(user);
+            userRepository.saveAndFlush(user);
         }
     }
 
