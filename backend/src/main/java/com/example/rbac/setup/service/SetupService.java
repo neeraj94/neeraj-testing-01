@@ -306,11 +306,18 @@ public class SetupService {
                             List.of("CATEGORY_VIEW")
                     ),
                     MenuDefinition.item(
-                            "wedges",
-                            "Wedges",
-                            "🧱",
-                            "/admin/wedges",
-                            List.of("WEDGE_VIEW")
+                            "badgeCategories",
+                            "Badge categories",
+                            "🗂️",
+                            "/admin/badge-categories",
+                            List.of("BADGE_CATEGORY_VIEW")
+                    ),
+                    MenuDefinition.item(
+                            "badges",
+                            "Badges",
+                            "🏅",
+                            "/admin/badges",
+                            List.of("BADGE_VIEW")
                     ),
                     MenuDefinition.item(
                             "attributes",

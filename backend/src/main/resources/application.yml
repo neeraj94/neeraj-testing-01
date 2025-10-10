@@ -43,7 +43,9 @@ app:
     public-base-url: ${APP_PUBLIC_BASE_URL:http://localhost:8080}
   category:
     public-base-url: ${APP_PUBLIC_BASE_URL:http://localhost:8080}
-  wedge:
+  badge:
+    public-base-url: ${APP_PUBLIC_BASE_URL:http://localhost:8080}
+  badge-category:
     public-base-url: ${APP_PUBLIC_BASE_URL:http://localhost:8080}
 
 springdoc:

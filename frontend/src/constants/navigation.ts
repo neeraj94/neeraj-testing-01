@@ -126,12 +126,21 @@ export const DEFAULT_NAVIGATION_MENU: NavigationNode[] = [
         children: []
       },
       {
-        key: 'wedges',
-        label: 'Wedges',
-        icon: '🧱',
-        path: '/admin/wedges',
+        key: 'badgeCategories',
+        label: 'Badge categories',
+        icon: '🗂️',
+        path: '/admin/badge-categories',
         group: false,
-        permissions: ['WEDGE_VIEW'],
+        permissions: ['BADGE_CATEGORY_VIEW'],
+        children: []
+      },
+      {
+        key: 'badges',
+        label: 'Badges',
+        icon: '🏅',
+        path: '/admin/badges',
+        group: false,
+        permissions: ['BADGE_VIEW'],
         children: []
       },
       {
