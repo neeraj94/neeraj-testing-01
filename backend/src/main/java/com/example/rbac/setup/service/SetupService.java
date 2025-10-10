@@ -306,6 +306,13 @@ public class SetupService {
                             List.of("CATEGORY_VIEW")
                     ),
                     MenuDefinition.item(
+                            "wedges",
+                            "Wedges",
+                            "🧱",
+                            "/admin/wedges",
+                            List.of("WEDGE_VIEW")
+                    ),
+                    MenuDefinition.item(
                             "attributes",
                             "Attributes",
                             "🎛️",
