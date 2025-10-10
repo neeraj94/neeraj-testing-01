@@ -19,3 +19,10 @@ export interface Brand {
 }
 
 export type BrandPage = Pagination<Brand>;
+
+export interface BrandLogoUploadResponse {
+  url: string;
+  originalFilename: string;
+  mimeType: string;
+  sizeBytes: number;
+}

@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../services/http';
-import type { Brand, BrandPage } from '../types/brand';
+import type { Brand, BrandLogoUploadResponse, BrandPage } from '../types/brand';
 import { useAppSelector } from '../app/hooks';
 import { hasAnyPermission } from '../utils/permissions';
 import type { PermissionKey } from '../types/auth';
@@ -55,11 +55,14 @@ const BrandsPage = () => {
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [searchDraft, setSearchDraft] = useState('');
   const [search, setSearch] = useState('');
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [formMode, setFormMode] = useState<FormMode>('create');
   const [form, setForm] = useState<BrandFormState>(defaultFormState);
   const [formError, setFormError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [isFormVisible, setIsFormVisible] = useState(false);
+  const [activeTab, setActiveTab] = useState<'general' | 'seo'>('general');
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const canCreate = useMemo(
     () => hasAnyPermission(permissions as PermissionKey[], ['BRAND_CREATE']),
@@ -135,15 +138,17 @@ const BrandsPage = () => {
     }
   });
 
-  const openCreateModal = () => {
+  const openCreateForm = () => {
     setForm({ ...defaultFormState });
     setFormError(null);
     setEditingId(null);
     setFormMode('create');
-    setIsModalOpen(true);
+    setIsFormVisible(true);
+    setActiveTab('general');
+    setLogoPreview(null);
   };
 
-  const openEditModal = (brand: Brand) => {
+  const openEditForm = (brand: Brand) => {
     setForm({
       name: brand.name,
       slug: brand.slug,
@@ -161,12 +166,18 @@ const BrandsPage = () => {
     setFormError(null);
     setEditingId(brand.id);
     setFormMode('edit');
-    setIsModalOpen(true);
+    setIsFormVisible(true);
+    setActiveTab('general');
+    setLogoPreview(brand.logoUrl ?? null);
   };
 
-  const closeModal = () => {
-    setIsModalOpen(false);
+  const closeForm = () => {
+    setIsFormVisible(false);
+    setForm({ ...defaultFormState });
     setFormError(null);
+    setActiveTab('general');
+    setLogoPreview(null);
+    setEditingId(null);
   };
 
   const handleSubmit = async () => {
@@ -194,7 +205,7 @@ const BrandsPage = () => {
       } else if (editingId != null) {
         await updateMutation.mutateAsync({ id: editingId, payload });
       }
-      closeModal();
+      closeForm();
     } catch (error) {
       setFormError(extractErrorMessage(error, 'Failed to save brand.'));
     }
@@ -209,6 +220,42 @@ const BrandsPage = () => {
       return;
     }
     await deleteMutation.mutateAsync(brand.id);
+  };
+
+  const logoUploadMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      const { data } = await api.post<BrandLogoUploadResponse>('/brands/assets', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      return data;
+    },
+    onSuccess: (data) => {
+      setForm((prev) => ({ ...prev, logoUrl: data.url }));
+      setLogoPreview(data.url);
+      notify({ type: 'success', message: 'Logo uploaded successfully.' });
+    },
+    onError: (error: unknown) => {
+      notify({ type: 'error', message: extractErrorMessage(error, 'Failed to upload logo.') });
+    }
+  });
+
+  const handleLogoSelect = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleLogoFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      await logoUploadMutation.mutateAsync(file);
+    }
+    event.target.value = '';
+  };
+
+  const handleLogoRemove = () => {
+    setForm((prev) => ({ ...prev, logoUrl: '' }));
+    setLogoPreview(null);
   };
 
   const totalElements = brandsQuery.data?.totalElements ?? 0;
@@ -230,7 +277,7 @@ const BrandsPage = () => {
             ? (
                 <button
                   type="button"
-                  onClick={openCreateModal}
+                  onClick={openCreateForm}
                   className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white shadow hover:bg-blue-600"
                 >
                   New brand
@@ -286,7 +333,7 @@ const BrandsPage = () => {
                           {canUpdate && (
                             <button
                               type="button"
-                              onClick={() => openEditModal(brand)}
+                              onClick={() => openEditForm(brand)}
                               className="rounded-full border border-slate-200 p-2 text-slate-500 transition hover:border-slate-300 hover:text-slate-800"
                               aria-label={`Edit ${brand.name}`}
                             >
@@ -346,211 +393,254 @@ const BrandsPage = () => {
         />
       </PageSection>
 
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4">
-          <div className="w-full max-w-3xl rounded-2xl bg-white shadow-xl">
-            <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
-              <div>
-                <h2 className="text-lg font-semibold text-slate-800">
-                  {formMode === 'create' ? 'Create Brand' : 'Edit Brand'}
-                </h2>
-                <p className="text-sm text-slate-500">
-                  Keep brand identities consistent and searchable with structured SEO metadata.
-                </p>
-              </div>
+      {isFormVisible && (
+        <PageSection
+          title={formMode === 'create' ? 'Create brand' : 'Edit brand'}
+          description="Keep brand identities consistent and searchable with structured SEO metadata."
+          actions={
+            <button
+              type="button"
+              onClick={closeForm}
+              className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100"
+            >
+              Close
+            </button>
+          }
+        >
+          <div className="mb-4 flex flex-wrap gap-2">
+            {[
+              { key: 'general', label: 'General' },
+              { key: 'seo', label: 'SEO & metadata' }
+            ].map((tab) => (
               <button
+                key={tab.key}
                 type="button"
-                onClick={closeModal}
-                className="rounded-full p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
+                onClick={() => setActiveTab(tab.key as 'general' | 'seo')}
+                className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
+                  activeTab === tab.key
+                    ? 'bg-primary text-white shadow'
+                    : 'border border-slate-200 text-slate-600 hover:border-primary/40 hover:text-primary'
+                }`}
               >
-                <span className="sr-only">Close</span>
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} className="h-5 w-5">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="m6 6 12 12M18 6 6 18" />
-                </svg>
+                {tab.label}
               </button>
-            </div>
-            <div className="grid max-h-[70vh] grid-cols-1 gap-4 overflow-y-auto px-6 py-4 md:grid-cols-2">
-              <div className="md:col-span-2">
-                <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="brand-name">
-                  Name
-                </label>
-                <input
-                  id="brand-name"
-                  type="text"
-                  value={form.name}
-                  onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                  placeholder="Aurora Market"
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="brand-slug">
-                  Slug <span className="text-xs font-normal text-slate-400">(optional)</span>
-                </label>
-                <input
-                  id="brand-slug"
-                  type="text"
-                  value={form.slug}
-                  onChange={(event) => setForm((prev) => ({ ...prev, slug: event.target.value }))}
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                  placeholder="aurora-market"
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="brand-logo">
-                  Logo URL <span className="text-xs font-normal text-slate-400">(optional)</span>
-                </label>
-                <input
-                  id="brand-logo"
-                  type="url"
-                  value={form.logoUrl}
-                  onChange={(event) => setForm((prev) => ({ ...prev, logoUrl: event.target.value }))}
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                  placeholder="https://cdn.example.com/brands/aurora.svg"
-                />
-              </div>
-              <div className="md:col-span-2">
-                <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="brand-description">
-                  Description <span className="text-xs font-normal text-slate-400">(optional)</span>
-                </label>
-                <textarea
-                  id="brand-description"
-                  value={form.description}
-                  onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
-                  rows={3}
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                  placeholder="Short summary that appears on collection and landing pages."
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="brand-meta-title">
-                  Meta title <span className="text-xs font-normal text-slate-400">(optional)</span>
-                </label>
-                <input
-                  id="brand-meta-title"
-                  type="text"
-                  value={form.metaTitle}
-                  onChange={(event) => setForm((prev) => ({ ...prev, metaTitle: event.target.value }))}
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                  placeholder="Premium lifestyle goods | Aurora Market"
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="brand-meta-description">
-                  Meta description <span className="text-xs font-normal text-slate-400">(optional)</span>
-                </label>
-                <textarea
-                  id="brand-meta-description"
-                  value={form.metaDescription}
-                  onChange={(event) => setForm((prev) => ({ ...prev, metaDescription: event.target.value }))}
-                  rows={3}
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                  placeholder="Crafted collections designed for mindful living and sustainable style."
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="brand-meta-keywords">
-                  Meta keywords <span className="text-xs font-normal text-slate-400">(optional)</span>
-                </label>
-                <textarea
-                  id="brand-meta-keywords"
-                  value={form.metaKeywords}
-                  onChange={(event) => setForm((prev) => ({ ...prev, metaKeywords: event.target.value }))}
-                  rows={2}
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                  placeholder="lifestyle, eco-friendly, apparel"
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="brand-meta-canonical">
-                  Canonical URL <span className="text-xs font-normal text-slate-400">(optional)</span>
-                </label>
-                <input
-                  id="brand-meta-canonical"
-                  type="url"
-                  value={form.metaCanonicalUrl}
-                  onChange={(event) => setForm((prev) => ({ ...prev, metaCanonicalUrl: event.target.value }))}
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                  placeholder="https://example.com/brands/aurora"
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="brand-meta-robots">
-                  Robots directive <span className="text-xs font-normal text-slate-400">(optional)</span>
-                </label>
-                <input
-                  id="brand-meta-robots"
-                  type="text"
-                  value={form.metaRobots}
-                  onChange={(event) => setForm((prev) => ({ ...prev, metaRobots: event.target.value }))}
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                  placeholder="index,follow"
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="brand-og-title">
-                  Open Graph title <span className="text-xs font-normal text-slate-400">(optional)</span>
-                </label>
-                <input
-                  id="brand-og-title"
-                  type="text"
-                  value={form.metaOgTitle}
-                  onChange={(event) => setForm((prev) => ({ ...prev, metaOgTitle: event.target.value }))}
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                  placeholder="Aurora Market — Elevated essentials"
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="brand-og-description">
-                  Open Graph description <span className="text-xs font-normal text-slate-400">(optional)</span>
-                </label>
-                <textarea
-                  id="brand-og-description"
-                  value={form.metaOgDescription}
-                  onChange={(event) => setForm((prev) => ({ ...prev, metaOgDescription: event.target.value }))}
-                  rows={3}
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                  placeholder="Discover the story behind Aurora Market and explore curated looks for every occasion."
-                />
-              </div>
-              <div className="md:col-span-2">
-                <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="brand-og-image">
-                  Open Graph image URL <span className="text-xs font-normal text-slate-400">(optional)</span>
-                </label>
-                <input
-                  id="brand-og-image"
-                  type="url"
-                  value={form.metaOgImage}
-                  onChange={(event) => setForm((prev) => ({ ...prev, metaOgImage: event.target.value }))}
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                  placeholder="https://cdn.example.com/brands/aurora-social.png"
-                />
-              </div>
-              {formError && (
-                <div className="md:col-span-2">
-                  <div className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-600">{formError}</div>
-                </div>
-              )}
-            </div>
-            <div className="flex items-center justify-end gap-3 border-t border-slate-200 px-6 py-4">
-              <button
-                type="button"
-                onClick={closeModal}
-                className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleSubmit}
-                className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white shadow hover:bg-blue-600"
-                disabled={createMutation.isPending || updateMutation.isPending}
-              >
-                {createMutation.isPending || updateMutation.isPending ? 'Saving…' : 'Save'}
-              </button>
-            </div>
+            ))}
           </div>
-        </div>
+          <div className="space-y-6">
+            {activeTab === 'general' ? (
+              <div className="space-y-6">
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="brand-name">
+                    Name
+                  </label>
+                  <input
+                    id="brand-name"
+                    type="text"
+                    value={form.name}
+                    onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    placeholder="Aurora Market"
+                  />
+                </div>
+                <div>
+                  <span className="mb-1 block text-sm font-medium text-slate-700">Logo</span>
+                  <p className="mb-3 text-xs text-slate-500">Upload a square logo in PNG, JPG, GIF, WEBP, or SVG format.</p>
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+                    <div className="flex h-32 w-32 items-center justify-center overflow-hidden rounded-xl border border-dashed border-slate-300 bg-slate-50">
+                      {logoPreview ? (
+                        <img src={logoPreview} alt="Brand logo preview" className="h-full w-full object-cover" />
+                      ) : (
+                        <span className="text-sm text-slate-400">No logo</span>
+                      )}
+                    </div>
+                    <div className="flex flex-1 flex-col gap-2">
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleLogoFileChange}
+                      />
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={handleLogoSelect}
+                          className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white shadow hover:bg-blue-600"
+                          disabled={logoUploadMutation.isPending}
+                        >
+                          {logoUploadMutation.isPending ? 'Uploading…' : 'Upload logo'}
+                        </button>
+                        {logoPreview && (
+                          <button
+                            type="button"
+                            onClick={handleLogoRemove}
+                            className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100"
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </div>
+                      {form.logoUrl && !logoPreview && (
+                        <p className="text-xs text-slate-500 break-words">{form.logoUrl}</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="brand-slug">
+                    Slug <span className="text-xs font-normal text-slate-400">(optional)</span>
+                  </label>
+                  <input
+                    id="brand-slug"
+                    type="text"
+                    value={form.slug}
+                    onChange={(event) => setForm((prev) => ({ ...prev, slug: event.target.value }))}
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    placeholder="aurora-market"
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="brand-description">
+                    Description <span className="text-xs font-normal text-slate-400">(optional)</span>
+                  </label>
+                  <textarea
+                    id="brand-description"
+                    value={form.description}
+                    onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
+                    rows={3}
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    placeholder="Short summary that appears on collection and landing pages."
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="brand-meta-title">
+                    Meta title <span className="text-xs font-normal text-slate-400">(optional)</span>
+                  </label>
+                  <input
+                    id="brand-meta-title"
+                    type="text"
+                    value={form.metaTitle}
+                    onChange={(event) => setForm((prev) => ({ ...prev, metaTitle: event.target.value }))}
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    placeholder="Premium lifestyle goods | Aurora Market"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="brand-meta-description">
+                    Meta description <span className="text-xs font-normal text-slate-400">(optional)</span>
+                  </label>
+                  <textarea
+                    id="brand-meta-description"
+                    value={form.metaDescription}
+                    onChange={(event) => setForm((prev) => ({ ...prev, metaDescription: event.target.value }))}
+                    rows={3}
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    placeholder="Crafted collections designed for mindful living and sustainable style."
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="brand-meta-keywords">
+                    Meta keywords <span className="text-xs font-normal text-slate-400">(optional)</span>
+                  </label>
+                  <textarea
+                    id="brand-meta-keywords"
+                    value={form.metaKeywords}
+                    onChange={(event) => setForm((prev) => ({ ...prev, metaKeywords: event.target.value }))}
+                    rows={2}
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    placeholder="lifestyle, eco-friendly, apparel"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="brand-meta-canonical">
+                    Canonical URL <span className="text-xs font-normal text-slate-400">(optional)</span>
+                  </label>
+                  <input
+                    id="brand-meta-canonical"
+                    type="url"
+                    value={form.metaCanonicalUrl}
+                    onChange={(event) => setForm((prev) => ({ ...prev, metaCanonicalUrl: event.target.value }))}
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    placeholder="https://example.com/brands/aurora"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="brand-meta-robots">
+                    Robots directive <span className="text-xs font-normal text-slate-400">(optional)</span>
+                  </label>
+                  <input
+                    id="brand-meta-robots"
+                    type="text"
+                    value={form.metaRobots}
+                    onChange={(event) => setForm((prev) => ({ ...prev, metaRobots: event.target.value }))}
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    placeholder="index,follow"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="brand-og-title">
+                    Open Graph title <span className="text-xs font-normal text-slate-400">(optional)</span>
+                  </label>
+                  <input
+                    id="brand-og-title"
+                    type="text"
+                    value={form.metaOgTitle}
+                    onChange={(event) => setForm((prev) => ({ ...prev, metaOgTitle: event.target.value }))}
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    placeholder="Aurora Market — Elevated essentials"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="brand-og-description">
+                    Open Graph description <span className="text-xs font-normal text-slate-400">(optional)</span>
+                  </label>
+                  <textarea
+                    id="brand-og-description"
+                    value={form.metaOgDescription}
+                    onChange={(event) => setForm((prev) => ({ ...prev, metaOgDescription: event.target.value }))}
+                    rows={3}
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    placeholder="Discover the story behind Aurora Market and explore curated looks for every occasion."
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="brand-og-image">
+                    Open Graph image URL <span className="text-xs font-normal text-slate-400">(optional)</span>
+                  </label>
+                  <input
+                    id="brand-og-image"
+                    type="url"
+                    value={form.metaOgImage}
+                    onChange={(event) => setForm((prev) => ({ ...prev, metaOgImage: event.target.value }))}
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    placeholder="https://cdn.example.com/brands/aurora-social.png"
+                  />
+                </div>
+              </div>
+            )}
+            {formError && <div className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-600">{formError}</div>}
+          </div>
+          <div className="mt-6 flex flex-wrap items-center justify-end gap-3">
+            <button
+              type="button"
+              onClick={closeForm}
+              className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleSubmit}
+              className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white shadow hover:bg-blue-600"
+              disabled={createMutation.isPending || updateMutation.isPending}
+            >
+              {createMutation.isPending || updateMutation.isPending ? 'Saving…' : 'Save'}
+            </button>
+          </div>
+        </PageSection>
       )}
     </div>
   );
