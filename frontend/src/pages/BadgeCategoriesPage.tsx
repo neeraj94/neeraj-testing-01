@@ -64,6 +64,15 @@ const BadgeCategoriesPage = () => {
     return () => window.clearTimeout(timer);
   }, [searchDraft]);
 
+  const closeForm = () => {
+    setPanelMode('list');
+    setForm({ ...defaultFormState });
+    setFormError(null);
+    setActiveTab('general');
+    setEditingId(null);
+    setIconPreview(null);
+  };
+
   const categoriesQuery = useQuery<BadgeCategoryPage>({
     queryKey: ['badgeCategories', { page, pageSize, search }],
     queryFn: async () => {
@@ -89,10 +98,7 @@ const BadgeCategoriesPage = () => {
     onSuccess: () => {
       notify({ type: 'success', message: 'Badge category created successfully.' });
       queryClient.invalidateQueries({ queryKey: ['badgeCategories'] });
-      setPanelMode('list');
-      setForm({ ...defaultFormState });
-      setIconPreview(null);
-      setEditingId(null);
+      closeForm();
     },
     onError: (error: unknown) => {
       setFormError(extractErrorMessage(error, 'Failed to create badge category.'));
@@ -111,10 +117,7 @@ const BadgeCategoriesPage = () => {
     onSuccess: () => {
       notify({ type: 'success', message: 'Badge category updated successfully.' });
       queryClient.invalidateQueries({ queryKey: ['badgeCategories'] });
-      setPanelMode('list');
-      setForm({ ...defaultFormState });
-      setIconPreview(null);
-      setEditingId(null);
+      closeForm();
     },
     onError: (error: unknown) => {
       setFormError(extractErrorMessage(error, 'Failed to update badge category.'));
@@ -156,8 +159,8 @@ const BadgeCategoriesPage = () => {
   const openCreateForm = () => {
     setForm({ ...defaultFormState });
     setFormError(null);
-    setPanelMode('create');
     setActiveTab('general');
+    setPanelMode('create');
     setEditingId(null);
     setIconPreview(null);
   };
@@ -169,8 +172,8 @@ const BadgeCategoriesPage = () => {
       iconUrl: category.iconUrl ?? ''
     });
     setFormError(null);
-    setPanelMode('edit');
     setActiveTab('general');
+    setPanelMode('edit');
     setEditingId(category.id);
     setIconPreview(category.iconUrl ?? null);
   };
@@ -208,6 +211,7 @@ const BadgeCategoriesPage = () => {
 
     if (!form.title.trim()) {
       setFormError('Category title is required.');
+      setActiveTab('general');
       return;
     }
 
@@ -223,22 +227,292 @@ const BadgeCategoriesPage = () => {
     }
   };
 
-  const isSaving = createMutation.isPending || updateMutation.isPending;
-  const showForm = panelMode !== 'list';
+  const isDirectoryView = panelMode === 'list';
   const isCreate = panelMode === 'create';
+  const isSaving = createMutation.isPending || updateMutation.isPending;
+
+  const formatDate = (value: string) =>
+    new Intl.DateTimeFormat(undefined, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    }).format(new Date(value));
+
+  const renderDirectory = () => (
+    <PageSection padded={false} bodyClassName="flex flex-col">
+      <div className="flex flex-col gap-4 border-b border-slate-200 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <input
+          type="search"
+          value={searchDraft}
+          onChange={(event) => setSearchDraft(event.target.value)}
+          placeholder="Search badge categories"
+          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:max-w-xs"
+        />
+      </div>
+      <div className="overflow-x-auto">
+        <table className="min-w-full divide-y divide-slate-200 text-sm">
+          <thead className="bg-slate-50">
+            <tr>
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Category</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Updated</th>
+              {(canUpdate || canDelete) && (
+                <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Actions</th>
+              )}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100 bg-white">
+            {categoriesQuery.isLoading ? (
+              <tr>
+                <td colSpan={canUpdate || canDelete ? 3 : 2} className="px-4 py-6 text-center text-sm text-slate-500">
+                  Loading badge categories…
+                </td>
+              </tr>
+            ) : categories.length > 0 ? (
+              categories.map((category) => (
+                <tr key={category.id} className="transition hover:bg-blue-50/40">
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
+                        {category.iconUrl ? (
+                          <img src={category.iconUrl} alt={`${category.title} icon`} className="h-full w-full object-cover" />
+                        ) : (
+                          <span className="text-xs text-slate-400">No icon</span>
+                        )}
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="font-medium text-slate-900">{category.title}</span>
+                        {category.description && <span className="text-xs text-slate-500">{category.description}</span>}
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-slate-600">{formatDate(category.updatedAt)}</td>
+                  {(canUpdate || canDelete) && (
+                    <td className="px-4 py-3">
+                      <div className="flex justify-end gap-2">
+                        {canUpdate && (
+                          <button
+                            type="button"
+                            onClick={() => openEditForm(category)}
+                            className="rounded-full border border-slate-200 p-2 text-slate-500 transition hover:border-slate-300 hover:text-slate-800"
+                            aria-label={`Edit ${category.title}`}
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+                              <path d="M15.414 2.586a2 2 0 0 0-2.828 0L3 12.172V17h4.828l9.586-9.586a2 2 0 0 0 0-2.828l-2-2Zm-2.121 1.415 2 2L13 8.293l-2-2 2.293-2.292ZM5 13.414 11.293 7.12l1.586 1.586L6.586 15H5v-1.586Z" />
+                            </svg>
+                          </button>
+                        )}
+                        {canDelete && (
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(category)}
+                            className="rounded-full border border-rose-200 p-2 text-rose-500 transition hover:border-rose-300 hover:text-rose-600"
+                            aria-label={`Delete ${category.title}`}
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth={1.5}
+                              className="h-4 w-4"
+                            >
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M6 7h12" />
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M10 11v6" />
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M14 11v6" />
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M9 7V4h6v3m2 0v12a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V7h12Z" />
+                            </svg>
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  )}
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={canUpdate || canDelete ? 3 : 2} className="px-4 py-6 text-center text-sm text-slate-500">
+                  No badge categories found.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+      <PaginationControls
+        page={page}
+        pageSize={pageSize}
+        totalElements={totalElements}
+        pageSizeOptions={PAGE_SIZE_OPTIONS}
+        onPageChange={setPage}
+        onPageSizeChange={(size) => {
+          setPageSize(size);
+          setPage(0);
+        }}
+        isLoading={categoriesQuery.isLoading}
+      />
+    </PageSection>
+  );
+
+  const renderForm = () => {
+    const headerTitle = isCreate ? 'Create badge category' : form.title || 'Edit badge category';
+    const headerSubtitle = isCreate
+      ? 'Organize badges into thematic collections for merchandising workflows.'
+      : editingId
+      ? `#${editingId} category`
+      : '';
+
+    return (
+      <form onSubmit={handleSubmit} className="flex flex-col gap-6 rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <header className="flex flex-col gap-4 border-b border-slate-200 bg-slate-50 px-6 py-5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-start gap-4">
+            <button
+              type="button"
+              onClick={closeForm}
+              className="rounded-full border border-slate-200 bg-white p-2 text-slate-600 transition hover:border-primary/40 hover:text-primary"
+              aria-label="Back to badge categories"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} className="h-5 w-5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="m15 19-7-7 7-7" />
+              </svg>
+            </button>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-primary">
+                {isCreate ? 'New badge category' : 'Edit badge category'}
+              </p>
+              <h2 className="mt-1 text-2xl font-semibold text-slate-900">{headerTitle}</h2>
+              {headerSubtitle && <p className="text-sm text-slate-500">{headerSubtitle}</p>}
+            </div>
+          </div>
+        </header>
+        <div className="grid border-b border-slate-200 lg:grid-cols-[240px,1fr]">
+          <nav className="flex shrink-0 flex-row gap-2 border-b border-slate-200 bg-white px-6 py-3 text-sm font-semibold text-slate-600 lg:flex-col lg:border-b-0 lg:border-r">
+            {[
+              { key: 'general', label: 'General' },
+              { key: 'details', label: 'Details' }
+            ].map((tab) => (
+              <button
+                key={tab.key}
+                type="button"
+                onClick={() => setActiveTab(tab.key as 'general' | 'details')}
+                className={`rounded-lg px-3 py-2 text-left transition ${
+                  activeTab === tab.key ? 'bg-primary/10 text-primary' : 'text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </nav>
+          <div className="flex-1 px-6 py-6">
+            {formError && (
+              <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-600">{formError}</div>
+            )}
+            {activeTab === 'general' ? (
+              <div className="space-y-6">
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="badge-category-title">
+                    Title
+                  </label>
+                  <input
+                    id="badge-category-title"
+                    type="text"
+                    value={form.title}
+                    onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))}
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    placeholder="Seasonal"
+                  />
+                </div>
+                <div>
+                  <span className="mb-1 block text-sm font-medium text-slate-700">Icon</span>
+                  <p className="mb-3 text-xs text-slate-500">Upload an image to represent this category.</p>
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+                    <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-xl border border-dashed border-slate-300 bg-slate-50">
+                      {iconPreview ? (
+                        <img src={iconPreview} alt="Badge category icon" className="h-full w-full object-cover" />
+                      ) : (
+                        <span className="text-xs text-slate-400">No icon</span>
+                      )}
+                    </div>
+                    <div className="flex flex-1 flex-col gap-2">
+                      <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleIconChange} />
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={handleIconSelect}
+                          className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white shadow hover:bg-blue-600"
+                          disabled={iconUploadMutation.isPending}
+                        >
+                          {iconUploadMutation.isPending ? 'Uploading…' : 'Upload icon'}
+                        </button>
+                        {iconPreview && (
+                          <button
+                            type="button"
+                            onClick={handleIconRemove}
+                            className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100"
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </div>
+                      {form.iconUrl && !iconPreview && (
+                        <p className="break-words text-xs text-slate-500">{form.iconUrl}</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="badge-category-description">
+                    Description <span className="text-xs font-normal text-slate-400">(optional)</span>
+                  </label>
+                  <textarea
+                    id="badge-category-description"
+                    value={form.description}
+                    onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
+                    className="min-h-[120px] w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    placeholder="Explain how badges in this category should be used"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+        <footer className="flex flex-col gap-3 bg-slate-50 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
+          <span className="text-xs text-slate-500">Badge categories help organize reusable badge assets across campaigns.</span>
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={closeForm}
+              className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100"
+              disabled={isSaving}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white shadow hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={isSaving}
+            >
+              {isSaving ? 'Saving…' : isCreate ? 'Create category' : 'Save changes'}
+            </button>
+          </div>
+        </footer>
+      </form>
+    );
+  };
 
   return (
-    <PageSection>
+    <div className="space-y-6 px-6 py-6">
       <PageHeader
         title="Badge categories"
         description="Group badges into curated collections for merchandising workflows."
         actions={
-          canCreate ? (
+          isDirectoryView && canCreate ? (
             <button
               type="button"
               onClick={openCreateForm}
-              className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white shadow hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-60"
-              disabled={showForm && isCreate}
+              className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white shadow hover:bg-blue-600"
             >
               New badge category
             </button>
@@ -246,270 +520,8 @@ const BadgeCategoriesPage = () => {
         }
       />
 
-      <div className="grid gap-6 lg:grid-cols-[1fr,minmax(320px,420px)]">
-        <div className="space-y-6">
-          <div className="flex flex-col gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <label htmlFor="badge-category-search" className="text-sm font-medium text-slate-600">
-                Search categories
-              </label>
-              <div className="flex items-center gap-3">
-                <input
-                  id="badge-category-search"
-                  type="search"
-                  placeholder="Search categories"
-                  value={searchDraft}
-                  onChange={(event) => setSearchDraft(event.target.value)}
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:w-64"
-                />
-                <select
-                  value={pageSize}
-                  onChange={(event) => setPageSize(Number(event.target.value))}
-                  className="rounded-lg border border-slate-200 px-2 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                >
-                  {PAGE_SIZE_OPTIONS.map((size) => (
-                    <option key={size} value={size}>
-                      {size} / page
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          </div>
-
-          <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-            <table className="min-w-full divide-y divide-slate-200">
-              <thead className="bg-slate-50">
-                <tr>
-                  <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">
-                    Category
-                  </th>
-                  <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">
-                    Updated
-                  </th>
-                  <th scope="col" className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-600">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200">
-                {categories.length > 0 ? (
-                  categories.map((category) => (
-                    <tr key={category.id} className="hover:bg-slate-50">
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
-                            {category.iconUrl ? (
-                              <img src={category.iconUrl} alt={`${category.title} icon`} className="h-full w-full object-cover" />
-                            ) : (
-                              <span className="text-xs text-slate-400">No icon</span>
-                            )}
-                          </div>
-                          <div>
-                            <p className="font-semibold text-slate-900">{category.title}</p>
-                            {category.description && (
-                              <p className="text-xs text-slate-500">{category.description}</p>
-                            )}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-slate-500">
-                        {new Date(category.updatedAt).toLocaleString()}
-                      </td>
-                      <td className="px-4 py-3 text-right text-sm">
-                        <div className="flex justify-end gap-2">
-                          {canUpdate && (
-                            <button
-                              type="button"
-                              onClick={() => openEditForm(category)}
-                              className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100"
-                            >
-                              Edit
-                            </button>
-                          )}
-                          {canDelete && (
-                            <button
-                              type="button"
-                              onClick={() => handleDelete(category)}
-                              className="rounded-lg border border-rose-200 px-3 py-1.5 text-sm font-medium text-rose-600 transition hover:bg-rose-50"
-                            >
-                              Delete
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={3} className="px-4 py-12 text-center text-sm text-slate-500">
-                      {categoriesQuery.isLoading ? 'Loading categories…' : 'No badge categories found.'}
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          <PaginationControls
-            page={page}
-            pageSize={pageSize}
-            totalElements={totalElements}
-            isLoading={categoriesQuery.isLoading}
-            onPageChange={setPage}
-          />
-        </div>
-
-        {showForm && (
-          <aside className="rounded-xl border border-slate-200 bg-white shadow-sm">
-            <header className="flex items-start gap-4 border-b border-slate-200 px-6 py-5">
-              <button
-                type="button"
-                onClick={() => {
-                  setPanelMode('list');
-                  setForm({ ...defaultFormState });
-                  setIconPreview(null);
-                  setEditingId(null);
-                }}
-                className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100"
-              >
-                Back
-              </button>
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-primary">
-                  {isCreate ? 'New badge category' : 'Edit badge category'}
-                </p>
-                <h2 className="mt-1 text-2xl font-semibold text-slate-900">
-                  {isCreate ? 'Create badge category' : form.title || 'Update badge category'}
-                </h2>
-                {editingId && !isCreate && <p className="text-xs text-slate-500">ID #{editingId}</p>}
-              </div>
-            </header>
-            <form onSubmit={handleSubmit} className="grid border-t border-slate-200 lg:grid-cols-[180px,1fr]">
-              <nav className="flex flex-row gap-2 border-b border-slate-200 bg-slate-50 px-6 py-4 text-sm font-semibold text-slate-600 lg:flex-col lg:border-b-0 lg:border-r">
-                {[{ key: 'general', label: 'General' }, { key: 'details', label: 'Details' }].map((tab) => (
-                  <button
-                    key={tab.key}
-                    type="button"
-                    onClick={() => setActiveTab(tab.key as 'general' | 'details')}
-                    className={`rounded-lg px-3 py-2 text-left transition ${
-                      activeTab === tab.key ? 'bg-primary/10 text-primary' : 'hover:bg-slate-100'
-                    }`}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
-              </nav>
-              <div className="px-6 py-6">
-                {formError && (
-                  <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-600">
-                    {formError}
-                  </div>
-                )}
-                {activeTab === 'general' ? (
-                  <div className="space-y-6">
-                    <div>
-                      <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="badge-category-title">
-                        Title
-                      </label>
-                      <input
-                        id="badge-category-title"
-                        type="text"
-                        value={form.title}
-                        onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))}
-                        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                        placeholder="Seasonal"
-                      />
-                    </div>
-                    <div>
-                      <span className="mb-1 block text-sm font-medium text-slate-700">Icon</span>
-                      <p className="mb-3 text-xs text-slate-500">Upload an image to represent this category.</p>
-                      <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
-                        <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-xl border border-dashed border-slate-300 bg-slate-50">
-                          {iconPreview ? (
-                            <img src={iconPreview} alt="Badge category icon" className="h-full w-full object-cover" />
-                          ) : (
-                            <span className="text-xs text-slate-400">No icon</span>
-                          )}
-                        </div>
-                        <div className="flex flex-1 flex-col gap-2">
-                          <input
-                            ref={fileInputRef}
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            onChange={handleIconChange}
-                          />
-                          <div className="flex flex-wrap gap-2">
-                            <button
-                              type="button"
-                              onClick={handleIconSelect}
-                              className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white shadow hover:bg-blue-600"
-                              disabled={iconUploadMutation.isPending}
-                            >
-                              {iconUploadMutation.isPending ? 'Uploading…' : 'Upload icon'}
-                            </button>
-                            {iconPreview && (
-                              <button
-                                type="button"
-                                onClick={handleIconRemove}
-                                className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100"
-                              >
-                                Remove
-                              </button>
-                            )}
-                          </div>
-                          {form.iconUrl && !iconPreview && (
-                            <p className="break-words text-xs text-slate-500">{form.iconUrl}</p>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-6">
-                    <div>
-                      <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="badge-category-description">
-                        Description
-                      </label>
-                      <textarea
-                        id="badge-category-description"
-                        value={form.description}
-                        onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
-                        className="min-h-[120px] w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                        placeholder="Explain how badges within this category should be used"
-                      />
-                    </div>
-                  </div>
-                )}
-                <div className="mt-8 flex items-center justify-end gap-3 border-t border-slate-200 pt-4">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPanelMode('list');
-                      setForm({ ...defaultFormState });
-                      setIconPreview(null);
-                      setEditingId(null);
-                    }}
-                    className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100"
-                    disabled={isSaving}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white shadow hover:bg-blue-600 disabled:cursor-not-allowed disabled:bg-slate-400"
-                    disabled={isSaving}
-                  >
-                    {isSaving ? 'Saving…' : isCreate ? 'Create category' : 'Save changes'}
-                  </button>
-                </div>
-              </div>
-            </form>
-          </aside>
-        )}
-      </div>
-    </PageSection>
+      {isDirectoryView ? renderDirectory() : renderForm()}
+    </div>
   );
 };
 

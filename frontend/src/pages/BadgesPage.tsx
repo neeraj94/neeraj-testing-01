@@ -75,6 +75,15 @@ const BadgesPage = () => {
     return () => window.clearTimeout(timer);
   }, [searchDraft]);
 
+  const closeForm = () => {
+    setPanelMode('list');
+    setForm({ ...defaultFormState });
+    setFormError(null);
+    setActiveTab('general');
+    setEditingId(null);
+    setIconPreview(null);
+  };
+
   const badgesQuery = useQuery<BadgePage>({
     queryKey: ['badges', { page, pageSize, search }],
     queryFn: async () => {
@@ -111,10 +120,7 @@ const BadgesPage = () => {
     onSuccess: () => {
       notify({ type: 'success', message: 'Badge created successfully.' });
       queryClient.invalidateQueries({ queryKey: ['badges'] });
-      setPanelMode('list');
-      setEditingId(null);
-      setForm({ ...defaultFormState });
-      setIconPreview(null);
+      closeForm();
     },
     onError: (error: unknown) => {
       setFormError(extractErrorMessage(error, 'Failed to create badge.'));
@@ -136,10 +142,7 @@ const BadgesPage = () => {
     onSuccess: () => {
       notify({ type: 'success', message: 'Badge updated successfully.' });
       queryClient.invalidateQueries({ queryKey: ['badges'] });
-      setPanelMode('list');
-      setEditingId(null);
-      setForm({ ...defaultFormState });
-      setIconPreview(null);
+      closeForm();
     },
     onError: (error: unknown) => {
       setFormError(extractErrorMessage(error, 'Failed to update badge.'));
@@ -236,6 +239,7 @@ const BadgesPage = () => {
 
     if (!form.name.trim()) {
       setFormError('Badge name is required.');
+      setActiveTab('general');
       return;
     }
 
@@ -251,22 +255,355 @@ const BadgesPage = () => {
     }
   };
 
-  const isSaving = createMutation.isPending || updateMutation.isPending;
-  const showForm = panelMode !== 'list';
+  const isDirectoryView = panelMode === 'list';
   const isCreate = panelMode === 'create';
+  const isSaving = createMutation.isPending || updateMutation.isPending;
+
+  const formatDate = (value: string) =>
+    new Intl.DateTimeFormat(undefined, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    }).format(new Date(value));
+
+  const renderDirectory = () => (
+    <PageSection padded={false} bodyClassName="flex flex-col">
+      <div className="flex flex-col gap-4 border-b border-slate-200 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <input
+          type="search"
+          value={searchDraft}
+          onChange={(event) => setSearchDraft(event.target.value)}
+          placeholder="Search badges"
+          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:max-w-xs"
+        />
+      </div>
+      <div className="overflow-x-auto">
+        <table className="min-w-full divide-y divide-slate-200 text-sm">
+          <thead className="bg-slate-50">
+            <tr>
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Badge</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Category</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Default</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Updated</th>
+              {(canUpdate || canDelete) && (
+                <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Actions</th>
+              )}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100 bg-white">
+            {badgesQuery.isLoading ? (
+              <tr>
+                <td colSpan={canUpdate || canDelete ? 5 : 4} className="px-4 py-6 text-center text-sm text-slate-500">
+                  Loading badges…
+                </td>
+              </tr>
+            ) : badges.length > 0 ? (
+              badges.map((badge) => (
+                <tr key={badge.id} className="transition hover:bg-blue-50/40">
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
+                        {badge.iconUrl ? (
+                          <img src={badge.iconUrl} alt={`${badge.name} icon`} className="h-full w-full object-cover" />
+                        ) : (
+                          <span className="text-xs text-slate-400">No icon</span>
+                        )}
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="font-medium text-slate-900">{badge.name}</span>
+                        {badge.shortDescription && <span className="text-xs text-slate-500">{badge.shortDescription}</span>}
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-slate-600">{badge.badgeCategory?.title ?? '—'}</td>
+                  <td className="px-4 py-3 text-slate-600">{badge.defaultBadge ? 'Yes' : 'No'}</td>
+                  <td className="px-4 py-3 text-slate-600">{formatDate(badge.updatedAt)}</td>
+                  {(canUpdate || canDelete) && (
+                    <td className="px-4 py-3">
+                      <div className="flex justify-end gap-2">
+                        {canUpdate && (
+                          <button
+                            type="button"
+                            onClick={() => openEditForm(badge)}
+                            className="rounded-full border border-slate-200 p-2 text-slate-500 transition hover:border-slate-300 hover:text-slate-800"
+                            aria-label={`Edit ${badge.name}`}
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+                              <path d="M15.414 2.586a2 2 0 0 0-2.828 0L3 12.172V17h4.828l9.586-9.586a2 2 0 0 0 0-2.828l-2-2Zm-2.121 1.415 2 2L13 8.293l-2-2 2.293-2.292ZM5 13.414 11.293 7.12l1.586 1.586L6.586 15H5v-1.586Z" />
+                            </svg>
+                          </button>
+                        )}
+                        {canDelete && (
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(badge)}
+                            className="rounded-full border border-rose-200 p-2 text-rose-500 transition hover:border-rose-300 hover:text-rose-600"
+                            aria-label={`Delete ${badge.name}`}
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth={1.5}
+                              className="h-4 w-4"
+                            >
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M6 7h12" />
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M10 11v6" />
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M14 11v6" />
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M9 7V4h6v3m2 0v12a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V7h12Z" />
+                            </svg>
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  )}
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={canUpdate || canDelete ? 5 : 4} className="px-4 py-6 text-center text-sm text-slate-500">
+                  No badges found.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+      <PaginationControls
+        page={page}
+        pageSize={pageSize}
+        totalElements={totalElements}
+        pageSizeOptions={PAGE_SIZE_OPTIONS}
+        onPageChange={setPage}
+        onPageSizeChange={(size) => {
+          setPageSize(size);
+          setPage(0);
+        }}
+        isLoading={badgesQuery.isLoading}
+      />
+    </PageSection>
+  );
+
+  const renderForm = () => {
+    const headerTitle = isCreate ? 'Create badge' : form.name || 'Edit badge';
+    const headerSubtitle = isCreate
+      ? 'Design reusable merchandising badges for storefront highlights.'
+      : editingId
+      ? `#${editingId} badge`
+      : '';
+
+    return (
+      <form onSubmit={handleSubmit} className="flex flex-col gap-6 rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <header className="flex flex-col gap-4 border-b border-slate-200 bg-slate-50 px-6 py-5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-start gap-4">
+            <button
+              type="button"
+              onClick={closeForm}
+              className="rounded-full border border-slate-200 bg-white p-2 text-slate-600 transition hover:border-primary/40 hover:text-primary"
+              aria-label="Back to badges"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} className="h-5 w-5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="m15 19-7-7 7-7" />
+              </svg>
+            </button>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-primary">
+                {isCreate ? 'New badge' : 'Edit badge'}
+              </p>
+              <h2 className="mt-1 text-2xl font-semibold text-slate-900">{headerTitle}</h2>
+              {headerSubtitle && <p className="text-sm text-slate-500">{headerSubtitle}</p>}
+            </div>
+          </div>
+        </header>
+        <div className="grid border-b border-slate-200 lg:grid-cols-[240px,1fr]">
+          <nav className="flex shrink-0 flex-row gap-2 border-b border-slate-200 bg-white px-6 py-3 text-sm font-semibold text-slate-600 lg:flex-col lg:border-b-0 lg:border-r">
+            {[
+              { key: 'general', label: 'General' },
+              { key: 'content', label: 'Content' }
+            ].map((tab) => (
+              <button
+                key={tab.key}
+                type="button"
+                onClick={() => setActiveTab(tab.key as 'general' | 'content')}
+                className={`rounded-lg px-3 py-2 text-left transition ${
+                  activeTab === tab.key ? 'bg-primary/10 text-primary' : 'text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </nav>
+          <div className="flex-1 px-6 py-6">
+            {formError && (
+              <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-600">{formError}</div>
+            )}
+            {activeTab === 'general' ? (
+              <div className="space-y-6">
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="badge-name">
+                    Name
+                  </label>
+                  <input
+                    id="badge-name"
+                    type="text"
+                    value={form.name}
+                    onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    placeholder="Limited Edition"
+                  />
+                </div>
+                <div>
+                  <span className="mb-1 block text-sm font-medium text-slate-700">Icon</span>
+                  <p className="mb-3 text-xs text-slate-500">Upload a square image (PNG, JPG, GIF, WEBP, or SVG).</p>
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+                    <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-xl border border-dashed border-slate-300 bg-slate-50">
+                      {iconPreview ? (
+                        <img src={iconPreview} alt="Badge icon preview" className="h-full w-full object-cover" />
+                      ) : (
+                        <span className="text-xs text-slate-400">No icon</span>
+                      )}
+                    </div>
+                    <div className="flex flex-1 flex-col gap-2">
+                      <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleIconChange} />
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={handleIconSelect}
+                          className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white shadow hover:bg-blue-600"
+                          disabled={iconUploadMutation.isPending}
+                        >
+                          {iconUploadMutation.isPending ? 'Uploading…' : 'Upload icon'}
+                        </button>
+                        {iconPreview && (
+                          <button
+                            type="button"
+                            onClick={handleIconRemove}
+                            className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100"
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </div>
+                      {form.iconUrl && !iconPreview && (
+                        <p className="break-words text-xs text-slate-500">{form.iconUrl}</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <span className="mb-1 block text-sm font-medium text-slate-700">Default badge</span>
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <label className="flex items-center gap-2 text-sm text-slate-600">
+                      <input
+                        type="radio"
+                        name="badge-default"
+                        checked={form.defaultBadge}
+                        onChange={() => setForm((prev) => ({ ...prev, defaultBadge: true }))}
+                      />
+                      Yes
+                    </label>
+                    <label className="flex items-center gap-2 text-sm text-slate-600">
+                      <input
+                        type="radio"
+                        name="badge-default"
+                        checked={!form.defaultBadge}
+                        onChange={() => setForm((prev) => ({ ...prev, defaultBadge: false }))}
+                      />
+                      No
+                    </label>
+                  </div>
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="badge-category">
+                    Badge category
+                  </label>
+                  <select
+                    id="badge-category"
+                    value={form.badgeCategoryId}
+                    onChange={(event) => setForm((prev) => ({ ...prev, badgeCategoryId: event.target.value }))}
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  >
+                    <option value="">No category</option>
+                    {(badgeCategoriesQuery.data ?? []).map((option) => (
+                      <option key={option.id} value={option.id}>
+                        {option.title}
+                      </option>
+                    ))}
+                  </select>
+                  {badgeCategoriesQuery.isLoading && (
+                    <p className="mt-1 text-xs text-slate-500">Loading categories…</p>
+                  )}
+                  {badgeCategoriesQuery.isError && (
+                    <p className="mt-1 text-xs text-rose-500">Unable to load badge categories.</p>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="badge-short-description">
+                    Short description
+                  </label>
+                  <textarea
+                    id="badge-short-description"
+                    value={form.shortDescription}
+                    onChange={(event) => setForm((prev) => ({ ...prev, shortDescription: event.target.value }))}
+                    className="min-h-[80px] w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    placeholder="Appears in badge listings"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="badge-long-description">
+                    Long description
+                  </label>
+                  <textarea
+                    id="badge-long-description"
+                    value={form.longDescription}
+                    onChange={(event) => setForm((prev) => ({ ...prev, longDescription: event.target.value }))}
+                    className="min-h-[140px] w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    placeholder="Detail how this badge should be used"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+        <footer className="flex flex-col gap-3 bg-slate-50 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
+          <span className="text-xs text-slate-500">Badges highlight key merchandising moments across the storefront.</span>
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={closeForm}
+              className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100"
+              disabled={isSaving}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white shadow hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={isSaving}
+            >
+              {isSaving ? 'Saving…' : isCreate ? 'Create badge' : 'Save changes'}
+            </button>
+          </div>
+        </footer>
+      </form>
+    );
+  };
 
   return (
-    <PageSection>
+    <div className="space-y-6 px-6 py-6">
       <PageHeader
         title="Badges"
         description="Create reusable merchandising badges for storefront highlights."
         actions={
-          canCreate ? (
+          isDirectoryView && canCreate ? (
             <button
               type="button"
               onClick={openCreateForm}
-              className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white shadow hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-60"
-              disabled={showForm && isCreate}
+              className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white shadow hover:bg-blue-600"
             >
               New badge
             </button>
@@ -274,349 +611,8 @@ const BadgesPage = () => {
         }
       />
 
-      <div className="grid gap-6 lg:grid-cols-[1fr,minmax(320px,420px)]">
-        <div className="space-y-6">
-          <div className="flex flex-col gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <label htmlFor="badge-search" className="text-sm font-medium text-slate-600">
-                Search badges
-              </label>
-              <div className="flex items-center gap-3">
-                <input
-                  id="badge-search"
-                  type="search"
-                  placeholder="Search badges"
-                  value={searchDraft}
-                  onChange={(event) => setSearchDraft(event.target.value)}
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:w-64"
-                />
-                <select
-                  value={pageSize}
-                  onChange={(event) => setPageSize(Number(event.target.value))}
-                  className="rounded-lg border border-slate-200 px-2 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                >
-                  {PAGE_SIZE_OPTIONS.map((size) => (
-                    <option key={size} value={size}>
-                      {size} / page
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          </div>
-
-          <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-            <table className="min-w-full divide-y divide-slate-200">
-              <thead className="bg-slate-50">
-                <tr>
-                  <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">
-                    Badge
-                  </th>
-                  <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">
-                    Category
-                  </th>
-                  <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">
-                    Default
-                  </th>
-                  <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">
-                    Updated
-                  </th>
-                  <th scope="col" className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-600">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200">
-                {badges.length > 0 ? (
-                  badges.map((badge) => (
-                    <tr key={badge.id} className="hover:bg-slate-50">
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
-                            {badge.iconUrl ? (
-                              <img src={badge.iconUrl} alt={`${badge.name} icon`} className="h-full w-full object-cover" />
-                            ) : (
-                              <span className="text-xs text-slate-400">No icon</span>
-                            )}
-                          </div>
-                          <div>
-                            <p className="font-semibold text-slate-900">{badge.name}</p>
-                            {badge.shortDescription && (
-                              <p className="text-xs text-slate-500">{badge.shortDescription}</p>
-                            )}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-slate-600">
-                        {badge.badgeCategory ? badge.badgeCategory.title : <span className="text-slate-400">—</span>}
-                      </td>
-                      <td className="px-4 py-3 text-sm">
-                        {badge.defaultBadge ? (
-                          <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-600">
-                            Default
-                          </span>
-                        ) : (
-                          <span className="text-xs text-slate-400">—</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-slate-500">
-                        {new Date(badge.updatedAt).toLocaleString()}
-                      </td>
-                      <td className="px-4 py-3 text-right text-sm">
-                        <div className="flex justify-end gap-2">
-                          {canUpdate && (
-                            <button
-                              type="button"
-                              onClick={() => openEditForm(badge)}
-                              className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100"
-                            >
-                              Edit
-                            </button>
-                          )}
-                          {canDelete && (
-                            <button
-                              type="button"
-                              onClick={() => handleDelete(badge)}
-                              className="rounded-lg border border-rose-200 px-3 py-1.5 text-sm font-medium text-rose-600 transition hover:bg-rose-50"
-                            >
-                              Delete
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={5} className="px-4 py-12 text-center text-sm text-slate-500">
-                      {badgesQuery.isLoading ? 'Loading badges…' : 'No badges found.'}
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          <PaginationControls
-            page={page}
-            pageSize={pageSize}
-            totalElements={totalElements}
-            isLoading={badgesQuery.isLoading}
-            onPageChange={setPage}
-          />
-        </div>
-
-        {showForm && (
-          <aside className="rounded-xl border border-slate-200 bg-white shadow-sm">
-            <header className="flex items-start gap-4 border-b border-slate-200 px-6 py-5">
-              <button
-                type="button"
-                onClick={() => {
-                  setPanelMode('list');
-                  setEditingId(null);
-                  setForm({ ...defaultFormState });
-                  setIconPreview(null);
-                }}
-                className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100"
-              >
-                Back
-              </button>
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-primary">
-                  {isCreate ? 'New badge' : 'Edit badge'}
-                </p>
-                <h2 className="mt-1 text-2xl font-semibold text-slate-900">
-                  {isCreate ? 'Create badge' : form.name || 'Update badge'}
-                </h2>
-                {editingId && !isCreate && (
-                  <p className="text-xs text-slate-500">ID #{editingId}</p>
-                )}
-              </div>
-            </header>
-            <form onSubmit={handleSubmit} className="grid border-t border-slate-200 lg:grid-cols-[180px,1fr]">
-              <nav className="flex flex-row gap-2 border-b border-slate-200 bg-slate-50 px-6 py-4 text-sm font-semibold text-slate-600 lg:flex-col lg:border-b-0 lg:border-r">
-                {[{ key: 'general', label: 'General' }, { key: 'content', label: 'Content' }].map((tab) => (
-                  <button
-                    key={tab.key}
-                    type="button"
-                    onClick={() => setActiveTab(tab.key as 'general' | 'content')}
-                    className={`rounded-lg px-3 py-2 text-left transition ${
-                      activeTab === tab.key ? 'bg-primary/10 text-primary' : 'hover:bg-slate-100'
-                    }`}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
-              </nav>
-              <div className="px-6 py-6">
-                {formError && (
-                  <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-600">
-                    {formError}
-                  </div>
-                )}
-                {activeTab === 'general' ? (
-                  <div className="space-y-6">
-                    <div>
-                      <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="badge-name">
-                        Name
-                      </label>
-                      <input
-                        id="badge-name"
-                        type="text"
-                        value={form.name}
-                        onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
-                        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                        placeholder="Limited Edition"
-                      />
-                    </div>
-                    <div>
-                      <span className="mb-1 block text-sm font-medium text-slate-700">Icon</span>
-                      <p className="mb-3 text-xs text-slate-500">Upload a square image (PNG, JPG, GIF, WEBP, or SVG).</p>
-                      <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
-                        <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-xl border border-dashed border-slate-300 bg-slate-50">
-                          {iconPreview ? (
-                            <img src={iconPreview} alt="Badge icon preview" className="h-full w-full object-cover" />
-                          ) : (
-                            <span className="text-xs text-slate-400">No icon</span>
-                          )}
-                        </div>
-                        <div className="flex flex-1 flex-col gap-2">
-                          <input
-                            ref={fileInputRef}
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            onChange={handleIconChange}
-                          />
-                          <div className="flex flex-wrap gap-2">
-                            <button
-                              type="button"
-                              onClick={handleIconSelect}
-                              className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white shadow hover:bg-blue-600"
-                              disabled={iconUploadMutation.isPending}
-                            >
-                              {iconUploadMutation.isPending ? 'Uploading…' : 'Upload icon'}
-                            </button>
-                            {iconPreview && (
-                              <button
-                                type="button"
-                                onClick={handleIconRemove}
-                                className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100"
-                              >
-                                Remove
-                              </button>
-                            )}
-                          </div>
-                          {form.iconUrl && !iconPreview && (
-                            <p className="break-words text-xs text-slate-500">{form.iconUrl}</p>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    <div>
-                      <span className="mb-1 block text-sm font-medium text-slate-700">Default badge</span>
-                      <div className="flex flex-col gap-2 sm:flex-row">
-                        <label className="flex items-center gap-2 text-sm text-slate-600">
-                          <input
-                            type="radio"
-                            name="badge-default"
-                            checked={form.defaultBadge}
-                            onChange={() => setForm((prev) => ({ ...prev, defaultBadge: true }))}
-                          />
-                          Yes
-                        </label>
-                        <label className="flex items-center gap-2 text-sm text-slate-600">
-                          <input
-                            type="radio"
-                            name="badge-default"
-                            checked={!form.defaultBadge}
-                            onChange={() => setForm((prev) => ({ ...prev, defaultBadge: false }))}
-                          />
-                          No
-                        </label>
-                      </div>
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="badge-category">
-                        Badge category
-                      </label>
-                      <select
-                        id="badge-category"
-                        value={form.badgeCategoryId}
-                        onChange={(event) => setForm((prev) => ({ ...prev, badgeCategoryId: event.target.value }))}
-                        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                      >
-                        <option value="">No category</option>
-                        {(badgeCategoriesQuery.data ?? []).map((option) => (
-                          <option key={option.id} value={option.id}>
-                            {option.title}
-                          </option>
-                        ))}
-                      </select>
-                      {badgeCategoriesQuery.isLoading && (
-                        <p className="mt-1 text-xs text-slate-500">Loading categories…</p>
-                      )}
-                      {badgeCategoriesQuery.isError && (
-                        <p className="mt-1 text-xs text-rose-500">Unable to load badge categories.</p>
-                      )}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-6">
-                    <div>
-                      <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="badge-short-description">
-                        Short description
-                      </label>
-                      <textarea
-                        id="badge-short-description"
-                        value={form.shortDescription}
-                        onChange={(event) => setForm((prev) => ({ ...prev, shortDescription: event.target.value }))}
-                        className="min-h-[80px] w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                        placeholder="Appears in badge listings"
-                      />
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="badge-long-description">
-                        Long description
-                      </label>
-                      <textarea
-                        id="badge-long-description"
-                        value={form.longDescription}
-                        onChange={(event) => setForm((prev) => ({ ...prev, longDescription: event.target.value }))}
-                        className="min-h-[140px] w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                        placeholder="Detail how this badge should be used"
-                      />
-                    </div>
-                  </div>
-                )}
-                <div className="mt-8 flex items-center justify-end gap-3 border-t border-slate-200 pt-4">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPanelMode('list');
-                      setEditingId(null);
-                      setForm({ ...defaultFormState });
-                      setIconPreview(null);
-                    }}
-                    className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100"
-                    disabled={isSaving}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white shadow hover:bg-blue-600 disabled:cursor-not-allowed disabled:bg-slate-400"
-                    disabled={isSaving}
-                  >
-                    {isSaving ? 'Saving…' : isCreate ? 'Create badge' : 'Save changes'}
-                  </button>
-                </div>
-              </div>
-            </form>
-          </aside>
-        )}
-      </div>
-    </PageSection>
+      {isDirectoryView ? renderDirectory() : renderForm()}
+    </div>
   );
 };
 
