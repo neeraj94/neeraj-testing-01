@@ -155,6 +155,13 @@ public class AuthService {
 
         user = userRepository.findDetailedById(user.getId())
                 .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "User not found"));
+        if (user.getRoles().isEmpty() && user.getDirectPermissions().isEmpty()) {
+            HashMap<String, Object> context = new HashMap<>(buildAuthContext(user));
+            context.put("reason", "NO_ROLES");
+            context.put("loginAttempts", user.getLoginAttempts());
+            activityRecorder.recordForUser(user, "Authentication", "LOGIN_BLOCKED", "Login blocked for user without assigned roles", "BLOCKED", context);
+            throw new ApiException(HttpStatus.FORBIDDEN, "Your account has not been assigned any roles yet. Please contact an administrator.");
+        }
         String refreshTokenValue = createRefreshToken(user);
         AuthResponse response = buildAuthResponse(user, refreshTokenValue);
         activityRecorder.recordForUser(user, "Authentication", "LOGIN", "User logged in", "SUCCESS", buildAuthContext(user));
@@ -242,31 +249,37 @@ public class AuthService {
         if (user == null) {
             return new FailedLoginAttempt(false, 0, MAX_FAILED_LOGIN_ATTEMPTS);
         }
-        if (user.getLockedAt() != null) {
-            HashMap<String, Object> context = new HashMap<>(buildAuthContext(user));
-            context.put("loginAttempts", user.getLoginAttempts());
+        User managed = userRepository.findByIdForUpdate(user.getId())
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "User not found"));
+        if (managed.getLockedAt() != null) {
+            HashMap<String, Object> context = new HashMap<>(buildAuthContext(managed));
+            context.put("loginAttempts", managed.getLoginAttempts());
             context.put("locked", true);
-            activityRecorder.recordForUser(user, "Authentication", "LOGIN_FAILED", "Attempted sign-in while account is locked", "LOCKED", context);
-            return new FailedLoginAttempt(true, user.getLoginAttempts(), 0);
+            activityRecorder.recordForUser(managed, "Authentication", "LOGIN_FAILED", "Attempted sign-in while account is locked", "LOCKED", context);
+            user.setLoginAttempts(managed.getLoginAttempts());
+            user.setLockedAt(managed.getLockedAt());
+            return new FailedLoginAttempt(true, managed.getLoginAttempts(), 0);
         }
-        int attempts = user.getLoginAttempts() + 1;
-        user.setLoginAttempts(attempts);
+        int attempts = managed.getLoginAttempts() + 1;
+        managed.setLoginAttempts(attempts);
         boolean locked = attempts >= MAX_FAILED_LOGIN_ATTEMPTS;
         if (locked) {
-            user.setLockedAt(Instant.now());
+            managed.setLockedAt(Instant.now());
         }
-        userRepository.saveAndFlush(user);
-        HashMap<String, Object> context = new HashMap<>(buildAuthContext(user));
-        context.put("loginAttempts", attempts);
-        int attemptsRemaining = Math.max(MAX_FAILED_LOGIN_ATTEMPTS - attempts, 0);
+        userRepository.saveAndFlush(managed);
+        user.setLoginAttempts(managed.getLoginAttempts());
+        user.setLockedAt(managed.getLockedAt());
+        HashMap<String, Object> context = new HashMap<>(buildAuthContext(managed));
+        context.put("loginAttempts", managed.getLoginAttempts());
+        int attemptsRemaining = Math.max(MAX_FAILED_LOGIN_ATTEMPTS - managed.getLoginAttempts(), 0);
         context.put("attemptsRemaining", attemptsRemaining);
         if (locked) {
             context.put("locked", true);
-            activityRecorder.recordForUser(user, "Authentication", "LOGIN_FAILED", "Account locked after failed sign-in attempt", "LOCKED", context);
+            activityRecorder.recordForUser(managed, "Authentication", "LOGIN_FAILED", "Account locked after failed sign-in attempt", "LOCKED", context);
         } else {
-            activityRecorder.recordForUser(user, "Authentication", "LOGIN_FAILED", "Failed sign-in attempt", "FAILURE", context);
+            activityRecorder.recordForUser(managed, "Authentication", "LOGIN_FAILED", "Failed sign-in attempt", "FAILURE", context);
         }
-        return new FailedLoginAttempt(locked, attempts, attemptsRemaining);
+        return new FailedLoginAttempt(locked, managed.getLoginAttempts(), attemptsRemaining);
     }
 
     private String buildRemainingAttemptsMessage(int attemptsRemaining) {
@@ -286,18 +299,22 @@ public class AuthService {
         if (user == null) {
             return;
         }
+        User managed = userRepository.findByIdForUpdate(user.getId())
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "User not found"));
         boolean changed = false;
-        if (user.getLoginAttempts() != 0) {
-            user.setLoginAttempts(0);
+        if (managed.getLoginAttempts() != 0) {
+            managed.setLoginAttempts(0);
             changed = true;
         }
-        if (user.getLockedAt() != null) {
-            user.setLockedAt(null);
+        if (managed.getLockedAt() != null) {
+            managed.setLockedAt(null);
             changed = true;
         }
         if (changed) {
-            userRepository.saveAndFlush(user);
+            userRepository.saveAndFlush(managed);
         }
+        user.setLoginAttempts(managed.getLoginAttempts());
+        user.setLockedAt(managed.getLockedAt());
     }
 
     private AuthResponse buildAuthResponse(User user, String refreshTokenValue) {

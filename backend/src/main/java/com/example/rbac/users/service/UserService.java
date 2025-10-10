@@ -319,15 +319,15 @@ public class UserService {
     public UserDto verifyUser(Long id) {
         User user = userRepository.findDetailedById(id)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "User not found"));
-        boolean wasVerified = user.getEmailVerifiedAt() != null;
-        boolean welcomeSent = userVerificationService.markVerifiedByAdmin(user);
-        UserDto dto = userMapper.toDto(userRepository.findDetailedById(user.getId()).orElseThrow());
+        UserVerificationService.AdminVerificationResult result = userVerificationService.markVerifiedByAdmin(user);
+        User refreshed = userRepository.findDetailedById(user.getId()).orElseThrow();
+        UserDto dto = userMapper.toDto(refreshed);
         HashMap<String, Object> context = new HashMap<>(buildUserContext(user));
         context.put("verified", true);
-        context.put("wasVerified", wasVerified);
-        context.put("welcomeEmailSent", welcomeSent);
-        context.put("loginAttempts", user.getLoginAttempts());
-        context.put("lockedAt", user.getLockedAt());
+        context.put("wasVerified", result.alreadyVerified());
+        context.put("welcomeEmailSent", result.welcomeEmailSent());
+        context.put("loginAttempts", refreshed.getLoginAttempts());
+        context.put("lockedAt", refreshed.getLockedAt());
         activityRecorder.record("Users", "VERIFY", "Verified user " + user.getEmail(), "SUCCESS", context);
         return dto;
     }
@@ -335,16 +335,18 @@ public class UserService {
     @PreAuthorize(USER_UPDATE_AUTHORITY)
     @Transactional
     public UserDto unlockUser(Long id) {
-        User user = userRepository.findDetailedById(id)
+        User lockedUser = userRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "User not found"));
-        user.setLockedAt(null);
-        user.setLoginAttempts(0);
-        user = userRepository.saveAndFlush(user);
-        UserDto dto = userMapper.toDto(user);
-        HashMap<String, Object> context = new HashMap<>(buildUserContext(user));
+        lockedUser.setLockedAt(null);
+        lockedUser.setLoginAttempts(0);
+        userRepository.saveAndFlush(lockedUser);
+        User refreshed = userRepository.findDetailedById(id)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "User not found"));
+        UserDto dto = userMapper.toDto(refreshed);
+        HashMap<String, Object> context = new HashMap<>(buildUserContext(refreshed));
         context.put("locked", false);
-        context.put("loginAttempts", user.getLoginAttempts());
-        activityRecorder.record("Users", "UNLOCK", "Unlocked user " + user.getEmail(), "SUCCESS", context);
+        context.put("loginAttempts", refreshed.getLoginAttempts());
+        activityRecorder.record("Users", "UNLOCK", "Unlocked user " + refreshed.getEmail(), "SUCCESS", context);
         return dto;
     }
 

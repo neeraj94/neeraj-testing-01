@@ -101,7 +101,7 @@ public class UserVerificationService {
     }
 
     @Transactional
-    public boolean markVerifiedByAdmin(User user) {
+    public AdminVerificationResult markVerifiedByAdmin(User user) {
         if (user == null || user.getId() == null) {
             throw new ApiException(HttpStatus.NOT_FOUND, "User not found");
         }
@@ -111,14 +111,14 @@ public class UserVerificationService {
         }
         user.setLockedAt(null);
         user.setLoginAttempts(0);
-        userRepository.saveAndFlush(user);
-        tokenRepository.deleteByUserIdAndVerifiedAtIsNull(user.getId());
+        User persisted = userRepository.saveAndFlush(user);
+        tokenRepository.deleteByUserIdAndVerifiedAtIsNull(persisted.getId());
         boolean welcomeSent = false;
         if (!alreadyVerified) {
-            welcomeSent = emailSender.sendWelcomeEmail(user, null);
+            welcomeSent = emailSender.sendWelcomeEmail(persisted, null);
         }
-        recordEvent("EMAIL_VERIFIED_ADMIN", user, null, alreadyVerified ? "IGNORED" : "SUCCESS", welcomeSent);
-        return welcomeSent;
+        recordEvent("EMAIL_VERIFIED_ADMIN", persisted, null, alreadyVerified ? "IGNORED" : "SUCCESS", welcomeSent);
+        return new AdminVerificationResult(persisted, alreadyVerified, welcomeSent);
     }
 
     private boolean requiresVerification(User user) {
@@ -179,5 +179,8 @@ public class UserVerificationService {
         public String getEmail() {
             return email;
         }
+    }
+
+    public record AdminVerificationResult(User user, boolean alreadyVerified, boolean welcomeEmailSent) {
     }
 }
