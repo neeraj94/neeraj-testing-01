@@ -59,19 +59,22 @@ public class UserService {
     private final PermissionRepository permissionRepository;
     private final UserMapper userMapper;
     private final ActivityRecorder activityRecorder;
+    private final UserVerificationService userVerificationService;
 
     public UserService(UserRepository userRepository,
                        RoleRepository roleRepository,
                        PasswordEncoder passwordEncoder,
                        PermissionRepository permissionRepository,
                        UserMapper userMapper,
-                       ActivityRecorder activityRecorder) {
+                       ActivityRecorder activityRecorder,
+                       UserVerificationService userVerificationService) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
         this.permissionRepository = permissionRepository;
         this.userMapper = userMapper;
         this.activityRecorder = activityRecorder;
+        this.userVerificationService = userVerificationService;
     }
 
     @PreAuthorize(USER_VIEW_AUTHORITY)
@@ -115,21 +118,26 @@ public class UserService {
         user.setLinkedinUrl(normalize(request.getLinkedinUrl()));
         user.setSkypeId(normalize(request.getSkypeId()));
         user.setEmailSignature(normalizeMultiline(request.getEmailSignature()));
+        user.setLoginAttempts(0);
+        user.setLockedAt(null);
         if (request.getRoleIds() != null && !request.getRoleIds().isEmpty()) {
             Set<Role> roles = new HashSet<>(roleRepository.findAllById(request.getRoleIds()));
             if (roles.size() != request.getRoleIds().size()) {
                 throw new ApiException(HttpStatus.BAD_REQUEST, "One or more roles not found");
             }
-            user.setRoles(roles);
+            user.setRoles(replaceAssignments(user.getRoles(), roles));
         }
         Set<Permission> direct = fetchPermissions(request.getPermissionKeys());
-        user.setDirectPermissions(direct);
+        user.setDirectPermissions(replaceAssignments(user.getDirectPermissions(), direct));
         Set<Permission> revoked = fetchPermissions(request.getRevokedPermissionKeys());
         removeOverlap(direct, revoked);
-        user.setRevokedPermissions(revoked);
-        user = userRepository.save(user);
-        UserDto dto = userMapper.toDto(userRepository.findDetailedById(user.getId()).orElseThrow());
-        activityRecorder.record("Users", "CREATE", "Created user " + user.getEmail(), "SUCCESS", buildUserContext(user));
+        user.setRevokedPermissions(replaceAssignments(user.getRevokedPermissions(), revoked));
+        user.setEmailVerifiedAt(null);
+        user = userRepository.saveAndFlush(user);
+        User detailed = userRepository.findDetailedById(user.getId()).orElseThrow();
+        userVerificationService.initiateVerification(detailed);
+        UserDto dto = userMapper.toDto(detailed);
+        activityRecorder.record("Users", "CREATE", "Created user " + detailed.getEmail(), "SUCCESS", buildUserContext(detailed));
         return dto;
     }
 
@@ -171,21 +179,21 @@ public class UserService {
             if (roles.size() != request.getRoleIds().size()) {
                 throw new ApiException(HttpStatus.BAD_REQUEST, "One or more roles not found");
             }
-            user.setRoles(roles);
+            user.setRoles(replaceAssignments(user.getRoles(), roles));
         }
         if (request.getPermissionKeys() != null) {
             Set<Permission> direct = fetchPermissions(request.getPermissionKeys());
-            user.setDirectPermissions(direct);
+            user.setDirectPermissions(replaceAssignments(user.getDirectPermissions(), direct));
             Set<Permission> revoked = fetchPermissions(request.getRevokedPermissionKeys());
             removeOverlap(direct, revoked);
-            user.setRevokedPermissions(revoked);
+            user.setRevokedPermissions(replaceAssignments(user.getRevokedPermissions(), revoked));
         }
         if (request.getRevokedPermissionKeys() != null && request.getPermissionKeys() == null) {
             Set<Permission> revoked = fetchPermissions(request.getRevokedPermissionKeys());
             removeOverlap(user.getDirectPermissions(), revoked);
-            user.setRevokedPermissions(revoked);
+            user.setRevokedPermissions(replaceAssignments(user.getRevokedPermissions(), revoked));
         }
-        user = userRepository.save(user);
+        user = userRepository.saveAndFlush(user);
         UserDto dto = userMapper.toDto(userRepository.findDetailedById(user.getId()).orElseThrow());
         activityRecorder.record("Users", "UPDATE", "Updated user " + user.getEmail(), "SUCCESS", buildUserContext(user));
         return dto;
@@ -197,7 +205,7 @@ public class UserService {
         User user = userRepository.findDetailedById(id)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "User not found"));
         user.setActive(Boolean.TRUE.equals(request.getActive()));
-        user = userRepository.save(user);
+        user = userRepository.saveAndFlush(user);
         UserDto dto = userMapper.toDto(userRepository.findDetailedById(user.getId()).orElseThrow());
         activityRecorder.record("Users", "STATUS_CHANGE", "Updated status for user " + user.getEmail(), "SUCCESS", buildUserContext(user));
         return dto;
@@ -220,8 +228,8 @@ public class UserService {
         if (roles.size() != request.getRoleIds().size()) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "One or more roles not found");
         }
-        user.setRoles(roles);
-        user = userRepository.save(user);
+        user.setRoles(replaceAssignments(user.getRoles(), roles));
+        user = userRepository.saveAndFlush(user);
         UserDto dto = userMapper.toDto(userRepository.findDetailedById(user.getId()).orElseThrow());
         HashMap<String, Object> context = new HashMap<>(buildUserContext(user));
         context.put("roleIds", request.getRoleIds());
@@ -235,7 +243,7 @@ public class UserService {
         User user = userRepository.findDetailedById(userId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "User not found"));
         user.getRoles().removeIf(role -> role.getId().equals(roleId));
-        user = userRepository.save(user);
+        user = userRepository.saveAndFlush(user);
         UserDto dto = userMapper.toDto(userRepository.findDetailedById(user.getId()).orElseThrow());
         HashMap<String, Object> context = new HashMap<>(buildUserContext(user));
         context.put("roleId", roleId);
@@ -279,8 +287,8 @@ public class UserService {
         } else if (StringUtils.hasText(request.getOldPassword()) || StringUtils.hasText(request.getConfirmNewPassword())) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "New password is required when updating your password");
         }
-        user = userRepository.save(user);
-        UserDto dto = userMapper.toDto(user);
+        user = userRepository.saveAndFlush(user);
+        UserDto dto = userMapper.toDto(userRepository.findDetailedById(user.getId()).orElseThrow());
         HashMap<String, Object> context = new HashMap<>(buildUserContext(user));
         context.put("profileUpdated", true);
         activityRecorder.record("Users", "PROFILE_UPDATE", "Updated profile for user " + user.getEmail(), "SUCCESS", context);
@@ -295,14 +303,48 @@ public class UserService {
         Set<Permission> direct = fetchPermissions(request.getGrantedPermissionKeys());
         Set<Permission> revoked = fetchPermissions(request.getRevokedPermissionKeys());
         removeOverlap(direct, revoked);
-        user.setDirectPermissions(direct);
-        user.setRevokedPermissions(revoked);
-        user = userRepository.save(user);
+        user.setDirectPermissions(replaceAssignments(user.getDirectPermissions(), direct));
+        user.setRevokedPermissions(replaceAssignments(user.getRevokedPermissions(), revoked));
+        user = userRepository.saveAndFlush(user);
         UserDto dto = userMapper.toDto(userRepository.findDetailedById(user.getId()).orElseThrow());
         HashMap<String, Object> context = new HashMap<>(buildUserContext(user));
         context.put("grantedPermissions", request.getGrantedPermissionKeys());
         context.put("revokedPermissions", request.getRevokedPermissionKeys());
         activityRecorder.record("Users", "PERMISSIONS_UPDATE", "Updated direct permissions for user " + user.getEmail(), "SUCCESS", context);
+        return dto;
+    }
+
+    @PreAuthorize(USER_UPDATE_AUTHORITY)
+    @Transactional
+    public UserDto verifyUser(Long id) {
+        User user = userRepository.findDetailedById(id)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "User not found"));
+        boolean wasVerified = user.getEmailVerifiedAt() != null;
+        boolean welcomeSent = userVerificationService.markVerifiedByAdmin(user);
+        UserDto dto = userMapper.toDto(userRepository.findDetailedById(user.getId()).orElseThrow());
+        HashMap<String, Object> context = new HashMap<>(buildUserContext(user));
+        context.put("verified", true);
+        context.put("wasVerified", wasVerified);
+        context.put("welcomeEmailSent", welcomeSent);
+        context.put("loginAttempts", user.getLoginAttempts());
+        context.put("lockedAt", user.getLockedAt());
+        activityRecorder.record("Users", "VERIFY", "Verified user " + user.getEmail(), "SUCCESS", context);
+        return dto;
+    }
+
+    @PreAuthorize(USER_UPDATE_AUTHORITY)
+    @Transactional
+    public UserDto unlockUser(Long id) {
+        User user = userRepository.findDetailedById(id)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "User not found"));
+        user.setLockedAt(null);
+        user.setLoginAttempts(0);
+        user = userRepository.saveAndFlush(user);
+        UserDto dto = userMapper.toDto(user);
+        HashMap<String, Object> context = new HashMap<>(buildUserContext(user));
+        context.put("locked", false);
+        context.put("loginAttempts", user.getLoginAttempts());
+        activityRecorder.record("Users", "UNLOCK", "Unlocked user " + user.getEmail(), "SUCCESS", context);
         return dto;
     }
 
@@ -314,6 +356,13 @@ public class UserService {
         long customers = userRepository.countByRoleKeyIgnoreCase(CUSTOMER_ROLE_KEY);
         long internal = Math.max(total - customers, 0);
         return new UserSummaryResponse(total, active, inactive, customers, internal);
+    }
+
+    private <T> Set<T> replaceAssignments(Set<T> current, Set<T> replacement) {
+        Set<T> target = current != null ? current : new HashSet<>();
+        target.clear();
+        target.addAll(replacement);
+        return target;
     }
 
     private Set<Permission> fetchPermissions(Set<String> permissionKeys) {
@@ -356,6 +405,9 @@ public class UserService {
             context.put("email", user.getEmail());
         }
         context.put("active", user.isActive());
+        context.put("locked", user.getLockedAt() != null);
+        context.put("loginAttempts", user.getLoginAttempts());
+        context.put("verified", user.getEmailVerifiedAt() != null);
         return context;
     }
 
