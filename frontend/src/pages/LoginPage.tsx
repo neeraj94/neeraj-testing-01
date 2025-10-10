@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../app/hooks';
 import { login } from '../features/auth/authSlice';
@@ -14,110 +14,36 @@ const LoginPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [showErrorDialog, setShowErrorDialog] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (status === 'failed' && error) {
-      setErrorMessage(error);
-      setShowErrorDialog(true);
-    }
-  }, [status, error]);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    setShowErrorDialog(false);
-    setErrorMessage(null);
+    setFormError(null);
     const result = await dispatch(login({ email, password }));
     if (login.fulfilled.match(result)) {
       notify({ type: 'success', message: 'Signed in successfully.' });
       navigate('/admin');
     } else if (login.rejected.match(result)) {
       const message = result.payload ?? 'Unable to sign in right now.';
-      setErrorMessage(message);
-      setShowErrorDialog(true);
+      setFormError(message);
       notify({ type: 'error', message });
     }
   };
 
-  const handleDismissError = () => {
-    setShowErrorDialog(false);
-  };
+  const activeError = formError ?? (status === 'failed' ? error ?? null : null);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-100 px-4">
-      {showErrorDialog && error && (
-        <div
-          role="alertdialog"
-          aria-modal="true"
-          aria-labelledby="login-error-title"
-          aria-describedby="login-error-description"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm"
-        >
-          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl ring-1 ring-slate-200">
-            <div className="flex items-start gap-4">
-              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-red-100 text-red-600">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  className="h-6 w-6"
-                  aria-hidden="true"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M12 9v3m0 3h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
-                  />
-                </svg>
-              </span>
-              <div className="flex-1">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <h3 id="login-error-title" className="text-lg font-semibold text-slate-900">
-                      Sign in failed
-                    </h3>
-                    <p id="login-error-description" className="mt-1 text-sm text-slate-600">
-                      {error}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleDismissError}
-                    className="rounded-full p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
-                    aria-label="Close sign in error dialog"
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.8"
-                      className="h-5 w-5"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" d="m6 6 12 12M18 6 6 18" />
-                    </svg>
-                  </button>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleDismissError}
-                  className="mt-4 w-full rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-700"
-                >
-                  Try again
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
       <div className="w-full max-w-md rounded-xl bg-white p-8 shadow-lg">
         <h2 className="text-2xl font-semibold text-slate-800">Welcome Back</h2>
         <p className="mt-2 text-sm text-slate-500">
           Sign in to continue to {applicationName || 'your dashboard'}.
         </p>
+        {activeError && (
+          <div className="mt-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-600">
+            {activeError}
+          </div>
+        )}
         <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
           <div>
             <label className="block text-sm font-medium text-slate-600">Email</label>
@@ -181,39 +107,6 @@ const LoginPage = () => {
           </Link>
         </p>
       </div>
-      {showErrorDialog && errorMessage && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4">
-          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
-            <div className="flex items-center gap-3">
-              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-rose-100 text-rose-600">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth={1.8}
-                  className="h-5 w-5"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m0 3.75h.007M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                </svg>
-              </span>
-              <div>
-                <h3 className="text-base font-semibold text-slate-800">We couldn&apos;t sign you in</h3>
-                <p className="mt-1 text-sm text-slate-500">{errorMessage}</p>
-              </div>
-            </div>
-            <div className="mt-6 flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => setShowErrorDialog(false)}
-                className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
-              >
-                Dismiss
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
