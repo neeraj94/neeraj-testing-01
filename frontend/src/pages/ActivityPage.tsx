@@ -699,7 +699,7 @@ const ActivityPage = () => {
             activities.map((activity) => (
               <tr
                 key={activity.id}
-                onClick={() => navigate(`/activity/${activity.id}`)}
+                onClick={() => navigate(`${activity.id}`)}
                 className="cursor-pointer transition hover:bg-slate-50"
               >
                 <td className="whitespace-nowrap px-4 py-3 text-sm text-slate-700">
