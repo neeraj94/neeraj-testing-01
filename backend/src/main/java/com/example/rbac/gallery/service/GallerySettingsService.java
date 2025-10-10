@@ -15,6 +15,9 @@ import java.util.stream.Collectors;
 public class GallerySettingsService {
 
     private static final String ALLOWED_EXTENSIONS_CODE = "gallery.allowed_extensions";
+    private static final String MAX_FILE_SIZE_CODE = "gallery.max_file_size_mb";
+    private static final long DEFAULT_MAX_FILE_SIZE_BYTES = 50L * 1024L * 1024L;
+    private static final long MAX_CONFIGURABLE_FILE_SIZE_BYTES = 5L * 1024L * 1024L * 1024L;
 
     private final SettingRepository settingRepository;
 
@@ -35,6 +38,31 @@ public class GallerySettingsService {
                 .collect(Collectors.toCollection(LinkedHashSet::new));
         normalized.add("zip");
         return normalized.stream().collect(Collectors.toList());
+    }
+
+    public long resolveMaxFileSizeBytes() {
+        Optional<Setting> setting = settingRepository.findByCode(MAX_FILE_SIZE_CODE);
+        String configured = setting.map(Setting::getValue).orElse(null);
+        if (configured == null || configured.isBlank()) {
+            return DEFAULT_MAX_FILE_SIZE_BYTES;
+        }
+        try {
+            double megabytes = Double.parseDouble(configured.trim());
+            if (Double.isNaN(megabytes) || megabytes <= 0) {
+                return DEFAULT_MAX_FILE_SIZE_BYTES;
+            }
+            long bytes = (long) Math.floor(megabytes * 1024D * 1024D);
+            return clampFileSize(bytes);
+        } catch (NumberFormatException ex) {
+            return DEFAULT_MAX_FILE_SIZE_BYTES;
+        }
+    }
+
+    private long clampFileSize(long bytes) {
+        if (bytes <= 0) {
+            return DEFAULT_MAX_FILE_SIZE_BYTES;
+        }
+        return Math.min(bytes, MAX_CONFIGURABLE_FILE_SIZE_BYTES);
     }
 
     private String normalizeExtension(String value) {
