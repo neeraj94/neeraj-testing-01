@@ -153,6 +153,31 @@ public class EmailSettingsService {
         }
     }
 
+    @Transactional(readOnly = true)
+    public EmailDeliveryPreparation prepareDeliveryContext() {
+        EmailSettingsDto emailSettings = getEmailSettings();
+        String driver = Optional.ofNullable(emailSettings.getDriver())
+                .map(String::trim)
+                .map(value -> value.toLowerCase(Locale.ROOT))
+                .orElse("smtp");
+
+        if (!"smtp".equals(driver)) {
+            log.debug("Email driver '{}' is not SMTP; skipping delivery context preparation", driver);
+            return EmailDeliveryPreparation.unavailable("SMTP_DISABLED");
+        }
+
+        try {
+            JavaMailSenderImpl mailSender = buildMailSender(emailSettings);
+            return EmailDeliveryPreparation.available(new EmailDeliveryContext(emailSettings, mailSender));
+        } catch (ApiException ex) {
+            if (ex.getStatus() == HttpStatus.BAD_REQUEST) {
+                log.debug("SMTP configuration incomplete: {}", ex.getMessage());
+                return EmailDeliveryPreparation.unavailable("SMTP_CONFIGURATION_INVALID");
+            }
+            throw ex;
+        }
+    }
+
     private JavaMailSenderImpl buildMailSender(EmailSettingsDto settings) {
         String driver = Optional.ofNullable(settings.getDriver())
                 .map(String::trim)
@@ -286,11 +311,7 @@ public class EmailSettingsService {
         if (value == null || value.isBlank()) {
             return "smtp";
         }
-        String normalized = value.trim().toLowerCase(Locale.ROOT);
-        if (!"smtp".equals(normalized)) {
-            return "smtp";
-        }
-        return normalized;
+        return value.trim().toLowerCase(Locale.ROOT);
     }
 
     private String normalizeEncryption(String value) {
@@ -298,5 +319,53 @@ public class EmailSettingsService {
             return "none";
         }
         return value.trim();
+    }
+
+    public static class EmailDeliveryContext {
+        private final EmailSettingsDto settings;
+        private final JavaMailSenderImpl mailSender;
+
+        public EmailDeliveryContext(EmailSettingsDto settings, JavaMailSenderImpl mailSender) {
+            this.settings = settings;
+            this.mailSender = mailSender;
+        }
+
+        public EmailSettingsDto getSettings() {
+            return settings;
+        }
+
+        public JavaMailSenderImpl getMailSender() {
+            return mailSender;
+        }
+    }
+
+    public static class EmailDeliveryPreparation {
+        private final EmailDeliveryContext context;
+        private final String failureReason;
+
+        private EmailDeliveryPreparation(EmailDeliveryContext context, String failureReason) {
+            this.context = context;
+            this.failureReason = failureReason;
+        }
+
+        public static EmailDeliveryPreparation available(EmailDeliveryContext context) {
+            return new EmailDeliveryPreparation(context, null);
+        }
+
+        public static EmailDeliveryPreparation unavailable(String failureReason) {
+            return new EmailDeliveryPreparation(null, failureReason);
+        }
+
+        public boolean isReady() {
+            return context != null;
+        }
+
+        public Optional<EmailDeliveryContext> getContext() {
+            return Optional.ofNullable(context);
+        }
+
+        public Optional<String> getFailureReason() {
+            return Optional.ofNullable(failureReason);
+        }
     }
 }

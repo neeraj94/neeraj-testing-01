@@ -77,4 +77,14 @@ public class UserController {
                                      @Valid @RequestBody UpdateUserPermissionsRequest request) {
         return userService.updateDirectPermissions(id, request);
     }
+
+    @PostMapping("/{id}/verify")
+    public UserDto verify(@PathVariable("id") Long id) {
+        return userService.verifyUser(id);
+    }
+
+    @PostMapping("/{id}/unlock")
+    public UserDto unlock(@PathVariable("id") Long id) {
+        return userService.unlockUser(id);
+    }
 }
