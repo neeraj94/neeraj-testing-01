@@ -28,3 +28,8 @@ export interface GalleryFolder {
 }
 
 export type GalleryFilePage = Pagination<GalleryFile>;
+
+export interface GallerySettings {
+  allowedExtensions: string[];
+  maxFileSizeBytes: number;
+}
