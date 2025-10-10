@@ -30,7 +30,7 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/v1/auth/**", "/api/v1/settings/theme", "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/v1/blog/public/**", "/api/v1/blog/media/**", "/api/v1/brands/assets/**", "/api/v1/categories/assets/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/blog/public/**", "/api/v1/blog/media/**", "/api/v1/brands/assets/**", "/api/v1/categories/assets/**", "/api/v1/wedges/assets/**").permitAll()
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();

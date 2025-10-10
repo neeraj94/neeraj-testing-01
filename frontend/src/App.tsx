@@ -14,6 +14,7 @@ import NotFoundPage from './pages/NotFoundPage';
 import BrandsPage from './pages/BrandsPage';
 import AttributesPage from './pages/AttributesPage';
 import CategoriesPage from './pages/CategoriesPage';
+import WedgesPage from './pages/WedgesPage';
 import EcommerceHomePage from './pages/EcommerceHomePage';
 import ProtectedRoute from './routes/ProtectedRoute';
 import PermissionRoute from './routes/PermissionRoute';
@@ -182,6 +183,9 @@ const App = () => {
           </Route>
           <Route element={<PermissionRoute required={['CATEGORY_VIEW']} />}>
             <Route path="categories" element={<CategoriesPage />} />
+          </Route>
+          <Route element={<PermissionRoute required={['WEDGE_VIEW']} />}>
+            <Route path="wedges" element={<WedgesPage />} />
           </Route>
           <Route element={<PermissionRoute required={['BRAND_VIEW']} />}>
             <Route path="brands" element={<BrandsPage />} />

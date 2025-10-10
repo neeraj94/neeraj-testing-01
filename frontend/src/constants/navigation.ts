@@ -126,6 +126,15 @@ export const DEFAULT_NAVIGATION_MENU: NavigationNode[] = [
         children: []
       },
       {
+        key: 'wedges',
+        label: 'Wedges',
+        icon: '🧱',
+        path: '/admin/wedges',
+        group: false,
+        permissions: ['WEDGE_VIEW'],
+        children: []
+      },
+      {
         key: 'attributes',
         label: 'Attributes',
         icon: '🎛️',
