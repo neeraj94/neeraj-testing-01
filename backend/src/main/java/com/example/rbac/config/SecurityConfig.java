@@ -30,7 +30,12 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/v1/auth/**", "/api/v1/settings/theme", "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/v1/blog/public/**", "/api/v1/blog/media/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/blog/public/**", "/api/v1/blog/media/**", "/api/v1/brands/assets/**", "/api/v1/categories/assets/**", "/api/v1/badge-categories/assets/**", "/api/v1/badges/assets/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/tax-rates/**").hasAuthority("TAX_RATE_VIEW")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/tax-rates/**").hasAuthority("TAX_RATE_CREATE")
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/tax-rates/**").hasAuthority("TAX_RATE_UPDATE")
+                        .requestMatchers(HttpMethod.PATCH, "/api/v1/tax-rates/**").hasAuthority("TAX_RATE_UPDATE")
+                        .requestMatchers(HttpMethod.DELETE, "/api/v1/tax-rates/**").hasAuthority("TAX_RATE_DELETE")
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();

@@ -258,6 +258,15 @@ public class SetupService {
                             List.of("INVOICE_VIEW", "INVOICE_VIEW_GLOBAL", "INVOICE_VIEW_OWN", "INVOICE_CREATE", "INVOICE_UPDATE", "INVOICE_DELETE")
                     )
             )),
+            MenuDefinition.group("finance", "Finance", "💰", List.of(
+                    MenuDefinition.item(
+                            "taxRates",
+                            "Tax rates",
+                            "🧾",
+                            "/admin/finance/tax-rates",
+                            List.of("TAX_RATE_VIEW")
+                    )
+            )),
             MenuDefinition.group("access", "Access Control", "🔐", List.of(
                     MenuDefinition.item(
                             "users",
@@ -295,6 +304,43 @@ public class SetupService {
                             "✍️",
                             "/admin/blog/posts",
                             List.of("BLOG_POST_VIEW")
+                    )
+            )),
+            MenuDefinition.group("catalog", "Catalog", "🛍️", List.of(
+                    MenuDefinition.item(
+                            "categories",
+                            "Categories",
+                            "🗃️",
+                            "/admin/categories",
+                            List.of("CATEGORY_VIEW")
+                    ),
+                    MenuDefinition.item(
+                            "badgeCategories",
+                            "Badge categories",
+                            "🗂️",
+                            "/admin/badge-categories",
+                            List.of("BADGE_CATEGORY_VIEW")
+                    ),
+                    MenuDefinition.item(
+                            "badges",
+                            "Badges",
+                            "🏅",
+                            "/admin/badges",
+                            List.of("BADGE_VIEW")
+                    ),
+                    MenuDefinition.item(
+                            "attributes",
+                            "Attributes",
+                            "🎛️",
+                            "/admin/attributes",
+                            List.of("ATTRIBUTE_VIEW")
+                    ),
+                    MenuDefinition.item(
+                            "brands",
+                            "Brands",
+                            "🏷️",
+                            "/admin/brands",
+                            List.of("BRAND_VIEW")
                     )
             )),
             MenuDefinition.item("gallery", "Gallery", "🖼️", "/admin/gallery", List.of("GALLERY_VIEW_ALL", "GALLERY_VIEW_OWN", "GALLERY_CREATE")),

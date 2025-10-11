@@ -37,6 +37,25 @@ export const DEFAULT_NAVIGATION_MENU: NavigationNode[] = [
     ]
   },
   {
+    key: 'finance',
+    label: 'Finance',
+    icon: '💰',
+    path: undefined,
+    group: true,
+    permissions: [],
+    children: [
+      {
+        key: 'taxRates',
+        label: 'Tax rates',
+        icon: '🧾',
+        path: '/admin/finance/tax-rates',
+        group: false,
+        permissions: ['TAX_RATE_VIEW'],
+        children: []
+      }
+    ]
+  },
+  {
     key: 'access',
     label: 'Access Control',
     icon: '🔐',
@@ -104,6 +123,61 @@ export const DEFAULT_NAVIGATION_MENU: NavigationNode[] = [
         path: '/admin/blog/posts',
         group: false,
         permissions: ['BLOG_POST_VIEW'],
+        children: []
+      }
+    ]
+  },
+  {
+    key: 'catalog',
+    label: 'Catalog',
+    icon: '🛍️',
+    path: undefined,
+    group: true,
+    permissions: [],
+    children: [
+      {
+        key: 'categories',
+        label: 'Categories',
+        icon: '🗃️',
+        path: '/admin/categories',
+        group: false,
+        permissions: ['CATEGORY_VIEW'],
+        children: []
+      },
+      {
+        key: 'badgeCategories',
+        label: 'Badge categories',
+        icon: '🗂️',
+        path: '/admin/badge-categories',
+        group: false,
+        permissions: ['BADGE_CATEGORY_VIEW'],
+        children: []
+      },
+      {
+        key: 'badges',
+        label: 'Badges',
+        icon: '🏅',
+        path: '/admin/badges',
+        group: false,
+        permissions: ['BADGE_VIEW'],
+        children: []
+      },
+      {
+        key: 'attributes',
+        label: 'Attributes',
+        icon: '🎛️',
+        path: '/admin/attributes',
+        group: false,
+        permissions: ['ATTRIBUTE_VIEW'],
+        children: []
+      },
+      {
+        key: 'brands',
+        label: 'Brands',
+        icon: '🏷️',
+        path: '/admin/brands',
+        group: false,
+        permissions: ['BRAND_VIEW'],
         children: []
       }
     ]
