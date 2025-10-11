@@ -131,17 +131,27 @@ const Layout = () => {
       nodes
         .map((node) => {
           const filteredChildren = node.children?.length ? filterNodes(node.children) : [];
-          const nodeHasPermission = !node.permissions?.length || hasAnyPermission(granted, node.permissions);
+          const nodeHasPermission =
+            !node.permissions?.length || hasAnyPermission(granted, node.permissions);
+          const hasChildren = filteredChildren.length > 0;
 
-          if (filteredChildren.length > 0) {
+          if (node.group) {
+            if (!nodeHasPermission) {
+              return null;
+            }
+
+            if (!hasChildren) {
+              return null;
+            }
+
             return { ...node, children: filteredChildren };
           }
 
-          if (node.group) {
-            return nodeHasPermission ? { ...node, children: [] } : null;
+          if (!nodeHasPermission) {
+            return null;
           }
 
-          return nodeHasPermission ? { ...node, children: [] } : null;
+          return { ...node, children: hasChildren ? filteredChildren : [] };
         })
         .filter((node): node is NavigationNode => node !== null);
 
