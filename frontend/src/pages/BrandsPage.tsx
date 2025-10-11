@@ -267,7 +267,7 @@ const BrandsPage = () => {
 
   const renderDirectory = () => (
     <PageSection padded={false} bodyClassName="flex flex-col">
-      <div className="flex flex-col gap-4 border-b border-slate-200 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 border-b border-slate-200 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
         <input
           type="search"
           value={searchDraft}
