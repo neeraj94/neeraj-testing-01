@@ -11,6 +11,13 @@ import InvoicesPage from './pages/InvoicesPage';
 import ProfilePage from './pages/ProfilePage';
 import ForbiddenPage from './pages/ForbiddenPage';
 import NotFoundPage from './pages/NotFoundPage';
+import BrandsPage from './pages/BrandsPage';
+import TaxRatesPage from './pages/TaxRatesPage';
+import AttributesPage from './pages/AttributesPage';
+import CategoriesPage from './pages/CategoriesPage';
+import BadgesPage from './pages/BadgesPage';
+import BadgeCategoriesPage from './pages/BadgeCategoriesPage';
+import EcommerceHomePage from './pages/EcommerceHomePage';
 import ProtectedRoute from './routes/ProtectedRoute';
 import PermissionRoute from './routes/PermissionRoute';
 import { useAppDispatch, useAppSelector } from './app/hooks';
@@ -102,7 +109,13 @@ const App = () => {
     };
   }, [accessToken, refreshToken, dispatch]);
 
-  const isPublicRoute = location.pathname.startsWith('/login') || location.pathname.startsWith('/signup');
+  const publicExact = ['/', '/login', '/signup'];
+  const publicPrefixes = ['/blog'];
+  const isPublicRoute =
+    publicExact.includes(location.pathname) ||
+    publicPrefixes.some((prefix) =>
+      location.pathname === prefix || location.pathname.startsWith(`${prefix}/`)
+    );
 
   if (initializing === 'checking' && !isPublicRoute) {
     return (
@@ -114,6 +127,7 @@ const App = () => {
 
   return (
     <Routes>
+      <Route path="/" element={<EcommerceHomePage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/signup" element={<SignupPage />} />
       <Route path="/blog" element={<PublicBlogListPage />} />
@@ -166,6 +180,24 @@ const App = () => {
           <Route element={<PermissionRoute required={['BLOG_POST_VIEW']} />}>
             <Route path="blog/posts" element={<BlogPostsPage />} />
           </Route>
+          <Route element={<PermissionRoute required={['ATTRIBUTE_VIEW']} />}>
+            <Route path="attributes" element={<AttributesPage />} />
+          </Route>
+          <Route element={<PermissionRoute required={['CATEGORY_VIEW']} />}>
+            <Route path="categories" element={<CategoriesPage />} />
+          </Route>
+          <Route element={<PermissionRoute required={['BADGE_CATEGORY_VIEW']} />}>
+            <Route path="badge-categories" element={<BadgeCategoriesPage />} />
+          </Route>
+          <Route element={<PermissionRoute required={['BADGE_VIEW']} />}>
+            <Route path="badges" element={<BadgesPage />} />
+          </Route>
+          <Route element={<PermissionRoute required={['TAX_RATE_VIEW']} />}>
+            <Route path="finance/tax-rates" element={<TaxRatesPage />} />
+          </Route>
+          <Route element={<PermissionRoute required={['BRAND_VIEW']} />}>
+            <Route path="brands" element={<BrandsPage />} />
+          </Route>
           <Route element={<PermissionRoute required={['ACTIVITY_VIEW']} />}>
             <Route path="activity" element={<ActivityPage />} />
             <Route path="activity/:id" element={<ActivityDetailPage />} />
@@ -188,7 +220,6 @@ const App = () => {
           <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Route>
-      <Route path="/" element={<Navigate to="/admin" replace />} />
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   );
