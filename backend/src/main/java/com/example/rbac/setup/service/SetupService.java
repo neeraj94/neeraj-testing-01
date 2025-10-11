@@ -258,6 +258,15 @@ public class SetupService {
                             List.of("INVOICE_VIEW", "INVOICE_VIEW_GLOBAL", "INVOICE_VIEW_OWN", "INVOICE_CREATE", "INVOICE_UPDATE", "INVOICE_DELETE")
                     )
             )),
+            MenuDefinition.group("finance", "Finance", "💰", List.of(
+                    MenuDefinition.item(
+                            "taxRates",
+                            "Tax rates",
+                            "🧾",
+                            "/admin/finance/tax-rates",
+                            List.of("TAX_RATE_VIEW")
+                    )
+            )),
             MenuDefinition.group("access", "Access Control", "🔐", List.of(
                     MenuDefinition.item(
                             "users",

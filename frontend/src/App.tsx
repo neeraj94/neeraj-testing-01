@@ -12,6 +12,7 @@ import ProfilePage from './pages/ProfilePage';
 import ForbiddenPage from './pages/ForbiddenPage';
 import NotFoundPage from './pages/NotFoundPage';
 import BrandsPage from './pages/BrandsPage';
+import TaxRatesPage from './pages/TaxRatesPage';
 import AttributesPage from './pages/AttributesPage';
 import CategoriesPage from './pages/CategoriesPage';
 import BadgesPage from './pages/BadgesPage';
@@ -190,6 +191,9 @@ const App = () => {
           </Route>
           <Route element={<PermissionRoute required={['BADGE_VIEW']} />}>
             <Route path="badges" element={<BadgesPage />} />
+          </Route>
+          <Route element={<PermissionRoute required={['TAX_RATE_VIEW']} />}>
+            <Route path="finance/tax-rates" element={<TaxRatesPage />} />
           </Route>
           <Route element={<PermissionRoute required={['BRAND_VIEW']} />}>
             <Route path="brands" element={<BrandsPage />} />

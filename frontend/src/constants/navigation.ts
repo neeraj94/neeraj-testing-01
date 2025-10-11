@@ -37,6 +37,25 @@ export const DEFAULT_NAVIGATION_MENU: NavigationNode[] = [
     ]
   },
   {
+    key: 'finance',
+    label: 'Finance',
+    icon: '💰',
+    path: undefined,
+    group: true,
+    permissions: [],
+    children: [
+      {
+        key: 'taxRates',
+        label: 'Tax rates',
+        icon: '🧾',
+        path: '/admin/finance/tax-rates',
+        group: false,
+        permissions: ['TAX_RATE_VIEW'],
+        children: []
+      }
+    ]
+  },
+  {
     key: 'access',
     label: 'Access Control',
     icon: '🔐',
