@@ -297,6 +297,43 @@ public class SetupService {
                             List.of("BLOG_POST_VIEW")
                     )
             )),
+            MenuDefinition.group("catalog", "Catalog", "🛍️", List.of(
+                    MenuDefinition.item(
+                            "categories",
+                            "Categories",
+                            "🗃️",
+                            "/admin/categories",
+                            List.of("CATEGORY_VIEW")
+                    ),
+                    MenuDefinition.item(
+                            "badgeCategories",
+                            "Badge categories",
+                            "🗂️",
+                            "/admin/badge-categories",
+                            List.of("BADGE_CATEGORY_VIEW")
+                    ),
+                    MenuDefinition.item(
+                            "badges",
+                            "Badges",
+                            "🏅",
+                            "/admin/badges",
+                            List.of("BADGE_VIEW")
+                    ),
+                    MenuDefinition.item(
+                            "attributes",
+                            "Attributes",
+                            "🎛️",
+                            "/admin/attributes",
+                            List.of("ATTRIBUTE_VIEW")
+                    ),
+                    MenuDefinition.item(
+                            "brands",
+                            "Brands",
+                            "🏷️",
+                            "/admin/brands",
+                            List.of("BRAND_VIEW")
+                    )
+            )),
             MenuDefinition.item("gallery", "Gallery", "🖼️", "/admin/gallery", List.of("GALLERY_VIEW_ALL", "GALLERY_VIEW_OWN", "GALLERY_CREATE")),
             MenuDefinition.item("activity", "Activity", "📝", "/admin/activity", List.of("ACTIVITY_VIEW")),
             MenuDefinition.item("settings", "Settings", "⚙️", "/admin/settings", List.of("SETTINGS_VIEW")),
