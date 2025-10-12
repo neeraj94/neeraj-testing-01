@@ -14,7 +14,7 @@ public final class GalleryFileSpecifications {
 
     public static Specification<GalleryFile> belongsToFolder(Long folderId) {
         if (folderId == null) {
-            return null;
+            return (root, query, builder) -> builder.isNull(root.get("folder"));
         }
         return (root, query, builder) -> builder.equal(root.join("folder", JoinType.LEFT).get("id"), folderId);
     }
