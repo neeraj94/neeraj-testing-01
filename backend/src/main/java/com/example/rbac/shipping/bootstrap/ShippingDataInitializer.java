@@ -20,6 +20,7 @@ import org.springframework.util.StringUtils;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
@@ -51,6 +52,7 @@ public class ShippingDataInitializer {
     public void initialize() {
         seedCountries();
         seedIndiaStatesAndCities();
+        seedDefaultStatesAndCities();
     }
 
     private void seedCountries() {
@@ -124,6 +126,79 @@ public class ShippingDataInitializer {
             }
         } catch (IOException ex) {
             LOGGER.warn("Failed to seed India states: {}", ex.getMessage());
+        }
+    }
+
+    private void seedDefaultStatesAndCities() {
+        List<ShippingCountry> countries = countryRepository.findAll();
+        for (ShippingCountry country : countries) {
+            List<ShippingState> states = stateRepository.findByCountryIdOrderByNameAsc(country.getId());
+            if (states.isEmpty()) {
+                states = createDefaultStates(country);
+            }
+            for (ShippingState state : states) {
+                ensureDefaultCities(state);
+            }
+        }
+    }
+
+    private List<ShippingState> createDefaultStates(ShippingCountry country) {
+        String baseName = StringUtils.hasText(country.getName()) ? country.getName().trim() : country.getCode();
+        if (!StringUtils.hasText(baseName)) {
+            baseName = "Country " + country.getId();
+        }
+        String[] regionMarkers = {"Northern", "Central", "Southern"};
+        List<ShippingState> createdStates = new ArrayList<>();
+        for (String marker : regionMarkers) {
+            String stateName = (baseName + " " + marker + " Region").replaceAll("\\s+", " ").trim();
+            if (!StringUtils.hasText(stateName)) {
+                continue;
+            }
+            if (stateRepository.existsByCountryIdAndNameIgnoreCase(country.getId(), stateName)) {
+                continue;
+            }
+            ShippingState state = new ShippingState();
+            state.setCountry(country);
+            state.setName(stateName);
+            state.setEnabled(true);
+            ShippingState saved = stateRepository.save(state);
+            createdStates.add(saved);
+        }
+
+        if (createdStates.isEmpty()) {
+            String fallbackName = (baseName + " Region").replaceAll("\\s+", " ").trim();
+            if (!stateRepository.existsByCountryIdAndNameIgnoreCase(country.getId(), fallbackName)) {
+                ShippingState state = new ShippingState();
+                state.setCountry(country);
+                state.setName(fallbackName);
+                state.setEnabled(true);
+                ShippingState saved = stateRepository.save(state);
+                createdStates.add(saved);
+            }
+        }
+        return createdStates;
+    }
+
+    private void ensureDefaultCities(ShippingState state) {
+        List<ShippingCity> cities = cityRepository.findByStateIdOrderByNameAsc(state.getId());
+        if (!cities.isEmpty()) {
+            return;
+        }
+        String baseName = StringUtils.hasText(state.getName()) ? state.getName().trim() : "State " + state.getId();
+        String[] cityMarkers = {"Metropolitan", "Harbor", "Valley"};
+        for (String marker : cityMarkers) {
+            String cityName = (baseName + " " + marker + " City").replaceAll("\\s+", " ").trim();
+            if (!StringUtils.hasText(cityName)) {
+                continue;
+            }
+            if (cityRepository.existsByStateIdAndNameIgnoreCase(state.getId(), cityName)) {
+                continue;
+            }
+            ShippingCity city = new ShippingCity();
+            city.setState(state);
+            city.setName(cityName);
+            city.setEnabled(true);
+            cityRepository.save(city);
         }
     }
 
