@@ -99,10 +99,10 @@ public class UploadedFileService {
                 .collect(Collectors.toList());
 
         return new PageResponse<>(content,
-                result.getNumber(),
-                result.getSize(),
                 result.getTotalElements(),
-                result.getTotalPages());
+                result.getTotalPages(),
+                result.getNumber(),
+                result.getSize());
     }
 
     @Transactional(readOnly = true)
