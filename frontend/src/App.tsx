@@ -36,6 +36,7 @@ import BlogCategoriesPage from './pages/BlogCategoriesPage';
 import BlogPostsPage from './pages/BlogPostsPage';
 import PublicBlogListPage from './pages/PublicBlogListPage';
 import PublicBlogPostPage from './pages/PublicBlogPostPage';
+import UploadedFilesPage from './pages/UploadedFilesPage';
 
 const App = () => {
   const dispatch = useAppDispatch();
@@ -192,6 +193,9 @@ const App = () => {
           </Route>
           <Route element={<PermissionRoute required={['BADGE_VIEW']} />}>
             <Route path="badges" element={<BadgesPage />} />
+          </Route>
+          <Route element={<PermissionRoute required={['UPLOADED_FILE_VIEW']} />}>
+            <Route path="assets/uploaded-files" element={<UploadedFilesPage />} />
           </Route>
           <Route element={<PermissionRoute required={['TAX_RATE_VIEW']} />}>
             <Route path="finance/tax-rates" element={<TaxRatesPage />} />

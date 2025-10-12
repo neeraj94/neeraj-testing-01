@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../services/http';
 import type { Brand, BrandLogoUploadResponse, BrandPage } from '../types/brand';
@@ -10,6 +10,8 @@ import { extractErrorMessage } from '../utils/errors';
 import PageHeader from '../components/PageHeader';
 import PageSection from '../components/PageSection';
 import PaginationControls from '../components/PaginationControls';
+import MediaLibraryDialog from '../components/MediaLibraryDialog';
+import type { MediaSelection } from '../types/uploaded-file';
 
 interface BrandFormState {
   name: string;
@@ -59,7 +61,7 @@ const BrandsPage = () => {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<'general' | 'seo'>('general');
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [mediaLibraryOpen, setMediaLibraryOpen] = useState(false);
 
   const canCreate = useMemo(
     () => hasAnyPermission(permissions as PermissionKey[], ['BRAND_CREATE']),
@@ -240,20 +242,28 @@ const BrandsPage = () => {
   });
 
   const handleLogoSelect = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleLogoFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      await logoUploadMutation.mutateAsync(file);
-    }
-    event.target.value = '';
+    setMediaLibraryOpen(true);
   };
 
   const handleLogoRemove = () => {
     setForm((prev) => ({ ...prev, logoUrl: '' }));
     setLogoPreview(null);
+  };
+
+  const handleMediaUpload = async (file: File): Promise<MediaSelection> => {
+    const response = await logoUploadMutation.mutateAsync(file);
+    return {
+      url: response.url,
+      originalFilename: response.originalFilename,
+      mimeType: response.mimeType,
+      sizeBytes: response.sizeBytes
+    };
+  };
+
+  const handleMediaSelect = (selection: MediaSelection) => {
+    setForm((prev) => ({ ...prev, logoUrl: selection.url }));
+    setLogoPreview(selection.url);
+    setMediaLibraryOpen(false);
   };
 
   const totalElements = brandsQuery.data?.totalElements ?? 0;
@@ -402,10 +412,11 @@ const BrandsPage = () => {
     };
 
     return (
-      <form
-        onSubmit={handleFormSubmit}
-        className="flex flex-col gap-6 rounded-2xl border border-slate-200 bg-white shadow-sm"
-      >
+      <>
+        <form
+          onSubmit={handleFormSubmit}
+          className="flex flex-col gap-6 rounded-2xl border border-slate-200 bg-white shadow-sm"
+        >
         <header className="flex flex-col gap-4 border-b border-slate-200 bg-slate-50 px-6 py-5 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-start gap-4">
             <button
@@ -480,13 +491,6 @@ const BrandsPage = () => {
                       )}
                     </div>
                     <div className="flex flex-1 flex-col gap-2">
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={handleLogoFileChange}
-                      />
                       <div className="flex flex-wrap gap-2">
                         <button
                           type="button"
@@ -672,7 +676,15 @@ const BrandsPage = () => {
             </button>
           </div>
         </footer>
-      </form>
+        </form>
+        <MediaLibraryDialog
+          open={mediaLibraryOpen}
+          onClose={() => setMediaLibraryOpen(false)}
+          moduleFilters={['BRAND_LOGO']}
+          onSelect={handleMediaSelect}
+          onUpload={handleMediaUpload}
+        />
+      </>
     );
   };
 

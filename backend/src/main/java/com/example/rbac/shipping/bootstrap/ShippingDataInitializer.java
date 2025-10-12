@@ -61,7 +61,8 @@ public class ShippingDataInitializer {
             if (!StringUtils.hasText(name)) {
                 continue;
             }
-            if (countryRepository.existsByCodeIgnoreCase(isoCode)) {
+            if (countryRepository.existsByCodeIgnoreCase(isoCode)
+                    || countryRepository.existsByNameIgnoreCase(name)) {
                 continue;
             }
             ShippingCountry country = new ShippingCountry();

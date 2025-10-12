@@ -75,6 +75,13 @@ This project is a full-stack Role-Based Access Control dashboard featuring a Spr
 
 - Backend: `mvn test`
 - Frontend linting: `npm run lint`
+- Frontend build: `npm run build`
+
+## Contribution workflow
+
+When working on a feature branch, commit your work locally and run the automated frontend build before opening a pull request. If
+your workflow relies on the provided automation scripts, generate the pull request summary with the helper tooling after your
+commit has been created.
 
 ## Project Structure
 

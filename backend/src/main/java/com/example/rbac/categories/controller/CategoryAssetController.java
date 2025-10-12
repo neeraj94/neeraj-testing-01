@@ -3,6 +3,10 @@ package com.example.rbac.categories.controller;
 import com.example.rbac.categories.service.CategoryAssetStorageService;
 import com.example.rbac.categories.service.CategoryAssetStorageService.AssetType;
 import com.example.rbac.categories.service.CategoryAssetStorageService.StoredAsset;
+import com.example.rbac.uploadedfile.model.UploadedFileModule;
+import com.example.rbac.uploadedfile.service.UploadedFileService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -19,10 +23,15 @@ import java.nio.charset.StandardCharsets;
 @RequestMapping("/api/v1/categories/assets")
 public class CategoryAssetController {
 
-    private final CategoryAssetStorageService storageService;
+    private static final Logger LOGGER = LoggerFactory.getLogger(CategoryAssetController.class);
 
-    public CategoryAssetController(CategoryAssetStorageService storageService) {
+    private final CategoryAssetStorageService storageService;
+    private final UploadedFileService uploadedFileService;
+
+    public CategoryAssetController(CategoryAssetStorageService storageService,
+                                   UploadedFileService uploadedFileService) {
         this.storageService = storageService;
+        this.uploadedFileService = uploadedFileService;
     }
 
     @PostMapping("/{type}")
@@ -32,6 +41,7 @@ public class CategoryAssetController {
         AssetType assetType = AssetType.fromPathSegment(type);
         StoredAsset stored = storageService.store(file, assetType);
         String url = storageService.publicUrlForKey(assetType, stored.key());
+        recordUpload(assetType, stored, url);
         return new CategoryAssetUploadResponse(assetType.name(), url, stored.originalFilename(), stored.mimeType(), stored.sizeBytes());
     }
 
@@ -57,5 +67,18 @@ public class CategoryAssetController {
     }
 
     public record CategoryAssetUploadResponse(String type, String url, String originalFilename, String mimeType, long sizeBytes) {
+    }
+
+    private void recordUpload(AssetType assetType, StoredAsset stored, String url) {
+        try {
+            UploadedFileModule module = switch (assetType) {
+                case ICON -> UploadedFileModule.CATEGORY_ICON;
+                case BANNER -> UploadedFileModule.CATEGORY_BANNER;
+                case COVER -> UploadedFileModule.CATEGORY_COVER;
+            };
+            uploadedFileService.recordUpload(module, stored.key(), url, stored.originalFilename(), stored.mimeType(), stored.sizeBytes());
+        } catch (Exception ex) {
+            LOGGER.debug("Failed to record uploaded category asset {}: {}", assetType, ex.getMessage());
+        }
     }
 }

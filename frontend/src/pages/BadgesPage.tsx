@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../services/http';
 import type {
@@ -15,6 +15,8 @@ import { extractErrorMessage } from '../utils/errors';
 import { useAppSelector } from '../app/hooks';
 import { hasAnyPermission } from '../utils/permissions';
 import type { PermissionKey } from '../types/auth';
+import MediaLibraryDialog from '../components/MediaLibraryDialog';
+import type { MediaSelection } from '../types/uploaded-file';
 
 interface BadgeFormState {
   name: string;
@@ -52,7 +54,7 @@ const BadgesPage = () => {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<'general' | 'content'>('general');
   const [iconPreview, setIconPreview] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [mediaLibraryOpen, setMediaLibraryOpen] = useState(false);
 
   const canCreate = useMemo(
     () => hasAnyPermission(permissions as PermissionKey[], ['BADGE_CREATE']),
@@ -217,20 +219,28 @@ const BadgesPage = () => {
   };
 
   const handleIconSelect = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleIconChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      iconUploadMutation.mutate(file);
-    }
-    event.target.value = '';
+    setMediaLibraryOpen(true);
   };
 
   const handleIconRemove = () => {
     setForm((prev) => ({ ...prev, iconUrl: '' }));
     setIconPreview(null);
+  };
+
+  const handleMediaUpload = async (file: File): Promise<MediaSelection> => {
+    const response = await iconUploadMutation.mutateAsync(file);
+    return {
+      url: response.url,
+      originalFilename: response.originalFilename,
+      mimeType: response.mimeType,
+      sizeBytes: response.sizeBytes
+    };
+  };
+
+  const handleMediaSelect = (selection: MediaSelection) => {
+    setForm((prev) => ({ ...prev, iconUrl: selection.url }));
+    setIconPreview(selection.url);
+    setMediaLibraryOpen(false);
   };
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
@@ -394,7 +404,8 @@ const BadgesPage = () => {
       : '';
 
     return (
-      <form onSubmit={handleSubmit} className="flex flex-col gap-6 rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-6 rounded-2xl border border-slate-200 bg-white shadow-sm">
         <header className="flex flex-col gap-4 border-b border-slate-200 bg-slate-50 px-6 py-5 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-start gap-4">
             <button
@@ -465,7 +476,6 @@ const BadgesPage = () => {
                       )}
                     </div>
                     <div className="flex flex-1 flex-col gap-2">
-                      <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleIconChange} />
                       <div className="flex flex-wrap gap-2">
                         <button
                           type="button"
@@ -589,7 +599,15 @@ const BadgesPage = () => {
             </button>
           </div>
         </footer>
-      </form>
+        </form>
+        <MediaLibraryDialog
+          open={mediaLibraryOpen}
+          onClose={() => setMediaLibraryOpen(false)}
+          moduleFilters={['BADGE_ICON']}
+          onSelect={handleMediaSelect}
+          onUpload={handleMediaUpload}
+        />
+      </>
     );
   };
 

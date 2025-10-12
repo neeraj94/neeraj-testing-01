@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../services/http';
 import type {
@@ -16,6 +16,8 @@ import { extractErrorMessage } from '../utils/errors';
 import PageHeader from '../components/PageHeader';
 import PageSection from '../components/PageSection';
 import PaginationControls from '../components/PaginationControls';
+import MediaLibraryDialog from '../components/MediaLibraryDialog';
+import type { MediaSelection } from '../types/uploaded-file';
 
 interface CategoryFormState {
   name: string;
@@ -106,9 +108,7 @@ const CategoriesPage = () => {
   const [iconPreview, setIconPreview] = useState<string | null>(null);
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
 
-  const bannerInputRef = useRef<HTMLInputElement | null>(null);
-  const iconInputRef = useRef<HTMLInputElement | null>(null);
-  const coverInputRef = useRef<HTMLInputElement | null>(null);
+  const [mediaLibraryTarget, setMediaLibraryTarget] = useState<AssetUploadType | null>(null);
 
   const canCreate = useMemo(
     () => hasAnyPermission(permissions as PermissionKey[], ['CATEGORY_CREATE']),
@@ -332,23 +332,7 @@ const CategoriesPage = () => {
   };
 
   const handleAssetSelect = (type: AssetUploadType) => {
-    if (type === 'banner') {
-      bannerInputRef.current?.click();
-      return;
-    }
-    if (type === 'icon') {
-      iconInputRef.current?.click();
-      return;
-    }
-    coverInputRef.current?.click();
-  };
-
-  const handleAssetFileChange = async (type: AssetUploadType, event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      await assetUploadMutation.mutateAsync({ type, file });
-    }
-    event.target.value = '';
+    setMediaLibraryTarget(type);
   };
 
   const handleAssetRemove = (type: AssetUploadType) => {
@@ -368,7 +352,46 @@ const CategoriesPage = () => {
 
   const categories = categoriesQuery.data?.content ?? [];
   const totalElements = categoriesQuery.data?.totalElements ?? 0;
-  const uploadingType = assetUploadMutation.isPending ? assetUploadMutation.variables?.type : null;
+  const moduleKeyForAsset: Record<AssetUploadType, string> = {
+    banner: 'CATEGORY_BANNER',
+    icon: 'CATEGORY_ICON',
+    cover: 'CATEGORY_COVER'
+  };
+
+  const applyAssetSelection = (type: AssetUploadType, selection: MediaSelection) => {
+    const url = selection.url;
+    if (type === 'banner') {
+      setForm((prev) => ({ ...prev, bannerUrl: url }));
+      setBannerPreview(url);
+      return;
+    }
+    if (type === 'icon') {
+      setForm((prev) => ({ ...prev, iconUrl: url }));
+      setIconPreview(url);
+      return;
+    }
+    setForm((prev) => ({ ...prev, coverUrl: url }));
+    setCoverPreview(url);
+  };
+
+  const handleMediaUpload = async (type: AssetUploadType, file: File): Promise<MediaSelection> => {
+    const result = await assetUploadMutation.mutateAsync({ type, file });
+    return {
+      url: result.data.url,
+      originalFilename: result.data.originalFilename,
+      mimeType: result.data.mimeType,
+      sizeBytes: result.data.sizeBytes
+    };
+  };
+
+  const handleMediaSelect = (type: AssetUploadType | null, selection: MediaSelection) => {
+    if (!type) {
+      return;
+    }
+    applyAssetSelection(type, selection);
+  };
+
+  const pendingAssetType = assetUploadMutation.isPending ? assetUploadMutation.variables?.type : null;
 
   const formatDate = (value: string) =>
     new Intl.DateTimeFormat(undefined, {
@@ -681,10 +704,10 @@ const CategoriesPage = () => {
                           <button
                             type="button"
                             onClick={() => handleAssetSelect(asset.key)}
-                            disabled={uploadingType === asset.key}
+                            disabled={assetUploadMutation.isPending}
                             className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
                           >
-                            {uploadingType === asset.key ? 'Uploading…' : 'Upload image'}
+                            {pendingAssetType === asset.key ? 'Uploading…' : 'Choose image'}
                           </button>
                           {asset.preview && (
                             <button
@@ -874,26 +897,18 @@ const CategoriesPage = () => {
         }
       />
 
-      <input
-        type="file"
-        accept="image/*"
-        ref={bannerInputRef}
-        className="hidden"
-        onChange={(event) => handleAssetFileChange('banner', event)}
-      />
-      <input
-        type="file"
-        accept="image/*"
-        ref={iconInputRef}
-        className="hidden"
-        onChange={(event) => handleAssetFileChange('icon', event)}
-      />
-      <input
-        type="file"
-        accept="image/*"
-        ref={coverInputRef}
-        className="hidden"
-        onChange={(event) => handleAssetFileChange('cover', event)}
+      <MediaLibraryDialog
+        open={mediaLibraryTarget !== null}
+        onClose={() => setMediaLibraryTarget(null)}
+        moduleFilters={mediaLibraryTarget ? [moduleKeyForAsset[mediaLibraryTarget]] : undefined}
+        onSelect={(selection) => {
+          handleMediaSelect(mediaLibraryTarget, selection);
+        }}
+        onUpload={
+          mediaLibraryTarget
+            ? (file) => handleMediaUpload(mediaLibraryTarget, file)
+            : undefined
+        }
       />
 
       {isDirectoryView ? renderDirectory() : renderForm()}

@@ -128,6 +128,25 @@ export const DEFAULT_NAVIGATION_MENU: NavigationNode[] = [
     ]
   },
   {
+    key: 'assets',
+    label: 'Assets',
+    icon: '🖼️',
+    path: undefined,
+    group: true,
+    permissions: [],
+    children: [
+      {
+        key: 'uploadedFiles',
+        label: 'Uploaded files',
+        icon: '📁',
+        path: '/admin/assets/uploaded-files',
+        group: false,
+        permissions: ['UPLOADED_FILE_VIEW'],
+        children: []
+      }
+    ]
+  },
+  {
     key: 'catalog',
     label: 'Catalog',
     icon: '🛍️',

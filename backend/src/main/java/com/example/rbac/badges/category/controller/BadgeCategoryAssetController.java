@@ -2,6 +2,10 @@ package com.example.rbac.badges.category.controller;
 
 import com.example.rbac.badges.category.service.BadgeCategoryIconStorageService;
 import com.example.rbac.badges.category.service.BadgeCategoryIconStorageService.StoredIcon;
+import com.example.rbac.uploadedfile.model.UploadedFileModule;
+import com.example.rbac.uploadedfile.service.UploadedFileService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
@@ -17,10 +21,15 @@ import java.io.IOException;
 @RequestMapping("/api/v1/badge-categories/assets")
 public class BadgeCategoryAssetController {
 
-    private final BadgeCategoryIconStorageService storageService;
+    private static final Logger LOGGER = LoggerFactory.getLogger(BadgeCategoryAssetController.class);
 
-    public BadgeCategoryAssetController(BadgeCategoryIconStorageService storageService) {
+    private final BadgeCategoryIconStorageService storageService;
+    private final UploadedFileService uploadedFileService;
+
+    public BadgeCategoryAssetController(BadgeCategoryIconStorageService storageService,
+                                       UploadedFileService uploadedFileService) {
         this.storageService = storageService;
+        this.uploadedFileService = uploadedFileService;
     }
 
     @PostMapping
@@ -28,6 +37,7 @@ public class BadgeCategoryAssetController {
     public BadgeCategoryUploadResponse upload(@RequestParam("file") MultipartFile file) {
         StoredIcon stored = storageService.store(file);
         String url = storageService.publicUrlForKey(stored.key());
+        recordUpload(stored, url);
         return new BadgeCategoryUploadResponse(url, stored.originalFilename(), stored.mimeType(), stored.sizeBytes());
     }
 
@@ -42,5 +52,13 @@ public class BadgeCategoryAssetController {
     }
 
     public record BadgeCategoryUploadResponse(String url, String originalFilename, String mimeType, long sizeBytes) {
+    }
+
+    private void recordUpload(StoredIcon stored, String url) {
+        try {
+            uploadedFileService.recordUpload(UploadedFileModule.BADGE_CATEGORY_ICON, stored.key(), url, stored.originalFilename(), stored.mimeType(), stored.sizeBytes());
+        } catch (Exception ex) {
+            LOGGER.debug("Failed to record badge category icon upload: {}", ex.getMessage());
+        }
     }
 }

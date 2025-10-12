@@ -3,6 +3,10 @@ package com.example.rbac.brands.controller;
 import com.example.rbac.brands.dto.BrandLogoUploadResponse;
 import com.example.rbac.brands.service.BrandLogoStorageService;
 import com.example.rbac.brands.service.BrandLogoStorageService.StoredLogo;
+import com.example.rbac.uploadedfile.model.UploadedFileModule;
+import com.example.rbac.uploadedfile.service.UploadedFileService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -19,10 +23,15 @@ import java.nio.charset.StandardCharsets;
 @RequestMapping("/api/v1/brands/assets")
 public class BrandAssetController {
 
-    private final BrandLogoStorageService storageService;
+    private static final Logger LOGGER = LoggerFactory.getLogger(BrandAssetController.class);
 
-    public BrandAssetController(BrandLogoStorageService storageService) {
+    private final BrandLogoStorageService storageService;
+    private final UploadedFileService uploadedFileService;
+
+    public BrandAssetController(BrandLogoStorageService storageService,
+                               UploadedFileService uploadedFileService) {
         this.storageService = storageService;
+        this.uploadedFileService = uploadedFileService;
     }
 
     @PostMapping
@@ -30,6 +39,7 @@ public class BrandAssetController {
     public BrandLogoUploadResponse uploadLogo(@RequestParam("file") MultipartFile file) {
         StoredLogo stored = storageService.store(file);
         String url = storageService.publicUrlForKey(stored.key());
+        recordUpload(UploadedFileModule.BRAND_LOGO, stored, url);
         return new BrandLogoUploadResponse(url, stored.originalFilename(), stored.mimeType(), stored.sizeBytes());
     }
 
@@ -50,5 +60,13 @@ public class BrandAssetController {
                 .contentType(mediaType)
                 .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + encoded + "\"")
                 .body(resource);
+    }
+
+    private void recordUpload(UploadedFileModule module, StoredLogo stored, String url) {
+        try {
+            uploadedFileService.recordUpload(module, stored.key(), url, stored.originalFilename(), stored.mimeType(), stored.sizeBytes());
+        } catch (Exception ex) {
+            LOGGER.debug("Failed to record uploaded file for module {}: {}", module, ex.getMessage());
+        }
     }
 }
