@@ -9,6 +9,7 @@ import PageHeader from '../components/PageHeader';
 import PageSection from '../components/PageSection';
 import PaginationControls from '../components/PaginationControls';
 import { useToast } from '../components/ToastProvider';
+import { useConfirm } from '../components/ConfirmDialogProvider';
 import { extractErrorMessage } from '../utils/errors';
 import { formatCurrency } from '../utils/currency';
 import { selectBaseCurrency } from '../features/settings/selectors';
@@ -38,6 +39,7 @@ const percentageFormatter = new Intl.NumberFormat(undefined, {
 const TaxRatesPage = () => {
   const queryClient = useQueryClient();
   const { notify } = useToast();
+  const confirm = useConfirm();
   const permissions = useAppSelector((state) => state.auth.permissions);
   const baseCurrency = useAppSelector(selectBaseCurrency);
 
@@ -222,7 +224,12 @@ const TaxRatesPage = () => {
     if (!canDelete) {
       return;
     }
-    const confirmed = window.confirm(`Delete tax rate "${taxRate.name}"? This action cannot be undone.`);
+    const confirmed = await confirm({
+      title: 'Delete tax rate?',
+      description: `Delete tax rate "${taxRate.name}"? This action cannot be undone.`,
+      confirmLabel: 'Delete',
+      tone: 'danger'
+    });
     if (!confirmed) {
       return;
     }

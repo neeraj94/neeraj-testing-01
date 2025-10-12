@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../services/http';
 import type { BlogCategory, BlogMediaUploadResponse, BlogPost, BlogPostPage } from '../types/blog';
 import { useToast } from '../components/ToastProvider';
+import { useConfirm } from '../components/ConfirmDialogProvider';
 import { useAppSelector } from '../app/hooks';
 import { hasAnyPermission } from '../utils/permissions';
 import type { PermissionKey } from '../types/auth';
@@ -59,6 +60,7 @@ const buildMediaUrl = (key?: string | null) => {
 const BlogPostsPage = () => {
   const queryClient = useQueryClient();
   const { notify } = useToast();
+  const confirm = useConfirm();
   const permissions = useAppSelector((state) => state.auth.permissions);
 
   const [page, setPage] = useState(0);
@@ -338,7 +340,12 @@ const BlogPostsPage = () => {
     if (!canDelete) {
       return;
     }
-    const confirmed = window.confirm(`Delete the post "${post.title}"? This action cannot be undone.`);
+    const confirmed = await confirm({
+      title: 'Delete post?',
+      description: `Delete the post "${post.title}"? This action cannot be undone.`,
+      confirmLabel: 'Delete',
+      tone: 'danger'
+    });
     if (!confirmed) {
       return;
     }

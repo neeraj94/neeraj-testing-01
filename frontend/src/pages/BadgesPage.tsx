@@ -8,6 +8,7 @@ import type {
   BadgePage
 } from '../types/badge';
 import { useToast } from '../components/ToastProvider';
+import { useConfirm } from '../components/ConfirmDialogProvider';
 import PageHeader from '../components/PageHeader';
 import PageSection from '../components/PageSection';
 import PaginationControls from '../components/PaginationControls';
@@ -208,14 +209,22 @@ const BadgesPage = () => {
     setIconPreview(badge.iconUrl ?? null);
   };
 
-  const handleDelete = (badge: Badge) => {
+  const confirm = useConfirm();
+
+  const handleDelete = async (badge: Badge) => {
     if (!canDelete) {
       return;
     }
-    const confirmed = window.confirm(`Delete badge "${badge.name}"? This action cannot be undone.`);
-    if (confirmed) {
-      deleteMutation.mutate(badge.id);
+    const confirmed = await confirm({
+      title: 'Delete badge?',
+      description: `Delete badge "${badge.name}"? This action cannot be undone.`,
+      confirmLabel: 'Delete',
+      tone: 'danger'
+    });
+    if (!confirmed) {
+      return;
     }
+    await deleteMutation.mutateAsync(badge.id);
   };
 
   const handleIconSelect = () => {

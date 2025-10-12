@@ -126,6 +126,21 @@ public class UploadedFileService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional
+    public void delete(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return;
+        }
+        List<Long> uniqueIds = ids.stream()
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+        if (uniqueIds.isEmpty()) {
+            return;
+        }
+        repository.deleteAllByIdInBatch(uniqueIds);
+    }
+
     private Set<UploadedFileModule> convertModuleKeys(List<String> moduleKeys) {
         if (moduleKeys == null || moduleKeys.isEmpty()) {
             return EnumSet.noneOf(UploadedFileModule.class);

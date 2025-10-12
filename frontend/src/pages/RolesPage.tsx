@@ -5,6 +5,7 @@ import api from '../services/http';
 import type { Pagination, Permission, Role } from '../types/models';
 import type { PermissionKey } from '../types/auth';
 import { useToast } from '../components/ToastProvider';
+import { useConfirm } from '../components/ConfirmDialogProvider';
 import { CAPABILITY_COLUMNS, type PermissionGroup, buildPermissionGroups } from '../utils/permissionGroups';
 import SortableColumnHeader from '../components/SortableColumnHeader';
 import { useAppSelector } from '../app/hooks';
@@ -222,6 +223,7 @@ const TrashIcon = () => (
 
 const RolesPage = () => {
   const { notify } = useToast();
+  const confirm = useConfirm();
   const { permissions: authPermissions } = useAppSelector((state) => state.auth);
   const grantedPermissions = (authPermissions ?? []) as PermissionKey[];
   const canExportRoles = useMemo(
@@ -631,14 +633,17 @@ const RolesPage = () => {
     });
   };
 
-  const handleDelete = (role: Role) => {
-    if (typeof window !== 'undefined') {
-      const confirmed = window.confirm(`Delete the role “${role.name}”?`);
-      if (!confirmed) {
-        return;
-      }
+  const handleDelete = async (role: Role) => {
+    const confirmed = await confirm({
+      title: 'Delete role?',
+      description: `Delete the role “${role.name}”?`,
+      confirmLabel: 'Delete',
+      tone: 'danger'
+    });
+    if (!confirmed) {
+      return;
     }
-    deleteRole.mutate(role.id);
+    await deleteRole.mutateAsync(role.id);
   };
 
   const renderPermissionSummary = (role: Role) => {

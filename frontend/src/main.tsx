@@ -9,6 +9,7 @@ import './styles/tailwind.css';
 import { injectStore, registerAuthListeners } from './services/http';
 import { tokensRefreshed, logout } from './features/auth/authSlice';
 import { ToastProvider } from './components/ToastProvider';
+import { ConfirmDialogProvider } from './components/ConfirmDialogProvider';
 
 injectStore(store);
 registerAuthListeners(
@@ -24,7 +25,9 @@ ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
           <ToastProvider>
-            <App />
+            <ConfirmDialogProvider>
+              <App />
+            </ConfirmDialogProvider>
           </ToastProvider>
         </BrowserRouter>
       </QueryClientProvider>

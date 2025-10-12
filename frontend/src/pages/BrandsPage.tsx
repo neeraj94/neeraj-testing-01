@@ -6,6 +6,7 @@ import { useAppSelector } from '../app/hooks';
 import { hasAnyPermission } from '../utils/permissions';
 import type { PermissionKey } from '../types/auth';
 import { useToast } from '../components/ToastProvider';
+import { useConfirm } from '../components/ConfirmDialogProvider';
 import { extractErrorMessage } from '../utils/errors';
 import PageHeader from '../components/PageHeader';
 import PageSection from '../components/PageSection';
@@ -49,6 +50,7 @@ const defaultFormState: BrandFormState = {
 const BrandsPage = () => {
   const queryClient = useQueryClient();
   const { notify } = useToast();
+  const confirm = useConfirm();
   const permissions = useAppSelector((state) => state.auth.permissions);
 
   const [page, setPage] = useState(0);
@@ -215,7 +217,12 @@ const BrandsPage = () => {
     if (!canDelete) {
       return;
     }
-    const confirmed = window.confirm(`Delete brand "${brand.name}"? This action cannot be undone.`);
+    const confirmed = await confirm({
+      title: 'Delete brand?',
+      description: `Delete brand "${brand.name}"? This action cannot be undone.`,
+      confirmLabel: 'Delete',
+      tone: 'danger'
+    });
     if (!confirmed) {
       return;
     }
