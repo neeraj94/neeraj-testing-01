@@ -306,6 +306,15 @@ public class SetupService {
                             List.of("BLOG_POST_VIEW")
                     )
             )),
+            MenuDefinition.group("assets", "Assets", "🖼️", List.of(
+                    MenuDefinition.item(
+                            "uploadedFiles",
+                            "Uploaded files",
+                            "📁",
+                            "/admin/assets/uploaded-files",
+                            List.of("UPLOADED_FILE_VIEW")
+                    )
+            )),
             MenuDefinition.group("catalog", "Catalog", "🛍️", List.of(
                     MenuDefinition.item(
                             "categories",

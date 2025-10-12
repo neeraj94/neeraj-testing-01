@@ -3,16 +3,51 @@ package com.example.rbac.blog.mapper;
 import com.example.rbac.blog.dto.BlogPostDto;
 import com.example.rbac.blog.dto.PublicBlogPostDto;
 import com.example.rbac.blog.model.BlogPost;
-import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
+import org.springframework.stereotype.Component;
 
-@Mapper(componentModel = "spring")
-public interface BlogPostMapper {
+@Component
+public class BlogPostMapper {
 
-    @Mapping(target = "categoryId", source = "category.id")
-    @Mapping(target = "categoryName", source = "category.name")
-    BlogPostDto toDto(BlogPost post);
+    public BlogPostDto toDto(BlogPost post) {
+        if (post == null) {
+            return null;
+        }
+        BlogPostDto dto = new BlogPostDto();
+        dto.setId(post.getId());
+        if (post.getCategory() != null) {
+            dto.setCategoryId(post.getCategory().getId());
+            dto.setCategoryName(post.getCategory().getName());
+        }
+        dto.setTitle(post.getTitle());
+        dto.setSlug(post.getSlug());
+        dto.setDescription(post.getDescription());
+        dto.setBannerImage(post.getBannerImage());
+        dto.setMetaTitle(post.getMetaTitle());
+        dto.setMetaDescription(post.getMetaDescription());
+        dto.setMetaKeywords(post.getMetaKeywords());
+        dto.setMetaImage(post.getMetaImage());
+        dto.setPublished(post.isPublished());
+        dto.setPublishedAt(post.getPublishedAt());
+        dto.setCreatedAt(post.getCreatedAt());
+        dto.setUpdatedAt(post.getUpdatedAt());
+        return dto;
+    }
 
-    @Mapping(target = "category", source = "category.name")
-    PublicBlogPostDto toPublicDto(BlogPost post);
+    public PublicBlogPostDto toPublicDto(BlogPost post) {
+        if (post == null) {
+            return null;
+        }
+        PublicBlogPostDto dto = new PublicBlogPostDto();
+        dto.setTitle(post.getTitle());
+        dto.setSlug(post.getSlug());
+        dto.setDescription(post.getDescription());
+        dto.setBannerImage(post.getBannerImage());
+        dto.setMetaTitle(post.getMetaTitle());
+        dto.setMetaDescription(post.getMetaDescription());
+        dto.setMetaKeywords(post.getMetaKeywords());
+        dto.setMetaImage(post.getMetaImage());
+        dto.setCategory(post.getCategory() != null ? post.getCategory().getName() : null);
+        dto.setPublishedAt(post.getPublishedAt());
+        return dto;
+    }
 }

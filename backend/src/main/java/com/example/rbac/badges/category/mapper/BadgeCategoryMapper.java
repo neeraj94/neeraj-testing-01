@@ -3,14 +3,26 @@ package com.example.rbac.badges.category.mapper;
 import com.example.rbac.badges.category.dto.BadgeCategoryDto;
 import com.example.rbac.badges.category.dto.BadgeCategoryOptionDto;
 import com.example.rbac.badges.category.model.BadgeCategory;
-import org.mapstruct.Mapper;
+import org.springframework.stereotype.Component;
 
-@Mapper(componentModel = "spring")
-public interface BadgeCategoryMapper {
+@Component
+public class BadgeCategoryMapper {
 
-    BadgeCategoryDto toDto(BadgeCategory category);
+    public BadgeCategoryDto toDto(BadgeCategory category) {
+        if (category == null) {
+            return null;
+        }
+        BadgeCategoryDto dto = new BadgeCategoryDto();
+        dto.setId(category.getId());
+        dto.setTitle(category.getTitle());
+        dto.setDescription(category.getDescription());
+        dto.setIconUrl(category.getIconUrl());
+        dto.setCreatedAt(category.getCreatedAt());
+        dto.setUpdatedAt(category.getUpdatedAt());
+        return dto;
+    }
 
-    default BadgeCategoryOptionDto toOption(BadgeCategory category) {
+    public BadgeCategoryOptionDto toOption(BadgeCategory category) {
         if (category == null) {
             return null;
         }
