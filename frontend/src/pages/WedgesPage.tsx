@@ -1,11 +1,4 @@
-import {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ChangeEvent,
-  type FormEvent
-} from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../services/http';
 import type { Wedge, WedgeIconUploadResponse, WedgePage } from '../types/wedge';
@@ -14,10 +7,13 @@ import { useAppSelector } from '../app/hooks';
 import { hasAnyPermission } from '../utils/permissions';
 import type { PermissionKey } from '../types/auth';
 import { useToast } from '../components/ToastProvider';
+import { useConfirm } from '../components/ConfirmDialogProvider';
 import { extractErrorMessage } from '../utils/errors';
 import PageHeader from '../components/PageHeader';
 import PageSection from '../components/PageSection';
 import PaginationControls from '../components/PaginationControls';
+import MediaLibraryDialog from '../components/MediaLibraryDialog';
+import type { MediaSelection } from '../types/uploaded-file';
 
 interface WedgeFormState {
   name: string;
@@ -55,7 +51,8 @@ const WedgesPage = () => {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<'general' | 'content'>('general');
   const [iconPreview, setIconPreview] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [mediaLibraryOpen, setMediaLibraryOpen] = useState(false);
+  const wedgeModuleFilter = ['WEDGE_ICON'];
 
   const canCreate = useMemo(
     () => hasAnyPermission(permissions as PermissionKey[], ['WEDGE_CREATE']),
@@ -163,14 +160,6 @@ const WedgesPage = () => {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       return data;
-    },
-    onSuccess: (data) => {
-      setForm((prev) => ({ ...prev, iconUrl: data.url }));
-      setIconPreview(data.url);
-      notify({ type: 'success', message: 'Icon uploaded successfully.' });
-    },
-    onError: (error: unknown) => {
-      notify({ type: 'error', message: extractErrorMessage(error, 'Failed to upload icon.') });
     }
   });
 
@@ -181,6 +170,7 @@ const WedgesPage = () => {
     setPanelMode('create');
     setActiveTab('general');
     setIconPreview(null);
+    setMediaLibraryOpen(false);
   };
 
   const openEditForm = (wedge: Wedge) => {
@@ -197,6 +187,7 @@ const WedgesPage = () => {
     setPanelMode('edit');
     setActiveTab('general');
     setIconPreview(wedge.iconUrl ?? null);
+    setMediaLibraryOpen(false);
   };
 
   const closeForm = () => {
@@ -206,6 +197,7 @@ const WedgesPage = () => {
     setActiveTab('general');
     setIconPreview(null);
     setEditingId(null);
+    setMediaLibraryOpen(false);
   };
 
   const handleSubmit = async () => {
@@ -236,21 +228,33 @@ const WedgesPage = () => {
     }
   };
 
-  const handleIconSelect = () => {
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
-    }
+  const openMediaLibraryDialog = () => {
+    setMediaLibraryOpen(true);
   };
 
-  const handleIconFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) {
-      return;
-    }
+  const closeMediaLibraryDialog = () => {
+    setMediaLibraryOpen(false);
+  };
+
+  const handleMediaSelect = (selection: MediaSelection) => {
+    setForm((prev) => ({ ...prev, iconUrl: selection.url }));
+    setIconPreview(selection.url);
+    closeMediaLibraryDialog();
+  };
+
+  const handleMediaUpload = async (file: File): Promise<MediaSelection> => {
     try {
-      await iconUploadMutation.mutateAsync(file);
-    } finally {
-      event.target.value = '';
+      const data = await iconUploadMutation.mutateAsync(file);
+      notify({ type: 'success', message: 'Icon uploaded successfully.' });
+      return {
+        url: data.url,
+        originalFilename: data.originalFilename ?? undefined,
+        mimeType: data.mimeType ?? undefined,
+        sizeBytes: data.sizeBytes ?? undefined
+      };
+    } catch (error) {
+      notify({ type: 'error', message: extractErrorMessage(error, 'Failed to upload icon.') });
+      throw error;
     }
   };
 
@@ -259,15 +263,22 @@ const WedgesPage = () => {
     setIconPreview(null);
   };
 
-  const handleDelete = (wedge: Wedge) => {
+  const confirm = useConfirm();
+
+  const handleDelete = async (wedge: Wedge) => {
     if (!canDelete) {
       return;
     }
-    const confirmed = window.confirm(`Delete wedge "${wedge.name}"? This action cannot be undone.`);
+    const confirmed = await confirm({
+      title: 'Delete wedge?',
+      description: `Delete wedge "${wedge.name}"? This action cannot be undone.`,
+      confirmLabel: 'Delete',
+      tone: 'danger'
+    });
     if (!confirmed) {
       return;
     }
-    deleteMutation.mutate(wedge.id);
+    await deleteMutation.mutateAsync(wedge.id);
   };
 
   const renderDirectory = () => (
@@ -477,21 +488,14 @@ const WedgesPage = () => {
                       )}
                     </div>
                     <div className="flex flex-1 flex-col gap-2">
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={handleIconFileChange}
-                      />
                       <div className="flex flex-wrap gap-2">
                         <button
                           type="button"
-                          onClick={handleIconSelect}
+                          onClick={openMediaLibraryDialog}
                           className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white shadow hover:bg-blue-600"
                           disabled={iconUploadMutation.isPending}
                         >
-                          {iconUploadMutation.isPending ? 'Uploading…' : 'Upload icon'}
+                          {iconUploadMutation.isPending ? 'Uploading…' : 'Select icon'}
                         </button>
                         {iconPreview && (
                           <button
@@ -635,6 +639,14 @@ const WedgesPage = () => {
               )
             : undefined
         }
+      />
+
+      <MediaLibraryDialog
+        open={mediaLibraryOpen}
+        onClose={closeMediaLibraryDialog}
+        moduleFilters={wedgeModuleFilter}
+        onSelect={handleMediaSelect}
+        onUpload={handleMediaUpload}
       />
 
       {isDirectoryView ? renderDirectory() : renderForm()}

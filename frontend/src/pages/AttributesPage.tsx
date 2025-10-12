@@ -9,6 +9,7 @@ import PageHeader from '../components/PageHeader';
 import PageSection from '../components/PageSection';
 import PaginationControls from '../components/PaginationControls';
 import { useToast } from '../components/ToastProvider';
+import { useConfirm } from '../components/ConfirmDialogProvider';
 import { extractErrorMessage } from '../utils/errors';
 
 interface AttributeFormState {
@@ -29,6 +30,7 @@ const defaultFormState: AttributeFormState = {
 const AttributesPage = () => {
   const queryClient = useQueryClient();
   const { notify } = useToast();
+  const confirm = useConfirm();
   const permissions = useAppSelector((state) => state.auth.permissions);
 
   const [page, setPage] = useState(0);
@@ -230,7 +232,12 @@ const AttributesPage = () => {
     if (!canDelete) {
       return;
     }
-    const confirmed = window.confirm(`Delete attribute "${attribute.name}"? This action cannot be undone.`);
+    const confirmed = await confirm({
+      title: 'Delete attribute?',
+      description: `Delete attribute "${attribute.name}"? This action cannot be undone.`,
+      confirmLabel: 'Delete',
+      tone: 'danger'
+    });
     if (!confirmed) {
       return;
     }

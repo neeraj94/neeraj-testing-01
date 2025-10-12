@@ -6,6 +6,7 @@ import { useAppSelector } from '../app/hooks';
 import { hasAnyPermission } from '../utils/permissions';
 import type { PermissionKey } from '../types/auth';
 import { useToast } from '../components/ToastProvider';
+import { useConfirm } from '../components/ConfirmDialogProvider';
 import { extractErrorMessage } from '../utils/errors';
 import PageHeader from '../components/PageHeader';
 import PageSection from '../components/PageSection';
@@ -25,6 +26,7 @@ const PAGE_SIZE_OPTIONS = [10, 25, 50];
 const BlogCategoriesPage = () => {
   const queryClient = useQueryClient();
   const { notify } = useToast();
+  const confirm = useConfirm();
   const permissions = useAppSelector((state) => state.auth.permissions);
 
   const [page, setPage] = useState(0);
@@ -161,7 +163,12 @@ const BlogCategoriesPage = () => {
     if (!canDelete) {
       return;
     }
-    const confirmed = window.confirm(`Delete category "${category.name}"? This cannot be undone.`);
+    const confirmed = await confirm({
+      title: 'Delete category?',
+      description: `Delete category "${category.name}"? This cannot be undone.`,
+      confirmLabel: 'Delete',
+      tone: 'danger'
+    });
     if (!confirmed) {
       return;
     }
