@@ -144,6 +144,7 @@ const MediaLibraryDialog = ({
     }
     onSelect({
       url: file.publicUrl,
+      storageKey: file.storageKey,
       originalFilename: file.originalFilename,
       mimeType: file.mimeType,
       sizeBytes: file.sizeBytes ?? undefined
