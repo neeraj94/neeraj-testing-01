@@ -343,6 +343,15 @@ public class SetupService {
                             List.of("BRAND_VIEW")
                     )
             )),
+            MenuDefinition.group("shipping", "Shipping", "🚚", List.of(
+                    MenuDefinition.item(
+                            "areaShipping",
+                            "Area-wise shipping",
+                            "🗺️",
+                            "/admin/shipping/area",
+                            List.of("SHIPPING_AREA_VIEW")
+                    )
+            )),
             MenuDefinition.item("gallery", "Gallery", "🖼️", "/admin/gallery", List.of("GALLERY_VIEW_ALL", "GALLERY_VIEW_OWN", "GALLERY_CREATE")),
             MenuDefinition.item("activity", "Activity", "📝", "/admin/activity", List.of("ACTIVITY_VIEW")),
             MenuDefinition.item("settings", "Settings", "⚙️", "/admin/settings", List.of("SETTINGS_VIEW")),
