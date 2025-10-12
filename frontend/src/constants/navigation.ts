@@ -183,6 +183,25 @@ export const DEFAULT_NAVIGATION_MENU: NavigationNode[] = [
     ]
   },
   {
+    key: 'shipping',
+    label: 'Shipping',
+    icon: '🚚',
+    path: undefined,
+    group: true,
+    permissions: [],
+    children: [
+      {
+        key: 'areaShipping',
+        label: 'Area-wise shipping',
+        icon: '🗺️',
+        path: '/admin/shipping/area',
+        group: false,
+        permissions: ['SHIPPING_AREA_VIEW'],
+        children: []
+      }
+    ]
+  },
+  {
     key: 'activity',
     label: 'Activity',
     icon: '📝',

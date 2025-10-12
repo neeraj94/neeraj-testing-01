@@ -17,6 +17,7 @@ import AttributesPage from './pages/AttributesPage';
 import CategoriesPage from './pages/CategoriesPage';
 import BadgesPage from './pages/BadgesPage';
 import BadgeCategoriesPage from './pages/BadgeCategoriesPage';
+import AreaShippingPage from './pages/AreaShippingPage';
 import EcommerceHomePage from './pages/EcommerceHomePage';
 import ProtectedRoute from './routes/ProtectedRoute';
 import PermissionRoute from './routes/PermissionRoute';
@@ -197,6 +198,9 @@ const App = () => {
           </Route>
           <Route element={<PermissionRoute required={['BRAND_VIEW']} />}>
             <Route path="brands" element={<BrandsPage />} />
+          </Route>
+          <Route element={<PermissionRoute required={['SHIPPING_AREA_VIEW']} />}>
+            <Route path="shipping/area" element={<AreaShippingPage />} />
           </Route>
           <Route element={<PermissionRoute required={['ACTIVITY_VIEW']} />}>
             <Route path="activity" element={<ActivityPage />} />
