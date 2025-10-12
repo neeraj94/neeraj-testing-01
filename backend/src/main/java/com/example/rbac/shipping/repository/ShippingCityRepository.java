@@ -8,5 +8,6 @@ import java.util.List;
 public interface ShippingCityRepository extends JpaRepository<ShippingCity, Long> {
     boolean existsByStateIdAndNameIgnoreCase(Long stateId, String name);
     boolean existsByStateIdAndNameIgnoreCaseAndIdNot(Long stateId, String name, Long id);
+    List<ShippingCity> findByStateIdOrderByEnabledDescNameAsc(Long stateId);
     List<ShippingCity> findByStateIdOrderByNameAsc(Long stateId);
 }
