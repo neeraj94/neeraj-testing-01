@@ -70,6 +70,7 @@ public class ShippingDataInitializer {
             ShippingCountry country = new ShippingCountry();
             country.setName(name);
             country.setCode(isoCode);
+            country.setEnabled(true);
             countryRepository.save(country);
         }
     }
@@ -102,10 +103,31 @@ public class ShippingDataInitializer {
                             ShippingState created = new ShippingState();
                             created.setCountry(india);
                             created.setName(stateSeed.getName());
+                            created.setEnabled(true);
                             ShippingState saved = stateRepository.save(created);
                             existingStates.add(saved);
                             return saved;
                         });
+
+                if (!state.isEnabled()) {
+                    state.setEnabled(true);
+                    state = stateRepository.save(state);
+                }
+
+                List<ShippingCity> existingCities = cityRepository.findByStateIdOrderByNameAsc(state.getId());
+
+                if (!CollectionUtils.isEmpty(existingCities)) {
+                    boolean updated = false;
+                    for (ShippingCity existingCity : existingCities) {
+                        if (!existingCity.isEnabled()) {
+                            existingCity.setEnabled(true);
+                            updated = true;
+                        }
+                    }
+                    if (updated) {
+                        cityRepository.saveAll(existingCities);
+                    }
+                }
 
                 if (CollectionUtils.isEmpty(stateSeed.getCities())) {
                     continue;
@@ -114,14 +136,24 @@ public class ShippingDataInitializer {
                     if (!StringUtils.hasText(cityName)) {
                         continue;
                     }
-                    boolean exists = cityRepository.existsByStateIdAndNameIgnoreCase(state.getId(), cityName.trim());
-                    if (exists) {
-                        continue;
+                    String normalizedCityName = cityName.trim();
+                    ShippingCity city = existingCities.stream()
+                            .filter(existing -> existing.getName().equalsIgnoreCase(normalizedCityName))
+                            .findFirst()
+                            .orElseGet(() -> {
+                                ShippingCity created = new ShippingCity();
+                                created.setState(state);
+                                created.setName(normalizedCityName);
+                                created.setEnabled(true);
+                                ShippingCity saved = cityRepository.save(created);
+                                existingCities.add(saved);
+                                return saved;
+                            });
+
+                    if (!city.isEnabled()) {
+                        city.setEnabled(true);
+                        cityRepository.save(city);
                     }
-                    ShippingCity city = new ShippingCity();
-                    city.setState(state);
-                    city.setName(cityName.trim());
-                    cityRepository.save(city);
                 }
             }
         } catch (IOException ex) {
@@ -136,8 +168,16 @@ public class ShippingDataInitializer {
             if (states.isEmpty()) {
                 states = createDefaultStates(country);
             }
+            boolean stateUpdates = false;
             for (ShippingState state : states) {
+                if (!state.isEnabled()) {
+                    state.setEnabled(true);
+                    stateUpdates = true;
+                }
                 ensureDefaultCities(state);
+            }
+            if (stateUpdates) {
+                stateRepository.saveAll(states);
             }
         }
     }
@@ -182,6 +222,16 @@ public class ShippingDataInitializer {
     private void ensureDefaultCities(ShippingState state) {
         List<ShippingCity> cities = cityRepository.findByStateIdOrderByNameAsc(state.getId());
         if (!cities.isEmpty()) {
+            boolean updated = false;
+            for (ShippingCity city : cities) {
+                if (!city.isEnabled()) {
+                    city.setEnabled(true);
+                    updated = true;
+                }
+            }
+            if (updated) {
+                cityRepository.saveAll(cities);
+            }
             return;
         }
         String baseName = StringUtils.hasText(state.getName()) ? state.getName().trim() : "State " + state.getId();
