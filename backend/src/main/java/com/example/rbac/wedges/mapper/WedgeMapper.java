@@ -4,16 +4,29 @@ import com.example.rbac.categories.dto.CategoryOptionDto;
 import com.example.rbac.categories.model.Category;
 import com.example.rbac.wedges.dto.WedgeDto;
 import com.example.rbac.wedges.model.Wedge;
-import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
+import org.springframework.stereotype.Component;
 
-@Mapper(componentModel = "spring")
-public interface WedgeMapper {
+@Component
+public class WedgeMapper {
 
-    @Mapping(target = "category", expression = "java(toCategoryOption(wedge.getCategory()))")
-    WedgeDto toDto(Wedge wedge);
+    public WedgeDto toDto(Wedge wedge) {
+        if (wedge == null) {
+            return null;
+        }
+        WedgeDto dto = new WedgeDto();
+        dto.setId(wedge.getId());
+        dto.setName(wedge.getName());
+        dto.setIconUrl(wedge.getIconUrl());
+        dto.setShortDescription(wedge.getShortDescription());
+        dto.setLongDescription(wedge.getLongDescription());
+        dto.setDefaultWedge(wedge.isDefaultWedge());
+        dto.setCategory(toCategoryOption(wedge.getCategory()));
+        dto.setCreatedAt(wedge.getCreatedAt());
+        dto.setUpdatedAt(wedge.getUpdatedAt());
+        return dto;
+    }
 
-    default CategoryOptionDto toCategoryOption(Category category) {
+    private CategoryOptionDto toCategoryOption(Category category) {
         if (category == null) {
             return null;
         }
