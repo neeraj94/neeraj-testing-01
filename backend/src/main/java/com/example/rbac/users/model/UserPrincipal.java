@@ -54,7 +54,7 @@ public class UserPrincipal implements UserDetails {
 
     @Override
     public boolean isAccountNonLocked() {
-        return user.isActive();
+        return user.isActive() && user.getLockedAt() == null;
     }
 
     @Override
