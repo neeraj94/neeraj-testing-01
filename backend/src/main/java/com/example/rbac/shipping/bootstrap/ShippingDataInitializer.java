@@ -111,7 +111,7 @@ public class ShippingDataInitializer {
 
                 if (!state.isEnabled()) {
                     state.setEnabled(true);
-                    state = stateRepository.save(state);
+                    stateRepository.save(state);
                 }
 
                 List<ShippingCity> existingCities = cityRepository.findByStateIdOrderByNameAsc(state.getId());
