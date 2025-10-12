@@ -2,6 +2,7 @@ package com.example.rbac.shipping.model;
 
 import jakarta.persistence.*;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 
 @Entity
@@ -17,6 +18,12 @@ public class ShippingCountry {
 
     @Column(unique = true, length = 10)
     private String code;
+
+    @Column(nullable = false)
+    private boolean enabled = false;
+
+    @Column(name = "base_cost", precision = 12, scale = 2)
+    private BigDecimal baseCost;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
@@ -58,6 +65,22 @@ public class ShippingCountry {
 
     public void setCode(String code) {
         this.code = code;
+    }
+
+    public boolean isEnabled() {
+        return enabled;
+    }
+
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
+    }
+
+    public BigDecimal getBaseCost() {
+        return baseCost;
+    }
+
+    public void setBaseCost(BigDecimal baseCost) {
+        this.baseCost = baseCost;
     }
 
     public Instant getCreatedAt() {

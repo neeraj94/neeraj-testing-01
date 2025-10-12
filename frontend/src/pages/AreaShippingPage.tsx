@@ -1,18 +1,10 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import PageHeader from '../components/PageHeader';
 import PageSection from '../components/PageSection';
-import PaginationControls from '../components/PaginationControls';
 import { useToast } from '../components/ToastProvider';
 import api from '../services/http';
-import type {
-  ShippingAreaRate,
-  ShippingAreaRatePage,
-  ShippingCity,
-  ShippingCountry,
-  ShippingOption,
-  ShippingState
-} from '../types/shipping';
+import type { ShippingCity, ShippingCountry, ShippingState } from '../types/shipping';
 import { useAppSelector } from '../app/hooks';
 import { hasAnyPermission } from '../utils/permissions';
 import type { PermissionKey } from '../types/auth';
@@ -20,24 +12,26 @@ import { extractErrorMessage } from '../utils/errors';
 import { selectBaseCurrency } from '../features/settings/selectors';
 import { formatCurrency } from '../utils/currency';
 
-interface AreaShippingFormState {
-  countryId: number | '';
-  stateId: number | '';
-  cityId: number | '';
-  costValue: string;
-  notes: string;
-}
-
-const DEFAULT_PAGE_SIZE = 10;
-const PAGE_SIZE_OPTIONS = [10, 25, 50];
-
-const defaultFormState: AreaShippingFormState = {
-  countryId: '',
-  stateId: '',
-  cityId: '',
-  costValue: '',
-  notes: ''
+type CountrySettingsPayload = {
+  enabled?: boolean;
+  costValue?: number;
+  clearCost?: boolean;
 };
+
+type StateSettingsPayload = {
+  enabled?: boolean;
+  overrideCost?: number;
+  clearOverride?: boolean;
+};
+
+type CitySettingsPayload = {
+  enabled?: boolean;
+  overrideCost?: number;
+  clearOverride?: boolean;
+};
+
+const renderCost = (value: number | null | undefined, currency: string | undefined) =>
+  typeof value === 'number' && Number.isFinite(value) ? formatCurrency(value, currency) : '—';
 
 const AreaShippingPage = () => {
   const queryClient = useQueryClient();
@@ -45,61 +39,19 @@ const AreaShippingPage = () => {
   const permissions = useAppSelector((state) => state.auth.permissions);
   const baseCurrency = useAppSelector(selectBaseCurrency);
 
-  const [page, setPage] = useState(0);
-  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
-  const [searchDraft, setSearchDraft] = useState('');
-  const [search, setSearch] = useState('');
-  const [panelMode, setPanelMode] = useState<'list' | 'create' | 'edit'>('list');
-  const [form, setForm] = useState<AreaShippingFormState>(defaultFormState);
-  const [formError, setFormError] = useState<string | null>(null);
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const [activeTab, setActiveTab] = useState<'general' | 'notes'>('general');
+  const [selectedCountryId, setSelectedCountryId] = useState<number | null>(null);
+  const [selectedStateId, setSelectedStateId] = useState<number | null>(null);
+  const [countryCostDrafts, setCountryCostDrafts] = useState<Record<number, string>>({});
+  const [stateCostDrafts, setStateCostDrafts] = useState<Record<number, string>>({});
+  const [cityCostDrafts, setCityCostDrafts] = useState<Record<number, string>>({});
+  const [pendingCountryId, setPendingCountryId] = useState<number | null>(null);
+  const [pendingStateId, setPendingStateId] = useState<number | null>(null);
+  const [pendingCityId, setPendingCityId] = useState<number | null>(null);
 
-  const [showCountryComposer, setShowCountryComposer] = useState(false);
-  const [showStateComposer, setShowStateComposer] = useState(false);
-  const [showCityComposer, setShowCityComposer] = useState(false);
-  const [newCountryName, setNewCountryName] = useState('');
-  const [newCountryCode, setNewCountryCode] = useState('');
-  const [newStateName, setNewStateName] = useState('');
-  const [newCityName, setNewCityName] = useState('');
-
-  const canCreate = useMemo(
-    () => hasAnyPermission(permissions as PermissionKey[], ['SHIPPING_AREA_CREATE']),
-    [permissions]
-  );
-  const canUpdate = useMemo(
-    () => hasAnyPermission(permissions as PermissionKey[], ['SHIPPING_AREA_UPDATE']),
-    [permissions]
-  );
-  const canDelete = useMemo(
-    () => hasAnyPermission(permissions as PermissionKey[], ['SHIPPING_AREA_DELETE']),
-    [permissions]
-  );
   const canManageLocations = useMemo(
     () => hasAnyPermission(permissions as PermissionKey[], ['SHIPPING_LOCATION_MANAGE']),
     [permissions]
   );
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      setSearch(searchDraft.trim());
-      setPage(0);
-    }, 300);
-    return () => window.clearTimeout(timer);
-  }, [searchDraft]);
-
-  const areaRatesQuery = useQuery<ShippingAreaRatePage>({
-    queryKey: ['shipping-area-rates', { page, pageSize, search }],
-    queryFn: async () => {
-      const { data } = await api.get<ShippingAreaRatePage>('/shipping/area-rates', {
-        params: { page, size: pageSize, search }
-      });
-      return data;
-    }
-  });
-
-  const areaRates = areaRatesQuery.data?.content ?? [];
-  const totalElements = areaRatesQuery.data?.totalElements ?? 0;
 
   const countriesQuery = useQuery<ShippingCountry[]>({
     queryKey: ['shipping', 'countries'],
@@ -109,8 +61,21 @@ const AreaShippingPage = () => {
     }
   });
 
-  const selectedCountryId = typeof form.countryId === 'number' ? form.countryId : null;
-  const selectedStateId = typeof form.stateId === 'number' ? form.stateId : null;
+  const countries = countriesQuery.data ?? [];
+
+  useEffect(() => {
+    if (!countries.length) {
+      if (selectedCountryId !== null) {
+        setSelectedCountryId(null);
+      }
+      return;
+    }
+    if (!selectedCountryId || !countries.some((country) => country.id === selectedCountryId)) {
+      setSelectedCountryId(countries[0].id);
+    }
+  }, [countries, selectedCountryId]);
+
+  const selectedCountry = countries.find((country) => country.id === selectedCountryId) ?? null;
 
   const statesQuery = useQuery<ShippingState[]>({
     queryKey: ['shipping', 'states', selectedCountryId],
@@ -121,6 +86,22 @@ const AreaShippingPage = () => {
     }
   });
 
+  const states = statesQuery.data ?? [];
+
+  useEffect(() => {
+    if (!states.length) {
+      if (selectedStateId !== null) {
+        setSelectedStateId(null);
+      }
+      return;
+    }
+    if (!selectedStateId || !states.some((state) => state.id === selectedStateId)) {
+      setSelectedStateId(states[0].id);
+    }
+  }, [states, selectedStateId]);
+
+  const selectedState = states.find((state) => state.id === selectedStateId) ?? null;
+
   const citiesQuery = useQuery<ShippingCity[]>({
     queryKey: ['shipping', 'cities', selectedStateId],
     enabled: selectedStateId !== null,
@@ -130,776 +111,490 @@ const AreaShippingPage = () => {
     }
   });
 
-  interface AreaRatePayload {
-    countryId: number;
-    stateId: number;
-    cityId: number;
-    costValue: number;
-    notes: string | null;
-  }
+  const cities = citiesQuery.data ?? [];
 
-  const createMutation = useMutation({
-    mutationFn: async (payload: AreaRatePayload) => {
-      const { data } = await api.post<ShippingAreaRate>('/shipping/area-rates', payload);
+  const getCountryDraft = (country: ShippingCountry) =>
+    countryCostDrafts[country.id] ?? (typeof country.costValue === 'number' ? country.costValue.toString() : '');
+
+  const getStateDraft = (state: ShippingState) =>
+    stateCostDrafts[state.id] ?? (typeof state.overrideCost === 'number' ? state.overrideCost.toString() : '');
+
+  const getCityDraft = (city: ShippingCity) =>
+    cityCostDrafts[city.id] ?? (typeof city.overrideCost === 'number' ? city.overrideCost.toString() : '');
+
+  const updateCountrySettings = useMutation({
+    mutationFn: async ({ id, payload }: { id: number; payload: CountrySettingsPayload }) => {
+      const { data } = await api.put<ShippingCountry>(`/shipping/countries/${id}/settings`, payload);
       return data;
     },
-    onSuccess: () => {
-      notify({ type: 'success', message: 'Area shipping rate created successfully.' });
-      queryClient.invalidateQueries({ queryKey: ['shipping-area-rates'] });
-      closeForm();
+    onMutate: ({ id }) => {
+      setPendingCountryId(id);
     },
-    onError: (error: unknown) => {
-      notify({ type: 'error', message: extractErrorMessage(error, 'Failed to create shipping rate.') });
-    }
-  });
-
-  const updateMutation = useMutation({
-    mutationFn: async ({ id, payload }: { id: number; payload: AreaRatePayload }) => {
-      const { data } = await api.put<ShippingAreaRate>(`/shipping/area-rates/${id}`, payload);
-      return data;
-    },
-    onSuccess: () => {
-      notify({ type: 'success', message: 'Area shipping rate updated successfully.' });
-      queryClient.invalidateQueries({ queryKey: ['shipping-area-rates'] });
-      closeForm();
-    },
-    onError: (error: unknown) => {
-      notify({ type: 'error', message: extractErrorMessage(error, 'Failed to update shipping rate.') });
-    }
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: async (id: number) => {
-      await api.delete(`/shipping/area-rates/${id}`);
-    },
-    onSuccess: () => {
-      notify({ type: 'success', message: 'Area shipping rate deleted successfully.' });
-      queryClient.invalidateQueries({ queryKey: ['shipping-area-rates'] });
-    },
-    onError: (error: unknown) => {
-      notify({ type: 'error', message: extractErrorMessage(error, 'Failed to delete shipping rate.') });
-    }
-  });
-
-  const createCountryMutation = useMutation({
-    mutationFn: async (payload: { name: string; code?: string | null }) => {
-      const { data } = await api.post<ShippingCountry>('/shipping/countries', payload);
-      return data;
-    },
-    onSuccess: (country) => {
-      notify({ type: 'success', message: 'Country added successfully.' });
+    onSuccess: (data) => {
+      setCountryCostDrafts((prev) => ({
+        ...prev,
+        [data.id]: typeof data.costValue === 'number' ? data.costValue.toString() : ''
+      }));
       queryClient.invalidateQueries({ queryKey: ['shipping', 'countries'] });
-      setForm((prev) => ({ ...prev, countryId: country.id, stateId: '', cityId: '' }));
-      setShowCountryComposer(false);
-      setNewCountryName('');
-      setNewCountryCode('');
+      queryClient.invalidateQueries({ queryKey: ['shipping', 'states', data.id] });
+      notify({ type: 'success', message: 'Country settings updated.' });
     },
     onError: (error: unknown) => {
-      notify({ type: 'error', message: extractErrorMessage(error, 'Failed to create country.') });
+      notify({ type: 'error', message: extractErrorMessage(error, 'Failed to update country settings.') });
+    },
+    onSettled: () => {
+      setPendingCountryId(null);
     }
   });
 
-  const createStateMutation = useMutation({
-    mutationFn: async ({ countryId, name }: { countryId: number; name: string }) => {
-      const { data } = await api.post<ShippingState>(`/shipping/countries/${countryId}/states`, { name });
-      return data;
-    },
-    onSuccess: (state) => {
-      notify({ type: 'success', message: 'State added successfully.' });
-      if (selectedCountryId) {
-        queryClient.invalidateQueries({ queryKey: ['shipping', 'states', selectedCountryId] });
-      }
-      setForm((prev) => ({ ...prev, stateId: state.id, cityId: '' }));
-      setShowStateComposer(false);
-      setNewStateName('');
-    },
-    onError: (error: unknown) => {
-      notify({ type: 'error', message: extractErrorMessage(error, 'Failed to create state.') });
-    }
-  });
-
-  const createCityMutation = useMutation({
-    mutationFn: async ({ stateId, name }: { stateId: number; name: string }) => {
-      const { data } = await api.post<ShippingCity>(`/shipping/states/${stateId}/cities`, { name });
-      return data;
-    },
-    onSuccess: (city) => {
-      notify({ type: 'success', message: 'City added successfully.' });
-      if (selectedStateId) {
-        queryClient.invalidateQueries({ queryKey: ['shipping', 'cities', selectedStateId] });
-      }
-      setForm((prev) => ({ ...prev, cityId: city.id }));
-      setShowCityComposer(false);
-      setNewCityName('');
-    },
-    onError: (error: unknown) => {
-      notify({ type: 'error', message: extractErrorMessage(error, 'Failed to create city.') });
-    }
-  });
-
-  const openCreateForm = () => {
-    setForm({ ...defaultFormState });
-    setFormError(null);
-    setEditingId(null);
-    setPanelMode('create');
-    setActiveTab('general');
-    setShowCountryComposer(false);
-    setShowStateComposer(false);
-    setShowCityComposer(false);
-    setNewCountryName('');
-    setNewCountryCode('');
-    setNewStateName('');
-    setNewCityName('');
-  };
-
-  const openEditForm = (rate: ShippingAreaRate) => {
-    setForm({
-      countryId: rate.countryId,
-      stateId: rate.stateId,
-      cityId: rate.cityId,
-      costValue: `${rate.costValue ?? ''}`,
-      notes: rate.notes ?? ''
-    });
-    setFormError(null);
-    setEditingId(rate.id);
-    setPanelMode('edit');
-    setActiveTab('general');
-    setShowCountryComposer(false);
-    setShowStateComposer(false);
-    setShowCityComposer(false);
-    setNewCountryName('');
-    setNewCountryCode('');
-    setNewStateName('');
-    setNewCityName('');
-  };
-
-  const closeForm = () => {
-    setPanelMode('list');
-    setForm({ ...defaultFormState });
-    setFormError(null);
-    setEditingId(null);
-    setActiveTab('general');
-    setShowCountryComposer(false);
-    setShowStateComposer(false);
-    setShowCityComposer(false);
-    setNewCountryName('');
-    setNewCountryCode('');
-    setNewStateName('');
-    setNewCityName('');
-  };
-
-  const handleDelete = (rate: ShippingAreaRate) => {
-    if (!canDelete) {
-      return;
-    }
-    const confirmed = window.confirm(`Delete the shipping rate for ${rate.cityName}?`);
-    if (!confirmed) {
-      return;
-    }
-    deleteMutation.mutate(rate.id);
-  };
-
-  const formatDate = (value: string) => {
-    try {
-      const date = new Date(value);
-      return new Intl.DateTimeFormat(undefined, {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric'
-      }).format(date);
-    } catch (error) {
-      return value;
-    }
-  };
-
-  const costLabel = (cost: number | null | undefined) => {
-    if (cost == null) {
-      return '--';
-    }
-    return formatCurrency(cost, baseCurrency);
-  };
-
-  const handleSubmit = async () => {
-    const countryId = typeof form.countryId === 'number' ? form.countryId : NaN;
-    const stateId = typeof form.stateId === 'number' ? form.stateId : NaN;
-    const cityId = typeof form.cityId === 'number' ? form.cityId : NaN;
-
-    if (!Number.isFinite(countryId)) {
-      setFormError('Select a country for this shipping rate.');
-      setActiveTab('general');
-      return;
-    }
-
-    if (!Number.isFinite(stateId)) {
-      setFormError('Select a state for this shipping rate.');
-      setActiveTab('general');
-      return;
-    }
-
-    if (!Number.isFinite(cityId)) {
-      setFormError('Select a city for this shipping rate.');
-      setActiveTab('general');
-      return;
-    }
-
-    const normalizedCost = form.costValue.trim();
-    if (!normalizedCost) {
-      setFormError('Enter a shipping cost.');
-      setActiveTab('general');
-      return;
-    }
-
-    const parsedCost = Number.parseFloat(normalizedCost);
-    if (!Number.isFinite(parsedCost) || parsedCost < 0) {
-      setFormError('Shipping cost must be a non-negative number.');
-      setActiveTab('general');
-      return;
-    }
-
-    const payload: AreaRatePayload = {
+  const updateStateSettings = useMutation({
+    mutationFn: async ({
+      id,
       countryId,
-      stateId,
-      cityId,
-      costValue: Number.parseFloat(parsedCost.toFixed(2)),
-      notes: form.notes.trim() ? form.notes.trim() : null
-    };
+      payload
+    }: {
+      id: number;
+      countryId: number;
+      payload: StateSettingsPayload;
+    }) => {
+      const { data } = await api.put<ShippingState>(`/shipping/states/${id}/settings`, payload);
+      return data;
+    },
+    onMutate: ({ id }) => {
+      setPendingStateId(id);
+    },
+    onSuccess: (data, variables) => {
+      setStateCostDrafts((prev) => ({
+        ...prev,
+        [data.id]: typeof data.overrideCost === 'number' ? data.overrideCost.toString() : ''
+      }));
+      queryClient.invalidateQueries({ queryKey: ['shipping', 'states', variables.countryId] });
+      queryClient.invalidateQueries({ queryKey: ['shipping', 'cities', variables.id] });
+      notify({ type: 'success', message: 'State settings updated.' });
+    },
+    onError: (error: unknown) => {
+      notify({ type: 'error', message: extractErrorMessage(error, 'Failed to update state settings.') });
+    },
+    onSettled: () => {
+      setPendingStateId(null);
+    }
+  });
 
-    if (panelMode === 'edit' && editingId) {
-      await updateMutation.mutateAsync({ id: editingId, payload });
+  const updateCitySettings = useMutation({
+    mutationFn: async ({ id, stateId, payload }: { id: number; stateId: number; payload: CitySettingsPayload }) => {
+      const { data } = await api.put<ShippingCity>(`/shipping/cities/${id}/settings`, payload);
+      return data;
+    },
+    onMutate: ({ id }) => {
+      setPendingCityId(id);
+    },
+    onSuccess: (data, variables) => {
+      setCityCostDrafts((prev) => ({
+        ...prev,
+        [data.id]: typeof data.overrideCost === 'number' ? data.overrideCost.toString() : ''
+      }));
+      queryClient.invalidateQueries({ queryKey: ['shipping', 'cities', variables.stateId] });
+      notify({ type: 'success', message: 'City settings updated.' });
+    },
+    onError: (error: unknown) => {
+      notify({ type: 'error', message: extractErrorMessage(error, 'Failed to update city settings.') });
+    },
+    onSettled: () => {
+      setPendingCityId(null);
+    }
+  });
+
+  const handleCountryToggle = (country: ShippingCountry) => {
+    if (!canManageLocations) {
       return;
     }
-
-    await createMutation.mutateAsync(payload);
+    updateCountrySettings.mutate({ id: country.id, payload: { enabled: !country.enabled } });
   };
 
-  const onCountryChange = (value: string) => {
-    if (value === '') {
-      setForm((prev) => ({ ...prev, countryId: '', stateId: '', cityId: '' }));
+  const handleStateToggle = (state: ShippingState) => {
+    if (!canManageLocations) {
       return;
     }
-    const numericValue = Number.parseInt(value, 10);
-    setForm((prev) => ({ ...prev, countryId: Number.isNaN(numericValue) ? '' : numericValue, stateId: '', cityId: '' }));
+    updateStateSettings.mutate({ id: state.id, countryId: state.countryId, payload: { enabled: !state.enabled } });
   };
 
-  const onStateChange = (value: string) => {
-    if (value === '') {
-      setForm((prev) => ({ ...prev, stateId: '', cityId: '' }));
+  const handleCityToggle = (city: ShippingCity) => {
+    if (!canManageLocations) {
       return;
     }
-    const numericValue = Number.parseInt(value, 10);
-    setForm((prev) => ({ ...prev, stateId: Number.isNaN(numericValue) ? '' : numericValue, cityId: '' }));
+    updateCitySettings.mutate({ id: city.id, stateId: city.stateId, payload: { enabled: !city.enabled } });
   };
 
-  const onCityChange = (value: string) => {
-    if (value === '') {
-      setForm((prev) => ({ ...prev, cityId: '' }));
+  const handleCountryCostSave = (country: ShippingCountry) => {
+    if (!canManageLocations) {
       return;
     }
-    const numericValue = Number.parseInt(value, 10);
-    setForm((prev) => ({ ...prev, cityId: Number.isNaN(numericValue) ? '' : numericValue }));
-  };
-
-  const submitNewCountry = () => {
-    const trimmed = newCountryName.trim();
-    if (!trimmed) {
-      notify({ type: 'error', message: 'Enter a country name.' });
+    const rawValue = (countryCostDrafts[country.id] ?? '').trim();
+    if (!rawValue) {
+      updateCountrySettings.mutate({ id: country.id, payload: { clearCost: true } });
       return;
     }
-    createCountryMutation.mutate({ name: trimmed, code: newCountryCode.trim() || undefined });
-  };
-
-  const submitNewState = () => {
-    if (!selectedCountryId) {
-      notify({ type: 'error', message: 'Select a country before adding a state.' });
+    const numericValue = Number(rawValue);
+    if (Number.isNaN(numericValue)) {
+      notify({ type: 'error', message: 'Enter a valid number for the country rate.' });
       return;
     }
-    const trimmed = newStateName.trim();
-    if (!trimmed) {
-      notify({ type: 'error', message: 'Enter a state name.' });
+    updateCountrySettings.mutate({ id: country.id, payload: { costValue: numericValue } });
+  };
+
+  const handleStateCostSave = (state: ShippingState) => {
+    if (!canManageLocations) {
       return;
     }
-    createStateMutation.mutate({ countryId: selectedCountryId, name: trimmed });
-  };
-
-  const submitNewCity = () => {
-    if (!selectedStateId) {
-      notify({ type: 'error', message: 'Select a state before adding a city.' });
+    const rawValue = (stateCostDrafts[state.id] ?? '').trim();
+    if (!rawValue) {
+      updateStateSettings.mutate({ id: state.id, countryId: state.countryId, payload: { clearOverride: true } });
       return;
     }
-    const trimmed = newCityName.trim();
-    if (!trimmed) {
-      notify({ type: 'error', message: 'Enter a city name.' });
+    const numericValue = Number(rawValue);
+    if (Number.isNaN(numericValue)) {
+      notify({ type: 'error', message: 'Enter a valid number for the state override.' });
       return;
     }
-    createCityMutation.mutate({ stateId: selectedStateId, name: trimmed });
+    updateStateSettings.mutate({ id: state.id, countryId: state.countryId, payload: { overrideCost: numericValue } });
   };
 
-  const renderInlineComposer = (
-    type: 'country' | 'state' | 'city',
-    options: {
-      visible: boolean;
-      onCancel: () => void;
-      onSubmit: () => void;
-      name: string;
-      onNameChange: (value: string) => void;
-      secondaryField?: { label: string; value: string; onChange: (value: string) => void } | null;
-      isSubmitting: boolean;
-      helper?: string;
-      placeholder?: string;
+  const handleCityCostSave = (city: ShippingCity) => {
+    if (!canManageLocations) {
+      return;
     }
-  ) => {
-    if (!options.visible) {
-      return null;
+    const rawValue = (cityCostDrafts[city.id] ?? '').trim();
+    if (!rawValue) {
+      updateCitySettings.mutate({ id: city.id, stateId: city.stateId, payload: { clearOverride: true } });
+      return;
     }
-    return (
-      <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-          <div className="flex-1">
-            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-600">
-              {type === 'country' ? 'Country name' : type === 'state' ? 'State name' : 'City name'}
-            </label>
-            <input
-              type="text"
-              value={options.name}
-              onChange={(event) => options.onNameChange(event.target.value)}
-              placeholder={options.placeholder ?? ''}
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-            />
-          </div>
-          {options.secondaryField ? (
-            <div className="flex-1">
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-600">
-                {options.secondaryField.label}
-              </label>
-              <input
-                type="text"
-                value={options.secondaryField.value}
-                onChange={(event) => options.secondaryField?.onChange(event.target.value)}
-                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-              />
-            </div>
-          ) : null}
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={options.onSubmit}
-              disabled={options.isSubmitting}
-              className="inline-flex items-center justify-center rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-70"
-            >
-              Save
-            </button>
-            <button
-              type="button"
-              onClick={options.onCancel}
-              className="inline-flex items-center justify-center rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-        {options.helper ? <p className="mt-3 text-xs text-slate-500">{options.helper}</p> : null}
-      </div>
-    );
+    const numericValue = Number(rawValue);
+    if (Number.isNaN(numericValue)) {
+      notify({ type: 'error', message: 'Enter a valid number for the city override.' });
+      return;
+    }
+    updateCitySettings.mutate({ id: city.id, stateId: city.stateId, payload: { overrideCost: numericValue } });
   };
-
-  const renderDirectory = () => (
-    <PageSection>
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <h2 className="text-lg font-semibold text-slate-900">Area-wise shipping</h2>
-          <p className="text-sm text-slate-500">
-            Define destination-based shipping charges for each country, state, and city you serve.
-          </p>
-        </div>
-        <div className="flex w-full gap-3 sm:max-w-xs">
-          <input
-            type="search"
-            value={searchDraft}
-            onChange={(event) => setSearchDraft(event.target.value)}
-            placeholder="Search locations"
-            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-          />
-        </div>
-      </div>
-
-      <div className="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <table className="min-w-full divide-y divide-slate-200">
-          <thead className="bg-slate-50">
-            <tr>
-              <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Location
-              </th>
-              <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Cost
-              </th>
-              <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Updated
-              </th>
-              {(canUpdate || canDelete) && (
-                <th scope="col" className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  Actions
-                </th>
-              )}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-200 bg-white">
-            {areaRates.length > 0 ? (
-              areaRates.map((rate) => (
-                <tr key={rate.id} className="transition hover:bg-slate-50">
-                  <td className="px-4 py-3">
-                    <div className="font-medium text-slate-900">{rate.cityName}</div>
-                    <p className="text-xs text-slate-500">
-                      {rate.stateName} • {rate.countryName}
-                    </p>
-                    {rate.notes ? (
-                      <p className="mt-1 text-xs text-slate-500 line-clamp-2">{rate.notes}</p>
-                    ) : null}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-slate-600">{costLabel(rate.costValue)}</td>
-                  <td className="px-4 py-3 text-sm text-slate-600">{formatDate(rate.updatedAt)}</td>
-                  {(canUpdate || canDelete) && (
-                    <td className="px-4 py-3">
-                      <div className="flex justify-end gap-2">
-                        {canUpdate && (
-                          <button
-                            type="button"
-                            onClick={() => openEditForm(rate)}
-                            className="rounded-full border border-slate-200 p-2 text-slate-500 transition hover:border-slate-300 hover:text-slate-800"
-                            aria-label={`Edit shipping rate for ${rate.cityName}`}
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
-                              <path d="M15.414 2.586a2 2 0 0 0-2.828 0L3 12.172V17h4.828l9.586-9.586a2 2 0 0 0 0-2.828l-2-2Zm-2.121 1.415 2 2L13 8.293l-2-2 2.293-2.292ZM5 13.414 11.293 7.12l1.586 1.586L6.586 15H5v-1.586Z" />
-                            </svg>
-                          </button>
-                        )}
-                        {canDelete && (
-                          <button
-                            type="button"
-                            onClick={() => handleDelete(rate)}
-                            className="rounded-full border border-rose-200 p-2 text-rose-500 transition hover:border-rose-300 hover:text-rose-600"
-                            aria-label={`Delete shipping rate for ${rate.cityName}`}
-                          >
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth={1.5}
-                              className="h-4 w-4"
-                            >
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M6 7h12" />
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M10 11v6" />
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M14 11v6" />
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M9 7V4h6v3m2 0v12a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V7h12Z" />
-                            </svg>
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  )}
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan={canUpdate || canDelete ? 4 : 3} className="px-4 py-6 text-center text-sm text-slate-500">
-                  {areaRatesQuery.isLoading ? 'Loading shipping rates…' : 'No shipping rates found.'}
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      <PaginationControls
-        page={page}
-        pageSize={pageSize}
-        totalElements={totalElements}
-        pageSizeOptions={PAGE_SIZE_OPTIONS}
-        onPageChange={setPage}
-        onPageSizeChange={(size) => {
-          setPageSize(size);
-          setPage(0);
-        }}
-        isLoading={areaRatesQuery.isLoading}
-      />
-    </PageSection>
-  );
-
-  const renderForm = () => {
-    const isCreate = panelMode === 'create';
-    const isSaving = createMutation.isPending || updateMutation.isPending;
-    const headerTitle = isCreate ? 'Create shipping rate' : 'Edit shipping rate';
-
-    const handleFormSubmit = async (event: FormEvent<HTMLFormElement>) => {
-      event.preventDefault();
-      await handleSubmit();
-    };
-
-    const renderSelect = (
-      id: string,
-      label: string,
-      value: number | '',
-      onChange: (value: string) => void,
-      options: ShippingOption[],
-      loading: boolean,
-      placeholder: string,
-      composerToggle?: () => void
-    ) => (
-      <div>
-        <div className="flex items-center justify-between">
-          <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor={id}>
-            {label}
-          </label>
-          {composerToggle && canManageLocations ? (
-            <button
-              type="button"
-              onClick={composerToggle}
-              className="text-xs font-semibold text-primary hover:text-primary/80"
-            >
-              Add new
-            </button>
-          ) : null}
-        </div>
-        <select
-          id={id}
-          value={value === '' ? '' : value}
-          onChange={(event) => onChange(event.target.value)}
-          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-        >
-          <option value="">{loading ? 'Loading…' : placeholder}</option>
-          {options.map((option) => (
-            <option key={option.id} value={option.id}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-      </div>
-    );
-
-    const countries: ShippingOption[] = (countriesQuery.data ?? []).map((country) => ({
-      id: country.id,
-      label: country.name
-    }));
-
-    const states: ShippingOption[] = (statesQuery.data ?? []).map((state) => ({
-      id: state.id,
-      label: state.name
-    }));
-
-    const cities: ShippingOption[] = (citiesQuery.data ?? []).map((city) => ({
-      id: city.id,
-      label: city.name
-    }));
-
-    return (
-      <form onSubmit={handleFormSubmit} className="flex flex-col gap-6 rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <header className="flex flex-col gap-4 border-b border-slate-200 bg-slate-50 px-6 py-5 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex items-start gap-4">
-            <button
-              type="button"
-              onClick={closeForm}
-              className="rounded-full border border-slate-200 bg-white p-2 text-slate-600 transition hover:border-primary/40 hover:text-primary"
-              aria-label="Back to area shipping directory"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} className="h-5 w-5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="m15 19-7-7 7-7" />
-              </svg>
-            </button>
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-primary">{isCreate ? 'New shipping rate' : 'Edit shipping rate'}</p>
-              <h2 className="mt-1 text-2xl font-semibold text-slate-900">{headerTitle}</h2>
-              {editingId && !isCreate ? (
-                <p className="text-sm text-slate-500">Shipping rate ID #{editingId}</p>
-              ) : null}
-            </div>
-          </div>
-        </header>
-        <div className="grid border-b border-slate-200 lg:grid-cols-[240px,1fr]">
-          <nav className="flex shrink-0 flex-row gap-2 border-b border-slate-200 bg-white px-6 py-3 text-sm font-semibold text-slate-600 lg:flex-col lg:border-b-0 lg:border-r">
-            {[
-              { key: 'general', label: 'General' },
-              { key: 'notes', label: 'Notes & visibility' }
-            ].map((tab) => (
-              <button
-                key={tab.key}
-                type="button"
-                onClick={() => setActiveTab(tab.key as 'general' | 'notes')}
-                className={`rounded-lg px-3 py-2 text-left transition ${
-                  activeTab === tab.key ? 'bg-primary/10 text-primary' : 'text-slate-600 hover:bg-slate-100'
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </nav>
-          <div className="flex-1 px-6 py-6">
-            {formError && (
-              <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-600">{formError}</div>
-            )}
-            {activeTab === 'general' ? (
-              <div className="space-y-6">
-                {renderSelect(
-                  'shipping-country',
-                  'Country',
-                  form.countryId,
-                  onCountryChange,
-                  countries,
-                  countriesQuery.isLoading,
-                  'Select a country',
-                  () => setShowCountryComposer((value) => !value)
-                )}
-                {renderInlineComposer('country', {
-                  visible: showCountryComposer,
-                  onCancel: () => {
-                    setShowCountryComposer(false);
-                    setNewCountryName('');
-                    setNewCountryCode('');
-                  },
-                  onSubmit: submitNewCountry,
-                  name: newCountryName,
-                  onNameChange: setNewCountryName,
-                  secondaryField: {
-                    label: 'Country code (optional)',
-                    value: newCountryCode,
-                    onChange: setNewCountryCode
-                  },
-                  isSubmitting: createCountryMutation.isPending,
-                  helper: 'The code helps match platform integrations. Example: US, IN, DE.',
-                  placeholder: 'India'
-                })}
-                {renderSelect(
-                  'shipping-state',
-                  'State / Region',
-                  form.stateId,
-                  onStateChange,
-                  states,
-                  statesQuery.isLoading,
-                  selectedCountryId ? 'Select a state' : 'Choose a country first',
-                  selectedCountryId ? () => setShowStateComposer((value) => !value) : undefined
-                )}
-                {renderInlineComposer('state', {
-                  visible: showStateComposer,
-                  onCancel: () => {
-                    setShowStateComposer(false);
-                    setNewStateName('');
-                  },
-                  onSubmit: submitNewState,
-                  name: newStateName,
-                  onNameChange: setNewStateName,
-                  isSubmitting: createStateMutation.isPending,
-                  helper: selectedCountryId ? undefined : 'Select a country before adding states.',
-                  placeholder: 'California'
-                })}
-                {renderSelect(
-                  'shipping-city',
-                  'City / Area',
-                  form.cityId,
-                  onCityChange,
-                  cities,
-                  citiesQuery.isLoading,
-                  selectedStateId ? 'Select a city' : 'Choose a state first',
-                  selectedStateId ? () => setShowCityComposer((value) => !value) : undefined
-                )}
-                {renderInlineComposer('city', {
-                  visible: showCityComposer,
-                  onCancel: () => {
-                    setShowCityComposer(false);
-                    setNewCityName('');
-                  },
-                  onSubmit: submitNewCity,
-                  name: newCityName,
-                  onNameChange: setNewCityName,
-                  isSubmitting: createCityMutation.isPending,
-                  helper: selectedStateId ? undefined : 'Select a state before adding cities.',
-                  placeholder: 'San Francisco'
-                })}
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="shipping-cost">
-                    Shipping cost
-                  </label>
-                  <input
-                    id="shipping-cost"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    inputMode="decimal"
-                    value={form.costValue}
-                    onChange={(event) => setForm((prev) => ({ ...prev, costValue: event.target.value }))}
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                    placeholder="0.00"
-                  />
-                  <p className="mt-1 text-xs text-slate-500">
-                    Customers within this city will see this charge at checkout.
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="shipping-notes">
-                    Internal notes (optional)
-                  </label>
-                  <textarea
-                    id="shipping-notes"
-                    value={form.notes}
-                    onChange={(event) => setForm((prev) => ({ ...prev, notes: event.target.value }))}
-                    rows={5}
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                    placeholder="Mention delivery timelines or courier preferences for this area."
-                  />
-                  <p className="mt-1 text-xs text-slate-500">
-                    These notes appear for your operations team and will not be shown to customers.
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-        <footer className="flex flex-col gap-3 bg-slate-50 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
-          <span className="text-xs text-slate-500">Ensure delivery partners are ready for changes to this area before publishing.</span>
-          <div className="flex flex-wrap items-center gap-3">
-            <button
-              type="button"
-              onClick={closeForm}
-              className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isSaving}
-              className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-70"
-            >
-              {isSaving ? 'Saving…' : isCreate ? 'Create shipping rate' : 'Save changes'}
-            </button>
-          </div>
-        </footer>
-      </form>
-    );
-  };
-
-  const isDirectoryView = panelMode === 'list';
 
   return (
-    <div className="space-y-6 px-6 py-6">
+    <>
       <PageHeader
-        title="Area-wise shipping"
-        description="Manage granular shipping charges for each serviceable area."
-        actions={
-          isDirectoryView && canCreate ? (
-            <button
-              type="button"
-              onClick={openCreateForm}
-              className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white shadow hover:bg-primary/90"
-            >
-              New area rate
-            </button>
-          ) : undefined
-        }
+        title="Area-wise Shipping"
+        description="Quickly enable countries, states, and cities while overriding delivery costs where required."
       />
+      <PageSection>
+        <div className="grid gap-6 lg:grid-cols-3">
+          <div className="flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+            <div className="border-b border-slate-200 px-4 py-3">
+              <h2 className="text-sm font-semibold text-slate-700">Countries</h2>
+              <p className="mt-1 text-xs text-slate-500">
+                Enable destinations and set the default shipping rate for each country.
+              </p>
+            </div>
+            <div className="flex-1 overflow-hidden">
+              {countriesQuery.isLoading ? (
+                <div className="px-4 py-6 text-sm text-slate-500">Loading countries…</div>
+              ) : !countries.length ? (
+                <div className="px-4 py-6 text-sm text-slate-500">No countries available.</div>
+              ) : (
+                <div className="max-h-[28rem] overflow-y-auto">
+                  <table className="min-w-full divide-y divide-slate-100">
+                    <tbody className="divide-y divide-slate-100">
+                      {countries.map((country) => {
+                        const isSelected = country.id === selectedCountryId;
+                        const draftValue = getCountryDraft(country);
+                        const isDisabled = pendingCountryId === country.id;
+                        return (
+                          <tr
+                            key={country.id}
+                            onClick={() => setSelectedCountryId(country.id)}
+                            onKeyDown={(event) => {
+                              if (event.key === 'Enter' || event.key === ' ') {
+                                event.preventDefault();
+                                setSelectedCountryId(country.id);
+                              }
+                            }}
+                            tabIndex={0}
+                            aria-selected={isSelected}
+                            className={`cursor-pointer transition hover:bg-blue-50/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2 ${
+                              isSelected ? 'bg-blue-50/60' : ''
+                            }`}
+                          >
+                            <td className="px-4 py-3 align-top">
+                              <div className="text-sm font-semibold text-slate-800">{country.name}</div>
+                              <div className="mt-1 text-xs uppercase tracking-wide text-slate-400">
+                                {country.code ?? '—'}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 align-top text-sm text-slate-700">
+                              <div className="font-semibold">{renderCost(country.effectiveCost, baseCurrency)}</div>
+                              <div className="mt-1 text-xs text-slate-500">Base rate</div>
+                            </td>
+                            <td className="px-4 py-3 align-top">
+                              <div className="flex flex-col items-end gap-3">
+                                <button
+                                  type="button"
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    handleCountryToggle(country);
+                                  }}
+                                  disabled={!canManageLocations || isDisabled}
+                                  className={`relative inline-flex h-6 w-11 items-center rounded-full border transition focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:cursor-not-allowed disabled:opacity-60 ${
+                                    country.enabled
+                                      ? 'border-emerald-200 bg-emerald-500/90'
+                                      : 'border-slate-300 bg-slate-200'
+                                  }`}
+                                  aria-label={country.enabled ? `Disable ${country.name}` : `Enable ${country.name}`}
+                                >
+                                  <span
+                                    className={`absolute left-1 h-4 w-4 rounded-full bg-white shadow transition-transform ${
+                                      country.enabled ? 'translate-x-5' : 'translate-x-0'
+                                    }`}
+                                  />
+                                </button>
+                                <div className="flex items-center gap-2">
+                                  <input
+                                    type="number"
+                                    inputMode="decimal"
+                                    step="0.01"
+                                    min="0"
+                                    value={draftValue}
+                                    onClick={(event) => event.stopPropagation()}
+                                    onChange={(event) =>
+                                      setCountryCostDrafts((prev) => ({ ...prev, [country.id]: event.target.value }))
+                                    }
+                                    className="w-24 rounded-md border border-slate-300 px-2 py-1 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:bg-slate-100"
+                                    placeholder="0.00"
+                                    disabled={!canManageLocations || isDisabled}
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      handleCountryCostSave(country);
+                                    }}
+                                    disabled={!canManageLocations || isDisabled}
+                                    className="rounded-md border border-primary px-2 py-1 text-xs font-semibold text-primary transition hover:bg-primary/10 disabled:cursor-not-allowed disabled:border-slate-300 disabled:text-slate-400"
+                                  >
+                                    Save
+                                  </button>
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
 
-      {isDirectoryView ? renderDirectory() : renderForm()}
-    </div>
+          <div className="flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+            <div className="border-b border-slate-200 px-4 py-3">
+              <h2 className="text-sm font-semibold text-slate-700">States</h2>
+              <p className="mt-1 text-xs text-slate-500">
+                Enable specific states and override the inherited country rate when needed.
+              </p>
+            </div>
+            <div className="flex-1 overflow-hidden">
+              {!selectedCountry ? (
+                <div className="px-4 py-6 text-sm text-slate-500">Select a country to manage its states.</div>
+              ) : statesQuery.isLoading ? (
+                <div className="px-4 py-6 text-sm text-slate-500">Loading states…</div>
+              ) : !states.length ? (
+                <div className="px-4 py-6 text-sm text-slate-500">No states available for this country.</div>
+              ) : (
+                <div className="max-h-[28rem] overflow-y-auto">
+                  <table className="min-w-full divide-y divide-slate-100">
+                    <tbody className="divide-y divide-slate-100">
+                      {states.map((state) => {
+                        const isSelected = state.id === selectedStateId;
+                        const draftValue = getStateDraft(state);
+                        const isDisabled = pendingStateId === state.id;
+                        return (
+                          <tr
+                            key={state.id}
+                            onClick={() => setSelectedStateId(state.id)}
+                            onKeyDown={(event) => {
+                              if (event.key === 'Enter' || event.key === ' ') {
+                                event.preventDefault();
+                                setSelectedStateId(state.id);
+                              }
+                            }}
+                            tabIndex={0}
+                            aria-selected={isSelected}
+                            className={`cursor-pointer transition hover:bg-blue-50/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2 ${
+                              isSelected ? 'bg-blue-50/60' : ''
+                            }`}
+                          >
+                            <td className="px-4 py-3 align-top">
+                              <div className="text-sm font-semibold text-slate-800">{state.name}</div>
+                              <div className="mt-1 text-xs text-slate-500">
+                                Inherited: {renderCost(state.inheritedCost ?? null, baseCurrency)}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 align-top text-sm text-slate-700">
+                              <div className="font-semibold">{renderCost(state.effectiveCost, baseCurrency)}</div>
+                              <div className="mt-1 text-xs text-slate-500">Effective rate</div>
+                            </td>
+                            <td className="px-4 py-3 align-top">
+                              <div className="flex flex-col items-end gap-3">
+                                <button
+                                  type="button"
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    handleStateToggle(state);
+                                  }}
+                                  disabled={!canManageLocations || isDisabled}
+                                  className={`relative inline-flex h-6 w-11 items-center rounded-full border transition focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:cursor-not-allowed disabled:opacity-60 ${
+                                    state.enabled
+                                      ? 'border-emerald-200 bg-emerald-500/90'
+                                      : 'border-slate-300 bg-slate-200'
+                                  }`}
+                                  aria-label={state.enabled ? `Disable ${state.name}` : `Enable ${state.name}`}
+                                >
+                                  <span
+                                    className={`absolute left-1 h-4 w-4 rounded-full bg-white shadow transition-transform ${
+                                      state.enabled ? 'translate-x-5' : 'translate-x-0'
+                                    }`}
+                                  />
+                                </button>
+                                <div className="flex items-center gap-2">
+                                  <input
+                                    type="number"
+                                    inputMode="decimal"
+                                    step="0.01"
+                                    min="0"
+                                    value={draftValue}
+                                    onClick={(event) => event.stopPropagation()}
+                                    onChange={(event) =>
+                                      setStateCostDrafts((prev) => ({ ...prev, [state.id]: event.target.value }))
+                                    }
+                                    className="w-24 rounded-md border border-slate-300 px-2 py-1 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:bg-slate-100"
+                                    placeholder="0.00"
+                                    disabled={!canManageLocations || isDisabled}
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      handleStateCostSave(state);
+                                    }}
+                                    disabled={!canManageLocations || isDisabled}
+                                    className="rounded-md border border-primary px-2 py-1 text-xs font-semibold text-primary transition hover:bg-primary/10 disabled:cursor-not-allowed disabled:border-slate-300 disabled:text-slate-400"
+                                  >
+                                    Save
+                                  </button>
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+            <div className="border-b border-slate-200 px-4 py-3">
+              <h2 className="text-sm font-semibold text-slate-700">Cities</h2>
+              <p className="mt-1 text-xs text-slate-500">
+                Fine-tune delivery costs for enabled cities or inherit the selected state value.
+              </p>
+            </div>
+            <div className="flex-1 overflow-hidden">
+              {!selectedState ? (
+                <div className="px-4 py-6 text-sm text-slate-500">Select a state to manage its cities.</div>
+              ) : citiesQuery.isLoading ? (
+                <div className="px-4 py-6 text-sm text-slate-500">Loading cities…</div>
+              ) : !cities.length ? (
+                <div className="px-4 py-6 text-sm text-slate-500">No cities available for this state.</div>
+              ) : (
+                <div className="max-h-[28rem] overflow-y-auto">
+                  <table className="min-w-full divide-y divide-slate-100">
+                    <tbody className="divide-y divide-slate-100">
+                      {cities.map((city) => {
+                        const draftValue = getCityDraft(city);
+                        const isDisabled = pendingCityId === city.id;
+                        return (
+                          <tr key={city.id} className="transition hover:bg-blue-50/40">
+                            <td className="px-4 py-3 align-top">
+                              <div className="text-sm font-semibold text-slate-800">{city.name}</div>
+                              <div className="mt-1 text-xs text-slate-500">
+                                Inherited: {renderCost(city.inheritedCost ?? null, baseCurrency)}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 align-top text-sm text-slate-700">
+                              <div className="font-semibold">{renderCost(city.effectiveCost, baseCurrency)}</div>
+                              <div className="mt-1 text-xs text-slate-500">Effective rate</div>
+                            </td>
+                            <td className="px-4 py-3 align-top">
+                              <div className="flex flex-col items-end gap-3">
+                                <button
+                                  type="button"
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    handleCityToggle(city);
+                                  }}
+                                  disabled={!canManageLocations || isDisabled}
+                                  className={`relative inline-flex h-6 w-11 items-center rounded-full border transition focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:cursor-not-allowed disabled:opacity-60 ${
+                                    city.enabled
+                                      ? 'border-emerald-200 bg-emerald-500/90'
+                                      : 'border-slate-300 bg-slate-200'
+                                  }`}
+                                  aria-label={city.enabled ? `Disable ${city.name}` : `Enable ${city.name}`}
+                                >
+                                  <span
+                                    className={`absolute left-1 h-4 w-4 rounded-full bg-white shadow transition-transform ${
+                                      city.enabled ? 'translate-x-5' : 'translate-x-0'
+                                    }`}
+                                  />
+                                </button>
+                                <div className="flex items-center gap-2">
+                                  <input
+                                    type="number"
+                                    inputMode="decimal"
+                                    step="0.01"
+                                    min="0"
+                                    value={draftValue}
+                                    onChange={(event) =>
+                                      setCityCostDrafts((prev) => ({ ...prev, [city.id]: event.target.value }))
+                                    }
+                                    className="w-24 rounded-md border border-slate-300 px-2 py-1 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:bg-slate-100"
+                                    placeholder="0.00"
+                                    disabled={!canManageLocations || isDisabled}
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      handleCityCostSave(city);
+                                    }}
+                                    disabled={!canManageLocations || isDisabled}
+                                    className="rounded-md border border-primary px-2 py-1 text-xs font-semibold text-primary transition hover:bg-primary/10 disabled:cursor-not-allowed disabled:border-slate-300 disabled:text-slate-400"
+                                  >
+                                    Save
+                                  </button>
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </PageSection>
+    </>
   );
 };
 

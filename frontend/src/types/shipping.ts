@@ -9,6 +9,9 @@ export interface ShippingCountry {
   id: number;
   name: string;
   code?: string | null;
+  enabled: boolean;
+  costValue?: number | null;
+  effectiveCost?: number | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -17,6 +20,10 @@ export interface ShippingState {
   id: number;
   countryId: number;
   name: string;
+  enabled: boolean;
+  overrideCost?: number | null;
+  inheritedCost?: number | null;
+  effectiveCost?: number | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -26,6 +33,10 @@ export interface ShippingCity {
   stateId: number;
   countryId: number;
   name: string;
+  enabled: boolean;
+  overrideCost?: number | null;
+  inheritedCost?: number | null;
+  effectiveCost?: number | null;
   createdAt: string;
   updatedAt: string;
 }

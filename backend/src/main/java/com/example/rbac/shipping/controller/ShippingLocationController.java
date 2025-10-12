@@ -43,6 +43,13 @@ public class ShippingLocationController {
         return shippingLocationService.updateCountry(id, request);
     }
 
+    @PutMapping("/countries/{id}/settings")
+    @PreAuthorize("hasAuthority('SHIPPING_LOCATION_MANAGE')")
+    public ShippingCountryDto updateCountrySettings(@PathVariable Long id,
+                                                    @RequestBody ShippingCountrySettingsRequest request) {
+        return shippingLocationService.updateCountrySettings(id, request);
+    }
+
     @DeleteMapping("/countries/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PreAuthorize("hasAuthority('SHIPPING_LOCATION_MANAGE')")
@@ -76,6 +83,13 @@ public class ShippingLocationController {
         return shippingLocationService.updateState(id, request);
     }
 
+    @PutMapping("/states/{id}/settings")
+    @PreAuthorize("hasAuthority('SHIPPING_LOCATION_MANAGE')")
+    public ShippingStateDto updateStateSettings(@PathVariable Long id,
+                                                @RequestBody ShippingStateSettingsRequest request) {
+        return shippingLocationService.updateStateSettings(id, request);
+    }
+
     @DeleteMapping("/states/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PreAuthorize("hasAuthority('SHIPPING_LOCATION_MANAGE')")
@@ -107,6 +121,13 @@ public class ShippingLocationController {
     @PreAuthorize("hasAuthority('SHIPPING_LOCATION_MANAGE')")
     public ShippingCityDto updateCity(@PathVariable Long id, @RequestBody ShippingCityRequest request) {
         return shippingLocationService.updateCity(id, request);
+    }
+
+    @PutMapping("/cities/{id}/settings")
+    @PreAuthorize("hasAuthority('SHIPPING_LOCATION_MANAGE')")
+    public ShippingCityDto updateCitySettings(@PathVariable Long id,
+                                              @RequestBody ShippingCitySettingsRequest request) {
+        return shippingLocationService.updateCitySettings(id, request);
     }
 
     @DeleteMapping("/cities/{id}")

@@ -1,0 +1,146 @@
+[
+  {
+    "name": "Andhra Pradesh",
+    "cities": ["Visakhapatnam", "Vijayawada", "Guntur", "Nellore", "Kurnool"]
+  },
+  {
+    "name": "Arunachal Pradesh",
+    "cities": ["Itanagar", "Tawang", "Naharlagun"]
+  },
+  {
+    "name": "Assam",
+    "cities": ["Guwahati", "Silchar", "Dibrugarh", "Jorhat", "Nagaon"]
+  },
+  {
+    "name": "Bihar",
+    "cities": ["Patna", "Gaya", "Bhagalpur", "Muzaffarpur", "Purnia"]
+  },
+  {
+    "name": "Chhattisgarh",
+    "cities": ["Raipur", "Bhilai", "Bilaspur", "Durg", "Korba"]
+  },
+  {
+    "name": "Goa",
+    "cities": ["Panaji", "Margao", "Mapusa"]
+  },
+  {
+    "name": "Gujarat",
+    "cities": ["Ahmedabad", "Surat", "Vadodara", "Rajkot", "Bhavnagar"]
+  },
+  {
+    "name": "Haryana",
+    "cities": ["Gurugram", "Faridabad", "Panipat", "Karnal", "Hisar"]
+  },
+  {
+    "name": "Himachal Pradesh",
+    "cities": ["Shimla", "Dharamshala", "Mandi", "Solan"]
+  },
+  {
+    "name": "Jharkhand",
+    "cities": ["Ranchi", "Jamshedpur", "Dhanbad", "Bokaro Steel City", "Hazaribagh"]
+  },
+  {
+    "name": "Karnataka",
+    "cities": ["Bengaluru", "Mysuru", "Mangaluru", "Hubballi", "Belagavi"]
+  },
+  {
+    "name": "Kerala",
+    "cities": ["Thiruvananthapuram", "Kochi", "Kozhikode", "Thrissur", "Kollam"]
+  },
+  {
+    "name": "Madhya Pradesh",
+    "cities": ["Bhopal", "Indore", "Gwalior", "Jabalpur", "Ujjain"]
+  },
+  {
+    "name": "Maharashtra",
+    "cities": ["Mumbai", "Pune", "Nagpur", "Nashik", "Aurangabad"]
+  },
+  {
+    "name": "Manipur",
+    "cities": ["Imphal", "Thoubal", "Ukhrul"]
+  },
+  {
+    "name": "Meghalaya",
+    "cities": ["Shillong", "Tura", "Jowai"]
+  },
+  {
+    "name": "Mizoram",
+    "cities": ["Aizawl", "Lunglei", "Champhai"]
+  },
+  {
+    "name": "Nagaland",
+    "cities": ["Kohima", "Dimapur", "Mokokchung"]
+  },
+  {
+    "name": "Odisha",
+    "cities": ["Bhubaneswar", "Cuttack", "Rourkela", "Berhampur", "Sambalpur"]
+  },
+  {
+    "name": "Punjab",
+    "cities": ["Ludhiana", "Amritsar", "Jalandhar", "Patiala", "Bathinda"]
+  },
+  {
+    "name": "Rajasthan",
+    "cities": ["Jaipur", "Jodhpur", "Udaipur", "Kota", "Ajmer"]
+  },
+  {
+    "name": "Sikkim",
+    "cities": ["Gangtok", "Namchi", "Gyalshing"]
+  },
+  {
+    "name": "Tamil Nadu",
+    "cities": ["Chennai", "Coimbatore", "Madurai", "Tiruchirappalli", "Salem"]
+  },
+  {
+    "name": "Telangana",
+    "cities": ["Hyderabad", "Warangal", "Nizamabad", "Karimnagar", "Khammam"]
+  },
+  {
+    "name": "Tripura",
+    "cities": ["Agartala", "Udaipur", "Dharmanagar"]
+  },
+  {
+    "name": "Uttar Pradesh",
+    "cities": ["Lucknow", "Kanpur", "Varanasi", "Noida", "Ghaziabad", "Agra"]
+  },
+  {
+    "name": "Uttarakhand",
+    "cities": ["Dehradun", "Haridwar", "Haldwani", "Roorkee"]
+  },
+  {
+    "name": "West Bengal",
+    "cities": ["Kolkata", "Howrah", "Asansol", "Durgapur", "Siliguri"]
+  },
+  {
+    "name": "Andaman and Nicobar Islands",
+    "cities": ["Port Blair", "Car Nicobar", "Diglipur"]
+  },
+  {
+    "name": "Chandigarh",
+    "cities": ["Chandigarh"]
+  },
+  {
+    "name": "Dadra and Nagar Haveli and Daman and Diu",
+    "cities": ["Daman", "Diu", "Silvassa"]
+  },
+  {
+    "name": "Delhi",
+    "cities": ["New Delhi", "Dwarka", "Rohini", "Saket"]
+  },
+  {
+    "name": "Jammu and Kashmir",
+    "cities": ["Srinagar", "Jammu", "Anantnag", "Baramulla"]
+  },
+  {
+    "name": "Ladakh",
+    "cities": ["Leh", "Kargil"]
+  },
+  {
+    "name": "Lakshadweep",
+    "cities": ["Kavaratti", "Agatti", "Minicoy"]
+  },
+  {
+    "name": "Puducherry",
+    "cities": ["Puducherry", "Karaikal", "Mahe", "Yanam"]
+  }
+]

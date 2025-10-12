@@ -1,5 +1,6 @@
 package com.example.rbac.shipping.dto;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 
 public class ShippingCityDto {
@@ -7,6 +8,10 @@ public class ShippingCityDto {
     private Long stateId;
     private Long countryId;
     private String name;
+    private boolean enabled;
+    private BigDecimal overrideCost;
+    private BigDecimal effectiveCost;
+    private BigDecimal inheritedCost;
     private Instant createdAt;
     private Instant updatedAt;
 
@@ -40,6 +45,38 @@ public class ShippingCityDto {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public boolean isEnabled() {
+        return enabled;
+    }
+
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
+    }
+
+    public BigDecimal getOverrideCost() {
+        return overrideCost;
+    }
+
+    public void setOverrideCost(BigDecimal overrideCost) {
+        this.overrideCost = overrideCost;
+    }
+
+    public BigDecimal getEffectiveCost() {
+        return effectiveCost;
+    }
+
+    public void setEffectiveCost(BigDecimal effectiveCost) {
+        this.effectiveCost = effectiveCost;
+    }
+
+    public BigDecimal getInheritedCost() {
+        return inheritedCost;
+    }
+
+    public void setInheritedCost(BigDecimal inheritedCost) {
+        this.inheritedCost = inheritedCost;
     }
 
     public Instant getCreatedAt() {

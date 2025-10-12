@@ -16,7 +16,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.stream.Collectors;
 
 @Service
@@ -73,6 +77,41 @@ public class ShippingLocationService {
         ShippingCountry saved = countryRepository.save(country);
         activityRecorder.record("Shipping", "SHIPPING_COUNTRY_UPDATED", "Updated shipping country " + saved.getName(), "SUCCESS", null);
         return toCountryDto(saved);
+    }
+
+    @Transactional
+    public ShippingCountryDto updateCountrySettings(Long id, ShippingCountrySettingsRequest request) {
+        if (request == null) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Country settings payload is required");
+        }
+        ShippingCountry country = countryRepository.findById(id)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Country not found"));
+
+        boolean changed = false;
+        if (Boolean.TRUE.equals(request.getClearCost())) {
+            country.setBaseCost(null);
+            changed = true;
+        } else if (request.getCostValue() != null) {
+            country.setBaseCost(sanitizeCost(request.getCostValue(), "Country rate"));
+            changed = true;
+        }
+
+        if (request.getEnabled() != null) {
+            boolean enabled = request.getEnabled();
+            country.setEnabled(enabled);
+            changed = true;
+            if (!enabled) {
+                disableStatesAndCities(country);
+            }
+        }
+
+        if (changed) {
+            ShippingCountry saved = countryRepository.save(country);
+            activityRecorder.record("Shipping", "SHIPPING_COUNTRY_SETTINGS_UPDATED",
+                    "Updated shipping country settings for " + saved.getName(), "SUCCESS", null);
+            return toCountryDto(saved);
+        }
+        return toCountryDto(country);
     }
 
     @Transactional
@@ -139,6 +178,44 @@ public class ShippingLocationService {
     }
 
     @Transactional
+    public ShippingStateDto updateStateSettings(Long id, ShippingStateSettingsRequest request) {
+        if (request == null) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "State settings payload is required");
+        }
+        ShippingState state = stateRepository.findById(id)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "State not found"));
+
+        boolean changed = false;
+        if (Boolean.TRUE.equals(request.getClearOverride())) {
+            state.setOverrideCost(null);
+            changed = true;
+        } else if (request.getOverrideCost() != null) {
+            state.setOverrideCost(sanitizeCost(request.getOverrideCost(), "State override rate"));
+            changed = true;
+        }
+
+        if (request.getEnabled() != null) {
+            boolean enabled = request.getEnabled();
+            if (enabled && (state.getCountry() == null || !state.getCountry().isEnabled())) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, "Enable the country before activating a state");
+            }
+            state.setEnabled(enabled);
+            changed = true;
+            if (!enabled) {
+                disableCities(state);
+            }
+        }
+
+        if (changed) {
+            ShippingState saved = stateRepository.save(state);
+            activityRecorder.record("Shipping", "SHIPPING_STATE_SETTINGS_UPDATED",
+                    "Updated shipping state settings for " + saved.getName(), "SUCCESS", null);
+            return toStateDto(saved);
+        }
+        return toStateDto(state);
+    }
+
+    @Transactional
     public void deleteState(Long id) {
         ShippingState state = stateRepository.findById(id)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "State not found"));
@@ -202,6 +279,42 @@ public class ShippingLocationService {
     }
 
     @Transactional
+    public ShippingCityDto updateCitySettings(Long id, ShippingCitySettingsRequest request) {
+        if (request == null) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "City settings payload is required");
+        }
+        ShippingCity city = cityRepository.findById(id)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "City not found"));
+
+        boolean changed = false;
+        if (Boolean.TRUE.equals(request.getClearOverride())) {
+            city.setOverrideCost(null);
+            changed = true;
+        } else if (request.getOverrideCost() != null) {
+            city.setOverrideCost(sanitizeCost(request.getOverrideCost(), "City override rate"));
+            changed = true;
+        }
+
+        if (request.getEnabled() != null) {
+            boolean enabled = request.getEnabled();
+            ShippingState state = city.getState();
+            if (enabled && (state == null || !state.isEnabled() || state.getCountry() == null || !state.getCountry().isEnabled())) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, "Enable the parent state and country before activating a city");
+            }
+            city.setEnabled(enabled);
+            changed = true;
+        }
+
+        if (changed) {
+            ShippingCity saved = cityRepository.save(city);
+            activityRecorder.record("Shipping", "SHIPPING_CITY_SETTINGS_UPDATED",
+                    "Updated shipping city settings for " + saved.getName(), "SUCCESS", null);
+            return toCityDto(saved);
+        }
+        return toCityDto(city);
+    }
+
+    @Transactional
     public void deleteCity(Long id) {
         ShippingCity city = cityRepository.findById(id)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "City not found"));
@@ -226,7 +339,11 @@ public class ShippingLocationService {
         }
         country.setName(name);
         String code = request.getCode();
-        country.setCode(StringUtils.hasText(code) ? code.trim() : null);
+        if (StringUtils.hasText(code)) {
+            country.setCode(code.trim().toUpperCase(Locale.ROOT));
+        } else {
+            country.setCode(null);
+        }
     }
 
     private void applyStateRequest(ShippingState state, ShippingStateRequest request) {
@@ -243,6 +360,66 @@ public class ShippingLocationService {
             throw new ApiException(HttpStatus.BAD_REQUEST, "City name is required");
         }
         city.setName(name);
+    }
+
+    private BigDecimal sanitizeCost(BigDecimal value, String label) {
+        BigDecimal normalized = normalizeCost(value);
+        if (normalized != null && normalized.compareTo(BigDecimal.ZERO) < 0) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, label + " cannot be negative");
+        }
+        return normalized;
+    }
+
+    private BigDecimal normalizeCost(BigDecimal value) {
+        if (value == null) {
+            return null;
+        }
+        return value.setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private void disableStatesAndCities(ShippingCountry country) {
+        if (country.getId() == null) {
+            return;
+        }
+        List<ShippingState> states = stateRepository.findByCountryIdOrderByNameAsc(country.getId());
+        List<ShippingState> statesToUpdate = new ArrayList<>();
+        List<ShippingCity> citiesToUpdate = new ArrayList<>();
+        for (ShippingState state : states) {
+            if (state.isEnabled()) {
+                state.setEnabled(false);
+                statesToUpdate.add(state);
+            }
+            List<ShippingCity> cities = cityRepository.findByStateIdOrderByNameAsc(state.getId());
+            for (ShippingCity city : cities) {
+                if (city.isEnabled()) {
+                    city.setEnabled(false);
+                    citiesToUpdate.add(city);
+                }
+            }
+        }
+        if (!statesToUpdate.isEmpty()) {
+            stateRepository.saveAll(statesToUpdate);
+        }
+        if (!citiesToUpdate.isEmpty()) {
+            cityRepository.saveAll(citiesToUpdate);
+        }
+    }
+
+    private void disableCities(ShippingState state) {
+        if (state.getId() == null) {
+            return;
+        }
+        List<ShippingCity> cities = cityRepository.findByStateIdOrderByNameAsc(state.getId());
+        List<ShippingCity> updated = new ArrayList<>();
+        for (ShippingCity city : cities) {
+            if (city.isEnabled()) {
+                city.setEnabled(false);
+                updated.add(city);
+            }
+        }
+        if (!updated.isEmpty()) {
+            cityRepository.saveAll(updated);
+        }
     }
 
     private void ensureUniqueCountry(String name, String code, Long countryId) {
@@ -312,6 +489,10 @@ public class ShippingLocationService {
         dto.setId(country.getId());
         dto.setName(country.getName());
         dto.setCode(country.getCode());
+        dto.setEnabled(country.isEnabled());
+        BigDecimal normalizedCost = normalizeCost(country.getBaseCost());
+        dto.setCostValue(normalizedCost);
+        dto.setEffectiveCost(normalizedCost);
         dto.setCreatedAt(country.getCreatedAt());
         dto.setUpdatedAt(country.getUpdatedAt());
         return dto;
@@ -322,6 +503,12 @@ public class ShippingLocationService {
         dto.setId(state.getId());
         dto.setName(state.getName());
         dto.setCountryId(state.getCountry() != null ? state.getCountry().getId() : null);
+        dto.setEnabled(state.isEnabled());
+        BigDecimal inheritedCost = state.getCountry() != null ? normalizeCost(state.getCountry().getBaseCost()) : null;
+        BigDecimal overrideCost = normalizeCost(state.getOverrideCost());
+        dto.setOverrideCost(overrideCost);
+        dto.setInheritedCost(inheritedCost);
+        dto.setEffectiveCost(overrideCost != null ? overrideCost : inheritedCost);
         dto.setCreatedAt(state.getCreatedAt());
         dto.setUpdatedAt(state.getUpdatedAt());
         return dto;
@@ -333,6 +520,17 @@ public class ShippingLocationService {
         dto.setName(city.getName());
         dto.setStateId(city.getState() != null ? city.getState().getId() : null);
         dto.setCountryId(city.getState() != null && city.getState().getCountry() != null ? city.getState().getCountry().getId() : null);
+        dto.setEnabled(city.isEnabled());
+        BigDecimal stateCost = null;
+        if (city.getState() != null) {
+            BigDecimal stateOverride = normalizeCost(city.getState().getOverrideCost());
+            BigDecimal countryCost = city.getState().getCountry() != null ? normalizeCost(city.getState().getCountry().getBaseCost()) : null;
+            stateCost = stateOverride != null ? stateOverride : countryCost;
+        }
+        BigDecimal overrideCost = normalizeCost(city.getOverrideCost());
+        dto.setOverrideCost(overrideCost);
+        dto.setInheritedCost(stateCost);
+        dto.setEffectiveCost(overrideCost != null ? overrideCost : stateCost);
         dto.setCreatedAt(city.getCreatedAt());
         dto.setUpdatedAt(city.getUpdatedAt());
         return dto;

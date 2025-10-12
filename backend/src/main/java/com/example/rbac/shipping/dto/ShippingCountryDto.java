@@ -1,11 +1,15 @@
 package com.example.rbac.shipping.dto;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 
 public class ShippingCountryDto {
     private Long id;
     private String name;
     private String code;
+    private boolean enabled;
+    private BigDecimal costValue;
+    private BigDecimal effectiveCost;
     private Instant createdAt;
     private Instant updatedAt;
 
@@ -31,6 +35,30 @@ public class ShippingCountryDto {
 
     public void setCode(String code) {
         this.code = code;
+    }
+
+    public boolean isEnabled() {
+        return enabled;
+    }
+
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
+    }
+
+    public BigDecimal getCostValue() {
+        return costValue;
+    }
+
+    public void setCostValue(BigDecimal costValue) {
+        this.costValue = costValue;
+    }
+
+    public BigDecimal getEffectiveCost() {
+        return effectiveCost;
+    }
+
+    public void setEffectiveCost(BigDecimal effectiveCost) {
+        this.effectiveCost = effectiveCost;
     }
 
     public Instant getCreatedAt() {
