@@ -45,14 +45,14 @@ public class ShippingLocationService {
     }
 
     public List<ShippingCountryDto> listCountries() {
-        return countryRepository.findAllByOrderByNameAsc()
+        return countryRepository.findAllByOrderByEnabledDescNameAsc()
                 .stream()
                 .map(this::toCountryDto)
                 .collect(Collectors.toList());
     }
 
     public List<ShippingOptionDto> countryOptions() {
-        return countryRepository.findAllByOrderByNameAsc()
+        return countryRepository.findAllByOrderByEnabledDescNameAsc()
                 .stream()
                 .map(country -> new ShippingOptionDto(country.getId(), country.getName()))
                 .collect(Collectors.toList());
@@ -131,7 +131,7 @@ public class ShippingLocationService {
 
     public List<ShippingStateDto> listStates(Long countryId) {
         ensureCountryExists(countryId);
-        return stateRepository.findByCountryIdOrderByNameAsc(countryId)
+        return stateRepository.findByCountryIdOrderByEnabledDescNameAsc(countryId)
                 .stream()
                 .map(this::toStateDto)
                 .collect(Collectors.toList());
@@ -139,7 +139,7 @@ public class ShippingLocationService {
 
     public List<ShippingOptionDto> stateOptions(Long countryId) {
         ensureCountryExists(countryId);
-        return stateRepository.findByCountryIdOrderByNameAsc(countryId)
+        return stateRepository.findByCountryIdOrderByEnabledDescNameAsc(countryId)
                 .stream()
                 .map(state -> new ShippingOptionDto(state.getId(), state.getName()))
                 .collect(Collectors.toList());
@@ -232,7 +232,7 @@ public class ShippingLocationService {
 
     public List<ShippingCityDto> listCities(Long stateId) {
         ensureStateExists(stateId);
-        return cityRepository.findByStateIdOrderByNameAsc(stateId)
+        return cityRepository.findByStateIdOrderByEnabledDescNameAsc(stateId)
                 .stream()
                 .map(this::toCityDto)
                 .collect(Collectors.toList());
@@ -240,7 +240,7 @@ public class ShippingLocationService {
 
     public List<ShippingOptionDto> cityOptions(Long stateId) {
         ensureStateExists(stateId);
-        return cityRepository.findByStateIdOrderByNameAsc(stateId)
+        return cityRepository.findByStateIdOrderByEnabledDescNameAsc(stateId)
                 .stream()
                 .map(city -> new ShippingOptionDto(city.getId(), city.getName()))
                 .collect(Collectors.toList());

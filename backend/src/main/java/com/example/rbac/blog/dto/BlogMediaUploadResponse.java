@@ -4,13 +4,19 @@ public class BlogMediaUploadResponse {
 
     private String key;
     private String url;
+    private String originalFilename;
+    private String mimeType;
+    private long sizeBytes;
 
     public BlogMediaUploadResponse() {
     }
 
-    public BlogMediaUploadResponse(String key, String url) {
+    public BlogMediaUploadResponse(String key, String url, String originalFilename, String mimeType, long sizeBytes) {
         this.key = key;
         this.url = url;
+        this.originalFilename = originalFilename;
+        this.mimeType = mimeType;
+        this.sizeBytes = sizeBytes;
     }
 
     public String getKey() {
@@ -27,5 +33,29 @@ public class BlogMediaUploadResponse {
 
     public void setUrl(String url) {
         this.url = url;
+    }
+
+    public String getOriginalFilename() {
+        return originalFilename;
+    }
+
+    public void setOriginalFilename(String originalFilename) {
+        this.originalFilename = originalFilename;
+    }
+
+    public String getMimeType() {
+        return mimeType;
+    }
+
+    public void setMimeType(String mimeType) {
+        this.mimeType = mimeType;
+    }
+
+    public long getSizeBytes() {
+        return sizeBytes;
+    }
+
+    public void setSizeBytes(long sizeBytes) {
+        this.sizeBytes = sizeBytes;
     }
 }

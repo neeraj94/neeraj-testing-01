@@ -205,12 +205,13 @@ const UploadedFilesPage = () => {
                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Module</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Uploaded</th>
                     <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Size</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 bg-white">
                   {filesQuery.isLoading ? (
                     <tr>
-                      <td colSpan={5} className="px-4 py-8 text-center text-sm text-slate-500">
+                      <td colSpan={6} className="px-4 py-8 text-center text-sm text-slate-500">
                         Loading files…
                       </td>
                     </tr>
@@ -267,11 +268,34 @@ const UploadedFilesPage = () => {
                         <td className="px-4 py-3 text-right text-slate-600">
                           {file.sizeBytes ? formatFileSize(file.sizeBytes) : '—'}
                         </td>
+                        <td className="px-4 py-3 text-right">
+                          {file.publicUrl ? (
+                            <div className="flex flex-wrap justify-end gap-2">
+                              <a
+                                href={file.publicUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-100"
+                              >
+                                Open
+                              </a>
+                              <a
+                                href={file.publicUrl}
+                                download={file.originalFilename ?? undefined}
+                                className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-100"
+                              >
+                                Download
+                              </a>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-slate-400">No link</span>
+                          )}
+                        </td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={5} className="px-4 py-8 text-center text-sm text-slate-500">
+                      <td colSpan={6} className="px-4 py-8 text-center text-sm text-slate-500">
                         No files found. Adjust your filters to see more results.
                       </td>
                     </tr>
