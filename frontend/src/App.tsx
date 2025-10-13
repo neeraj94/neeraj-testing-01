@@ -12,6 +12,7 @@ import ProfilePage from './pages/ProfilePage';
 import ForbiddenPage from './pages/ForbiddenPage';
 import NotFoundPage from './pages/NotFoundPage';
 import BrandsPage from './pages/BrandsPage';
+import ProductsPage from './pages/ProductsPage';
 import TaxRatesPage from './pages/TaxRatesPage';
 import AttributesPage from './pages/AttributesPage';
 import CategoriesPage from './pages/CategoriesPage';
@@ -208,6 +209,13 @@ const App = () => {
           </Route>
           <Route element={<PermissionRoute required={['BRAND_VIEW']} />}>
             <Route path="brands" element={<BrandsPage />} />
+          </Route>
+          <Route
+            element={
+              <PermissionRoute required={['PRODUCT_VIEW', 'PRODUCT_CREATE', 'PRODUCT_UPDATE']} />
+            }
+          >
+            <Route path="products" element={<ProductsPage />} />
           </Route>
           <Route element={<PermissionRoute required={['SHIPPING_AREA_VIEW']} />}>
             <Route path="shipping/area" element={<AreaShippingPage />} />
