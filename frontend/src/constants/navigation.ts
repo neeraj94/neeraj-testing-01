@@ -198,6 +198,15 @@ export const DEFAULT_NAVIGATION_MENU: NavigationNode[] = [
         group: false,
         permissions: ['BRAND_VIEW'],
         children: []
+      },
+      {
+        key: 'products',
+        label: 'Products',
+        icon: '🛒',
+        path: '/admin/products',
+        group: false,
+        permissions: ['PRODUCT_VIEW', 'PRODUCT_CREATE', 'PRODUCT_UPDATE'],
+        children: []
       }
     ]
   },
