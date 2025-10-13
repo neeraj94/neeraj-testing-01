@@ -201,9 +201,9 @@ const buildCategoryTree = (categories: Category[]): CategoryTreeNode[] => {
     }
   });
 
-  const sortNodes = (list: CategoryTreeNode[]) =>
+  const sortNodes = (list: CategoryTreeNode[]): CategoryTreeNode[] =>
     list
-      .map((node) => ({
+      .map((node): CategoryTreeNode => ({
         ...node,
         children: sortNodes(node.children)
       }))
