@@ -37,6 +37,8 @@ import BlogPostsPage from './pages/BlogPostsPage';
 import PublicBlogListPage from './pages/PublicBlogListPage';
 import PublicBlogPostPage from './pages/PublicBlogPostPage';
 import UploadedFilesPage from './pages/UploadedFilesPage';
+import PublicCategoriesPage from './pages/PublicCategoriesPage';
+import PublicProductPage from './pages/PublicProductPage';
 
 const App = () => {
   const dispatch = useAppDispatch();
@@ -111,8 +113,8 @@ const App = () => {
     };
   }, [accessToken, refreshToken, dispatch]);
 
-  const publicExact = ['/', '/login', '/signup'];
-  const publicPrefixes = ['/blog'];
+  const publicExact = ['/', '/login', '/signup', '/categories', '/products/showcase'];
+  const publicPrefixes = ['/blog', '/products'];
   const isPublicRoute =
     publicExact.includes(location.pathname) ||
     publicPrefixes.some((prefix) =>
@@ -134,6 +136,8 @@ const App = () => {
       <Route path="/signup" element={<SignupPage />} />
       <Route path="/blog" element={<PublicBlogListPage />} />
       <Route path="/blog/:slug" element={<PublicBlogPostPage />} />
+      <Route path="/categories" element={<PublicCategoriesPage />} />
+      <Route path="/products/showcase" element={<PublicProductPage />} />
       <Route element={<ProtectedRoute />}>
         <Route path="/admin" element={<Layout />}>
           <Route index element={<Navigate to="dashboard" replace />} />

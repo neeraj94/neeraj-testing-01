@@ -161,23 +161,18 @@ const AreaShippingPage = () => {
 
   const countries = countriesQuery.data ?? [];
   const sortedCountries = useMemo(() => sortByEnabledThenName(countries), [countries]);
-  const enabledCountries = useMemo(
-    () => sortedCountries.filter((country) => country.enabled),
-    [sortedCountries]
-  );
-
   useEffect(() => {
-    if (!sortedCountries.length || !enabledCountries.length) {
+    if (!sortedCountries.length) {
       if (stateCountryId !== null) {
         setStateCountryId(null);
       }
       return;
     }
 
-    if (!enabledCountries.some((country) => country.id === stateCountryId)) {
-      setStateCountryId(enabledCountries[0].id);
+    if (!sortedCountries.some((country) => country.id === stateCountryId)) {
+      setStateCountryId(sortedCountries[0].id);
     }
-  }, [sortedCountries, enabledCountries, stateCountryId]);
+  }, [sortedCountries, stateCountryId]);
 
   useEffect(() => {
     setStatePage(0);
@@ -190,17 +185,17 @@ const AreaShippingPage = () => {
   }, [stateCountryId]);
 
   useEffect(() => {
-    if (!sortedCountries.length || !enabledCountries.length) {
+    if (!sortedCountries.length) {
       if (cityCountryId !== null) {
         setCityCountryId(null);
       }
       return;
     }
 
-    if (!enabledCountries.some((country) => country.id === cityCountryId)) {
-      setCityCountryId(enabledCountries[0].id);
+    if (!sortedCountries.some((country) => country.id === cityCountryId)) {
+      setCityCountryId(sortedCountries[0].id);
     }
-  }, [sortedCountries, enabledCountries, cityCountryId]);
+  }, [sortedCountries, cityCountryId]);
 
   const filteredCountries = useMemo(() => {
     if (!countrySearch) {
@@ -267,22 +262,17 @@ const AreaShippingPage = () => {
 
   const cityStates = cityStatesQuery.data ?? [];
   const sortedCityStates = useMemo(() => sortByEnabledThenName(cityStates), [cityStates]);
-  const enabledCityStates = useMemo(
-    () => sortedCityStates.filter((state) => state.enabled),
-    [sortedCityStates]
-  );
-
   useEffect(() => {
-    if (!enabledCityStates.length) {
+    if (!sortedCityStates.length) {
       if (cityStateId !== null) {
         setCityStateId(null);
       }
       return;
     }
-    if (!enabledCityStates.some((state) => state.id === cityStateId)) {
-      setCityStateId(enabledCityStates[0].id);
+    if (!sortedCityStates.some((state) => state.id === cityStateId)) {
+      setCityStateId(sortedCityStates[0].id);
     }
-  }, [enabledCityStates, cityStateId]);
+  }, [sortedCityStates, cityStateId]);
 
   useEffect(() => {
     setCityPage(0);
@@ -834,12 +824,12 @@ const AreaShippingPage = () => {
                 setStatePage(0);
               }}
               className="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-              disabled={!enabledCountries.length}
+              disabled={!sortedCountries.length}
             >
-              {!enabledCountries.length ? (
-                <option value="">Enable a country first</option>
+              {!sortedCountries.length ? (
+                <option value="">Add a country first</option>
               ) : (
-                enabledCountries.map((country) => (
+                sortedCountries.map((country) => (
                   <option key={country.id} value={country.id}>
                     {country.name}
                   </option>
@@ -944,9 +934,9 @@ const AreaShippingPage = () => {
               ) : stateCountryId === null ? (
                 <tr>
                   <td className="px-6 py-6 text-center text-slate-500" colSpan={3}>
-                    {enabledCountries.length
+                    {sortedCountries.length
                       ? 'Select a country to view its states.'
-                      : 'Enable a country to manage states.'}
+                      : 'Add a country to manage states.'}
                   </td>
                 </tr>
               ) : !filteredStates.length ? (
@@ -1047,12 +1037,12 @@ const AreaShippingPage = () => {
                 setCityPage(0);
               }}
               className="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-              disabled={!enabledCountries.length}
+              disabled={!sortedCountries.length}
             >
-              {!enabledCountries.length ? (
-                <option value="">Enable a country first</option>
+              {!sortedCountries.length ? (
+                <option value="">Add a country first</option>
               ) : (
-                enabledCountries.map((country) => (
+                sortedCountries.map((country) => (
                   <option key={country.id} value={country.id}>
                     {country.name}
                   </option>
@@ -1071,12 +1061,12 @@ const AreaShippingPage = () => {
                 setCityPage(0);
               }}
               className="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-              disabled={!enabledCityStates.length}
+              disabled={!sortedCityStates.length}
             >
-              {!enabledCityStates.length ? (
-                <option value="">Enable a state first</option>
+              {!sortedCityStates.length ? (
+                <option value="">Add a state first</option>
               ) : (
-                enabledCityStates.map((state) => (
+                sortedCityStates.map((state) => (
                   <option key={state.id} value={state.id}>
                     {state.name}
                   </option>
@@ -1181,17 +1171,17 @@ const AreaShippingPage = () => {
               ) : cityCountryId === null ? (
                 <tr>
                   <td className="px-6 py-6 text-center text-slate-500" colSpan={3}>
-                    {enabledCountries.length
+                    {sortedCountries.length
                       ? 'Select a country to manage its cities.'
-                      : 'Enable a country to manage cities.'}
+                      : 'Add a country to manage cities.'}
                   </td>
                 </tr>
               ) : cityStateId === null ? (
                 <tr>
                   <td className="px-6 py-6 text-center text-slate-500" colSpan={3}>
-                    {enabledCityStates.length
+                    {sortedCityStates.length
                       ? 'Select a state to view its cities.'
-                      : 'Enable a state to manage cities.'}
+                      : 'Add a state to manage cities.'}
                   </td>
                 </tr>
               ) : !filteredCities.length ? (

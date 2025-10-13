@@ -4,6 +4,7 @@ import com.example.rbac.activity.service.ActivityRecorder;
 import com.example.rbac.categories.dto.CategoryDto;
 import com.example.rbac.categories.dto.CategoryOptionDto;
 import com.example.rbac.categories.dto.CategoryRequest;
+import com.example.rbac.categories.dto.PublicCategoryDto;
 import com.example.rbac.categories.mapper.CategoryMapper;
 import com.example.rbac.categories.model.Category;
 import com.example.rbac.categories.model.CategoryType;
@@ -37,6 +38,23 @@ public class CategoryService {
         this.categoryMapper = categoryMapper;
         this.activityRecorder = activityRecorder;
         this.assetStorageService = assetStorageService;
+    }
+
+    public List<PublicCategoryDto> listPublicCategories() {
+        List<Category> categories = categoryRepository.findAllOrderByOrderNumberDescNameAsc();
+        List<PublicCategoryDto> response = new ArrayList<>(categories.size());
+        for (Category category : categories) {
+            PublicCategoryDto dto = new PublicCategoryDto();
+            dto.setId(category.getId());
+            dto.setName(category.getName());
+            dto.setSlug(category.getSlug());
+            dto.setType(category.getType());
+            dto.setOrderNumber(category.getOrderNumber());
+            dto.setImageUrl(resolveCategoryImage(category));
+            dto.setDescription(trimToNull(category.getMetaDescription()));
+            response.add(dto);
+        }
+        return response;
     }
 
     public PageResponse<CategoryDto> list(int page, int size, String search) {
@@ -199,5 +217,13 @@ public class CategoryService {
         dto.setIconUrl(assetStorageService.resolvePublicUrl(dto.getIconUrl()));
         dto.setCoverUrl(assetStorageService.resolvePublicUrl(dto.getCoverUrl()));
         return dto;
+    }
+
+    private String resolveCategoryImage(Category category) {
+        String banner = trimToNull(category.getBannerUrl());
+        String cover = trimToNull(category.getCoverUrl());
+        String icon = trimToNull(category.getIconUrl());
+        String candidate = banner != null ? banner : (cover != null ? cover : icon);
+        return assetStorageService.resolvePublicUrl(candidate);
     }
 }
