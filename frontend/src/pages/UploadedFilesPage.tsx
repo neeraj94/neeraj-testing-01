@@ -266,7 +266,9 @@ const UploadedFilesPage = () => {
     }
     const anchor = document.createElement('a');
     anchor.href = file.publicUrl;
-    anchor.download = file.originalFilename ?? undefined;
+    if (file.originalFilename) {
+      anchor.download = file.originalFilename;
+    }
     anchor.rel = 'noopener';
     document.body.appendChild(anchor);
     anchor.click();

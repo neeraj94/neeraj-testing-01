@@ -1,3 +1,12 @@
+import { Link } from 'react-router-dom';
+
+const navLinks = [
+  { href: '/', label: 'Home' },
+  { href: '/categories', label: 'Categories' },
+  { href: '/blog', label: 'Blog' },
+  { href: '/products/showcase', label: 'Product' }
+];
+
 const features = [
   {
     title: 'Premium Products',
@@ -36,70 +45,95 @@ const collections = [
 
 const EcommerceHomePage = () => {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-950 to-slate-900 text-white">
-      <header className="relative overflow-hidden">
-        <div className="absolute inset-0 opacity-40" aria-hidden>
-          <div className="absolute -top-32 left-1/2 h-96 w-96 -translate-x-1/2 rounded-full bg-primary blur-3xl" />
-          <div className="absolute bottom-0 right-0 h-72 w-72 rounded-full bg-purple-600/60 blur-3xl" />
-        </div>
-        <div className="relative mx-auto flex max-w-6xl flex-col gap-10 px-6 py-24 sm:py-32">
-          <div className="max-w-3xl">
-            <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-4 py-1 text-xs font-semibold uppercase tracking-widest text-white/80">
-              New Season Drop
-            </span>
-            <h1 className="mt-6 text-4xl font-semibold leading-tight text-white sm:text-6xl">
-              Elevate every day with products crafted to inspire your lifestyle.
-            </h1>
-            <p className="mt-4 text-lg text-slate-200">
-              Shop curated collections featuring premium materials, mindful design, and planet-friendly manufacturing.
-              Discover stories behind the brands and bring home pieces that last.
-            </p>
-            <div className="mt-8 flex flex-wrap items-center gap-4">
-              <a
-                href="#collections"
-                className="rounded-full bg-primary px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-primary/40 transition hover:-translate-y-0.5 hover:bg-blue-600"
+    <div className="min-h-screen bg-slate-50 text-slate-900">
+      <header className="border-b border-slate-200 bg-white">
+        <div className="mx-auto flex max-w-6xl flex-col gap-6 px-6 py-6 sm:flex-row sm:items-center sm:justify-between">
+          <Link to="/" className="text-2xl font-semibold tracking-tight text-slate-900">
+            Aurora Market
+          </Link>
+          <nav className="flex flex-wrap items-center gap-3 text-sm text-slate-600">
+            {navLinks.map((link) => (
+              <Link
+                key={link.href}
+                to={link.href}
+                className={`rounded-full px-4 py-2 transition ${
+                  link.href === '/'
+                    ? 'bg-slate-900 text-white shadow-sm shadow-slate-900/20'
+                    : 'hover:bg-slate-100 hover:text-slate-900'
+                }`}
               >
-                Explore Collections
-              </a>
-              <a
-                href="#newsletter"
-                className="rounded-full border border-white/20 px-6 py-3 text-sm font-semibold text-white transition hover:border-white hover:bg-white/10"
-              >
-                Join the Community
-              </a>
-            </div>
+                {link.label}
+              </Link>
+            ))}
+          </nav>
+          <div className="flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-slate-500">
+            <span className="hidden sm:inline">Support</span>
+            <a href="mailto:support@auroramarket.com" className="font-semibold text-slate-900">
+              support@auroramarket.com
+            </a>
           </div>
         </div>
       </header>
 
-      <main className="relative z-10">
+      <main>
+        <section className="border-b border-slate-200 bg-white">
+          <div className="mx-auto max-w-6xl px-6 py-20">
+            <div className="max-w-3xl">
+              <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-100 px-4 py-1 text-xs font-semibold uppercase tracking-widest text-slate-600">
+                New Season Drop
+              </span>
+              <h1 className="mt-6 text-4xl font-semibold leading-tight text-slate-900 sm:text-5xl">
+                Elevate every day with products crafted to inspire your lifestyle.
+              </h1>
+              <p className="mt-4 text-lg text-slate-600">
+                Shop curated collections featuring premium materials, mindful design, and planet-friendly manufacturing.
+                Discover stories behind the brands and bring home pieces that last.
+              </p>
+              <div className="mt-8 flex flex-wrap items-center gap-4">
+                <a
+                  href="#collections"
+                  className="rounded-full bg-primary px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-primary/30 transition hover:-translate-y-0.5 hover:bg-blue-600"
+                >
+                  Explore Collections
+                </a>
+                <a
+                  href="#newsletter"
+                  className="rounded-full border border-slate-200 px-6 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-100"
+                >
+                  Join the Community
+                </a>
+              </div>
+            </div>
+          </div>
+        </section>
+
         <section className="mx-auto max-w-6xl px-6 py-16">
           <div className="grid gap-8 md:grid-cols-3">
             {features.map((feature) => (
               <div
                 key={feature.title}
-                className="rounded-2xl border border-white/10 bg-white/5 p-8 shadow-lg shadow-slate-900/40 backdrop-blur"
+                className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg"
               >
-                <h2 className="text-xl font-semibold text-white">{feature.title}</h2>
-                <p className="mt-3 text-sm text-slate-200">{feature.description}</p>
+                <h2 className="text-xl font-semibold text-slate-900">{feature.title}</h2>
+                <p className="mt-3 text-sm text-slate-600">{feature.description}</p>
               </div>
             ))}
           </div>
         </section>
 
-        <section id="collections" className="bg-black/20">
+        <section id="collections" className="border-y border-slate-200 bg-slate-100">
           <div className="mx-auto max-w-6xl px-6 py-20">
             <div className="flex flex-col items-start justify-between gap-6 sm:flex-row sm:items-end">
               <div>
-                <h2 className="text-3xl font-semibold text-white sm:text-4xl">Shop by Collection</h2>
-                <p className="mt-3 max-w-2xl text-sm text-slate-300">
+                <h2 className="text-3xl font-semibold text-slate-900 sm:text-4xl">Shop by Collection</h2>
+                <p className="mt-3 max-w-2xl text-sm text-slate-600">
                   Each edit is designed by our in-house stylists to pair effortlessly. Find your next signature look and
                   feel confident from desk to weekend.
                 </p>
               </div>
               <a
                 href="#newsletter"
-                className="rounded-full border border-white/20 px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white/70 transition hover:border-white hover:text-white"
+                className="rounded-full border border-slate-300 px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-slate-600 transition hover:border-slate-400 hover:text-slate-900"
               >
                 See lookbook
               </a>
@@ -108,17 +142,17 @@ const EcommerceHomePage = () => {
               {collections.map((collection) => (
                 <article
                   key={collection.name}
-                  className="group relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-white/10 via-white/5 to-transparent p-8 backdrop-blur transition hover:-translate-y-1 hover:border-white/30"
+                  className="group relative overflow-hidden rounded-3xl border border-slate-200 bg-white p-8 shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
                 >
                   <div className="absolute inset-0 opacity-0 transition group-hover:opacity-100" aria-hidden>
-                    <div className="absolute -top-10 right-0 h-40 w-40 rounded-full bg-primary/60 blur-3xl" />
+                    <div className="absolute -top-10 right-0 h-40 w-40 rounded-full bg-primary/20 blur-3xl" />
                   </div>
                   <div className="relative">
-                    <h3 className="text-2xl font-semibold text-white">{collection.name}</h3>
-                    <p className="mt-4 text-sm text-slate-200">{collection.description}</p>
+                    <h3 className="text-2xl font-semibold text-slate-900">{collection.name}</h3>
+                    <p className="mt-4 text-sm text-slate-600">{collection.description}</p>
                     <button
                       type="button"
-                      className="mt-6 inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-xs font-semibold uppercase tracking-widest text-slate-900 transition group-hover:bg-primary group-hover:text-white"
+                      className="mt-6 inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-white transition hover:bg-primary"
                     >
                       {collection.cta}
                       <span aria-hidden>→</span>
@@ -132,57 +166,57 @@ const EcommerceHomePage = () => {
 
         <section className="mx-auto max-w-6xl px-6 py-20">
           <div className="grid gap-10 lg:grid-cols-2">
-            <div className="rounded-3xl border border-white/10 bg-gradient-to-br from-primary/30 via-primary/10 to-transparent p-10 text-white shadow-xl shadow-primary/20 backdrop-blur">
-              <h2 className="text-3xl font-semibold">Weekly Spotlight</h2>
-              <p className="mt-4 text-sm text-slate-100">
+            <div className="rounded-3xl border border-slate-200 bg-white p-10 shadow-sm">
+              <h2 className="text-3xl font-semibold text-slate-900">Weekly Spotlight</h2>
+              <p className="mt-4 text-sm text-slate-600">
                 Meet Lumina Atelier — a female-led studio crafting small-batch denim with water-saving dye techniques and
                 inclusive sizing. Each piece is hand-finished in Los Angeles.
               </p>
-              <ul className="mt-6 space-y-3 text-sm text-slate-100/90">
+              <ul className="mt-6 space-y-3 text-sm text-slate-600">
                 <li className="flex items-start gap-3">
-                  <span className="mt-1 h-1.5 w-1.5 rounded-full bg-white" />
+                  <span className="mt-1 h-1.5 w-1.5 rounded-full bg-primary" />
                   Vintage-wash denim jackets with removable shearling collars.
                 </li>
                 <li className="flex items-start gap-3">
-                  <span className="mt-1 h-1.5 w-1.5 rounded-full bg-white" />
+                  <span className="mt-1 h-1.5 w-1.5 rounded-full bg-primary" />
                   Tailored jeans available in three inseam lengths and adaptive fits.
                 </li>
                 <li className="flex items-start gap-3">
-                  <span className="mt-1 h-1.5 w-1.5 rounded-full bg-white" />
+                  <span className="mt-1 h-1.5 w-1.5 rounded-full bg-primary" />
                   A give-back program funding textile recycling initiatives across the West Coast.
                 </li>
               </ul>
               <button
                 type="button"
-                className="mt-8 inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-semibold text-slate-900 transition hover:-translate-y-0.5 hover:bg-slate-100"
+                className="mt-8 inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-blue-600"
               >
                 View the collection
                 <span aria-hidden>→</span>
               </button>
             </div>
-            <div className="rounded-3xl border border-white/10 bg-white/5 p-10 text-white shadow-lg shadow-slate-900/40 backdrop-blur">
-              <h2 className="text-3xl font-semibold">Why shoppers love us</h2>
-              <ul className="mt-6 space-y-4 text-sm text-slate-200">
+            <div className="rounded-3xl border border-slate-200 bg-white p-10 shadow-sm">
+              <h2 className="text-3xl font-semibold text-slate-900">Why shoppers love us</h2>
+              <ul className="mt-6 space-y-4 text-sm text-slate-600">
                 <li className="flex gap-3">
-                  <span className="text-xl" aria-hidden>
+                  <span className="text-xl text-primary" aria-hidden>
                     ★
                   </span>
                   4.9 average rating across 12k verified reviews.
                 </li>
                 <li className="flex gap-3">
-                  <span className="text-xl" aria-hidden>
+                  <span className="text-xl text-primary" aria-hidden>
                     🚚
                   </span>
                   Carbon-neutral shipping on every order.
                 </li>
                 <li className="flex gap-3">
-                  <span className="text-xl" aria-hidden>
+                  <span className="text-xl text-primary" aria-hidden>
                     🔁
                   </span>
                   60-day hassle-free returns with reusable packaging.
                 </li>
                 <li className="flex gap-3">
-                  <span className="text-xl" aria-hidden>
+                  <span className="text-xl text-primary" aria-hidden>
                     🤝
                   </span>
                   Exclusive collaborations released monthly.
@@ -192,10 +226,10 @@ const EcommerceHomePage = () => {
           </div>
         </section>
 
-        <section id="newsletter" className="border-t border-white/10 bg-black/40">
+        <section id="newsletter" className="border-t border-slate-200 bg-white">
           <div className="mx-auto max-w-5xl px-6 py-20 text-center">
-            <h2 className="text-3xl font-semibold text-white sm:text-4xl">Get early access to product drops</h2>
-            <p className="mx-auto mt-4 max-w-2xl text-sm text-slate-300">
+            <h2 className="text-3xl font-semibold text-slate-900 sm:text-4xl">Get early access to product drops</h2>
+            <p className="mx-auto mt-4 max-w-2xl text-sm text-slate-600">
               Subscribe for insider stories, curated playlists, and invitations to limited-run collaborations with the
               designers you love.
             </p>
@@ -208,11 +242,11 @@ const EcommerceHomePage = () => {
                 type="email"
                 required
                 placeholder="you@example.com"
-                className="w-full rounded-full border border-white/20 bg-black/40 px-4 py-3 text-sm text-white placeholder-white/50 focus:border-white focus:outline-none focus:ring-2 focus:ring-primary/60"
+                className="w-full rounded-full border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
               />
               <button
                 type="submit"
-                className="rounded-full bg-primary px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-primary/40 transition hover:bg-blue-600"
+                className="rounded-full bg-primary px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-600"
               >
                 Notify me
               </button>
@@ -221,20 +255,20 @@ const EcommerceHomePage = () => {
         </section>
       </main>
 
-      <footer className="border-t border-white/10 bg-black/60">
-        <div className="mx-auto flex max-w-6xl flex-col gap-6 px-6 py-10 text-sm text-slate-400 sm:flex-row sm:items-center sm:justify-between">
+      <footer className="border-t border-slate-200 bg-white">
+        <div className="mx-auto flex max-w-6xl flex-col gap-6 px-6 py-10 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between">
           <div>© {new Date().getFullYear()} Aurora Market. Crafted with purpose.</div>
           <div className="flex flex-wrap items-center gap-4">
-            <a href="#" className="hover:text-white">
+            <a href="#" className="hover:text-slate-900">
               Privacy Policy
             </a>
-            <a href="#" className="hover:text-white">
+            <a href="#" className="hover:text-slate-900">
               Terms
             </a>
-            <a href="#" className="hover:text-white">
+            <a href="#" className="hover:text-slate-900">
               Instagram
             </a>
-            <a href="#" className="hover:text-white">
+            <a href="#" className="hover:text-slate-900">
               Pinterest
             </a>
           </div>
