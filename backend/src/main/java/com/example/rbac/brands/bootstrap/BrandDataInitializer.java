@@ -2,14 +2,19 @@ package com.example.rbac.brands.bootstrap;
 
 import com.example.rbac.brands.model.Brand;
 import com.example.rbac.brands.repository.BrandRepository;
-import jakarta.annotation.PostConstruct;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.boot.ApplicationArguments;
+import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 @Component
-public class BrandDataInitializer {
+public class BrandDataInitializer implements ApplicationRunner {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(BrandDataInitializer.class);
 
     private final BrandRepository brandRepository;
 
@@ -17,9 +22,13 @@ public class BrandDataInitializer {
         this.brandRepository = brandRepository;
     }
 
-    @PostConstruct
+    @Override
     @Transactional
-    public void seedBrands() {
+    public void run(ApplicationArguments args) {
+        seedBrands();
+    }
+
+    private void seedBrands() {
         List<BrandSeed> seeds = List.of(
                 new BrandSeed("Apple", "apple", "Premium electronics designed in California.", "https://logo.clearbit.com/apple.com"),
                 new BrandSeed("Samsung", "samsung", "Global leader in smart devices and appliances.", "https://logo.clearbit.com/samsung.com"),
@@ -83,6 +92,7 @@ public class BrandDataInitializer {
             brand.setDescription(seed.description());
             brand.setLogoUrl(seed.logoUrl());
             brandRepository.save(brand);
+            LOGGER.debug("Seeded brand {}", seed.name());
         }
     }
 

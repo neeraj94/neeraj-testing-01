@@ -1,0 +1,41 @@
+[
+  {
+    "code": "AF",
+    "states": [
+      { "name": "Badakhshan", "cities": ["Fayzabad", "Jurm", "Ishkashim"] },
+      { "name": "Badghis", "cities": ["Qala i Naw", "Bala Murghab", "Ghormach"] },
+      { "name": "Baghlan", "cities": ["Pul-e-Khumri", "Baghlan", "Dushi"] },
+      { "name": "Balkh", "cities": ["Mazar-i-Sharif", "Sholgara", "Balkh"] },
+      { "name": "Bamyan", "cities": ["Bamyan", "Yakawlang", "Panjab"] },
+      { "name": "Daykundi", "cities": ["Nili", "Shahristan", "Gizab"] },
+      { "name": "Farah", "cities": ["Farah", "Lash wa Juwayn", "Anar Dara"] },
+      { "name": "Faryab", "cities": ["Maymana", "Andkhoy", "Dawlat Abad"] },
+      { "name": "Ghazni", "cities": ["Ghazni", "Qarabagh", "Jaghori"] },
+      { "name": "Ghor", "cities": ["Chaghcharan", "Shahrak", "Taywara"] },
+      { "name": "Helmand", "cities": ["Lashkar Gah", "Gereshk", "Sangin"] },
+      { "name": "Herat", "cities": ["Herat", "Shindand", "Injil"] },
+      { "name": "Jowzjan", "cities": ["Sheberghan", "Aqcha", "Qarqin"] },
+      { "name": "Kabul", "cities": ["Kabul", "Paghman", "Sarobi"] },
+      { "name": "Kandahar", "cities": ["Kandahar", "Spin Boldak", "Arghandab"] },
+      { "name": "Kapisa", "cities": ["Mahmood Raqi", "Nijrab", "Kohistan"] },
+      { "name": "Khost", "cities": ["Khost", "Tani", "Spera"] },
+      { "name": "Kunar", "cities": ["Asadabad", "Nurgal", "Chawkay"] },
+      { "name": "Kunduz", "cities": ["Kunduz", "Imam Sahib", "Chahar Dara"] },
+      { "name": "Laghman", "cities": ["Mihtarlam", "Qarghayi", "Alingar"] },
+      { "name": "Logar", "cities": ["Puli Alam", "Mohammad Agha", "Kharwar"] },
+      { "name": "Nangarhar", "cities": ["Jalalabad", "Kama", "Bihsud"] },
+      { "name": "Nimruz", "cities": ["Zaranj", "Chakhansur", "Kang"] },
+      { "name": "Nuristan", "cities": ["Parun", "Wama", "Kamdesh"] },
+      { "name": "Paktia", "cities": ["Gardez", "Zurmat", "Shwak"] },
+      { "name": "Paktika", "cities": ["Sharana", "Urgun", "Barmal"] },
+      { "name": "Panjshir", "cities": ["Bazarak", "Anaba", "Rokha"] },
+      { "name": "Parwan", "cities": ["Charikar", "Bagram", "Ghorband"] },
+      { "name": "Samangan", "cities": ["Aybak", "Dara-i-Suf", "Khuram Wa Sarbagh"] },
+      { "name": "Sar-e Pol", "cities": ["Sar-e Pol", "Sayyad", "Kohistanat"] },
+      { "name": "Takhar", "cities": ["Taloqan", "Farkhar", "Rustaq"] },
+      { "name": "Uruzgan", "cities": ["Tarinkot", "Deh Rahwod", "Chora"] },
+      { "name": "Wardak", "cities": ["Maidan Shahr", "Nirkh", "Jaghatu"] },
+      { "name": "Zabul", "cities": ["Qalat", "Shamulzayi", "Tarnak Wa Jaldak"] }
+    ]
+  }
+]
