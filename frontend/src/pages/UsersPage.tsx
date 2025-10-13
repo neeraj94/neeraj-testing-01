@@ -413,6 +413,12 @@ const UsersPage = () => {
       if (!selectedUserId) {
         return null;
       }
+      if (form.roleIds.length === 0) {
+        throw new Error('Assign at least one role before saving access.');
+      }
+      await api.post<User>(`/users/${selectedUserId}/roles`, {
+        roleIds: form.roleIds
+      });
       const { data } = await api.put<User>(`/users/${selectedUserId}/permissions`, {
         grantedPermissionKeys: form.directPermissions,
         revokedPermissionKeys: form.revokedPermissions

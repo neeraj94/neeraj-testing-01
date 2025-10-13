@@ -61,6 +61,11 @@ const MediaLibraryDialog = ({
   useEffect(() => {
     if (open) {
       setSelectedPreview(null);
+      if (moduleFilters && moduleFilters.length === 1) {
+        setModule(moduleFilters[0]);
+      } else if (!moduleFilters || moduleFilters.length === 0) {
+        setModule('');
+      }
     } else {
       setSearchDraft('');
       setSearch('');
@@ -71,13 +76,7 @@ const MediaLibraryDialog = ({
       setTo('');
       setPage(0);
     }
-  }, [open]);
-
-  useEffect(() => {
-    if (moduleFilters && moduleFilters.length === 1) {
-      setModule(moduleFilters[0]);
-    }
-  }, [moduleFilters]);
+  }, [open, moduleFilters]);
 
   const { data: moduleOptions } = useQuery<UploadedFileModuleOption[]>({
     queryKey: ['uploaded-files', 'modules'],
@@ -105,7 +104,7 @@ const MediaLibraryDialog = ({
         size,
         search,
         fileType,
-        module: moduleFilters?.length ? moduleFilters.join(',') : module,
+        module,
         uploader,
         from,
         to
@@ -114,9 +113,8 @@ const MediaLibraryDialog = ({
     queryFn: async () => {
       const params: Record<string, unknown> = { page, size };
       if (search) params.search = search;
-      const resolvedModules = moduleFilters?.length ? moduleFilters : module ? [module] : [];
-      if (resolvedModules.length > 0) {
-        params.module = resolvedModules;
+      if (module) {
+        params.module = [module];
       }
       if (fileType) params.fileType = fileType;
       if (uploader) params.uploadedBy = uploader;
@@ -131,12 +129,7 @@ const MediaLibraryDialog = ({
   const files = filesQuery.data?.content ?? [];
   const totalElements = filesQuery.data?.totalElements ?? 0;
 
-  const moduleFilterOptions = useMemo(() => {
-    if (moduleFilters && moduleFilters.length === 1 && moduleOptions) {
-      return moduleOptions.filter((option) => moduleFilters.includes(option.module));
-    }
-    return moduleOptions ?? [];
-  }, [moduleFilters, moduleOptions]);
+  const moduleFilterOptions = useMemo(() => moduleOptions ?? [], [moduleOptions]);
 
   const handleFilePick = (file: UploadedFile) => {
     if (!file.publicUrl) {
@@ -251,7 +244,7 @@ const MediaLibraryDialog = ({
                 ))}
               </select>
             </div>
-            {(!moduleFilters || moduleFilters.length > 1) && moduleFilterOptions.length > 0 && (
+            {moduleFilterOptions.length > 0 && (
               <div className="flex flex-col">
                 <label className="text-xs font-medium uppercase tracking-wide text-slate-500">Module</label>
                 <select
