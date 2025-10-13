@@ -350,6 +350,13 @@ public class SetupService {
                             "🏷️",
                             "/admin/brands",
                             List.of("BRAND_VIEW")
+                    ),
+                    MenuDefinition.item(
+                            "products",
+                            "Products",
+                            "🛒",
+                            "/admin/products",
+                            List.of("PRODUCT_VIEW", "PRODUCT_CREATE", "PRODUCT_UPDATE")
                     )
             )),
             MenuDefinition.group("shipping", "Shipping", "🚚", List.of(
