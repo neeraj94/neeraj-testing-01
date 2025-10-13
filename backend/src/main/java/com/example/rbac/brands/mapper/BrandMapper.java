@@ -1,6 +1,7 @@
 package com.example.rbac.brands.mapper;
 
 import com.example.rbac.brands.dto.BrandDto;
+import com.example.rbac.brands.dto.PublicBrandDto;
 import com.example.rbac.brands.model.Brand;
 import org.springframework.stereotype.Component;
 
@@ -27,6 +28,19 @@ public class BrandMapper {
         dto.setMetaOgImage(brand.getMetaOgImage());
         dto.setCreatedAt(brand.getCreatedAt());
         dto.setUpdatedAt(brand.getUpdatedAt());
+        return dto;
+    }
+
+    public PublicBrandDto toPublicDto(Brand brand) {
+        if (brand == null) {
+            return null;
+        }
+        PublicBrandDto dto = new PublicBrandDto();
+        dto.setId(brand.getId());
+        dto.setName(brand.getName());
+        dto.setSlug(brand.getSlug());
+        dto.setDescription(brand.getDescription());
+        dto.setLogoUrl(brand.getLogoUrl());
         return dto;
     }
 }

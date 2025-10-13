@@ -40,3 +40,13 @@ export interface CategoryAssetUploadResponse {
   mimeType: string;
   sizeBytes: number;
 }
+
+export interface PublicCategory {
+  id: number;
+  name: string;
+  slug: string;
+  type: CategoryType;
+  orderNumber: number | null;
+  imageUrl?: string | null;
+  description?: string | null;
+}

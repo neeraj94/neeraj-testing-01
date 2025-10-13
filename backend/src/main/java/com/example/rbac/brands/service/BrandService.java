@@ -3,6 +3,7 @@ package com.example.rbac.brands.service;
 import com.example.rbac.activity.service.ActivityRecorder;
 import com.example.rbac.brands.dto.BrandDto;
 import com.example.rbac.brands.dto.BrandRequest;
+import com.example.rbac.brands.dto.PublicBrandDto;
 import com.example.rbac.brands.mapper.BrandMapper;
 import com.example.rbac.brands.model.Brand;
 import com.example.rbac.brands.repository.BrandRepository;
@@ -18,8 +19,10 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class BrandService {
@@ -49,6 +52,14 @@ public class BrandService {
             result = brandRepository.findAll(pageable);
         }
         return PageResponse.from(result.map(this::mapToDto));
+    }
+
+    public List<PublicBrandDto> listPublicBrands() {
+        return brandRepository.findAllByOrderByNameAsc()
+                .stream()
+                .map(brandMapper::toPublicDto)
+                .peek(dto -> dto.setLogoUrl(logoStorageService.resolvePublicUrl(dto.getLogoUrl())))
+                .collect(Collectors.toList());
     }
 
     public BrandDto get(Long id) {
