@@ -22,4 +22,7 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
 
     @Query("select c from Category c where c.id <> :excludeId order by c.name asc")
     List<Category> findAllExcept(Long excludeId);
+
+    @Query("select c from Category c order by case when c.orderNumber is null then 1 else 0 end, c.orderNumber desc, c.name asc")
+    List<Category> findAllOrderByOrderNumberDescNameAsc();
 }
