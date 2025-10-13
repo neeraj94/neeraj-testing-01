@@ -8,10 +8,11 @@ import com.example.rbac.shipping.repository.ShippingCountryRepository;
 import com.example.rbac.shipping.repository.ShippingStateRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.ApplicationArguments;
+import org.springframework.boot.ApplicationRunner;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,7 +26,7 @@ import java.util.List;
 import java.util.Locale;
 
 @Component
-public class ShippingDataInitializer {
+public class ShippingDataInitializer implements ApplicationRunner {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ShippingDataInitializer.class);
 
@@ -34,25 +35,55 @@ public class ShippingDataInitializer {
     private final ShippingCityRepository cityRepository;
     private final ObjectMapper objectMapper;
     private final Resource indiaStatesResource;
+    private final Resource globalStatesResource;
 
     public ShippingDataInitializer(ShippingCountryRepository countryRepository,
                                    ShippingStateRepository stateRepository,
                                    ShippingCityRepository cityRepository,
                                    ObjectMapper objectMapper,
-                                   @Value("classpath:data/shipping/india_states.json") Resource indiaStatesResource) {
+                                   @Value("classpath:data/shipping/india_states.json") Resource indiaStatesResource,
+                                   @Value("classpath:data/shipping/global_states_cities.json") Resource globalStatesResource) {
         this.countryRepository = countryRepository;
         this.stateRepository = stateRepository;
         this.cityRepository = cityRepository;
         this.objectMapper = objectMapper;
         this.indiaStatesResource = indiaStatesResource;
+        this.globalStatesResource = globalStatesResource;
     }
 
-    @PostConstruct
+    @Override
     @Transactional
-    public void initialize() {
+    public void run(ApplicationArguments args) {
         seedCountries();
+        seedStructuredStates(globalStatesResource);
         seedIndiaStatesAndCities();
         seedDefaultStatesAndCities();
+    }
+
+    private void seedStructuredStates(Resource resource) {
+        if (resource == null || !resource.exists()) {
+            return;
+        }
+        try (InputStream stream = resource.getInputStream()) {
+            List<CountrySeed> seeds = objectMapper.readValue(stream, new TypeReference<>() {
+            });
+            if (CollectionUtils.isEmpty(seeds)) {
+                return;
+            }
+            for (CountrySeed countrySeed : seeds) {
+                if (!StringUtils.hasText(countrySeed.getCode()) || CollectionUtils.isEmpty(countrySeed.getStates())) {
+                    continue;
+                }
+                ShippingCountry country = countryRepository.findByCodeIgnoreCase(countrySeed.getCode())
+                        .orElse(null);
+                if (country == null) {
+                    continue;
+                }
+                ensureStatesAndCities(country, countrySeed.getStates());
+            }
+        } catch (IOException ex) {
+            LOGGER.warn("Failed to seed structured states: {}", ex.getMessage());
+        }
     }
 
     private void seedCountries() {
@@ -87,51 +118,55 @@ public class ShippingDataInitializer {
             return;
         }
         try (InputStream stream = indiaStatesResource.getInputStream()) {
-            List<IndiaStateSeed> states = objectMapper.readValue(stream, new TypeReference<>() {});
+            List<StateSeed> states = objectMapper.readValue(stream, new TypeReference<>() {
+            });
             if (CollectionUtils.isEmpty(states)) {
                 return;
             }
-            List<ShippingState> existingStates = stateRepository.findByCountryIdOrderByNameAsc(india.getId());
-            for (IndiaStateSeed stateSeed : states) {
-                if (!StringUtils.hasText(stateSeed.getName())) {
-                    continue;
-                }
-                ShippingState state = existingStates.stream()
-                        .filter(existing -> existing.getName().equalsIgnoreCase(stateSeed.getName()))
-                        .findFirst()
-                        .orElseGet(() -> {
-                            ShippingState created = new ShippingState();
-                            created.setCountry(india);
-                            created.setName(stateSeed.getName());
-                            created.setEnabled(true);
-                            ShippingState saved = stateRepository.save(created);
-                            existingStates.add(saved);
-                            return saved;
-                        });
+            ensureStatesAndCities(india, states);
+        } catch (IOException ex) {
+            LOGGER.warn("Failed to seed India states: {}", ex.getMessage());
+        }
+    }
 
-                if (!state.isEnabled()) {
-                    state.setEnabled(true);
-                    stateRepository.save(state);
-                }
+    private void ensureStatesAndCities(ShippingCountry country, List<StateSeed> states) {
+        if (country == null || CollectionUtils.isEmpty(states)) {
+            return;
+        }
+        List<ShippingState> existingStates = new ArrayList<>(stateRepository.findByCountryIdOrderByNameAsc(country.getId()));
+        for (StateSeed stateSeed : states) {
+            if (!StringUtils.hasText(stateSeed.getName())) {
+                continue;
+            }
+            String normalizedStateName = stateSeed.getName().trim();
+            ShippingState state = existingStates.stream()
+                    .filter(existing -> existing.getName().equalsIgnoreCase(normalizedStateName))
+                    .findFirst()
+                    .orElseGet(() -> {
+                        ShippingState created = new ShippingState();
+                        created.setCountry(country);
+                        created.setName(normalizedStateName);
+                        created.setEnabled(true);
+                        ShippingState saved = stateRepository.save(created);
+                        existingStates.add(saved);
+                        return saved;
+                    });
 
-                List<ShippingCity> existingCities = cityRepository.findByStateIdOrderByNameAsc(state.getId());
+            if (!state.isEnabled()) {
+                state.setEnabled(true);
+                stateRepository.save(state);
+            }
 
-                if (!CollectionUtils.isEmpty(existingCities)) {
-                    boolean updated = false;
-                    for (ShippingCity existingCity : existingCities) {
-                        if (!existingCity.isEnabled()) {
-                            existingCity.setEnabled(true);
-                            updated = true;
-                        }
-                    }
-                    if (updated) {
-                        cityRepository.saveAll(existingCities);
-                    }
+            List<ShippingCity> existingCities = new ArrayList<>(cityRepository.findByStateIdOrderByNameAsc(state.getId()));
+            boolean citiesUpdated = false;
+            for (ShippingCity existingCity : existingCities) {
+                if (!existingCity.isEnabled()) {
+                    existingCity.setEnabled(true);
+                    citiesUpdated = true;
                 }
+            }
 
-                if (CollectionUtils.isEmpty(stateSeed.getCities())) {
-                    continue;
-                }
+            if (!CollectionUtils.isEmpty(stateSeed.getCities())) {
                 for (String cityName : stateSeed.getCities()) {
                     if (!StringUtils.hasText(cityName)) {
                         continue;
@@ -149,15 +184,16 @@ public class ShippingDataInitializer {
                                 existingCities.add(saved);
                                 return saved;
                             });
-
                     if (!city.isEnabled()) {
                         city.setEnabled(true);
-                        cityRepository.save(city);
+                        citiesUpdated = true;
                     }
                 }
             }
-        } catch (IOException ex) {
-            LOGGER.warn("Failed to seed India states: {}", ex.getMessage());
+
+            if (citiesUpdated) {
+                cityRepository.saveAll(existingCities);
+            }
         }
     }
 
@@ -252,7 +288,28 @@ public class ShippingDataInitializer {
         }
     }
 
-    private static class IndiaStateSeed {
+    private static class CountrySeed {
+        private String code;
+        private List<StateSeed> states;
+
+        public String getCode() {
+            return code;
+        }
+
+        public void setCode(String code) {
+            this.code = code;
+        }
+
+        public List<StateSeed> getStates() {
+            return states;
+        }
+
+        public void setStates(List<StateSeed> states) {
+            this.states = states;
+        }
+    }
+
+    private static class StateSeed {
         private String name;
         private List<String> cities;
 
