@@ -6,7 +6,8 @@ This project is a full-stack Role-Based Access Control dashboard featuring a Spr
 
 - **Authentication**: Email/password with BCrypt hashing, JWT access/refresh tokens, logout and token refresh flows.
 - **RBAC**: Users may have multiple roles; roles are composed of permissions. API endpoints enforce permissions via `@PreAuthorize`.
-- **Domain Modules**: CRUD for users, roles, permissions, customers, invoices (with items and totals), and profile management.
+- **Domain Modules**: CRUD for users, roles, permissions, customers, invoices (with items and totals), catalog assets (brands, categories, attributes), and profile management.
+- **Catalog Products**: End-to-end product workspace under **Catalog → Products** covering rich descriptions, brand pickers with logos, hierarchical category selection, multi-tax assignment, gallery/thumbnail uploads, PDF specs, SEO meta data, and attribute-driven variant matrices.
 - **Dynamic Dashboard**: Frontend tabs render based on effective permissions. React Query keeps data fresh, Redux Toolkit stores auth state, and Tailwind provides styling.
 - **Database Migrations**: Flyway manages schema and seed data for MySQL, including demo users and sample business data.
 - **Data Exports**: Users with the new export permissions can download filtered table views (Users, Roles, Permissions, Invoices,
@@ -50,8 +51,11 @@ This project is a full-stack Role-Based Access Control dashboard featuring a Spr
    | Email                | Password     | Role         |
    |----------------------|--------------|--------------|
    | superadmin@demo.io   | Super@123    | SUPER_ADMIN  |
-   | admin@demo.io        | Admin@123    | ADMIN        |
-   | finance@demo.io      | Finance@123  | FINANCE      |
+ | admin@demo.io        | Admin@123    | ADMIN        |
+  | finance@demo.io      | Finance@123  | FINANCE      |
+
+Product permissions (`PRODUCT_VIEW`, `PRODUCT_CREATE`, `PRODUCT_UPDATE`, `PRODUCT_DELETE`) are seeded automatically for the
+SUPER_ADMIN and ADMIN roles; assign them to additional roles to unlock the catalog product workspace.
 
 ## Frontend Setup
 
