@@ -3,10 +3,12 @@ import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import api from '../services/http';
 import type { PublicCategory } from '../types/category';
+import type { PublicBrand } from '../types/brand';
 
 const navLinks = [
   { href: '/', label: 'Home' },
   { href: '/categories', label: 'Categories' },
+  { href: '/brands', label: 'Brands' },
   { href: '/blog', label: 'Blog' },
   { href: '/products/showcase', label: 'Product' }
 ];
@@ -23,6 +25,21 @@ const PublicCategoriesPage = () => {
   });
 
   const categories = categoriesQuery.data ?? [];
+
+  const brandsQuery = useQuery<PublicBrand[]>({
+    queryKey: ['public', 'catalog', 'brands'],
+    queryFn: async () => {
+      const { data } = await api.get<PublicBrand[]>('/public/catalog/brands');
+      return data;
+    }
+  });
+
+  const featuredBrands = useMemo(() => {
+    const sorted = [...(brandsQuery.data ?? [])].sort((a, b) =>
+      a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
+    );
+    return sorted.slice(0, 8);
+  }, [brandsQuery.data]);
 
   const filteredCategories = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
@@ -177,6 +194,68 @@ const PublicCategoriesPage = () => {
                 </article>
               ))
             )}
+          </div>
+        </section>
+
+        <section className="border-t border-slate-200 bg-white">
+          <div className="mx-auto max-w-6xl px-6 py-16">
+            <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+              <div className="max-w-2xl">
+                <p className="text-xs font-semibold uppercase tracking-[0.35em] text-primary">Our partners</p>
+                <h2 className="mt-3 text-3xl font-semibold text-slate-900 sm:text-4xl">Brands we champion</h2>
+                <p className="mt-3 text-sm text-slate-600">
+                  Meet the labels shaping our marketplace—from heritage designers to emerging innovators. Explore the full
+                  roster or jump straight to featured collections curated by our buyers.
+                </p>
+              </div>
+              <Link
+                to="/brands"
+                className="inline-flex items-center gap-2 self-start rounded-full border border-slate-200 px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-slate-600 transition hover:border-slate-300 hover:text-slate-900 md:self-auto"
+              >
+                View all brands
+                <span aria-hidden>→</span>
+              </Link>
+            </div>
+
+            <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+              {brandsQuery.isLoading
+                ? Array.from({ length: 4 }).map((_, index) => (
+                    <div key={index} className="h-40 animate-pulse rounded-3xl border border-slate-200 bg-white" aria-hidden />
+                  ))
+                : brandsQuery.isError || featuredBrands.length === 0
+                ? (
+                    <div className="sm:col-span-2 lg:col-span-4 rounded-3xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500">
+                      {brandsQuery.isError
+                        ? 'Unable to load featured brands at the moment. Please refresh to try again.'
+                        : 'Check back soon for our curated brand lineup.'}
+                    </div>
+                  )
+                : (
+                    featuredBrands.map((brand) => (
+                      <article
+                        key={brand.id}
+                        className="group flex flex-col justify-between overflow-hidden rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:border-primary/40 hover:shadow-lg"
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                            {brand.logoUrl ? (
+                              <img src={brand.logoUrl} alt={`${brand.name} logo`} className="h-full w-full object-contain p-2" />
+                            ) : (
+                              <span className="text-xl font-semibold text-primary">{brand.name.charAt(0).toUpperCase()}</span>
+                            )}
+                          </div>
+                          <div>
+                            <h3 className="text-lg font-semibold text-slate-900">{brand.name}</h3>
+                            <p className="text-xs uppercase tracking-[0.3em] text-primary">{brand.slug}</p>
+                          </div>
+                        </div>
+                        <p className="mt-4 text-sm text-slate-600 line-clamp-2">
+                          {brand.description || 'Exclusive collaborations launching soon.'}
+                        </p>
+                      </article>
+                    ))
+                  )}
+            </div>
           </div>
         </section>
       </main>

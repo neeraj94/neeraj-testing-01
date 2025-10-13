@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 const navLinks = [
   { href: '/', label: 'Home' },
   { href: '/categories', label: 'Categories' },
+  { href: '/brands', label: 'Brands' },
   { href: '/blog', label: 'Blog' },
   { href: '/products/showcase', label: 'Product' }
 ];

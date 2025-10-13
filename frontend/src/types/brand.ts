@@ -26,3 +26,11 @@ export interface BrandLogoUploadResponse {
   mimeType: string;
   sizeBytes: number;
 }
+
+export interface PublicBrand {
+  id: number;
+  name: string;
+  slug: string;
+  description?: string | null;
+  logoUrl?: string | null;
+}

@@ -161,18 +161,26 @@ const AreaShippingPage = () => {
 
   const countries = countriesQuery.data ?? [];
   const sortedCountries = useMemo(() => sortByEnabledThenName(countries), [countries]);
+  const enabledCountries = useMemo(
+    () => sortedCountries.filter((country) => country.enabled),
+    [sortedCountries]
+  );
+  const stateCountryOptions = useMemo(
+    () => (enabledCountries.length ? enabledCountries : sortedCountries),
+    [enabledCountries, sortedCountries]
+  );
   useEffect(() => {
-    if (!sortedCountries.length) {
+    if (!stateCountryOptions.length) {
       if (stateCountryId !== null) {
         setStateCountryId(null);
       }
       return;
     }
 
-    if (!sortedCountries.some((country) => country.id === stateCountryId)) {
-      setStateCountryId(sortedCountries[0].id);
+    if (!stateCountryOptions.some((country) => country.id === stateCountryId)) {
+      setStateCountryId(stateCountryOptions[0].id);
     }
-  }, [sortedCountries, stateCountryId]);
+  }, [stateCountryOptions, stateCountryId]);
 
   useEffect(() => {
     setStatePage(0);
@@ -184,18 +192,19 @@ const AreaShippingPage = () => {
     }
   }, [stateCountryId]);
 
+  const cityCountryOptions = stateCountryOptions;
   useEffect(() => {
-    if (!sortedCountries.length) {
+    if (!cityCountryOptions.length) {
       if (cityCountryId !== null) {
         setCityCountryId(null);
       }
       return;
     }
 
-    if (!sortedCountries.some((country) => country.id === cityCountryId)) {
-      setCityCountryId(sortedCountries[0].id);
+    if (!cityCountryOptions.some((country) => country.id === cityCountryId)) {
+      setCityCountryId(cityCountryOptions[0].id);
     }
-  }, [sortedCountries, cityCountryId]);
+  }, [cityCountryOptions, cityCountryId]);
 
   const filteredCountries = useMemo(() => {
     if (!countrySearch) {
@@ -262,17 +271,25 @@ const AreaShippingPage = () => {
 
   const cityStates = cityStatesQuery.data ?? [];
   const sortedCityStates = useMemo(() => sortByEnabledThenName(cityStates), [cityStates]);
+  const enabledCityStates = useMemo(
+    () => sortedCityStates.filter((state) => state.enabled),
+    [sortedCityStates]
+  );
+  const cityStateOptions = useMemo(
+    () => (enabledCityStates.length ? enabledCityStates : sortedCityStates),
+    [enabledCityStates, sortedCityStates]
+  );
   useEffect(() => {
-    if (!sortedCityStates.length) {
+    if (!cityStateOptions.length) {
       if (cityStateId !== null) {
         setCityStateId(null);
       }
       return;
     }
-    if (!sortedCityStates.some((state) => state.id === cityStateId)) {
-      setCityStateId(sortedCityStates[0].id);
+    if (!cityStateOptions.some((state) => state.id === cityStateId)) {
+      setCityStateId(cityStateOptions[0].id);
     }
-  }, [sortedCityStates, cityStateId]);
+  }, [cityStateOptions, cityStateId]);
 
   useEffect(() => {
     setCityPage(0);
@@ -824,12 +841,12 @@ const AreaShippingPage = () => {
                 setStatePage(0);
               }}
               className="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-              disabled={!sortedCountries.length}
+              disabled={!stateCountryOptions.length}
             >
-              {!sortedCountries.length ? (
-                <option value="">Add a country first</option>
+              {!stateCountryOptions.length ? (
+                <option value="">Enable a country first</option>
               ) : (
-                sortedCountries.map((country) => (
+                stateCountryOptions.map((country) => (
                   <option key={country.id} value={country.id}>
                     {country.name}
                   </option>
@@ -1037,12 +1054,12 @@ const AreaShippingPage = () => {
                 setCityPage(0);
               }}
               className="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-              disabled={!sortedCountries.length}
+              disabled={!cityCountryOptions.length}
             >
-              {!sortedCountries.length ? (
-                <option value="">Add a country first</option>
+              {!cityCountryOptions.length ? (
+                <option value="">Enable a country first</option>
               ) : (
-                sortedCountries.map((country) => (
+                cityCountryOptions.map((country) => (
                   <option key={country.id} value={country.id}>
                     {country.name}
                   </option>
@@ -1061,12 +1078,12 @@ const AreaShippingPage = () => {
                 setCityPage(0);
               }}
               className="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-              disabled={!sortedCityStates.length}
+              disabled={!cityStateOptions.length}
             >
-              {!sortedCityStates.length ? (
-                <option value="">Add a state first</option>
+              {!cityStateOptions.length ? (
+                <option value="">Enable a state first</option>
               ) : (
-                sortedCityStates.map((state) => (
+                cityStateOptions.map((state) => (
                   <option key={state.id} value={state.id}>
                     {state.name}
                   </option>
