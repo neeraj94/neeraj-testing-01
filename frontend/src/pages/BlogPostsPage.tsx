@@ -1,8 +1,9 @@
-import { ChangeEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../services/http';
 import type { BlogCategory, BlogMediaUploadResponse, BlogPost, BlogPostPage } from '../types/blog';
 import { useToast } from '../components/ToastProvider';
+import { useConfirm } from '../components/ConfirmDialogProvider';
 import { useAppSelector } from '../app/hooks';
 import { hasAnyPermission } from '../utils/permissions';
 import type { PermissionKey } from '../types/auth';
@@ -11,6 +12,8 @@ import RichTextEditor from '../components/RichTextEditor';
 import PageHeader from '../components/PageHeader';
 import PageSection from '../components/PageSection';
 import PaginationControls from '../components/PaginationControls';
+import MediaLibraryDialog from '../components/MediaLibraryDialog';
+import type { MediaSelection } from '../types/uploaded-file';
 
 interface PostFormState {
   title: string;
@@ -57,6 +60,7 @@ const buildMediaUrl = (key?: string | null) => {
 const BlogPostsPage = () => {
   const queryClient = useQueryClient();
   const { notify } = useToast();
+  const confirm = useConfirm();
   const permissions = useAppSelector((state) => state.auth.permissions);
 
   const [page, setPage] = useState(0);
@@ -74,10 +78,8 @@ const BlogPostsPage = () => {
     bannerImage: null,
     metaImage: null
   });
-  const [mediaUploading, setMediaUploading] = useState<{ bannerImage: boolean; metaImage: boolean }>({
-    bannerImage: false,
-    metaImage: false
-  });
+  const [mediaLibraryOpen, setMediaLibraryOpen] = useState(false);
+  const [mediaLibraryTarget, setMediaLibraryTarget] = useState<'bannerImage' | 'metaImage' | null>(null);
 
   const canCreate = useMemo(
     () => hasAnyPermission(permissions as PermissionKey[], ['BLOG_POST_CREATE']),
@@ -175,6 +177,8 @@ const BlogPostsPage = () => {
     setMediaPreview({ bannerImage: null, metaImage: null });
     setFormError(null);
     setEditingId(null);
+    setMediaLibraryOpen(false);
+    setMediaLibraryTarget(null);
   };
 
   const openCreateModal = () => {
@@ -208,38 +212,83 @@ const BlogPostsPage = () => {
 
   const closeModal = () => {
     setIsModalOpen(false);
+    setMediaLibraryOpen(false);
+    setMediaLibraryTarget(null);
   };
 
-  const handleFileUpload = async (file: File, target: 'bannerImage' | 'metaImage') => {
-    setMediaUploading((prev) => ({ ...prev, [target]: true }));
+  const openMediaLibrary = (target: 'bannerImage' | 'metaImage') => {
+    setMediaLibraryTarget(target);
+    setMediaLibraryOpen(true);
+  };
+
+  const closeMediaLibrary = () => {
+    setMediaLibraryOpen(false);
+    setMediaLibraryTarget(null);
+  };
+
+  const resolveMediaKey = (selection: MediaSelection): string | null => {
+    if (selection.storageKey && selection.storageKey.trim() !== '') {
+      return selection.storageKey;
+    }
+    if (!selection.url) {
+      return null;
+    }
+    try {
+      const origin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost';
+      const parsed = new URL(selection.url, origin);
+      const segments = parsed.pathname.split('/').filter(Boolean);
+      return segments.length > 0 ? segments[segments.length - 1] : selection.url;
+    } catch (error) {
+      const parts = selection.url.split('/').filter(Boolean);
+      return parts.length > 0 ? parts[parts.length - 1] : selection.url;
+    }
+  };
+
+  const handleMediaSelect = (selection: MediaSelection) => {
+    if (!mediaLibraryTarget) {
+      closeMediaLibrary();
+      return;
+    }
+    const key = resolveMediaKey(selection);
+    setForm((prev) => ({ ...prev, [mediaLibraryTarget]: key ?? null }));
+    setMediaPreview((prev) => ({ ...prev, [mediaLibraryTarget]: selection.url }));
+    closeMediaLibrary();
+  };
+
+  const handleMediaUpload = async (file: File): Promise<MediaSelection> => {
+    if (!mediaLibraryTarget) {
+      throw new Error('No media target selected.');
+    }
     try {
       const formData = new FormData();
       formData.append('file', file);
+      const usage = mediaLibraryTarget === 'bannerImage' ? 'BANNER' : 'META';
       const { data } = await api.post<BlogMediaUploadResponse>('/blog/media', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
+        headers: { 'Content-Type': 'multipart/form-data' },
+        params: { usage }
       });
-      setForm((prev) => ({ ...prev, [target]: data.key }));
-      setMediaPreview((prev) => ({ ...prev, [target]: data.url }));
       notify({ type: 'success', message: 'Media uploaded successfully.' });
+      return {
+        url: data.url,
+        storageKey: data.key,
+        originalFilename: data.originalFilename ?? undefined,
+        mimeType: data.mimeType ?? undefined,
+        sizeBytes: data.sizeBytes ?? undefined
+      };
     } catch (error) {
       notify({ type: 'error', message: extractErrorMessage(error, 'Failed to upload media.') });
-    } finally {
-      setMediaUploading((prev) => ({ ...prev, [target]: false }));
+      throw error;
     }
   };
 
-  const handleBannerFile = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      void handleFileUpload(file, 'bannerImage');
-    }
+  const handleMediaRemove = (target: 'bannerImage' | 'metaImage') => {
+    setForm((prev) => ({ ...prev, [target]: null }));
+    setMediaPreview((prev) => ({ ...prev, [target]: null }));
   };
 
-  const handleMetaFile = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      void handleFileUpload(file, 'metaImage');
-    }
+  const moduleForTarget: Record<'bannerImage' | 'metaImage', string> = {
+    bannerImage: 'BLOG_BANNER_IMAGE',
+    metaImage: 'BLOG_META_IMAGE'
   };
 
   const validateForm = (): boolean => {
@@ -291,7 +340,12 @@ const BlogPostsPage = () => {
     if (!canDelete) {
       return;
     }
-    const confirmed = window.confirm(`Delete the post "${post.title}"? This action cannot be undone.`);
+    const confirmed = await confirm({
+      title: 'Delete post?',
+      description: `Delete the post "${post.title}"? This action cannot be undone.`,
+      confirmLabel: 'Delete',
+      tone: 'danger'
+    });
     if (!confirmed) {
       return;
     }
@@ -319,6 +373,14 @@ const BlogPostsPage = () => {
               )
             : undefined
         }
+      />
+
+      <MediaLibraryDialog
+        open={mediaLibraryOpen}
+        onClose={closeMediaLibrary}
+        moduleFilters={mediaLibraryTarget ? [moduleForTarget[mediaLibraryTarget]] : undefined}
+        onSelect={handleMediaSelect}
+        onUpload={mediaLibraryTarget ? handleMediaUpload : undefined}
       />
 
       <PageSection padded={false} bodyClassName="flex flex-col">
@@ -569,30 +631,41 @@ const BlogPostsPage = () => {
                 <div className="space-y-5">
                   <div className="rounded-xl border border-slate-200 p-4">
                     <h3 className="mb-3 text-sm font-semibold text-slate-700">Banner Image</h3>
-                    <div className="space-y-3">
-                      {mediaPreview.bannerImage ? (
-                        <img
-                          src={mediaPreview.bannerImage}
-                          alt="Banner preview"
-                          className="h-40 w-full rounded-lg object-cover"
-                        />
-                      ) : (
-                        <div className="flex h-40 w-full items-center justify-center rounded-lg border border-dashed border-slate-300 bg-slate-50 text-sm text-slate-400">
-                          No banner selected
-                        </div>
+                  <div className="space-y-3">
+                    {mediaPreview.bannerImage ? (
+                      <img
+                        src={mediaPreview.bannerImage}
+                        alt="Banner preview"
+                        className="h-40 w-full rounded-lg object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-40 w-full items-center justify-center rounded-lg border border-dashed border-slate-300 bg-slate-50 text-sm text-slate-400">
+                        No banner selected
+                      </div>
+                    )}
+                    {form.bannerImage && !mediaPreview.bannerImage && (
+                      <p className="break-all text-xs text-slate-500">{form.bannerImage}</p>
+                    )}
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => openMediaLibrary('bannerImage')}
+                        className="rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-white shadow hover:bg-blue-600"
+                      >
+                        Select banner
+                      </button>
+                      {form.bannerImage && (
+                        <button
+                          type="button"
+                          onClick={() => handleMediaRemove('bannerImage')}
+                          className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-100"
+                        >
+                          Remove
+                        </button>
                       )}
-                      <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-xs font-medium text-slate-600 transition hover:border-primary hover:text-primary">
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={handleBannerFile}
-                          disabled={mediaUploading.bannerImage}
-                        />
-                        {mediaUploading.bannerImage ? 'Uploading…' : 'Upload banner'}
-                      </label>
                     </div>
                   </div>
+                </div>
                   <div className="rounded-xl border border-slate-200 p-4">
                     <h3 className="mb-3 text-sm font-semibold text-slate-700">SEO Metadata</h3>
                     <div className="space-y-3">
@@ -648,16 +721,27 @@ const BlogPostsPage = () => {
                             No meta image selected
                           </div>
                         )}
-                        <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-xs font-medium text-slate-600 transition hover:border-primary hover:text-primary">
-                          <input
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            onChange={handleMetaFile}
-                            disabled={mediaUploading.metaImage}
-                          />
-                          {mediaUploading.metaImage ? 'Uploading…' : 'Upload meta image'}
-                        </label>
+                        {form.metaImage && !mediaPreview.metaImage && (
+                          <p className="break-all text-xs text-slate-500">{form.metaImage}</p>
+                        )}
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            onClick={() => openMediaLibrary('metaImage')}
+                            className="rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-white shadow hover:bg-blue-600"
+                          >
+                            Select meta image
+                          </button>
+                          {form.metaImage && (
+                            <button
+                              type="button"
+                              onClick={() => handleMediaRemove('metaImage')}
+                              className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-100"
+                            >
+                              Remove
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>

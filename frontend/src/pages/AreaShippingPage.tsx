@@ -67,6 +67,15 @@ const defaultCityForm: CityFormState = {
 const renderCost = (value: number | null | undefined, currency: string | undefined) =>
   typeof value === 'number' && Number.isFinite(value) ? formatCurrency(value, currency) : '—';
 
+const sortByEnabledThenName = <T extends { enabled?: boolean; name: string }>(items: T[]) =>
+  [...items].sort((a, b) => {
+    const enabledDelta = Number(Boolean(b.enabled)) - Number(Boolean(a.enabled));
+    if (enabledDelta !== 0) {
+      return enabledDelta;
+    }
+    return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+  });
+
 const AreaShippingPage = () => {
   const queryClient = useQueryClient();
   const { notify } = useToast();
@@ -151,32 +160,57 @@ const AreaShippingPage = () => {
   });
 
   const countries = countriesQuery.data ?? [];
+  const sortedCountries = useMemo(() => sortByEnabledThenName(countries), [countries]);
+  const enabledCountries = useMemo(
+    () => sortedCountries.filter((country) => country.enabled),
+    [sortedCountries]
+  );
 
   useEffect(() => {
-    if (!countries.length) {
-      setStateCountryId(null);
-      setCityCountryId(null);
+    if (!sortedCountries.length || !enabledCountries.length) {
+      if (stateCountryId !== null) {
+        setStateCountryId(null);
+      }
       return;
     }
 
-    if (stateCountryId === null || !countries.some((country) => country.id === stateCountryId)) {
-      setStateCountryId(countries[0].id);
+    if (!enabledCountries.some((country) => country.id === stateCountryId)) {
+      setStateCountryId(enabledCountries[0].id);
+    }
+  }, [sortedCountries, enabledCountries, stateCountryId]);
+
+  useEffect(() => {
+    setStatePage(0);
+  }, [stateCountryId]);
+
+  useEffect(() => {
+    if (stateCountryId === null) {
+      setShowStateForm(false);
+    }
+  }, [stateCountryId]);
+
+  useEffect(() => {
+    if (!sortedCountries.length || !enabledCountries.length) {
+      if (cityCountryId !== null) {
+        setCityCountryId(null);
+      }
+      return;
     }
 
-    if (cityCountryId === null || !countries.some((country) => country.id === cityCountryId)) {
-      setCityCountryId(countries[0].id);
+    if (!enabledCountries.some((country) => country.id === cityCountryId)) {
+      setCityCountryId(enabledCountries[0].id);
     }
-  }, [countries, stateCountryId, cityCountryId]);
+  }, [sortedCountries, enabledCountries, cityCountryId]);
 
   const filteredCountries = useMemo(() => {
     if (!countrySearch) {
-      return countries;
+      return sortedCountries;
     }
     const term = countrySearch.toLowerCase();
-    return countries.filter((country) =>
+    return sortedCountries.filter((country) =>
       [country.name, country.code ?? ''].some((value) => value?.toLowerCase().includes(term))
     );
-  }, [countries, countrySearch]);
+  }, [sortedCountries, countrySearch]);
 
   useEffect(() => {
     const maxPage = Math.max(Math.ceil(filteredCountries.length / countryPageSize) - 1, 0);
@@ -200,14 +234,15 @@ const AreaShippingPage = () => {
   });
 
   const states = statesQuery.data ?? [];
+  const sortedStates = useMemo(() => sortByEnabledThenName(states), [states]);
 
   const filteredStates = useMemo(() => {
     if (!stateSearch) {
-      return states;
+      return sortedStates;
     }
     const term = stateSearch.toLowerCase();
-    return states.filter((state) => state.name.toLowerCase().includes(term));
-  }, [states, stateSearch]);
+    return sortedStates.filter((state) => state.name.toLowerCase().includes(term));
+  }, [sortedStates, stateSearch]);
 
   useEffect(() => {
     const maxPage = Math.max(Math.ceil(filteredStates.length / statePageSize) - 1, 0);
@@ -231,16 +266,33 @@ const AreaShippingPage = () => {
   });
 
   const cityStates = cityStatesQuery.data ?? [];
+  const sortedCityStates = useMemo(() => sortByEnabledThenName(cityStates), [cityStates]);
+  const enabledCityStates = useMemo(
+    () => sortedCityStates.filter((state) => state.enabled),
+    [sortedCityStates]
+  );
 
   useEffect(() => {
-    if (!cityStates.length) {
-      setCityStateId(null);
+    if (!enabledCityStates.length) {
+      if (cityStateId !== null) {
+        setCityStateId(null);
+      }
       return;
     }
-    if (cityStateId === null || !cityStates.some((state) => state.id === cityStateId)) {
-      setCityStateId(cityStates[0].id);
+    if (!enabledCityStates.some((state) => state.id === cityStateId)) {
+      setCityStateId(enabledCityStates[0].id);
     }
-  }, [cityStates, cityStateId]);
+  }, [enabledCityStates, cityStateId]);
+
+  useEffect(() => {
+    setCityPage(0);
+  }, [cityStateId, cityCountryId]);
+
+  useEffect(() => {
+    if (cityStateId === null) {
+      setShowCityForm(false);
+    }
+  }, [cityStateId]);
 
   const citiesQuery = useQuery<ShippingCity[]>({
     queryKey: ['shipping', 'cities', 'list', cityStateId],
@@ -252,14 +304,15 @@ const AreaShippingPage = () => {
   });
 
   const cities = citiesQuery.data ?? [];
+  const sortedCities = useMemo(() => sortByEnabledThenName(cities), [cities]);
 
   const filteredCities = useMemo(() => {
     if (!citySearch) {
-      return cities;
+      return sortedCities;
     }
     const term = citySearch.toLowerCase();
-    return cities.filter((city) => city.name.toLowerCase().includes(term));
-  }, [cities, citySearch]);
+    return sortedCities.filter((city) => city.name.toLowerCase().includes(term));
+  }, [sortedCities, citySearch]);
 
   useEffect(() => {
     const maxPage = Math.max(Math.ceil(filteredCities.length / cityPageSize) - 1, 0);
@@ -566,17 +619,18 @@ const AreaShippingPage = () => {
 
   const renderCountryTab = () => (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <label className="flex w-full max-w-xs flex-col gap-1 text-sm font-medium text-slate-600">
+          Search countries
           <input
             type="search"
             value={countrySearchDraft}
             onChange={(event: ChangeEvent<HTMLInputElement>) => setCountrySearchDraft(event.target.value)}
-            placeholder="Search countries"
-            className="w-full max-w-xs rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            placeholder="Start typing to filter"
+            className="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
             aria-label="Search countries"
           />
-        </div>
+        </label>
         {canManageLocations && (
           <button
             type="button"
@@ -584,7 +638,7 @@ const AreaShippingPage = () => {
               setShowCountryForm((prev) => !prev);
               setCountryFormError(null);
             }}
-            className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white shadow transition hover:bg-blue-600"
+            className="inline-flex items-center gap-2 self-start rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white shadow transition hover:bg-blue-600 lg:self-auto"
           >
             {showCountryForm ? 'Cancel' : 'Add country'}
           </button>
@@ -767,34 +821,43 @@ const AreaShippingPage = () => {
 
   const renderStateTab = () => (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-wrap items-center gap-3">
-          <label className="text-sm font-medium text-slate-600">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div className="flex flex-col gap-4 md:flex-row md:items-end md:gap-4">
+          <label className="flex min-w-[220px] flex-col gap-1 text-sm font-medium text-slate-600">
             Country
             <select
               value={stateCountryId ?? ''}
               onChange={(event) => {
-                const value = Number(event.target.value);
-                setStateCountryId(Number.isNaN(value) ? null : value);
+                const rawValue = event.target.value;
+                const value = Number(rawValue);
+                setStateCountryId(rawValue === '' || Number.isNaN(value) ? null : value);
                 setStatePage(0);
               }}
-              className="ml-3 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+              className="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+              disabled={!enabledCountries.length}
             >
-              {countries.map((country) => (
-                <option key={country.id} value={country.id}>
-                  {country.name}
-                </option>
-              ))}
+              {!enabledCountries.length ? (
+                <option value="">Enable a country first</option>
+              ) : (
+                enabledCountries.map((country) => (
+                  <option key={country.id} value={country.id}>
+                    {country.name}
+                  </option>
+                ))
+              )}
             </select>
           </label>
-          <input
-            type="search"
-            value={stateSearchDraft}
-            onChange={(event) => setStateSearchDraft(event.target.value)}
-            placeholder="Search states"
-            className="w-full max-w-xs rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-            aria-label="Search states"
-          />
+          <label className="flex w-full max-w-xs flex-col gap-1 text-sm font-medium text-slate-600">
+            Search
+            <input
+              type="search"
+              value={stateSearchDraft}
+              onChange={(event) => setStateSearchDraft(event.target.value)}
+              placeholder="Search states"
+              className="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+              aria-label="Search states"
+            />
+          </label>
         </div>
         {canManageLocations && (
           <button
@@ -803,7 +866,7 @@ const AreaShippingPage = () => {
               setShowStateForm((prev) => !prev);
               setStateFormError(null);
             }}
-            className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white shadow transition hover:bg-blue-600"
+            className="inline-flex items-center gap-2 self-start rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white shadow transition hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-60 lg:self-auto"
             disabled={stateCountryId === null}
           >
             {showStateForm ? 'Cancel' : 'Add state'}
@@ -881,7 +944,9 @@ const AreaShippingPage = () => {
               ) : stateCountryId === null ? (
                 <tr>
                   <td className="px-6 py-6 text-center text-slate-500" colSpan={3}>
-                    Select a country to view its states.
+                    {enabledCountries.length
+                      ? 'Select a country to view its states.'
+                      : 'Enable a country to manage states.'}
                   </td>
                 </tr>
               ) : !filteredStates.length ? (
@@ -967,54 +1032,69 @@ const AreaShippingPage = () => {
 
   const renderCityTab = () => (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-wrap items-center gap-3">
-          <label className="text-sm font-medium text-slate-600">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div className="flex flex-col gap-4 md:flex-row md:items-end md:gap-4">
+          <label className="flex min-w-[220px] flex-col gap-1 text-sm font-medium text-slate-600">
             Country
             <select
               value={cityCountryId ?? ''}
               onChange={(event) => {
-                const value = Number(event.target.value);
-                const nextCountryId = Number.isNaN(value) ? null : value;
+                const rawValue = event.target.value;
+                const value = Number(rawValue);
+                const nextCountryId = rawValue === '' || Number.isNaN(value) ? null : value;
                 setCityCountryId(nextCountryId);
                 setCityStateId(null);
                 setCityPage(0);
               }}
-              className="ml-3 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+              className="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+              disabled={!enabledCountries.length}
             >
-              {countries.map((country) => (
-                <option key={country.id} value={country.id}>
-                  {country.name}
-                </option>
-              ))}
+              {!enabledCountries.length ? (
+                <option value="">Enable a country first</option>
+              ) : (
+                enabledCountries.map((country) => (
+                  <option key={country.id} value={country.id}>
+                    {country.name}
+                  </option>
+                ))
+              )}
             </select>
           </label>
-          <label className="text-sm font-medium text-slate-600">
+          <label className="flex min-w-[220px] flex-col gap-1 text-sm font-medium text-slate-600">
             State
             <select
               value={cityStateId ?? ''}
               onChange={(event) => {
-                const value = Number(event.target.value);
-                setCityStateId(Number.isNaN(value) ? null : value);
+                const rawValue = event.target.value;
+                const value = Number(rawValue);
+                setCityStateId(rawValue === '' || Number.isNaN(value) ? null : value);
                 setCityPage(0);
               }}
-              className="ml-3 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+              className="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+              disabled={!enabledCityStates.length}
             >
-              {cityStates.map((state) => (
-                <option key={state.id} value={state.id}>
-                  {state.name}
-                </option>
-              ))}
+              {!enabledCityStates.length ? (
+                <option value="">Enable a state first</option>
+              ) : (
+                enabledCityStates.map((state) => (
+                  <option key={state.id} value={state.id}>
+                    {state.name}
+                  </option>
+                ))
+              )}
             </select>
           </label>
-          <input
-            type="search"
-            value={citySearchDraft}
-            onChange={(event) => setCitySearchDraft(event.target.value)}
-            placeholder="Search cities"
-            className="w-full max-w-xs rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-            aria-label="Search cities"
-          />
+          <label className="flex w-full max-w-xs flex-col gap-1 text-sm font-medium text-slate-600">
+            Search
+            <input
+              type="search"
+              value={citySearchDraft}
+              onChange={(event) => setCitySearchDraft(event.target.value)}
+              placeholder="Search cities"
+              className="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+              aria-label="Search cities"
+            />
+          </label>
         </div>
         {canManageLocations && (
           <button
@@ -1023,7 +1103,7 @@ const AreaShippingPage = () => {
               setShowCityForm((prev) => !prev);
               setCityFormError(null);
             }}
-            className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white shadow transition hover:bg-blue-600"
+            className="inline-flex items-center gap-2 self-start rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white shadow transition hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-60 lg:self-auto"
             disabled={cityStateId === null}
           >
             {showCityForm ? 'Cancel' : 'Add city'}
@@ -1098,10 +1178,20 @@ const AreaShippingPage = () => {
                     Loading cities…
                   </td>
                 </tr>
+              ) : cityCountryId === null ? (
+                <tr>
+                  <td className="px-6 py-6 text-center text-slate-500" colSpan={3}>
+                    {enabledCountries.length
+                      ? 'Select a country to manage its cities.'
+                      : 'Enable a country to manage cities.'}
+                  </td>
+                </tr>
               ) : cityStateId === null ? (
                 <tr>
                   <td className="px-6 py-6 text-center text-slate-500" colSpan={3}>
-                    Select a state to view its cities.
+                    {enabledCityStates.length
+                      ? 'Select a state to view its cities.'
+                      : 'Enable a state to manage cities.'}
                   </td>
                 </tr>
               ) : !filteredCities.length ? (

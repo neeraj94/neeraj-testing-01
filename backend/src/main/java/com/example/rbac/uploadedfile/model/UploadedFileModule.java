@@ -9,7 +9,10 @@ public enum UploadedFileModule {
     CATEGORY_BANNER("Category", "Banner"),
     CATEGORY_COVER("Category", "Cover"),
     BADGE_ICON("Badge", "Icon"),
-    BADGE_CATEGORY_ICON("Badge category", "Icon");
+    BADGE_CATEGORY_ICON("Badge category", "Icon"),
+    BLOG_BANNER_IMAGE("Blog", "Banner image"),
+    BLOG_META_IMAGE("Blog", "Meta image"),
+    WEDGE_ICON("Wedge", "Icon");
 
     private final String featureName;
     private final String contextLabel;

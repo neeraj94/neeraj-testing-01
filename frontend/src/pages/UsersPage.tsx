@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../services/http';
 import type { Pagination, Permission, Role, User, UserSummaryMetrics } from '../types/models';
 import { useToast } from '../components/ToastProvider';
+import { useConfirm } from '../components/ConfirmDialogProvider';
 import SortableColumnHeader from '../components/SortableColumnHeader';
 import ExportMenu from '../components/ExportMenu';
 import { exportDataset, type ExportFormat } from '../utils/exporters';
@@ -98,6 +99,7 @@ const isCustomerAccount = (user: User) =>
 const UsersPage = () => {
   const queryClient = useQueryClient();
   const { notify } = useToast();
+  const confirm = useConfirm();
   const { permissions: grantedPermissions, user: currentUser, roles: currentRoles } = useAppSelector((state) => state.auth);
 
   const [page, setPage] = useState(0);
@@ -411,6 +413,12 @@ const UsersPage = () => {
       if (!selectedUserId) {
         return null;
       }
+      if (form.roleIds.length === 0) {
+        throw new Error('Assign at least one role before saving access.');
+      }
+      await api.post<User>(`/users/${selectedUserId}/roles`, {
+        roleIds: form.roleIds
+      });
       const { data } = await api.put<User>(`/users/${selectedUserId}/permissions`, {
         grantedPermissionKeys: form.directPermissions,
         revokedPermissionKeys: form.revokedPermissions
@@ -1055,18 +1063,21 @@ const UsersPage = () => {
                         {canDeleteUsers && (
                           <button
                             type="button"
-                            onClick={(event) => {
+                            onClick={async (event) => {
                               event.stopPropagation();
                               if (isSelfSuperAdmin) {
                                 return;
                               }
-                              if (typeof window !== 'undefined') {
-                                const confirmed = window.confirm(`Delete ${user.fullName}?`);
-                                if (!confirmed) {
-                                  return;
-                                }
+                              const confirmed = await confirm({
+                                title: 'Delete user?',
+                                description: `Delete ${user.fullName}?`,
+                                confirmLabel: 'Delete',
+                                tone: 'danger'
+                              });
+                              if (!confirmed) {
+                                return;
                               }
-                              deleteUser.mutate(user.id);
+                              await deleteUser.mutateAsync(user.id);
                             }}
                             className="rounded-full border border-rose-200 p-2 text-rose-500 transition hover:border-rose-300 hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-50"
                             aria-label={`Delete ${user.fullName}`}

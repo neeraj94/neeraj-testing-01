@@ -1,18 +1,24 @@
 package com.example.rbac.uploadedfile.controller;
 
 import com.example.rbac.common.pagination.PageResponse;
+import com.example.rbac.uploadedfile.dto.UploadedFileDeleteRequest;
 import com.example.rbac.uploadedfile.dto.UploadedFileDto;
 import com.example.rbac.uploadedfile.dto.UploadedFileModuleDto;
 import com.example.rbac.uploadedfile.dto.UploadedFileUploaderDto;
 import com.example.rbac.uploadedfile.service.UploadedFileService;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.Valid;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDate;
@@ -60,5 +66,12 @@ public class UploadedFileController {
     @PreAuthorize("hasAnyAuthority('UPLOADED_FILE_VIEW','UPLOADED_FILE_MANAGE')")
     public List<UploadedFileUploaderDto> uploaders() {
         return uploadedFileService.listUploaders();
+    }
+
+    @PostMapping("/delete")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("hasAuthority('UPLOADED_FILE_MANAGE')")
+    public void delete(@RequestBody @Valid UploadedFileDeleteRequest request) {
+        uploadedFileService.delete(request.getIds());
     }
 }

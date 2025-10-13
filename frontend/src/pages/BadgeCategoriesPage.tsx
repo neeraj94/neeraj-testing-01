@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../services/http';
 import type { BadgeCategory, BadgeCategoryPage, BadgeCategoryUploadResponse } from '../types/badge';
 import { useToast } from '../components/ToastProvider';
+import { useConfirm } from '../components/ConfirmDialogProvider';
 import PageHeader from '../components/PageHeader';
 import PageSection from '../components/PageSection';
 import PaginationControls from '../components/PaginationControls';
@@ -180,14 +181,22 @@ const BadgeCategoriesPage = () => {
     setIconPreview(category.iconUrl ?? null);
   };
 
-  const handleDelete = (category: BadgeCategory) => {
+  const confirm = useConfirm();
+
+  const handleDelete = async (category: BadgeCategory) => {
     if (!canDelete) {
       return;
     }
-    const confirmed = window.confirm(`Delete badge category "${category.title}"? This action cannot be undone.`);
-    if (confirmed) {
-      deleteMutation.mutate(category.id);
+    const confirmed = await confirm({
+      title: 'Delete badge category?',
+      description: `Delete badge category "${category.title}"? This action cannot be undone.`,
+      confirmLabel: 'Delete',
+      tone: 'danger'
+    });
+    if (!confirmed) {
+      return;
     }
+    await deleteMutation.mutateAsync(category.id);
   };
 
   const handleIconSelect = () => {

@@ -1,8 +1,12 @@
 package com.example.rbac.wedges.controller;
 
+import com.example.rbac.uploadedfile.model.UploadedFileModule;
+import com.example.rbac.uploadedfile.service.UploadedFileService;
 import com.example.rbac.wedges.dto.WedgeIconUploadResponse;
 import com.example.rbac.wedges.service.WedgeIconStorageService;
 import com.example.rbac.wedges.service.WedgeIconStorageService.StoredIcon;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -19,10 +23,15 @@ import java.nio.charset.StandardCharsets;
 @RequestMapping("/api/v1/wedges/assets")
 public class WedgeAssetController {
 
-    private final WedgeIconStorageService storageService;
+    private static final Logger LOGGER = LoggerFactory.getLogger(WedgeAssetController.class);
 
-    public WedgeAssetController(WedgeIconStorageService storageService) {
+    private final WedgeIconStorageService storageService;
+    private final UploadedFileService uploadedFileService;
+
+    public WedgeAssetController(WedgeIconStorageService storageService,
+                                UploadedFileService uploadedFileService) {
         this.storageService = storageService;
+        this.uploadedFileService = uploadedFileService;
     }
 
     @PostMapping
@@ -30,6 +39,7 @@ public class WedgeAssetController {
     public WedgeIconUploadResponse upload(@RequestParam("file") MultipartFile file) {
         StoredIcon stored = storageService.store(file);
         String url = storageService.publicUrlForKey(stored.key());
+        recordUpload(stored, url);
         return new WedgeIconUploadResponse(url, stored.originalFilename(), stored.mimeType(), stored.sizeBytes());
     }
 
@@ -50,5 +60,13 @@ public class WedgeAssetController {
                 .contentType(mediaType)
                 .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + encoded + "\"")
                 .body(resource);
+    }
+
+    private void recordUpload(StoredIcon stored, String url) {
+        try {
+            uploadedFileService.recordUpload(UploadedFileModule.WEDGE_ICON, stored.key(), url, stored.originalFilename(), stored.mimeType(), stored.sizeBytes());
+        } catch (Exception ex) {
+            LOGGER.debug("Failed to record uploaded file for module {}: {}", UploadedFileModule.WEDGE_ICON, ex.getMessage());
+        }
     }
 }

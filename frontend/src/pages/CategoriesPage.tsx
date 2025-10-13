@@ -12,6 +12,7 @@ import { useAppSelector } from '../app/hooks';
 import { hasAnyPermission } from '../utils/permissions';
 import type { PermissionKey } from '../types/auth';
 import { useToast } from '../components/ToastProvider';
+import { useConfirm } from '../components/ConfirmDialogProvider';
 import { extractErrorMessage } from '../utils/errors';
 import PageHeader from '../components/PageHeader';
 import PageSection from '../components/PageSection';
@@ -318,13 +319,18 @@ const CategoriesPage = () => {
     }
   };
 
+  const confirm = useConfirm();
+
   const handleDelete = async (category: Category) => {
     if (!canDelete) {
       return;
     }
-    const confirmed = window.confirm(
-      `Delete category "${category.name}"? Child categories will need to be reassigned first.`
-    );
+    const confirmed = await confirm({
+      title: 'Delete category?',
+      description: `Delete category "${category.name}"? Child categories will need to be reassigned first.`,
+      confirmLabel: 'Delete',
+      tone: 'danger'
+    });
     if (!confirmed) {
       return;
     }

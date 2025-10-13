@@ -31,6 +31,7 @@ export interface UploadedFileUploaderOption {
 
 export interface MediaSelection {
   url: string;
+  storageKey?: string | null;
   originalFilename?: string | null;
   mimeType?: string | null;
   sizeBytes?: number | null;

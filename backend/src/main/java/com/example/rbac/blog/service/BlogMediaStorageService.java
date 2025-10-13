@@ -30,13 +30,13 @@ public class BlogMediaStorageService {
         }
     }
 
-    public String store(MultipartFile file) {
+    public StoredMedia store(MultipartFile file) {
         try {
             String extension = extractExtension(file.getOriginalFilename());
             String filename = UUID.randomUUID() + (extension == null ? "" : "." + extension);
             Path destination = storageRoot.resolve(filename);
             Files.copy(file.getInputStream(), destination, StandardCopyOption.REPLACE_EXISTING);
-            return filename;
+            return new StoredMedia(filename, file.getOriginalFilename(), file.getContentType(), file.getSize());
         } catch (IOException ex) {
             throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to store media file");
         }
@@ -81,5 +81,8 @@ public class BlogMediaStorageService {
             return null;
         }
         return filename.substring(index + 1).toLowerCase();
+    }
+
+    public record StoredMedia(String key, String originalFilename, String mimeType, long sizeBytes) {
     }
 }

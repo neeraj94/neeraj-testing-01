@@ -43,6 +43,9 @@ export interface PublicBlogPost {
 export interface BlogMediaUploadResponse {
   key: string;
   url: string;
+  originalFilename?: string | null;
+  mimeType?: string | null;
+  sizeBytes?: number | null;
 }
 
 export type BlogCategoryPage = Pagination<BlogCategory>;
