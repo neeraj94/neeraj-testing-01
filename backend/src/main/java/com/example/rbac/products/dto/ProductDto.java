@@ -29,6 +29,9 @@ public class ProductDto {
     private List<ProductVariantDto> variants;
     private List<ProductExpandableSectionDto> expandableSections;
     private List<ProductInfoSectionDto> infoSections;
+    private List<ProductReviewDto> reviews;
+    private List<ProductSummaryDto> frequentlyBoughtProducts;
+    private List<Long> frequentlyBoughtCategoryIds;
     private Instant createdAt;
     private Instant updatedAt;
 
@@ -214,6 +217,30 @@ public class ProductDto {
 
     public void setInfoSections(List<ProductInfoSectionDto> infoSections) {
         this.infoSections = infoSections;
+    }
+
+    public List<ProductReviewDto> getReviews() {
+        return reviews;
+    }
+
+    public void setReviews(List<ProductReviewDto> reviews) {
+        this.reviews = reviews;
+    }
+
+    public List<ProductSummaryDto> getFrequentlyBoughtProducts() {
+        return frequentlyBoughtProducts;
+    }
+
+    public void setFrequentlyBoughtProducts(List<ProductSummaryDto> frequentlyBoughtProducts) {
+        this.frequentlyBoughtProducts = frequentlyBoughtProducts;
+    }
+
+    public List<Long> getFrequentlyBoughtCategoryIds() {
+        return frequentlyBoughtCategoryIds;
+    }
+
+    public void setFrequentlyBoughtCategoryIds(List<Long> frequentlyBoughtCategoryIds) {
+        this.frequentlyBoughtCategoryIds = frequentlyBoughtCategoryIds;
     }
 
     public Instant getCreatedAt() {

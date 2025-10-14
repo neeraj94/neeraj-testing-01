@@ -76,7 +76,7 @@ const sortByEnabledThenName = <T extends { enabled?: boolean; name: string }>(it
     return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
   });
 
-const AreaShippingPage = () => {
+const AreaShippingManager = () => {
   const queryClient = useQueryClient();
   const { notify } = useToast();
   const permissions = useAppSelector((state) => state.auth.permissions);
@@ -95,8 +95,6 @@ const AreaShippingPage = () => {
   const [stateCountryId, setStateCountryId] = useState<number | null>(null);
   const [stateSearchDraft, setStateSearchDraft] = useState('');
   const [stateSearch, setStateSearch] = useState('');
-  const [statePage, setStatePage] = useState(0);
-  const [statePageSize, setStatePageSize] = useState(DEFAULT_PAGE_SIZE);
   const [showStateForm, setShowStateForm] = useState(false);
   const [stateForm, setStateForm] = useState<StateFormState>(defaultStateForm);
   const [stateFormError, setStateFormError] = useState<string | null>(null);
@@ -105,8 +103,6 @@ const AreaShippingPage = () => {
   const [cityStateId, setCityStateId] = useState<number | null>(null);
   const [citySearchDraft, setCitySearchDraft] = useState('');
   const [citySearch, setCitySearch] = useState('');
-  const [cityPage, setCityPage] = useState(0);
-  const [cityPageSize, setCityPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [showCityForm, setShowCityForm] = useState(false);
   const [cityForm, setCityForm] = useState<CityFormState>(defaultCityForm);
   const [cityFormError, setCityFormError] = useState<string | null>(null);
@@ -136,7 +132,6 @@ const AreaShippingPage = () => {
   useEffect(() => {
     const timer = window.setTimeout(() => {
       setStateSearch(stateSearchDraft.trim());
-      setStatePage(0);
     }, 250);
 
     return () => window.clearTimeout(timer);
@@ -145,7 +140,6 @@ const AreaShippingPage = () => {
   useEffect(() => {
     const timer = window.setTimeout(() => {
       setCitySearch(citySearchDraft.trim());
-      setCityPage(0);
     }, 250);
 
     return () => window.clearTimeout(timer);
@@ -181,10 +175,6 @@ const AreaShippingPage = () => {
       setStateCountryId(stateCountryOptions[0].id);
     }
   }, [stateCountryOptions, stateCountryId]);
-
-  useEffect(() => {
-    setStatePage(0);
-  }, [stateCountryId]);
 
   useEffect(() => {
     if (stateCountryId === null) {
@@ -248,18 +238,6 @@ const AreaShippingPage = () => {
     return sortedStates.filter((state) => state.name.toLowerCase().includes(term));
   }, [sortedStates, stateSearch]);
 
-  useEffect(() => {
-    const maxPage = Math.max(Math.ceil(filteredStates.length / statePageSize) - 1, 0);
-    if (statePage > maxPage) {
-      setStatePage(maxPage);
-    }
-  }, [filteredStates, statePage, statePageSize]);
-
-  const paginatedStates = useMemo(() => {
-    const start = statePage * statePageSize;
-    return filteredStates.slice(start, start + statePageSize);
-  }, [filteredStates, statePage, statePageSize]);
-
   const cityStatesQuery = useQuery<ShippingState[]>({
     queryKey: ['shipping', 'states', 'list', cityCountryId, 'city'],
     enabled: cityCountryId !== null,
@@ -292,10 +270,6 @@ const AreaShippingPage = () => {
   }, [cityStateOptions, cityStateId]);
 
   useEffect(() => {
-    setCityPage(0);
-  }, [cityStateId, cityCountryId]);
-
-  useEffect(() => {
     if (cityStateId === null) {
       setShowCityForm(false);
     }
@@ -320,18 +294,6 @@ const AreaShippingPage = () => {
     const term = citySearch.toLowerCase();
     return sortedCities.filter((city) => city.name.toLowerCase().includes(term));
   }, [sortedCities, citySearch]);
-
-  useEffect(() => {
-    const maxPage = Math.max(Math.ceil(filteredCities.length / cityPageSize) - 1, 0);
-    if (cityPage > maxPage) {
-      setCityPage(maxPage);
-    }
-  }, [filteredCities, cityPage, cityPageSize]);
-
-  const paginatedCities = useMemo(() => {
-    const start = cityPage * cityPageSize;
-    return filteredCities.slice(start, start + cityPageSize);
-  }, [filteredCities, cityPage, cityPageSize]);
 
   const updateCountrySettingsMutation = useMutation({
     mutationFn: async ({ id, payload }: { id: number; payload: CountrySettingsPayload }) => {
@@ -838,7 +800,6 @@ const AreaShippingPage = () => {
                 const rawValue = event.target.value;
                 const value = Number(rawValue);
                 setStateCountryId(rawValue === '' || Number.isNaN(value) ? null : value);
-                setStatePage(0);
               }}
               className="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
               disabled={!stateCountryOptions.length}
@@ -963,7 +924,7 @@ const AreaShippingPage = () => {
                   </td>
                 </tr>
               ) : (
-                paginatedStates.map((state) => {
+                filteredStates.map((state) => {
                   const draftValue = getStateDraft(state);
                   const isDisabled = pendingStateId === state.id;
                   return (
@@ -1021,18 +982,6 @@ const AreaShippingPage = () => {
             </tbody>
           </table>
         </div>
-        <PaginationControls
-          page={statePage}
-          pageSize={statePageSize}
-          totalElements={filteredStates.length}
-          onPageChange={setStatePage}
-          onPageSizeChange={(size) => {
-            setStatePageSize(size);
-            setStatePage(0);
-          }}
-          pageSizeOptions={PAGE_SIZE_OPTIONS}
-          isLoading={statesQuery.isLoading}
-        />
       </div>
     </div>
   );
@@ -1051,7 +1000,6 @@ const AreaShippingPage = () => {
                 const nextCountryId = rawValue === '' || Number.isNaN(value) ? null : value;
                 setCityCountryId(nextCountryId);
                 setCityStateId(null);
-                setCityPage(0);
               }}
               className="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
               disabled={!cityCountryOptions.length}
@@ -1075,7 +1023,6 @@ const AreaShippingPage = () => {
                 const rawValue = event.target.value;
                 const value = Number(rawValue);
                 setCityStateId(rawValue === '' || Number.isNaN(value) ? null : value);
-                setCityPage(0);
               }}
               className="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
               disabled={!cityStateOptions.length}
@@ -1208,7 +1155,7 @@ const AreaShippingPage = () => {
                   </td>
                 </tr>
               ) : (
-                paginatedCities.map((city) => {
+                filteredCities.map((city) => {
                   const draftValue = getCityDraft(city);
                   const isDisabled = pendingCityId === city.id;
                   return (
@@ -1266,60 +1213,101 @@ const AreaShippingPage = () => {
             </tbody>
           </table>
         </div>
-        <PaginationControls
-          page={cityPage}
-          pageSize={cityPageSize}
-          totalElements={filteredCities.length}
-          onPageChange={setCityPage}
-          onPageSizeChange={(size) => {
-            setCityPageSize(size);
-            setCityPage(0);
-          }}
-          pageSizeOptions={PAGE_SIZE_OPTIONS}
-          isLoading={citiesQuery.isLoading}
-        />
       </div>
     </div>
   );
 
   return (
-    <>
-      <PageHeader
-        title="Area-wise Shipping"
-        description="Toggle available destinations and fine-tune delivery rates by country, state, and city."
-      />
-      <PageSection>
-        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <div className="grid border-b border-slate-200 lg:grid-cols-[240px,1fr]">
-            <nav className="flex shrink-0 flex-row gap-2 border-b border-slate-200 bg-slate-50 px-6 py-4 text-sm font-semibold text-slate-600 lg:flex-col lg:border-b-0 lg:border-r">
-              {[
-                { key: 'countries', label: 'Countries' },
-                { key: 'states', label: 'States' },
-                { key: 'cities', label: 'Cities' }
-              ].map((tab) => (
-                <button
-                  key={tab.key}
-                  type="button"
-                  onClick={() => setActiveTab(tab.key as TabKey)}
-                  className={`rounded-lg px-3 py-2 text-left transition ${
-                    activeTab === tab.key ? 'bg-primary/10 text-primary' : 'text-slate-600 hover:bg-slate-100'
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </nav>
-            <div className="flex-1 px-6 py-6">
-              {activeTab === 'countries' && renderCountryTab()}
-              {activeTab === 'states' && renderStateTab()}
-              {activeTab === 'cities' && renderCityTab()}
-            </div>
-          </div>
+    <PageSection
+      title="Area-wide shipping"
+      description="Toggle available destinations and fine-tune delivery rates by country, state, and city."
+      padded={false}
+      bodyClassName="lg:flex"
+    >
+      <div className="grid w-full border-t border-slate-200 lg:grid-cols-[240px,1fr] lg:border-t-0 lg:divide-x lg:divide-slate-200">
+        <nav className="flex shrink-0 flex-row gap-2 border-b border-slate-200 bg-slate-50 px-6 py-4 text-sm font-semibold text-slate-600 lg:h-full lg:flex-col lg:border-b-0">
+          {[
+            { key: 'countries', label: 'Countries' },
+            { key: 'states', label: 'States' },
+            { key: 'cities', label: 'Cities' }
+          ].map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => setActiveTab(tab.key as TabKey)}
+              className={`rounded-lg px-3 py-2 text-left transition ${
+                activeTab === tab.key ? 'bg-primary/10 text-primary' : 'text-slate-600 hover:bg-slate-100'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </nav>
+        <div className="flex-1 px-6 py-6">
+          {activeTab === 'countries' && renderCountryTab()}
+          {activeTab === 'states' && renderStateTab()}
+          {activeTab === 'cities' && renderCityTab()}
         </div>
-      </PageSection>
-    </>
+      </div>
+    </PageSection>
   );
 };
 
-export default AreaShippingPage;
+const CarrierShippingPlaceholder = () => (
+  <PageSection
+    title="Carrier-wide shipping"
+    description="Configure carrier-based pricing, service levels, and transit promises."
+  >
+    <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50/70 px-6 py-10 text-center text-sm text-slate-500">
+      Carrier integrations are coming soon. Use this space to connect logistics partners, negotiate rates, and
+      publish carrier-specific delivery options.
+    </div>
+  </PageSection>
+);
+
+type ShippingSection = 'area' | 'carrier';
+
+const ShippingPage = () => {
+  const [activeSection, setActiveSection] = useState<ShippingSection>('area');
+
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        title="Shipping"
+        description="Manage location-based delivery rules today and prepare for carrier-based fulfillment tomorrow."
+      />
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <nav className="flex flex-wrap gap-2 border-b border-slate-200 bg-slate-50 px-4 py-3 sm:px-6">
+          {[
+            { key: 'area' as ShippingSection, label: 'Area-wide shipping' },
+            { key: 'carrier' as ShippingSection, label: 'Carrier-wide shipping' }
+          ].map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => setActiveSection(tab.key)}
+              className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                activeSection === tab.key
+                  ? 'bg-primary text-white shadow'
+                  : 'bg-white text-slate-600 hover:bg-slate-100'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </nav>
+      </div>
+      <div className="space-y-6">
+        <div className={activeSection === 'area' ? 'block' : 'hidden'} aria-hidden={activeSection !== 'area'}>
+          <AreaShippingManager />
+        </div>
+        <div className={activeSection === 'carrier' ? 'block' : 'hidden'} aria-hidden={activeSection !== 'carrier'}>
+          <CarrierShippingPlaceholder />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default ShippingPage;
 
