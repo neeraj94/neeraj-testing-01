@@ -357,6 +357,13 @@ public class SetupService {
                             "🛒",
                             "/admin/products",
                             List.of("PRODUCT_VIEW", "PRODUCT_CREATE", "PRODUCT_UPDATE")
+                    ),
+                    MenuDefinition.item(
+                            "reviews",
+                            "Reviews",
+                            "⭐",
+                            "/admin/reviews",
+                            List.of("PRODUCT_VIEW", "PRODUCT_REVIEW_VIEW")
                     )
             )),
             MenuDefinition.group("shipping", "Shipping", "🚚", List.of(

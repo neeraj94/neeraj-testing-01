@@ -218,7 +218,7 @@ const App = () => {
           >
             <Route path="products" element={<ProductsPage />} />
           </Route>
-          <Route element={<PermissionRoute required={['PRODUCT_VIEW']} />}>
+          <Route element={<PermissionRoute required={['PRODUCT_VIEW', 'PRODUCT_REVIEW_VIEW']} />}>
             <Route path="reviews" element={<ReviewsPage />} />
           </Route>
           <Route element={<PermissionRoute required={['SHIPPING_AREA_VIEW']} />}>

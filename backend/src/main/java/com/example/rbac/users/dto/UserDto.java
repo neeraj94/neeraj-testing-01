@@ -15,6 +15,7 @@ public class UserDto {
     private String linkedinUrl;
     private String skypeId;
     private String emailSignature;
+    private String profileImageUrl;
     private Instant emailVerifiedAt;
     private int loginAttempts;
     private Instant lockedAt;
@@ -112,6 +113,14 @@ public class UserDto {
 
     public void setEmailSignature(String emailSignature) {
         this.emailSignature = emailSignature;
+    }
+
+    public String getProfileImageUrl() {
+        return profileImageUrl;
+    }
+
+    public void setProfileImageUrl(String profileImageUrl) {
+        this.profileImageUrl = profileImageUrl;
     }
 
     public Instant getEmailVerifiedAt() {

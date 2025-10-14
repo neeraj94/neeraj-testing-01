@@ -214,7 +214,7 @@ export const DEFAULT_NAVIGATION_MENU: NavigationNode[] = [
         icon: '⭐',
         path: '/admin/reviews',
         group: false,
-        permissions: ['PRODUCT_VIEW'],
+        permissions: ['PRODUCT_VIEW', 'PRODUCT_REVIEW_VIEW'],
         children: []
       }
     ]

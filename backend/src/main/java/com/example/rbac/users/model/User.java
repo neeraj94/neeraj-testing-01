@@ -49,6 +49,9 @@ public class User {
     @Column(name = "email_signature")
     private String emailSignature;
 
+    @Column(name = "profile_image_url", length = 500)
+    private String profileImageUrl;
+
     @Column(name = "email_verified_at")
     private Instant emailVerifiedAt;
 
@@ -211,6 +214,14 @@ public class User {
 
     public void setEmailSignature(String emailSignature) {
         this.emailSignature = emailSignature;
+    }
+
+    public String getProfileImageUrl() {
+        return profileImageUrl;
+    }
+
+    public void setProfileImageUrl(String profileImageUrl) {
+        this.profileImageUrl = profileImageUrl;
     }
 
     public Instant getEmailVerifiedAt() {

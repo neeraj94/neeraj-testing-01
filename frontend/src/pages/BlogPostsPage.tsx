@@ -290,7 +290,7 @@ const BlogPostsPage = () => {
       notify({ type: 'error', message: extractErrorMessage(error, 'Failed to upload media.') });
       throw error;
     }
-    return selections;
+    return [];
   };
 
   const handleMediaRemove = (target: 'bannerImage' | 'metaImage') => {

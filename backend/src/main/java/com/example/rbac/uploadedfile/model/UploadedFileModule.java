@@ -17,7 +17,9 @@ public enum UploadedFileModule {
     PRODUCT_THUMBNAIL("Product", "Thumbnail"),
     PRODUCT_META_IMAGE("Product", "Meta image"),
     PRODUCT_PDF_SPEC("Product", "Specification"),
-    PRODUCT_VARIANT_IMAGE("Product", "Variant image");
+    PRODUCT_VARIANT_IMAGE("Product", "Variant image"),
+    PRODUCT_MEDIA("Product", "Media asset"),
+    USER_PROFILE("User", "Profile photo");
 
     private final String featureName;
     private final String contextLabel;

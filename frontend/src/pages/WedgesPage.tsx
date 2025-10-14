@@ -266,7 +266,7 @@ const WedgesPage = () => {
       notify({ type: 'error', message: extractErrorMessage(error, 'Failed to upload icon.') });
       throw error;
     }
-    return selections;
+    return [];
   };
 
   const handleIconRemove = () => {

@@ -26,6 +26,7 @@ import type {
   StockVisibilityState
 } from '../types/product';
 import { extractErrorMessage } from '../utils/errors';
+import { formatCurrency } from '../utils/currency';
 
 interface ProductFormState {
   name: string;
@@ -37,7 +38,6 @@ interface ProductFormState {
   todaysDeal: 'yes' | 'no';
   shortDescription: string;
   description: string;
-  shortDescription: string;
   videoProvider: string;
   videoUrl: string;
   unitPrice: string;
@@ -132,7 +132,6 @@ const defaultFormState: ProductFormState = {
   todaysDeal: 'no',
   shortDescription: '',
   description: '',
-  shortDescription: '',
   videoProvider: 'YOUTUBE',
   videoUrl: '',
   unitPrice: '',
@@ -304,6 +303,7 @@ const ProductsPage = () => {
   const confirm = useConfirm();
   const { notify } = useToast();
   const permissions = useAppSelector((state) => state.auth.permissions);
+  const baseCurrency = useAppSelector((state) => state.settings.theme.baseCurrency);
 
   const [panelMode, setPanelMode] = useState<'list' | 'create' | 'edit'>('list');
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -630,6 +630,7 @@ const ProductsPage = () => {
     setActiveTab('basic');
     setPanelMode('edit');
     setShowValidation(false);
+    editInitializedRef.current = false;
     setEditingId(productId);
   };
 
@@ -673,7 +674,6 @@ const ProductsPage = () => {
       todaysDeal: product.todaysDeal ? 'yes' : 'no',
       shortDescription: product.shortDescription ?? '',
       description: product.description ?? '',
-      shortDescription: product.shortDescription ?? '',
       videoProvider: product.videoProvider ?? 'YOUTUBE',
       videoUrl: product.videoUrl ?? '',
       unitPrice: product.pricing.unitPrice != null ? String(product.pricing.unitPrice) : '',
@@ -1171,7 +1171,6 @@ const ProductsPage = () => {
       todaysDeal: form.todaysDeal === 'yes',
       shortDescription: form.shortDescription.trim(),
       description: form.description,
-      shortDescription: form.shortDescription.trim(),
       gallery,
       thumbnail,
       videoProvider: form.videoProvider,
@@ -1459,11 +1458,7 @@ const ProductsPage = () => {
         return '—';
       }
       try {
-        return new Intl.NumberFormat(undefined, {
-          style: 'currency',
-          currency: 'INR',
-          maximumFractionDigits: 2
-        }).format(value);
+        return formatCurrency(value, baseCurrency);
       } catch (error) {
         return value.toLocaleString(undefined, {
           minimumFractionDigits: 2,
