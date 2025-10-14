@@ -95,8 +95,6 @@ const AreaShippingManager = () => {
   const [stateCountryId, setStateCountryId] = useState<number | null>(null);
   const [stateSearchDraft, setStateSearchDraft] = useState('');
   const [stateSearch, setStateSearch] = useState('');
-  const [statePage, setStatePage] = useState(0);
-  const [statePageSize, setStatePageSize] = useState(DEFAULT_PAGE_SIZE);
   const [showStateForm, setShowStateForm] = useState(false);
   const [stateForm, setStateForm] = useState<StateFormState>(defaultStateForm);
   const [stateFormError, setStateFormError] = useState<string | null>(null);
@@ -105,8 +103,6 @@ const AreaShippingManager = () => {
   const [cityStateId, setCityStateId] = useState<number | null>(null);
   const [citySearchDraft, setCitySearchDraft] = useState('');
   const [citySearch, setCitySearch] = useState('');
-  const [cityPage, setCityPage] = useState(0);
-  const [cityPageSize, setCityPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [showCityForm, setShowCityForm] = useState(false);
   const [cityForm, setCityForm] = useState<CityFormState>(defaultCityForm);
   const [cityFormError, setCityFormError] = useState<string | null>(null);
@@ -136,7 +132,6 @@ const AreaShippingManager = () => {
   useEffect(() => {
     const timer = window.setTimeout(() => {
       setStateSearch(stateSearchDraft.trim());
-      setStatePage(0);
     }, 250);
 
     return () => window.clearTimeout(timer);
@@ -145,7 +140,6 @@ const AreaShippingManager = () => {
   useEffect(() => {
     const timer = window.setTimeout(() => {
       setCitySearch(citySearchDraft.trim());
-      setCityPage(0);
     }, 250);
 
     return () => window.clearTimeout(timer);
@@ -181,10 +175,6 @@ const AreaShippingManager = () => {
       setStateCountryId(stateCountryOptions[0].id);
     }
   }, [stateCountryOptions, stateCountryId]);
-
-  useEffect(() => {
-    setStatePage(0);
-  }, [stateCountryId]);
 
   useEffect(() => {
     if (stateCountryId === null) {
@@ -248,18 +238,6 @@ const AreaShippingManager = () => {
     return sortedStates.filter((state) => state.name.toLowerCase().includes(term));
   }, [sortedStates, stateSearch]);
 
-  useEffect(() => {
-    const maxPage = Math.max(Math.ceil(filteredStates.length / statePageSize) - 1, 0);
-    if (statePage > maxPage) {
-      setStatePage(maxPage);
-    }
-  }, [filteredStates, statePage, statePageSize]);
-
-  const paginatedStates = useMemo(() => {
-    const start = statePage * statePageSize;
-    return filteredStates.slice(start, start + statePageSize);
-  }, [filteredStates, statePage, statePageSize]);
-
   const cityStatesQuery = useQuery<ShippingState[]>({
     queryKey: ['shipping', 'states', 'list', cityCountryId, 'city'],
     enabled: cityCountryId !== null,
@@ -292,10 +270,6 @@ const AreaShippingManager = () => {
   }, [cityStateOptions, cityStateId]);
 
   useEffect(() => {
-    setCityPage(0);
-  }, [cityStateId, cityCountryId]);
-
-  useEffect(() => {
     if (cityStateId === null) {
       setShowCityForm(false);
     }
@@ -320,18 +294,6 @@ const AreaShippingManager = () => {
     const term = citySearch.toLowerCase();
     return sortedCities.filter((city) => city.name.toLowerCase().includes(term));
   }, [sortedCities, citySearch]);
-
-  useEffect(() => {
-    const maxPage = Math.max(Math.ceil(filteredCities.length / cityPageSize) - 1, 0);
-    if (cityPage > maxPage) {
-      setCityPage(maxPage);
-    }
-  }, [filteredCities, cityPage, cityPageSize]);
-
-  const paginatedCities = useMemo(() => {
-    const start = cityPage * cityPageSize;
-    return filteredCities.slice(start, start + cityPageSize);
-  }, [filteredCities, cityPage, cityPageSize]);
 
   const updateCountrySettingsMutation = useMutation({
     mutationFn: async ({ id, payload }: { id: number; payload: CountrySettingsPayload }) => {
@@ -838,7 +800,6 @@ const AreaShippingManager = () => {
                 const rawValue = event.target.value;
                 const value = Number(rawValue);
                 setStateCountryId(rawValue === '' || Number.isNaN(value) ? null : value);
-                setStatePage(0);
               }}
               className="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
               disabled={!stateCountryOptions.length}
@@ -963,7 +924,7 @@ const AreaShippingManager = () => {
                   </td>
                 </tr>
               ) : (
-                paginatedStates.map((state) => {
+                filteredStates.map((state) => {
                   const draftValue = getStateDraft(state);
                   const isDisabled = pendingStateId === state.id;
                   return (
@@ -1021,18 +982,6 @@ const AreaShippingManager = () => {
             </tbody>
           </table>
         </div>
-        <PaginationControls
-          page={statePage}
-          pageSize={statePageSize}
-          totalElements={filteredStates.length}
-          onPageChange={setStatePage}
-          onPageSizeChange={(size) => {
-            setStatePageSize(size);
-            setStatePage(0);
-          }}
-          pageSizeOptions={PAGE_SIZE_OPTIONS}
-          isLoading={statesQuery.isLoading}
-        />
       </div>
     </div>
   );
@@ -1051,7 +1000,6 @@ const AreaShippingManager = () => {
                 const nextCountryId = rawValue === '' || Number.isNaN(value) ? null : value;
                 setCityCountryId(nextCountryId);
                 setCityStateId(null);
-                setCityPage(0);
               }}
               className="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
               disabled={!cityCountryOptions.length}
@@ -1075,7 +1023,6 @@ const AreaShippingManager = () => {
                 const rawValue = event.target.value;
                 const value = Number(rawValue);
                 setCityStateId(rawValue === '' || Number.isNaN(value) ? null : value);
-                setCityPage(0);
               }}
               className="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
               disabled={!cityStateOptions.length}
@@ -1208,7 +1155,7 @@ const AreaShippingManager = () => {
                   </td>
                 </tr>
               ) : (
-                paginatedCities.map((city) => {
+                filteredCities.map((city) => {
                   const draftValue = getCityDraft(city);
                   const isDisabled = pendingCityId === city.id;
                   return (
@@ -1266,18 +1213,6 @@ const AreaShippingManager = () => {
             </tbody>
           </table>
         </div>
-        <PaginationControls
-          page={cityPage}
-          pageSize={cityPageSize}
-          totalElements={filteredCities.length}
-          onPageChange={setCityPage}
-          onPageSizeChange={(size) => {
-            setCityPageSize(size);
-            setCityPage(0);
-          }}
-          pageSizeOptions={PAGE_SIZE_OPTIONS}
-          isLoading={citiesQuery.isLoading}
-        />
       </div>
     </div>
   );
