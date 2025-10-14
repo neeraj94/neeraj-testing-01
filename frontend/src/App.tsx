@@ -19,7 +19,7 @@ import AttributesPage from './pages/AttributesPage';
 import CategoriesPage from './pages/CategoriesPage';
 import BadgesPage from './pages/BadgesPage';
 import BadgeCategoriesPage from './pages/BadgeCategoriesPage';
-import AreaShippingPage from './pages/AreaShippingPage';
+import ShippingPage from './pages/ShippingPage';
 import EcommerceHomePage from './pages/EcommerceHomePage';
 import ProtectedRoute from './routes/ProtectedRoute';
 import PermissionRoute from './routes/PermissionRoute';
@@ -218,11 +218,22 @@ const App = () => {
           >
             <Route path="products" element={<ProductsPage />} />
           </Route>
-          <Route element={<PermissionRoute required={['PRODUCT_VIEW', 'PRODUCT_REVIEW_VIEW']} />}>
+          <Route
+            element={
+              <PermissionRoute
+                required={[
+                  'PRODUCT_REVIEW_VIEW',
+                  'PRODUCT_REVIEW_CREATE',
+                  'PRODUCT_REVIEW_UPDATE',
+                  'PRODUCT_REVIEW_DELETE'
+                ]}
+              />
+            }
+          >
             <Route path="reviews" element={<ReviewsPage />} />
           </Route>
           <Route element={<PermissionRoute required={['SHIPPING_AREA_VIEW']} />}>
-            <Route path="shipping/area" element={<AreaShippingPage />} />
+            <Route path="shipping" element={<ShippingPage />} />
           </Route>
           <Route element={<PermissionRoute required={['ACTIVITY_VIEW']} />}>
             <Route path="activity" element={<ActivityPage />} />
