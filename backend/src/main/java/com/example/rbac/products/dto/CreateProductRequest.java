@@ -72,6 +72,10 @@ public class CreateProductRequest {
     @Valid
     private List<ProductInfoSectionRequest> infoSections = new ArrayList<>();
 
+    private List<Long> frequentlyBoughtProductIds = new ArrayList<>();
+
+    private List<Long> frequentlyBoughtCategoryIds = new ArrayList<>();
+
     public String getName() {
         return name;
     }
@@ -246,5 +250,21 @@ public class CreateProductRequest {
 
     public void setInfoSections(List<ProductInfoSectionRequest> infoSections) {
         this.infoSections = infoSections;
+    }
+
+    public List<Long> getFrequentlyBoughtProductIds() {
+        return frequentlyBoughtProductIds;
+    }
+
+    public void setFrequentlyBoughtProductIds(List<Long> frequentlyBoughtProductIds) {
+        this.frequentlyBoughtProductIds = frequentlyBoughtProductIds;
+    }
+
+    public List<Long> getFrequentlyBoughtCategoryIds() {
+        return frequentlyBoughtCategoryIds;
+    }
+
+    public void setFrequentlyBoughtCategoryIds(List<Long> frequentlyBoughtCategoryIds) {
+        this.frequentlyBoughtCategoryIds = frequentlyBoughtCategoryIds;
     }
 }

@@ -18,6 +18,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Component
@@ -41,6 +42,7 @@ public class ProductMapper {
         dto.setBrandName(product.getBrand() != null ? product.getBrand().getName() : null);
         dto.setCategoryCount(product.getCategories() != null ? product.getCategories().size() : 0);
         dto.setVariantCount(product.getVariants() != null ? product.getVariants().size() : 0);
+        dto.setThumbnailUrl(product.getThumbnail() != null ? product.getThumbnail().getUrl() : null);
         dto.setCreatedAt(product.getCreatedAt());
         dto.setUpdatedAt(product.getUpdatedAt());
         return dto;
@@ -75,6 +77,8 @@ public class ProductMapper {
         dto.setExpandableSections(mapExpandableSections(product.getExpandableSections()));
         dto.setInfoSections(mapInfoSections(product.getInfoSections()));
         dto.setReviews(productReviewMapper.toDtoList(reviews));
+        dto.setFrequentlyBoughtProducts(mapFrequentlyBoughtProducts(product.getFrequentlyBoughtProducts()));
+        dto.setFrequentlyBoughtCategoryIds(mapFrequentlyBoughtCategoryIds(product.getFrequentlyBoughtCategories()));
         dto.setCreatedAt(product.getCreatedAt());
         dto.setUpdatedAt(product.getUpdatedAt());
         if (product.getBrand() != null) {
@@ -164,6 +168,27 @@ public class ProductMapper {
                     dto.setBulletPoints(section.getBulletPoints() != null ? List.copyOf(section.getBulletPoints()) : List.of());
                     return dto;
                 })
+                .collect(Collectors.toList());
+    }
+
+    private List<ProductSummaryDto> mapFrequentlyBoughtProducts(Set<Product> relatedProducts) {
+        if (relatedProducts == null || relatedProducts.isEmpty()) {
+            return List.of();
+        }
+        return relatedProducts.stream()
+                .filter(Objects::nonNull)
+                .map(this::toSummary)
+                .collect(Collectors.toList());
+    }
+
+    private List<Long> mapFrequentlyBoughtCategoryIds(Set<com.example.rbac.categories.model.Category> categories) {
+        if (categories == null || categories.isEmpty()) {
+            return List.of();
+        }
+        return categories.stream()
+                .filter(Objects::nonNull)
+                .map(com.example.rbac.categories.model.Category::getId)
+                .filter(Objects::nonNull)
                 .collect(Collectors.toList());
     }
 

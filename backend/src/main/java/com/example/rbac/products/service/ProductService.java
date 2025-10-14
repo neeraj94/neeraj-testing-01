@@ -27,6 +27,7 @@ import org.springframework.util.StringUtils;
 
 import java.time.Instant;
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -156,6 +157,20 @@ public class ProductService {
         if (product.getTags() != null) {
             product.getTags().size();
         }
+        if (product.getFrequentlyBoughtProducts() != null) {
+            product.getFrequentlyBoughtProducts().forEach(related -> {
+                related.getName();
+                if (related.getBrand() != null) {
+                    related.getBrand().getName();
+                }
+                if (related.getThumbnail() != null) {
+                    related.getThumbnail().getUrl();
+                }
+            });
+        }
+        if (product.getFrequentlyBoughtCategories() != null) {
+            product.getFrequentlyBoughtCategories().forEach(category -> category.getName());
+        }
     }
 
     @Transactional
@@ -254,6 +269,7 @@ public class ProductService {
 
         rebuildGallery(product, request.getGallery());
         rebuildExpandableSections(product, request.getExpandableSections());
+        rebuildFrequentlyBoughtAssociations(product, request.getFrequentlyBoughtProductIds(), request.getFrequentlyBoughtCategoryIds());
 
         Set<Long> attributeValueIds = collectAttributeValueIds(request);
         Map<Long, AttributeValue> attributeValueMap = attributeValueIds.isEmpty()
@@ -374,6 +390,68 @@ public class ProductService {
             section.setContent(content);
             expandableSections.add(section);
         }
+    }
+
+    private void rebuildFrequentlyBoughtAssociations(Product product,
+                                                     List<Long> relatedProductIds,
+                                                     List<Long> categoryIds) {
+        LinkedHashSet<Long> normalizedProductIds = new LinkedHashSet<>();
+        if (!CollectionUtils.isEmpty(relatedProductIds)) {
+            for (Long id : relatedProductIds) {
+                if (id == null) {
+                    continue;
+                }
+                if (product.getId() != null && product.getId().equals(id)) {
+                    continue;
+                }
+                normalizedProductIds.add(id);
+            }
+        }
+
+        LinkedHashSet<Product> nextRelatedProducts = new LinkedHashSet<>();
+        if (!normalizedProductIds.isEmpty()) {
+            List<Product> relatedProducts = productRepository.findAllById(normalizedProductIds);
+            Map<Long, Product> relatedMap = relatedProducts.stream()
+                    .collect(Collectors.toMap(Product::getId, Function.identity()));
+            if (relatedMap.size() != normalizedProductIds.size()) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, "One or more selected frequently bought products were not found");
+            }
+            for (Long id : normalizedProductIds) {
+                Product related = relatedMap.get(id);
+                if (related != null) {
+                    nextRelatedProducts.add(related);
+                }
+            }
+        }
+        product.getFrequentlyBoughtProducts().clear();
+        product.getFrequentlyBoughtProducts().addAll(nextRelatedProducts);
+
+        LinkedHashSet<Long> normalizedCategoryIds = new LinkedHashSet<>();
+        if (!CollectionUtils.isEmpty(categoryIds)) {
+            for (Long id : categoryIds) {
+                if (id != null) {
+                    normalizedCategoryIds.add(id);
+                }
+            }
+        }
+
+        LinkedHashSet<Category> nextCategories = new LinkedHashSet<>();
+        if (!normalizedCategoryIds.isEmpty()) {
+            List<Category> categories = categoryRepository.findAllById(normalizedCategoryIds);
+            Map<Long, Category> categoryMap = categories.stream()
+                    .collect(Collectors.toMap(Category::getId, Function.identity()));
+            if (categoryMap.size() != normalizedCategoryIds.size()) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, "One or more selected frequently bought categories were not found");
+            }
+            for (Long id : normalizedCategoryIds) {
+                Category category = categoryMap.get(id);
+                if (category != null) {
+                    nextCategories.add(category);
+                }
+            }
+        }
+        product.getFrequentlyBoughtCategories().clear();
+        product.getFrequentlyBoughtCategories().addAll(nextCategories);
     }
 
     private Set<Long> collectAttributeValueIds(CreateProductRequest request) {

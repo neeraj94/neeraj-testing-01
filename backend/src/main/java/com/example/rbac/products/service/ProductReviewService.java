@@ -139,6 +139,7 @@ public class ProductReviewService {
         review.setRating(request.getRating());
         review.setComment(trimToNull(request.getComment()));
         review.setReviewedAt(request.getReviewedAt() != null ? request.getReviewedAt() : Instant.now());
+        review.setPublished(request.getPublished() == null || request.getPublished());
 
         List<MediaAsset> mediaAssets = new ArrayList<>();
         if (!CollectionUtils.isEmpty(request.getMedia())) {

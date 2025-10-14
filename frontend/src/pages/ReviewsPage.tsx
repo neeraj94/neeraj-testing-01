@@ -95,7 +95,8 @@ const createEmptyForm = () => ({
   reviewerName: '',
   rating: '5',
   reviewDate: new Date().toISOString().slice(0, 10),
-  comment: ''
+  comment: '',
+  published: 'enabled' as 'enabled' | 'disabled'
 });
 
 type ReviewFormState = ReturnType<typeof createEmptyForm>;
@@ -105,6 +106,27 @@ const isVideoAsset = (asset: { url: string; mimeType?: string | null }) => {
     return true;
   }
   return /\.(mp4|webm|ogg|mov)$/i.test(asset.url);
+};
+
+const reviewToPayload = (
+  review: ProductReview,
+  overrides: Partial<CreateProductReviewPayload> = {}
+): CreateProductReviewPayload => {
+  const media = (review.media ?? [])
+    .map((asset) => mediaAssetToSelection(asset))
+    .filter((asset): asset is MediaSelection => Boolean(asset));
+  const payload: CreateProductReviewPayload = {
+    productId: review.productId,
+    customerId: review.customerId,
+    reviewerName: review.customerId ? undefined : review.reviewerName ?? undefined,
+    reviewerAvatar: review.customerId ? undefined : mediaAssetToSelection(review.reviewerAvatar) ?? undefined,
+    rating: review.rating,
+    comment: review.comment ?? undefined,
+    reviewedAt: review.reviewedAt,
+    media,
+    published: review.published
+  };
+  return { ...payload, ...overrides };
 };
 
 const ReviewsPage = () => {
@@ -130,6 +152,13 @@ const ReviewsPage = () => {
     () => hasAnyPermission(permissions as PermissionKey[], ['PRODUCT_REVIEW_DELETE']),
     [permissions]
   );
+  const canDeleteReviews = useMemo(
+    () => hasAnyPermission(permissions as PermissionKey[], ['PRODUCT_REVIEW_DELETE']),
+    [permissions]
+  );
+
+  const [panelMode, setPanelMode] = useState<PanelMode>('list');
+  const [editingId, setEditingId] = useState<number | null>(null);
 
   const [panelMode, setPanelMode] = useState<PanelMode>('list');
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -146,6 +175,7 @@ const ReviewsPage = () => {
   const [reviewerAvatar, setReviewerAvatar] = useState<MediaSelection | null>(null);
   const [mediaDialogContext, setMediaDialogContext] = useState<MediaDialogContext | null>(null);
   const [ratingHover, setRatingHover] = useState<number | null>(null);
+  const [visibilityUpdatingId, setVisibilityUpdatingId] = useState<number | null>(null);
   const editInitializedRef = useRef(false);
 
   const productsQuery = useQuery({
@@ -277,6 +307,36 @@ const ReviewsPage = () => {
     }
   });
 
+  const toggleReviewVisibilityMutation = useMutation({
+    mutationFn: async (input: { review: ProductReview; published: boolean }) => {
+      const payload = reviewToPayload(input.review, { published: input.published });
+      await api.put(`/product-reviews/${input.review.id}`, payload);
+      return input;
+    },
+    onMutate: ({ review }) => {
+      setVisibilityUpdatingId(review.id);
+    },
+    onSuccess: (_data, variables) => {
+      notify({
+        type: 'success',
+        message: variables.published ? 'Review enabled successfully.' : 'Review hidden successfully.'
+      });
+      queryClient.invalidateQueries({ queryKey: ['product-reviews'] });
+      if (variables.review.productId) {
+        queryClient.invalidateQueries({ queryKey: ['products', 'detail', variables.review.productId] });
+      }
+    },
+    onError: (error: unknown) => {
+      notify({
+        type: 'error',
+        message: extractErrorMessage(error, 'Unable to update review visibility. Please try again later.')
+      });
+    },
+    onSettled: () => {
+      setVisibilityUpdatingId(null);
+    }
+  });
+
   const deleteReviewMutation = useMutation({
     mutationFn: async (id: number) => {
       await api.delete(`/product-reviews/${id}`);
@@ -335,7 +395,8 @@ const ReviewsPage = () => {
       reviewerName: review.reviewerName ?? '',
       rating: review.rating != null ? String(review.rating) : '5',
       reviewDate: toDateInput(review.reviewedAt) || new Date().toISOString().slice(0, 10),
-      comment: review.comment ?? ''
+      comment: review.comment ?? '',
+      published: review.published ? 'enabled' : 'disabled'
     });
     const mediaSelections = (review.media ?? [])
       .map((asset) => mediaAssetToSelection(asset))
@@ -493,6 +554,20 @@ const ReviewsPage = () => {
     await deleteReviewMutation.mutateAsync(review.id);
   };
 
+  const handleVisibilityChange = (review: ProductReview, published: boolean) => {
+    if (!canUpdateReviews) {
+      notify({ type: 'error', message: 'You do not have permission to update reviews.' });
+      return;
+    }
+    if (review.published === published) {
+      return;
+    }
+    if (toggleReviewVisibilityMutation.isPending && visibilityUpdatingId === review.id) {
+      return;
+    }
+    toggleReviewVisibilityMutation.mutate({ review, published });
+  };
+
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const isCreateMode = panelMode === 'create';
@@ -523,7 +598,8 @@ const ReviewsPage = () => {
       rating: Math.round(ratingNumber),
       comment: form.comment.trim() || undefined,
       reviewedAt: toIsoDate(form.reviewDate),
-      media: reviewAttachments
+      media: reviewAttachments,
+      published: form.published === 'enabled'
     };
 
     if (isEditMode && editingId != null) {
@@ -797,6 +873,39 @@ const ReviewsPage = () => {
                 </div>
               </div>
 
+              <fieldset className="space-y-2">
+                <legend className="text-sm font-medium text-slate-700">Visibility</legend>
+                <p className="text-xs text-slate-500">
+                  Choose whether this review appears on customer-facing experiences or stays internal.
+                </p>
+                <div className="flex flex-wrap gap-4">
+                  <label className="inline-flex items-center gap-2 text-sm text-slate-600">
+                    <input
+                      type="radio"
+                      name="review-visibility"
+                      value="enabled"
+                      checked={form.published === 'enabled'}
+                      onChange={() => setForm((previous) => ({ ...previous, published: 'enabled' }))}
+                      disabled={!canSubmit}
+                      className="h-4 w-4 border-slate-300 text-primary focus:ring-primary/40 disabled:cursor-not-allowed"
+                    />
+                    <span>Visible</span>
+                  </label>
+                  <label className="inline-flex items-center gap-2 text-sm text-slate-600">
+                    <input
+                      type="radio"
+                      name="review-visibility"
+                      value="disabled"
+                      checked={form.published === 'disabled'}
+                      onChange={() => setForm((previous) => ({ ...previous, published: 'disabled' }))}
+                      disabled={!canSubmit}
+                      className="h-4 w-4 border-slate-300 text-primary focus:ring-primary/40 disabled:cursor-not-allowed"
+                    />
+                    <span>Hidden</span>
+                  </label>
+                </div>
+              </fieldset>
+
               <div className="space-y-2">
                 <label className="text-sm font-medium text-slate-700" htmlFor="review-date">
                   Review date
@@ -1002,6 +1111,7 @@ const ReviewsPage = () => {
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Reviewed on</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Media</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Comment</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Status</th>
                   {(canUpdateReviews || canDeleteReviews) && (
                     <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">
                       Actions
@@ -1105,6 +1215,37 @@ const ReviewsPage = () => {
                         <div className="max-w-xs truncate" title={review.comment ?? ''}>
                           {review.comment ? review.comment : <span className="text-slate-400">No comment</span>}
                         </div>
+                      </td>
+                      <td className="px-4 py-4 text-sm text-slate-600">
+                        <fieldset className="flex flex-wrap items-center gap-4" aria-label="Review visibility">
+                          <label className="inline-flex items-center gap-2">
+                            <input
+                              type="radio"
+                              name={`review-${review.id}-status`}
+                              value="enabled"
+                              checked={review.published}
+                              onChange={() => handleVisibilityChange(review, true)}
+                              disabled={!canUpdateReviews || visibilityUpdatingId === review.id}
+                              className="h-4 w-4 border-slate-300 text-primary focus:ring-primary/40 disabled:cursor-not-allowed"
+                            />
+                            <span className="text-sm">Visible</span>
+                          </label>
+                          <label className="inline-flex items-center gap-2">
+                            <input
+                              type="radio"
+                              name={`review-${review.id}-status`}
+                              value="disabled"
+                              checked={!review.published}
+                              onChange={() => handleVisibilityChange(review, false)}
+                              disabled={!canUpdateReviews || visibilityUpdatingId === review.id}
+                              className="h-4 w-4 border-slate-300 text-primary focus:ring-primary/40 disabled:cursor-not-allowed"
+                            />
+                            <span className="text-sm">Hidden</span>
+                          </label>
+                        </fieldset>
+                        {visibilityUpdatingId === review.id && (
+                          <p className="mt-1 text-xs text-slate-400">Updating…</p>
+                        )}
                       </td>
                       {(canUpdateReviews || canDeleteReviews) && (
                         <td className="px-4 py-4">

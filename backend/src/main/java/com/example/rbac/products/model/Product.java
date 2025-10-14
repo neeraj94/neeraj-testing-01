@@ -14,6 +14,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -161,6 +162,18 @@ public class Product {
             joinColumns = @JoinColumn(name = "product_id"),
             inverseJoinColumns = @JoinColumn(name = "tax_rate_id"))
     private Set<TaxRate> taxRates = new HashSet<>();
+
+    @ManyToMany
+    @JoinTable(name = "product_frequently_bought_products",
+            joinColumns = @JoinColumn(name = "product_id"),
+            inverseJoinColumns = @JoinColumn(name = "related_product_id"))
+    private Set<Product> frequentlyBoughtProducts = new LinkedHashSet<>();
+
+    @ManyToMany
+    @JoinTable(name = "product_frequently_bought_categories",
+            joinColumns = @JoinColumn(name = "product_id"),
+            inverseJoinColumns = @JoinColumn(name = "category_id"))
+    private Set<Category> frequentlyBoughtCategories = new LinkedHashSet<>();
 
     @ManyToMany
     @JoinTable(name = "product_attribute_values",
@@ -457,6 +470,22 @@ public class Product {
 
     public void setStockVisibility(StockVisibilityState stockVisibility) {
         this.stockVisibility = stockVisibility;
+    }
+
+    public Set<Product> getFrequentlyBoughtProducts() {
+        return frequentlyBoughtProducts;
+    }
+
+    public void setFrequentlyBoughtProducts(Set<Product> frequentlyBoughtProducts) {
+        this.frequentlyBoughtProducts = frequentlyBoughtProducts;
+    }
+
+    public Set<Category> getFrequentlyBoughtCategories() {
+        return frequentlyBoughtCategories;
+    }
+
+    public void setFrequentlyBoughtCategories(Set<Category> frequentlyBoughtCategories) {
+        this.frequentlyBoughtCategories = frequentlyBoughtCategories;
     }
 
     public Set<Category> getCategories() {

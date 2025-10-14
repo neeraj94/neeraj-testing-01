@@ -70,6 +70,10 @@ export interface CreateProductPayload {
     content: string;
     bulletPoints: string[];
   }[];
+  frequentlyBought: {
+    productIds: number[];
+    categoryIds: number[];
+  };
 }
 
 export interface ProductMediaAsset {
@@ -91,6 +95,7 @@ export interface ProductSummary {
   brandName?: string | null;
   categoryCount: number;
   variantCount: number;
+  thumbnailUrl?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -141,6 +146,7 @@ export interface ProductReview {
   media: ProductMediaAsset[];
   createdAt: string;
   updatedAt: string;
+  published: boolean;
 }
 
 export type ProductReviewPage = Pagination<ProductReview>;
@@ -154,6 +160,7 @@ export interface CreateProductReviewPayload {
   comment?: string;
   reviewedAt?: string;
   media: MediaSelection[];
+  published: boolean;
 }
 
 export interface ProductDetailPricing {
@@ -219,6 +226,8 @@ export interface ProductDetail {
   infoSections: ProductDetailInfoSection[];
   expandableSections?: ProductDetailExpandableSection[];
   reviews?: ProductReview[];
+  frequentlyBoughtProducts?: ProductSummary[];
+  frequentlyBoughtCategoryIds?: number[];
   createdAt: string;
   updatedAt: string;
 }
