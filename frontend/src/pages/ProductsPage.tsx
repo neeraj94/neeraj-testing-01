@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import PageHeader from '../components/PageHeader';
 import PageSection from '../components/PageSection';
+import PaginationControls from '../components/PaginationControls';
 import MediaLibraryDialog from '../components/MediaLibraryDialog';
 import RichTextEditor from '../components/RichTextEditor';
 import { useToast } from '../components/ToastProvider';
+import { useConfirm } from '../components/ConfirmDialogProvider';
 import { useAppSelector } from '../app/hooks';
 import { hasAnyPermission } from '../utils/permissions';
 import type { PermissionKey } from '../types/auth';
@@ -17,6 +19,9 @@ import type { MediaSelection } from '../types/uploaded-file';
 import type {
   CreateProductPayload,
   DiscountType,
+  ProductDetail,
+  ProductSummary,
+  ProductSummaryPage,
   StockVisibilityState
 } from '../types/product';
 import { extractErrorMessage } from '../utils/errors';
@@ -185,6 +190,30 @@ const validationFieldTab: Record<keyof ValidationMessages, TabId> = {
   unitPrice: 'pricing'
 };
 
+const DEFAULT_PAGE_SIZE = 10;
+const PAGE_SIZE_OPTIONS = [10, 25, 50];
+
+const mediaAssetToSelection = (
+  asset?: {
+    url: string;
+    storageKey?: string | null;
+    originalFilename?: string | null;
+    mimeType?: string | null;
+    sizeBytes?: number | null;
+  } | null
+): MediaSelection | null => {
+  if (!asset) {
+    return null;
+  }
+  return {
+    url: asset.url,
+    storageKey: asset.storageKey ?? null,
+    originalFilename: asset.originalFilename ?? null,
+    mimeType: asset.mimeType ?? null,
+    sizeBytes: asset.sizeBytes ?? null
+  };
+};
+
 const buildCategoryTree = (categories: Category[]): CategoryTreeNode[] => {
   const nodes = new Map<number, CategoryTreeNode>();
   const roots: CategoryTreeNode[] = [];
@@ -231,9 +260,17 @@ const parseNumber = (value: string): number | null => {
 const formatVariantLabel = (combination: VariantCombinationValue[]) =>
   combination.map((part) => `${part.attributeName}: ${part.valueName}`).join(' · ');
 const ProductsPage = () => {
+  const queryClient = useQueryClient();
+  const confirm = useConfirm();
   const { notify } = useToast();
   const permissions = useAppSelector((state) => state.auth.permissions);
 
+  const [panelMode, setPanelMode] = useState<'list' | 'create' | 'edit'>('list');
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const [searchDraft, setSearchDraft] = useState('');
+  const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState<TabId>('basic');
   const [form, setForm] = useState<ProductFormState>(defaultFormState);
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<number[]>([]);
@@ -252,11 +289,28 @@ const ProductsPage = () => {
 
   const brandDropdownRef = useRef<HTMLDivElement | null>(null);
   const taxDropdownRef = useRef<HTMLDivElement | null>(null);
+  const editInitializedRef = useRef(false);
 
   const canCreate = useMemo(
     () => hasAnyPermission(permissions as PermissionKey[], ['PRODUCT_CREATE']),
     [permissions]
   );
+  const canUpdate = useMemo(
+    () => hasAnyPermission(permissions as PermissionKey[], ['PRODUCT_UPDATE']),
+    [permissions]
+  );
+  const canDelete = useMemo(
+    () => hasAnyPermission(permissions as PermissionKey[], ['PRODUCT_DELETE']),
+    [permissions]
+  );
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setSearch(searchDraft.trim());
+      setPage(0);
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [searchDraft]);
 
   const brandsQuery = useQuery({
     queryKey: ['products', 'brands'],
@@ -297,6 +351,20 @@ const ProductsPage = () => {
       return data.content ?? [];
     }
   });
+
+  const productsQuery = useQuery({
+    queryKey: ['products', { page, pageSize, search }],
+    queryFn: async () => {
+      const { data } = await api.get<ProductSummaryPage>('/products', {
+        params: { page, size: pageSize, search: search || undefined }
+      });
+      return data;
+    },
+    enabled: panelMode === 'list'
+  });
+
+  const products = productsQuery.data?.content ?? [];
+  const totalElements = productsQuery.data?.totalElements ?? 0;
 
   const categoryTree = useMemo(
     () => buildCategoryTree(categoriesQuery.data ?? []),
@@ -427,13 +495,27 @@ const ProductsPage = () => {
       document.removeEventListener('mousedown', handleClickAway);
     };
   }, [taxDropdownOpen]);
+
+  const productDetailQuery = useQuery({
+    queryKey: ['products', 'detail', editingId],
+    queryFn: async () => {
+      if (editingId == null) {
+        throw new Error('No product selected');
+      }
+      const { data } = await api.get<ProductDetail>(`/products/${editingId}`);
+      return data;
+    },
+    enabled: panelMode === 'edit' && editingId !== null
+  });
+
   const createMutation = useMutation({
     mutationFn: async (payload: CreateProductPayload) => {
       await api.post('/products', payload);
     },
     onSuccess: () => {
       notify({ type: 'success', message: 'Product created successfully.' });
-      resetFormState();
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      closeForm();
     },
     onError: (error: unknown) => {
       notify({
@@ -442,6 +524,198 @@ const ProductsPage = () => {
       });
     }
   });
+
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, payload }: { id: number; payload: CreateProductPayload }) => {
+      await api.put(`/products/${id}`, payload);
+    },
+    onSuccess: () => {
+      notify({ type: 'success', message: 'Product updated successfully.' });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      closeForm();
+    },
+    onError: (error: unknown) => {
+      notify({
+        type: 'error',
+        message: extractErrorMessage(error, 'Unable to update product. Please try again later.')
+      });
+    }
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await api.delete(`/products/${id}`);
+    },
+    onSuccess: () => {
+      notify({ type: 'success', message: 'Product deleted successfully.' });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+    },
+    onError: (error: unknown) => {
+      notify({
+        type: 'error',
+        message: extractErrorMessage(error, 'Unable to delete product. Please try again later.')
+      });
+    }
+  });
+
+  const closeForm = () => {
+    resetFormState();
+    setPanelMode('list');
+    setEditingId(null);
+  };
+
+  const openCreateForm = () => {
+    resetFormState();
+    setActiveTab('basic');
+    setPanelMode('create');
+    setEditingId(null);
+  };
+
+  const openEditForm = (productId: number) => {
+    setActiveTab('basic');
+    setPanelMode('edit');
+    setEditingId(productId);
+  };
+
+  const handleDelete = async (product: ProductSummary) => {
+    if (!canDelete) {
+      return;
+    }
+    const confirmed = await confirm({
+      title: 'Delete product?',
+      description: `Delete product "${product.name}"? This action cannot be undone.`,
+      confirmLabel: 'Delete',
+      tone: 'danger'
+    });
+    if (!confirmed) {
+      return;
+    }
+    await deleteMutation.mutateAsync(product.id);
+  };
+
+  const handleCancel = () => {
+    closeForm();
+  };
+
+  const populateFormFromProduct = (product: ProductDetail) => {
+    setForm({
+      name: product.name ?? '',
+      brandId: product.brand ? String(product.brand.id) : '',
+      unit: product.unit ?? '',
+      weightKg: product.weightKg != null ? String(product.weightKg) : '',
+      minPurchaseQuantity:
+        product.minPurchaseQuantity != null ? String(product.minPurchaseQuantity) : '',
+      featured: product.featured ? 'yes' : 'no',
+      todaysDeal: product.todaysDeal ? 'yes' : 'no',
+      description: product.description ?? '',
+      videoProvider: product.videoProvider ?? 'YOUTUBE',
+      videoUrl: product.videoUrl ?? '',
+      unitPrice: product.pricing.unitPrice != null ? String(product.pricing.unitPrice) : '',
+      discountValue: product.pricing.discountValue != null ? String(product.pricing.discountValue) : '',
+      discountType: product.pricing.discountType,
+      discountMinQuantity:
+        product.pricing.discountMinQuantity != null
+          ? String(product.pricing.discountMinQuantity)
+          : '',
+      discountMaxQuantity:
+        product.pricing.discountMaxQuantity != null
+          ? String(product.pricing.discountMaxQuantity)
+          : '',
+      priceTag: product.pricing.priceTag ?? '',
+      stockQuantity: product.pricing.stockQuantity != null ? String(product.pricing.stockQuantity) : '',
+      sku: product.pricing.sku ?? '',
+      externalLink: product.pricing.externalLink ?? '',
+      externalLinkButton: product.pricing.externalLinkButton ?? '',
+      lowStockWarning:
+        product.pricing.lowStockWarning != null ? String(product.pricing.lowStockWarning) : '',
+      stockVisibility: product.pricing.stockVisibility,
+      metaTitle: product.seo.title ?? '',
+      metaDescription: product.seo.description ?? '',
+      metaKeywords: product.seo.keywords ?? '',
+      metaCanonicalUrl: product.seo.canonicalUrl ?? ''
+    });
+
+    setSelectedCategoryIds(product.categories.map((category) => category.id));
+    setSelectedTaxIds(product.taxRates.map((tax) => tax.id));
+
+    const gallerySelections = (product.gallery ?? [])
+      .map((asset) => mediaAssetToSelection(asset))
+      .filter((asset): asset is MediaSelection => asset !== null);
+    setGallery(gallerySelections);
+    setThumbnail(mediaAssetToSelection(product.thumbnail));
+    setPdfSpecification(mediaAssetToSelection(product.pdfSpecification));
+    setMetaImage(mediaAssetToSelection(product.seo.image));
+
+    const attributeCatalog = attributesQuery.data ?? [];
+    const nextSelectedAttributes = product.attributes.map((attribute) => {
+      const catalogAttribute = attributeCatalog.find((entry) => entry.id === attribute.attributeId);
+      const values: AttributeValue[] = catalogAttribute?.values ??
+        attribute.values.map((value) => ({
+          id: value.id,
+          value: value.value,
+          sortOrder: value.sortOrder ?? 0
+        }));
+      return {
+        attributeId: attribute.attributeId,
+        attributeName: attribute.attributeName,
+        values,
+        selectedValueIds: attribute.values.map((value) => value.id)
+      } satisfies AttributeSelection;
+    });
+    setSelectedAttributes(nextSelectedAttributes);
+
+    const nextVariants: Record<string, ProductVariantFormState> = {};
+    product.variants.forEach((variant) => {
+      const combination = variant.values.map((value) => ({
+        attributeId: value.attributeId,
+        attributeName: value.attributeName,
+        valueId: value.valueId,
+        valueName: value.value
+      }));
+      const mediaSelections = (variant.media ?? [])
+        .map((asset) => mediaAssetToSelection(asset))
+        .filter((asset): asset is MediaSelection => asset !== null);
+      nextVariants[variant.key] = {
+        combination,
+        priceAdjustment: variant.priceAdjustment != null ? String(variant.priceAdjustment) : '',
+        sku: variant.sku ?? '',
+        quantity: variant.quantity != null ? String(variant.quantity) : '',
+        media: mediaSelections
+      };
+    });
+    setVariants(nextVariants);
+
+    if (product.unit && unitOptions.includes(product.unit as (typeof unitOptions)[number])) {
+      setUnitMode('preset');
+    } else {
+      setUnitMode('custom');
+    }
+
+    setActiveTab('basic');
+  };
+
+  const handleResetClick = () => {
+    if (panelMode === 'edit' && productDetailQuery.data) {
+      populateFormFromProduct(productDetailQuery.data);
+      return;
+    }
+    resetFormState();
+  };
+
+  useEffect(() => {
+    if (panelMode !== 'edit') {
+      editInitializedRef.current = false;
+      return;
+    }
+    if (attributesQuery.isLoading || !productDetailQuery.data) {
+      return;
+    }
+    if (editInitializedRef.current) {
+      return;
+    }
+    populateFormFromProduct(productDetailQuery.data);
+    editInitializedRef.current = true;
+  }, [panelMode, productDetailQuery.data, attributesQuery.isLoading, attributesQuery.data]);
 
   const selectedBrand = useMemo(() => {
     const brands = brandsQuery.data ?? [];
@@ -622,11 +896,20 @@ const ProductsPage = () => {
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!canCreate) {
+    const isCreateMode = panelMode === 'create';
+    const isEditMode = panelMode === 'edit';
+    const isSaving = createMutation.isPending || updateMutation.isPending;
+
+    if (isCreateMode && !canCreate) {
       notify({ type: 'error', message: 'You do not have permission to create products.' });
       return;
     }
-    if (createMutation.isPending) {
+    if (isEditMode && !canUpdate) {
+      notify({ type: 'error', message: 'You do not have permission to update products.' });
+      return;
+    }
+
+    if (isSaving) {
       return;
     }
 
@@ -701,7 +984,11 @@ const ProductsPage = () => {
       })
     };
 
-    createMutation.mutate(payload);
+    if (isEditMode && editingId != null) {
+      updateMutation.mutate({ id: editingId, payload });
+    } else {
+      createMutation.mutate(payload);
+    }
   };
 
   const renderCategoryNodes = (nodes: CategoryTreeNode[], depth = 0): JSX.Element[] => {
@@ -804,39 +1091,235 @@ const ProductsPage = () => {
         ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-200'
         : 'border-slate-300 focus:border-primary focus:ring-primary/20'
     }`;
-  return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Products"
-        description="Create and configure catalog products, manage media, and prepare rich merchandising data before publishing."
-      />
 
+  const renderList = () => {
+    const formatDate = (value: string) =>
+      new Intl.DateTimeFormat(undefined, {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      }).format(new Date(value));
+
+    const formatPrice = (value: number | null | undefined) => {
+      if (value == null) {
+        return '—';
+      }
+      try {
+        return new Intl.NumberFormat(undefined, {
+          style: 'currency',
+          currency: 'INR',
+          maximumFractionDigits: 2
+        }).format(value);
+      } catch (error) {
+        return value.toLocaleString(undefined, {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        });
+      }
+    };
+
+    if (productsQuery.isError) {
+      return (
+        <PageSection>
+          <div className="space-y-4 text-sm text-slate-600">
+            <p>We couldn’t load the products directory right now. Please try again in a moment.</p>
+            <button
+              type="button"
+              onClick={() => productsQuery.refetch()}
+              className="inline-flex items-center rounded-full border border-primary px-4 py-2 font-medium text-primary transition hover:bg-primary/10"
+            >
+              Retry loading products
+            </button>
+          </div>
+        </PageSection>
+      );
+    }
+
+    return (
+      <PageSection padded={false} bodyClassName="flex flex-col">
+        <div className="flex flex-col gap-4 border-b border-slate-200 bg-slate-50 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+          <input
+            type="search"
+            value={searchDraft}
+            onChange={(event) => setSearchDraft(event.target.value)}
+            placeholder="Search products"
+            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:max-w-xs"
+          />
+          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            {totalElements.toLocaleString()} item{totalElements === 1 ? '' : 's'}
+          </div>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
+            <thead className="bg-slate-50">
+              <tr>
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Product</th>
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Brand</th>
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">SKU</th>
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Unit price</th>
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Variants</th>
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Updated</th>
+                {(canUpdate || canDelete) && (
+                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Actions</th>
+                )}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 bg-white">
+              {productsQuery.isLoading ? (
+                <tr>
+                  <td colSpan={canUpdate || canDelete ? 7 : 6} className="px-4 py-6 text-center text-sm text-slate-500">
+                    Loading products…
+                  </td>
+                </tr>
+              ) : products.length > 0 ? (
+                products.map((product) => (
+                  <tr key={product.id} className="transition hover:bg-blue-50/40">
+                    <td className="px-4 py-3">
+                      <div className="flex flex-col">
+                        <span className="font-semibold text-slate-900">{product.name}</span>
+                        <span className="text-xs text-slate-500">
+                          {product.unit || '—'} · {product.featured ? 'Featured' : 'Standard'}
+                          {product.todaysDeal ? ' · Today’s deal' : ''}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-slate-600">{product.brandName ?? '—'}</td>
+                    <td className="px-4 py-3 text-slate-600">{product.sku || '—'}</td>
+                    <td className="px-4 py-3 text-slate-600">{formatPrice(product.unitPrice)}</td>
+                    <td className="px-4 py-3 text-slate-600">{product.variantCount}</td>
+                    <td className="px-4 py-3 text-slate-600">{formatDate(product.updatedAt)}</td>
+                    {(canUpdate || canDelete) && (
+                      <td className="px-4 py-3">
+                        <div className="flex justify-end gap-2">
+                          {canUpdate && (
+                            <button
+                              type="button"
+                              onClick={() => openEditForm(product.id)}
+                              className="rounded-full border border-slate-200 p-2 text-slate-500 transition hover:border-slate-300 hover:text-slate-800"
+                              aria-label={`Edit ${product.name}`}
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+                                <path d="M15.414 2.586a2 2 0 0 0-2.828 0L3 12.172V17h4.828l9.586-9.586a2 2 0 0 0 0-2.828l-2-2Zm-2.121 1.415 2 2L13 8.293l-2-2 2.293-2.292ZM5 13.414 11.293 7.12l1.586 1.586L6.586 15H5v-1.586Z" />
+                              </svg>
+                            </button>
+                          )}
+                          {canDelete && (
+                            <button
+                              type="button"
+                              onClick={() => handleDelete(product)}
+                              className="rounded-full border border-rose-200 p-2 text-rose-500 transition hover:border-rose-300 hover:text-rose-600"
+                              aria-label={`Delete ${product.name}`}
+                            >
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth={1.5}
+                                className="h-4 w-4"
+                              >
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M6 7h12" />
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M10 11v6" />
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M14 11v6" />
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M9 7V4h6v3m2 0v12a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V7h12Z" />
+                              </svg>
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    )}
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={canUpdate || canDelete ? 7 : 6} className="px-4 py-6 text-center text-sm text-slate-500">
+                    No products found.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        <PaginationControls
+          page={page}
+          pageSize={pageSize}
+          totalElements={totalElements}
+          pageSizeOptions={PAGE_SIZE_OPTIONS}
+          onPageChange={setPage}
+          onPageSizeChange={(size) => {
+            setPageSize(size);
+            setPage(0);
+          }}
+          isLoading={productsQuery.isLoading}
+        />
+      </PageSection>
+    );
+  };
+  const renderForm = () => {
+    const isCreateMode = panelMode === 'create';
+    const isEditMode = panelMode === 'edit';
+    const isSaving = createMutation.isPending || updateMutation.isPending;
+    const canSubmit = isCreateMode ? canCreate : canUpdate;
+    const submitLabel = isCreateMode ? 'Create product' : 'Update product';
+
+    if (isEditMode && productDetailQuery.isLoading && !editInitializedRef.current) {
+      return (
+        <PageSection title="Loading product details">
+          <div className="flex items-center gap-3 text-sm text-slate-600">
+            <span className="inline-flex h-2.5 w-2.5 animate-pulse rounded-full bg-primary" />
+            Loading product details…
+          </div>
+        </PageSection>
+      );
+    }
+
+    if (isEditMode && productDetailQuery.isError && !productDetailQuery.data) {
+      return (
+        <PageSection title="Unable to load product">
+          <div className="space-y-3 text-sm text-slate-600">
+            <p>We couldn’t load this product right now. Please try again.</p>
+            <button
+              type="button"
+              onClick={() => productDetailQuery.refetch()}
+              className="inline-flex items-center justify-center rounded-full border border-primary px-4 py-2 text-sm font-semibold text-primary transition hover:bg-primary/10"
+            >
+              Retry
+            </button>
+          </div>
+        </PageSection>
+      );
+    }
+
+    return (
       <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <nav className="flex flex-wrap gap-2 border-b border-slate-200 bg-slate-50 px-4 py-3 sm:px-6">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setActiveTab(tab.id)}
-                className={`rounded-full px-4 py-2 text-sm transition focus:outline-none focus:ring-2 focus:ring-primary/30 ${
-                  activeTab === tab.id
-                    ? 'bg-primary text-white shadow-sm shadow-primary/30'
-                    : 'bg-white text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </nav>
+        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="grid gap-0 lg:grid-cols-[240px_minmax(0,1fr)]">
+            <nav className="flex flex-col gap-2 border-b border-slate-200 bg-slate-50 p-4 sm:p-6 lg:border-b-0 lg:border-r">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`w-full rounded-lg px-3 py-2 text-left text-sm transition focus:outline-none focus:ring-2 focus:ring-primary/20 ${
+                    activeTab === tab.id
+                      ? 'bg-primary text-white shadow-sm shadow-primary/30'
+                      : 'bg-white text-slate-600 hover:bg-primary/10 hover:text-primary'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </nav>
 
-          <div className="space-y-6 px-4 py-6 sm:px-6">
-            {activeTab === 'basic' && (
+            <div className="space-y-6 px-4 py-6 sm:px-6">
+              {activeTab === 'basic' && (
               <PageSection
                 title="Basic information"
                 description="Capture the core catalog attributes, merchandising units, and customer-facing messaging."
               >
-                <div className="grid gap-6 lg:grid-cols-2">
+                <div className="grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
                   <div className="space-y-4">
                     <div>
                       <label htmlFor="product-name" className="text-sm font-medium text-slate-700">
@@ -1206,13 +1689,13 @@ const ProductsPage = () => {
                   </div>
                 </div>
               </PageSection>
-            )}
+              )}
             {activeTab === 'media' && (
               <PageSection
                 title="Media"
                 description="Manage gallery imagery, hero thumbnails, product videos, and supporting specification documents."
               >
-                <div className="grid gap-6 lg:grid-cols-2">
+                <div className="grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
                   <div className="space-y-4">
                     <div>
                       <div className="flex items-center justify-between">
@@ -1352,23 +1835,21 @@ const ProductsPage = () => {
                 title="Price & Stock"
                 description="Configure pricing, inventory, and attribute-driven variants. Base pricing powers quick calculations for every variant."
               >
-                <div className="space-y-6">
-                  <div className="rounded-xl border border-slate-200 p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="text-sm font-semibold text-slate-800">Attribute options</h3>
-                        <p className="mt-1 text-xs text-slate-500">
-                          Enable the attributes that should generate product variants. Select values for each attribute.
-                        </p>
-                      </div>
+                <div className="grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
+                  <aside className="space-y-4">
+                    <div className="rounded-xl border border-slate-200 p-4">
+                      <h3 className="text-sm font-semibold text-slate-800">Attribute options</h3>
+                      <p className="mt-1 text-xs text-slate-500">
+                        Enable the attributes that should generate product variants. Select values for each attribute.
+                      </p>
                     </div>
-                    <div className="mt-4 grid gap-4 md:grid-cols-2">
+                    <div className="space-y-4">
                       {(attributesQuery.data ?? []).map((attribute) => {
                         const selection = selectedAttributes.find((entry) => entry.attributeId === attribute.id);
                         const enabled = Boolean(selection);
                         return (
                           <div key={attribute.id} className="rounded-xl border border-slate-200 p-4 shadow-sm">
-                            <div className="flex items-start justify-between">
+                            <div className="flex items-start justify-between gap-3">
                               <div>
                                 <h4 className="text-sm font-semibold text-slate-800">{attribute.name}</h4>
                                 <p className="mt-1 text-xs text-slate-500">
@@ -1418,230 +1899,231 @@ const ProductsPage = () => {
                         </div>
                       )}
                     </div>
-                  </div>
+                  </aside>
 
-                  <div className="grid gap-6 lg:grid-cols-2">
-                    <div className="space-y-4">
-                      <div>
-                        <label htmlFor="unit-price" className="text-sm font-medium text-slate-700">
-                          Unit price
-                        </label>
-                        <input
-                          id="unit-price"
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={form.unitPrice}
-                          onChange={(event) => setForm((previous) => ({ ...previous, unitPrice: event.target.value }))}
-                          placeholder="100.00"
-                          className={inputClassNames(Boolean(validation.unitPrice))}
-                          aria-invalid={Boolean(validation.unitPrice)}
-                        />
-                        {validation.unitPrice && (
-                          <p className="mt-1 text-xs text-rose-500">{validation.unitPrice}</p>
-                        )}
-                      </div>
-
-                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div className="space-y-6">
+                    <div className="grid gap-6 lg:grid-cols-2">
+                      <div className="space-y-4">
                         <div>
-                          <label htmlFor="discount-value" className="text-sm font-medium text-slate-700">
-                            Discount value
+                          <label htmlFor="unit-price" className="text-sm font-medium text-slate-700">
+                            Unit price
                           </label>
                           <input
-                            id="discount-value"
+                            id="unit-price"
                             type="number"
+                            min="0"
                             step="0.01"
-                            value={form.discountValue}
-                            onChange={(event) => setForm((previous) => ({ ...previous, discountValue: event.target.value }))}
-                            placeholder="10"
-                            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                            value={form.unitPrice}
+                            onChange={(event) => setForm((previous) => ({ ...previous, unitPrice: event.target.value }))}
+                            placeholder="100.00"
+                            className={inputClassNames(Boolean(validation.unitPrice))}
+                            aria-invalid={Boolean(validation.unitPrice)}
                           />
+                          {validation.unitPrice && (
+                            <p className="mt-1 text-xs text-rose-500">{validation.unitPrice}</p>
+                          )}
                         </div>
-                        <div>
-                          <span className="text-sm font-medium text-slate-700">Discount type</span>
-                          <div className="mt-1 flex items-center gap-4 text-sm text-slate-600">
-                            {(['FLAT', 'PERCENTAGE'] as DiscountType[]).map((type) => (
-                              <label key={type} className="flex items-center gap-2">
-                                <input
-                                  type="radio"
-                                  name="discountType"
-                                  value={type}
-                                  checked={form.discountType === type}
-                                  onChange={(event) =>
-                                    setForm((previous) => ({
-                                      ...previous,
-                                      discountType: event.target.value as DiscountType
-                                    }))
-                                  }
-                                  className="h-4 w-4 border-slate-300 text-primary focus:ring-primary"
-                                />
-                                {type === 'FLAT' ? 'Flat amount' : 'Percentage'}
-                              </label>
-                            ))}
+
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                          <div>
+                            <label htmlFor="discount-value" className="text-sm font-medium text-slate-700">
+                              Discount value
+                            </label>
+                            <input
+                              id="discount-value"
+                              type="number"
+                              step="0.01"
+                              value={form.discountValue}
+                              onChange={(event) => setForm((previous) => ({ ...previous, discountValue: event.target.value }))}
+                              placeholder="10"
+                              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                            />
+                          </div>
+                          <div>
+                            <span className="text-sm font-medium text-slate-700">Discount type</span>
+                            <div className="mt-1 flex items-center gap-4 text-sm text-slate-600">
+                              {(['FLAT', 'PERCENTAGE'] as DiscountType[]).map((type) => (
+                                <label key={type} className="flex items-center gap-2">
+                                  <input
+                                    type="radio"
+                                    name="discountType"
+                                    value={type}
+                                    checked={form.discountType === type}
+                                    onChange={(event) =>
+                                      setForm((previous) => ({
+                                        ...previous,
+                                        discountType: event.target.value as DiscountType
+                                      }))
+                                    }
+                                    className="h-4 w-4 border-slate-300 text-primary focus:ring-primary"
+                                  />
+                                  {type === 'FLAT' ? 'Flat amount' : 'Percentage'}
+                                </label>
+                              ))}
+                            </div>
                           </div>
                         </div>
-                      </div>
 
-                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                        <div>
-                          <label htmlFor="discount-min" className="text-sm font-medium text-slate-700">
-                            Discount min quantity
-                          </label>
-                          <input
-                            id="discount-min"
-                            type="number"
-                            min="0"
-                            step="1"
-                            value={form.discountMinQuantity}
-                            onChange={(event) =>
-                              setForm((previous) => ({ ...previous, discountMinQuantity: event.target.value }))
-                            }
-                            placeholder="1"
-                            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                          />
-                        </div>
-                        <div>
-                          <label htmlFor="discount-max" className="text-sm font-medium text-slate-700">
-                            Discount max quantity
-                          </label>
-                          <input
-                            id="discount-max"
-                            type="number"
-                            min="0"
-                            step="1"
-                            value={form.discountMaxQuantity}
-                            onChange={(event) =>
-                              setForm((previous) => ({ ...previous, discountMaxQuantity: event.target.value }))
-                            }
-                            placeholder="10"
-                            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                          />
-                        </div>
-                      </div>
-
-                      <div>
-                        <label htmlFor="price-tag" className="text-sm font-medium text-slate-700">
-                          Price tag label
-                        </label>
-                        <input
-                          id="price-tag"
-                          type="text"
-                          value={form.priceTag}
-                          onChange={(event) => setForm((previous) => ({ ...previous, priceTag: event.target.value }))}
-                          placeholder="MSRP / Launch price"
-                          className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-4">
-                      <div>
-                        <label htmlFor="stock-quantity" className="text-sm font-medium text-slate-700">
-                          Stock quantity
-                        </label>
-                        <input
-                          id="stock-quantity"
-                          type="number"
-                          min="0"
-                          step="1"
-                          value={form.stockQuantity}
-                          onChange={(event) => setForm((previous) => ({ ...previous, stockQuantity: event.target.value }))}
-                          placeholder="250"
-                          className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                        <div>
-                          <label htmlFor="sku" className="text-sm font-medium text-slate-700">
-                            SKU
-                          </label>
-                          <input
-                            id="sku"
-                            type="text"
-                            value={form.sku}
-                            onChange={(event) => setForm((previous) => ({ ...previous, sku: event.target.value }))}
-                            placeholder="AUR-SHOE-001"
-                            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                          />
-                        </div>
-                        <div>
-                          <label htmlFor="external-link" className="text-sm font-medium text-slate-700">
-                            External link
-                          </label>
-                          <input
-                            id="external-link"
-                            type="url"
-                            value={form.externalLink}
-                            onChange={(event) => setForm((previous) => ({ ...previous, externalLink: event.target.value }))}
-                            placeholder="https://brand.com/product"
-                            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                        <div>
-                          <label htmlFor="external-button" className="text-sm font-medium text-slate-700">
-                            External link button label
-                          </label>
-                          <input
-                            id="external-button"
-                            type="text"
-                            value={form.externalLinkButton}
-                            onChange={(event) =>
-                              setForm((previous) => ({ ...previous, externalLinkButton: event.target.value }))
-                            }
-                            placeholder="Shop now"
-                            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                          />
-                        </div>
-                        <div>
-                          <label htmlFor="low-stock" className="text-sm font-medium text-slate-700">
-                            Low stock warning threshold
-                          </label>
-                          <input
-                            id="low-stock"
-                            type="number"
-                            min="0"
-                            step="1"
-                            value={form.lowStockWarning}
-                            onChange={(event) => setForm((previous) => ({ ...previous, lowStockWarning: event.target.value }))}
-                            placeholder="20"
-                            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="space-y-3 rounded-xl border border-slate-200 px-4 py-4">
-                        <span className="text-sm font-semibold text-slate-800">Stock visibility</span>
-                        {stockVisibilityOptions.map((option) => (
-                          <label key={option.value} className="flex items-start gap-3 text-sm text-slate-700">
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                          <div>
+                            <label htmlFor="discount-min" className="text-sm font-medium text-slate-700">
+                              Discount min quantity
+                            </label>
                             <input
-                              type="radio"
-                              name="stockVisibility"
-                              value={option.value}
-                              checked={form.stockVisibility === option.value}
+                              id="discount-min"
+                              type="number"
+                              min="0"
+                              step="1"
+                              value={form.discountMinQuantity}
                               onChange={(event) =>
-                                setForm((previous) => ({
-                                  ...previous,
-                                  stockVisibility: event.target.value as StockVisibilityState
-                                }))
+                                setForm((previous) => ({ ...previous, discountMinQuantity: event.target.value }))
                               }
-                              className="mt-1 h-4 w-4 border-slate-300 text-primary focus:ring-primary"
+                              placeholder="1"
+                              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                             />
-                            <span>
-                              <span className="font-medium">{option.label}</span>
-                              <span className="block text-xs text-slate-500">{option.description}</span>
-                            </span>
+                          </div>
+                          <div>
+                            <label htmlFor="discount-max" className="text-sm font-medium text-slate-700">
+                              Discount max quantity
+                            </label>
+                            <input
+                              id="discount-max"
+                              type="number"
+                              min="0"
+                              step="1"
+                              value={form.discountMaxQuantity}
+                              onChange={(event) =>
+                                setForm((previous) => ({ ...previous, discountMaxQuantity: event.target.value }))
+                              }
+                              placeholder="10"
+                              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label htmlFor="price-tag" className="text-sm font-medium text-slate-700">
+                            Price tag label
                           </label>
-                        ))}
+                          <input
+                            id="price-tag"
+                            type="text"
+                            value={form.priceTag}
+                            onChange={(event) => setForm((previous) => ({ ...previous, priceTag: event.target.value }))}
+                            placeholder="MSRP / Launch price"
+                            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-4">
+                        <div>
+                          <label htmlFor="stock-quantity" className="text-sm font-medium text-slate-700">
+                            Stock quantity
+                          </label>
+                          <input
+                            id="stock-quantity"
+                            type="number"
+                            min="0"
+                            step="1"
+                            value={form.stockQuantity}
+                            onChange={(event) => setForm((previous) => ({ ...previous, stockQuantity: event.target.value }))}
+                            placeholder="250"
+                            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                          <div>
+                            <label htmlFor="sku" className="text-sm font-medium text-slate-700">
+                              SKU
+                            </label>
+                            <input
+                              id="sku"
+                              type="text"
+                              value={form.sku}
+                              onChange={(event) => setForm((previous) => ({ ...previous, sku: event.target.value }))}
+                              placeholder="AUR-SHOE-001"
+                              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                            />
+                          </div>
+                          <div>
+                            <label htmlFor="external-link" className="text-sm font-medium text-slate-700">
+                              External link
+                            </label>
+                            <input
+                              id="external-link"
+                              type="url"
+                              value={form.externalLink}
+                              onChange={(event) => setForm((previous) => ({ ...previous, externalLink: event.target.value }))}
+                              placeholder="https://brand.com/product"
+                              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                          <div>
+                            <label htmlFor="external-button" className="text-sm font-medium text-slate-700">
+                              External link button label
+                            </label>
+                            <input
+                              id="external-button"
+                              type="text"
+                              value={form.externalLinkButton}
+                              onChange={(event) =>
+                                setForm((previous) => ({ ...previous, externalLinkButton: event.target.value }))
+                              }
+                              placeholder="Shop now"
+                              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                            />
+                          </div>
+                          <div>
+                            <label htmlFor="low-stock" className="text-sm font-medium text-slate-700">
+                              Low stock warning threshold
+                            </label>
+                            <input
+                              id="low-stock"
+                              type="number"
+                              min="0"
+                              step="1"
+                              value={form.lowStockWarning}
+                              onChange={(event) => setForm((previous) => ({ ...previous, lowStockWarning: event.target.value }))}
+                              placeholder="20"
+                              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-3 rounded-xl border border-slate-200 px-4 py-4">
+                          <span className="text-sm font-semibold text-slate-800">Stock visibility</span>
+                          {stockVisibilityOptions.map((option) => (
+                            <label key={option.value} className="flex items-start gap-3 text-sm text-slate-700">
+                              <input
+                                type="radio"
+                                name="stockVisibility"
+                                value={option.value}
+                                checked={form.stockVisibility === option.value}
+                                onChange={(event) =>
+                                  setForm((previous) => ({
+                                    ...previous,
+                                    stockVisibility: event.target.value as StockVisibilityState
+                                  }))
+                                }
+                                className="mt-1 h-4 w-4 border-slate-300 text-primary focus:ring-primary"
+                              />
+                              <span>
+                                <span className="font-medium">{option.label}</span>
+                                <span className="block text-xs text-slate-500">{option.description}</span>
+                              </span>
+                            </label>
+                          ))}
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  {variantCombinations.length > 0 ? (
-                    <div className="overflow-hidden rounded-xl border border-slate-200">
+                    {variantCombinations.length > 0 ? (
+                      <div className="overflow-hidden rounded-xl border border-slate-200">
                       <div className="border-b border-slate-200 bg-slate-50 px-4 py-3">
                         <h3 className="text-sm font-semibold text-slate-800">Generated variants</h3>
                         <p className="mt-1 text-xs text-slate-500">
@@ -1744,7 +2226,8 @@ const ProductsPage = () => {
                       Variants will appear here once you enable attributes and choose values. Without attributes the base pricing
                       above will be used for the product.
                     </div>
-                  )}
+                    )}
+                  </div>
                 </div>
               </PageSection>
             )}
@@ -1873,42 +2356,82 @@ const ProductsPage = () => {
             )}
           </div>
         </div>
+        </div>
         <div className="flex flex-col items-stretch gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <div className="space-y-1 text-sm text-slate-500">
             {isLoading && <div>We are loading catalog data to help with product configuration…</div>}
             {validationMessages.length > 0 && (
-              <div className="text-amber-600">
-                Complete the highlighted fields before saving.
-              </div>
+              <div className="text-amber-600">Complete the highlighted fields before saving.</div>
             )}
-            {!canCreate && (
+            {!canSubmit && (
               <div className="text-rose-500">
-                You do not have permission to create products. Contact an administrator to request access.
+                You do not have permission to {isCreateMode ? 'create' : 'update'} products. Contact an administrator to request
+                access.
               </div>
             )}
           </div>
           <div className="flex flex-col gap-2 sm:flex-row">
             <button
               type="button"
-              onClick={resetFormState}
+              onClick={handleResetClick}
               className="inline-flex items-center justify-center rounded-full border border-slate-300 px-5 py-2 text-sm font-semibold text-slate-600 transition hover:border-slate-400 hover:text-slate-900"
             >
-              Reset form
+              Reset
+            </button>
+            <button
+              type="button"
+              onClick={handleCancel}
+              className="inline-flex items-center justify-center rounded-full border border-slate-200 px-5 py-2 text-sm font-semibold text-slate-500 transition hover:border-slate-300 hover:text-slate-800"
+            >
+              Cancel
             </button>
             <button
               type="submit"
-              disabled={!canCreate || createMutation.isPending}
+              disabled={!canSubmit || isSaving}
               className={`inline-flex items-center justify-center rounded-full px-6 py-2 text-sm font-semibold text-white shadow-sm transition focus:outline-none focus:ring-2 focus:ring-primary/30 ${
-                !canCreate || createMutation.isPending
-                  ? 'bg-slate-400'
-                  : 'bg-primary hover:bg-primary/90'
+                !canSubmit || isSaving ? 'bg-slate-400' : 'bg-primary hover:bg-primary/90'
               }`}
             >
-              {createMutation.isPending ? 'Saving…' : 'Save product'}
+              {isSaving ? 'Saving…' : submitLabel}
             </button>
           </div>
         </div>
       </form>
+    );
+  };
+
+  const headerActions =
+    panelMode === 'list'
+      ? canCreate
+        ? (
+            <button
+              type="button"
+              onClick={openCreateForm}
+              className="inline-flex items-center justify-center rounded-full bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-primary/90"
+            >
+              Add product
+            </button>
+          )
+        : null
+      : (
+          <button
+            type="button"
+            onClick={handleCancel}
+            className="inline-flex items-center justify-center rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-slate-400 hover:text-slate-900"
+          >
+            Back to products
+          </button>
+        );
+
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        title="Products"
+        description="Create and configure catalog products, manage media, and prepare rich merchandising data before publishing."
+        actions={headerActions}
+      />
+
+      {panelMode === 'list' ? renderList() : renderForm()}
 
       <MediaLibraryDialog
         open={mediaContext !== null}
