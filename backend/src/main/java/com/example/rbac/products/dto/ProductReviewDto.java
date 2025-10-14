@@ -19,6 +19,7 @@ public class ProductReviewDto {
     private List<MediaAssetDto> media;
     private Instant createdAt;
     private Instant updatedAt;
+    private boolean published;
 
     public Long getId() {
         return id;
@@ -130,5 +131,13 @@ public class ProductReviewDto {
 
     public void setUpdatedAt(Instant updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public boolean isPublished() {
+        return published;
+    }
+
+    public void setPublished(boolean published) {
+        this.published = published;
     }
 }
