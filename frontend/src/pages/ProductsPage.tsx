@@ -35,6 +35,7 @@ interface ProductFormState {
   featured: 'yes' | 'no';
   todaysDeal: 'yes' | 'no';
   description: string;
+  shortDescription: string;
   videoProvider: string;
   videoUrl: string;
   unitPrice: string;
@@ -81,6 +82,20 @@ interface ProductVariantFormState {
   media: MediaSelection[];
 }
 
+interface ExpandableSectionFormState {
+  id: string;
+  title: string;
+  content: string;
+}
+
+interface UploadedFileUploadResponse {
+  url: string;
+  storageKey?: string | null;
+  originalFilename?: string | null;
+  mimeType?: string | null;
+  sizeBytes?: number | null;
+}
+
 type MediaDialogContext =
   | { type: 'gallery' }
   | { type: 'thumbnail' }
@@ -97,6 +112,7 @@ const defaultFormState: ProductFormState = {
   featured: 'no',
   todaysDeal: 'no',
   description: '',
+  shortDescription: '',
   videoProvider: 'YOUTUBE',
   videoUrl: '',
   unitPrice: '',
@@ -116,6 +132,8 @@ const defaultFormState: ProductFormState = {
   metaKeywords: '',
   metaCanonicalUrl: ''
 };
+
+const generateSectionId = () => Math.random().toString(36).slice(2, 10);
 
 const unitOptions = [
   'Piece',
@@ -167,6 +185,7 @@ const tabs = [
   { id: 'seo', label: 'SEO' },
   { id: 'shipping', label: 'Shipping' },
   { id: 'warranty', label: 'Warranty' },
+  { id: 'reviews', label: 'Reviews' },
   { id: 'frequentlyBought', label: 'Frequently Bought' }
 ] as const;
 
@@ -279,6 +298,7 @@ const ProductsPage = () => {
   const [thumbnail, setThumbnail] = useState<MediaSelection | null>(null);
   const [pdfSpecification, setPdfSpecification] = useState<MediaSelection | null>(null);
   const [metaImage, setMetaImage] = useState<MediaSelection | null>(null);
+  const [expandableSections, setExpandableSections] = useState<ExpandableSectionFormState[]>([]);
   const [mediaContext, setMediaContext] = useState<MediaDialogContext | null>(null);
   const [selectedAttributes, setSelectedAttributes] = useState<AttributeSelection[]>([]);
   const [variants, setVariants] = useState<Record<string, ProductVariantFormState>>({});
@@ -299,7 +319,7 @@ const ProductsPage = () => {
     [permissions]
   );
   const canUpdate = useMemo(
-    () => hasAnyPermission(permissions as PermissionKey[], ['PRODUCT_UPDATE']),
+    () => hasAnyPermission(permissions as PermissionKey[], ['PRODUCT_UPDATE', 'PRODUCT_CREATE']),
     [permissions]
   );
   const canDelete = useMemo(
@@ -621,6 +641,7 @@ const ProductsPage = () => {
       featured: product.featured ? 'yes' : 'no',
       todaysDeal: product.todaysDeal ? 'yes' : 'no',
       description: product.description ?? '',
+      shortDescription: product.shortDescription ?? '',
       videoProvider: product.videoProvider ?? 'YOUTUBE',
       videoUrl: product.videoUrl ?? '',
       unitPrice: product.pricing.unitPrice != null ? String(product.pricing.unitPrice) : '',
@@ -658,6 +679,13 @@ const ProductsPage = () => {
     setThumbnail(mediaAssetToSelection(product.thumbnail));
     setPdfSpecification(mediaAssetToSelection(product.pdfSpecification));
     setMetaImage(mediaAssetToSelection(product.seo.image));
+    setExpandableSections(
+      (product.expandableSections ?? []).map((section) => ({
+        id: generateSectionId(),
+        title: section.title ?? '',
+        content: section.content ?? ''
+      }))
+    );
 
     const attributeCatalog = attributesQuery.data ?? [];
     const nextSelectedAttributes = product.attributes.map((attribute) => {
@@ -811,6 +839,44 @@ const ProductsPage = () => {
     [showValidation, validation]
   );
 
+  const productReviews = productDetailQuery.data?.reviews ?? [];
+  const reviewSummary = useMemo(() => {
+    if (!productReviews.length) {
+      return {
+        total: 0,
+        average: 0,
+        breakdown: [5, 4, 3, 2, 1].map((score) => ({ score, count: 0 }))
+      } as const;
+    }
+    const counts = [0, 0, 0, 0, 0];
+    productReviews.forEach((review) => {
+      const rating = Math.min(Math.max(Math.round(review.rating ?? 0), 1), 5);
+      counts[rating - 1] += 1;
+    });
+    const breakdown = [5, 4, 3, 2, 1].map((score) => ({ score, count: counts[score - 1] }));
+    const average =
+      productReviews.reduce((sum, review) => sum + (review.rating ?? 0), 0) / productReviews.length;
+    return { total: productReviews.length, average, breakdown };
+  }, [productReviews]);
+
+  const renderStars = (rating: number) => (
+    <span className="inline-flex items-center gap-0.5 text-base leading-none">
+      {Array.from({ length: 5 }).map((_, index) => (
+        <span key={index} className={index < rating ? 'text-amber-400' : 'text-slate-300'}>
+          ★
+        </span>
+      ))}
+      <span className="sr-only">{`${rating} out of 5 stars`}</span>
+    </span>
+  );
+
+  const isVideoAsset = (asset: { url: string; mimeType?: string | null }) => {
+    if (asset.mimeType && asset.mimeType.toLowerCase().startsWith('video/')) {
+      return true;
+    }
+    return /\.(mp4|webm|ogg|mov)$/i.test(asset.url);
+  };
+
   const toggleCategorySelection = (categoryId: number) => {
     setSelectedCategoryIds((previous) =>
       previous.includes(categoryId)
@@ -891,6 +957,47 @@ const ProductsPage = () => {
     });
   };
 
+  const addExpandableSection = () => {
+    setExpandableSections((previous) => [
+      ...previous,
+      { id: generateSectionId(), title: '', content: '' }
+    ]);
+  };
+
+  const updateExpandableSection = (id: string, field: 'title' | 'content', value: string) => {
+    setExpandableSections((previous) =>
+      previous.map((section) =>
+        section.id === id
+          ? {
+              ...section,
+              [field]: value
+            }
+          : section
+      )
+    );
+  };
+
+  const removeExpandableSection = (id: string) => {
+    setExpandableSections((previous) => previous.filter((section) => section.id !== id));
+  };
+
+  const moveExpandableSection = (id: string, direction: 'up' | 'down') => {
+    setExpandableSections((previous) => {
+      const index = previous.findIndex((section) => section.id === id);
+      if (index === -1) {
+        return previous;
+      }
+      const newIndex = direction === 'up' ? index - 1 : index + 1;
+      if (newIndex < 0 || newIndex >= previous.length) {
+        return previous;
+      }
+      const next = [...previous];
+      const [item] = next.splice(index, 1);
+      next.splice(newIndex, 0, item);
+      return next;
+    });
+  };
+
   const handleVariantFieldChange = (
     variantKey: string,
     field: 'priceAdjustment' | 'sku' | 'quantity',
@@ -915,6 +1022,7 @@ const ProductsPage = () => {
     setThumbnail(null);
     setPdfSpecification(null);
     setMetaImage(null);
+    setExpandableSections([]);
     setSelectedAttributes([]);
     setVariants({});
     setUnitMode('preset');
@@ -971,6 +1079,7 @@ const ProductsPage = () => {
       featured: form.featured === 'yes',
       todaysDeal: form.todaysDeal === 'yes',
       description: form.description,
+      shortDescription: form.shortDescription.trim(),
       gallery,
       thumbnail,
       videoProvider: form.videoProvider,
@@ -1014,7 +1123,13 @@ const ProductsPage = () => {
           quantity: variant ? parseNumber(variant.quantity) : null,
           media: variant?.media ?? []
         };
-      })
+      }),
+      expandableSections: expandableSections
+        .map((section) => ({
+          title: section.title.trim(),
+          content: section.content.trim()
+        }))
+        .filter((section) => section.title || section.content)
     };
 
     if (isEditMode && editingId != null) {
@@ -1075,23 +1190,72 @@ const ProductsPage = () => {
     setMediaContext(null);
   };
 
-  const handleMediaSelect = (selection: MediaSelection) => {
+  const handleMediaUpload = async (files: File[]): Promise<MediaSelection[]> => {
+    const sanitized = files.filter(Boolean);
+    if (!sanitized.length) {
+      return [];
+    }
+    const formData = new FormData();
+    sanitized.forEach((file) => {
+      formData.append('files', file);
+    });
+    formData.append('module', 'PRODUCT_MEDIA');
+    try {
+      const { data } = await api.post<UploadedFileUploadResponse[]>('/uploaded-files/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      const selections = (data ?? [])
+        .filter((item): item is UploadedFileUploadResponse => Boolean(item && item.url))
+        .map((uploaded) => ({
+          url: uploaded.url,
+          storageKey: uploaded.storageKey ?? undefined,
+          originalFilename: uploaded.originalFilename ?? undefined,
+          mimeType: uploaded.mimeType ?? undefined,
+          sizeBytes: uploaded.sizeBytes ?? undefined
+        }));
+      if (!selections.length) {
+        throw new Error('Upload failed');
+      }
+      notify({
+        type: 'success',
+        message:
+          selections.length === 1
+            ? `Uploaded ${selections[0].originalFilename ?? 'file'} successfully.`
+            : `Uploaded ${selections.length} files successfully.`
+      });
+      return selections;
+    } catch (error) {
+      notify({
+        type: 'error',
+        message: extractErrorMessage(error, 'Unable to upload files. Please try again.')
+      });
+      throw error;
+    }
+  };
+
+  const handleMediaSelect = (selection: MediaSelection | MediaSelection[]) => {
     if (!mediaContext) {
+      return;
+    }
+
+    const selections = Array.isArray(selection) ? selection : [selection];
+    if (!selections.length) {
+      setMediaContext(null);
       return;
     }
 
     switch (mediaContext.type) {
       case 'gallery':
-        setGallery((previous) => [...previous, selection]);
+        setGallery((previous) => [...previous, ...selections]);
         break;
       case 'thumbnail':
-        setThumbnail(selection);
+        setThumbnail(selections[0]);
         break;
       case 'pdf':
-        setPdfSpecification(selection);
+        setPdfSpecification(selections[0]);
         break;
       case 'metaImage':
-        setMetaImage(selection);
+        setMetaImage(selections[0]);
         break;
       case 'variant':
         setVariants((previous) => {
@@ -1103,7 +1267,7 @@ const ProductsPage = () => {
             ...previous,
             [mediaContext.key]: {
               ...variant,
-              media: [...variant.media, selection]
+              media: [...variant.media, ...selections]
             }
           };
         });
@@ -1180,15 +1344,6 @@ const ProductsPage = () => {
                 placeholder="Search products"
                 className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:max-w-sm"
               />
-              {canCreate && (
-                <button
-                  type="button"
-                  onClick={openCreateForm}
-                  className="inline-flex items-center justify-center rounded-full bg-primary px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/30"
-                >
-                  Add product
-                </button>
-              )}
             </div>
             <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
               {totalElements.toLocaleString()} item{totalElements === 1 ? '' : 's'}
@@ -1795,16 +1950,121 @@ const ProductsPage = () => {
                       </div>
                     </div>
 
-                    <div className="lg:col-span-2 space-y-2">
-                      <label className="text-sm font-medium text-slate-700">Description</label>
-                      <RichTextEditor
-                        value={form.description}
-                        onChange={(value) => setForm((previous) => ({ ...previous, description: value }))}
-                        minHeight={220}
-                      />
-                      {visibleValidation.description && (
-                        <p className="text-xs text-rose-500">{visibleValidation.description}</p>
-                      )}
+                    <div className="lg:col-span-2 space-y-6">
+                      <div className="space-y-2">
+                        <label htmlFor="short-description" className="text-sm font-medium text-slate-700">
+                          Short description
+                        </label>
+                        <textarea
+                          id="short-description"
+                          value={form.shortDescription}
+                          onChange={(event) =>
+                            setForm((previous) => ({ ...previous, shortDescription: event.target.value }))
+                          }
+                          rows={3}
+                          placeholder="Summarize the product in a sentence or two for quick merchandising callouts."
+                          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                        />
+                        <p className="text-xs text-slate-500">
+                          This appears alongside quick views, featured cards, and marketing placements.
+                        </p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-slate-700">Description</label>
+                        <RichTextEditor
+                          value={form.description}
+                          onChange={(value) => setForm((previous) => ({ ...previous, description: value }))}
+                          minHeight={220}
+                        />
+                        {visibleValidation.description && (
+                          <p className="text-xs text-rose-500">{visibleValidation.description}</p>
+                        )}
+                      </div>
+
+                      <div className="rounded-xl border border-slate-200 p-4 shadow-sm">
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div>
+                            <span className="text-sm font-medium text-slate-700">Expandable details</span>
+                            <p className="text-xs text-slate-500">
+                              Create accordion-style sections for specifications, materials, or FAQs.
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={addExpandableSection}
+                            className="inline-flex items-center justify-center rounded-full border border-primary/40 px-4 py-2 text-xs font-semibold text-primary transition hover:border-primary hover:bg-primary/10"
+                          >
+                            Add section
+                          </button>
+                        </div>
+                        {expandableSections.length ? (
+                          <div className="mt-4 space-y-4">
+                            {expandableSections.map((section, index) => (
+                              <div key={section.id} className="space-y-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+                                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                  <label className="flex-1">
+                                    <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Title</span>
+                                    <input
+                                      type="text"
+                                      value={section.title}
+                                      onChange={(event) =>
+                                        updateExpandableSection(section.id, 'title', event.target.value)
+                                      }
+                                      placeholder="e.g. Materials & care"
+                                      className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                                    />
+                                  </label>
+                                  <div className="flex items-center gap-2 self-start sm:self-auto">
+                                    <button
+                                      type="button"
+                                      onClick={() => moveExpandableSection(section.id, 'up')}
+                                      disabled={index === 0}
+                                      className="inline-flex items-center justify-center rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
+                                      aria-label="Move section up"
+                                    >
+                                      ↑
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => moveExpandableSection(section.id, 'down')}
+                                      disabled={index === expandableSections.length - 1}
+                                      className="inline-flex items-center justify-center rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
+                                      aria-label="Move section down"
+                                    >
+                                      ↓
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => removeExpandableSection(section.id)}
+                                      className="inline-flex items-center justify-center rounded-full border border-rose-200 px-3 py-1 text-xs font-semibold text-rose-500 transition hover:border-rose-300 hover:text-rose-600"
+                                      aria-label="Remove section"
+                                    >
+                                      Remove
+                                    </button>
+                                  </div>
+                                </div>
+                                <label className="block">
+                                  <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Content</span>
+                                  <textarea
+                                    value={section.content}
+                                    onChange={(event) =>
+                                      updateExpandableSection(section.id, 'content', event.target.value)
+                                    }
+                                    rows={4}
+                                    placeholder="Provide supporting details shown when the section expands."
+                                    className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                                  />
+                                </label>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="mt-4 rounded-lg border border-dashed border-slate-300 p-6 text-sm text-slate-500">
+                            No expandable sections yet. Use “Add section” to create product highlights or FAQs.
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </PageSection>
@@ -2465,6 +2725,158 @@ const ProductsPage = () => {
                 </div>
               </PageSection>
             )}
+
+            {activeTab === 'reviews' && (
+              <div className="space-y-6">
+                <PageSection
+                  title="Review snapshot"
+                  description="Understand overall sentiment and score distribution for this product."
+                >
+                  <div className="grid gap-6 lg:grid-cols-[minmax(0,260px)_minmax(0,1fr)]">
+                    <div className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Average rating</p>
+                        <div className="mt-3 flex items-baseline gap-3">
+                          <span className="text-4xl font-semibold text-slate-900">
+                            {reviewSummary.total ? reviewSummary.average.toFixed(1) : '—'}
+                          </span>
+                          {reviewSummary.total > 0 && renderStars(Math.round(reviewSummary.average))}
+                        </div>
+                      </div>
+                      <p className="mt-6 text-sm text-slate-600">
+                        {reviewSummary.total.toLocaleString()} review{reviewSummary.total === 1 ? '' : 's'} recorded
+                      </p>
+                    </div>
+                    <div className="space-y-3">
+                      {reviewSummary.breakdown.map((item) => {
+                        const percentage = reviewSummary.total
+                          ? Math.round((item.count / reviewSummary.total) * 100)
+                          : 0;
+                        return (
+                          <div key={item.score} className="flex items-center gap-3">
+                            <div className="flex w-16 items-center justify-between text-sm font-medium text-slate-600">
+                              <span>{item.score}</span>
+                              <span className="text-amber-400">★</span>
+                            </div>
+                            <div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-200">
+                              <div
+                                className="h-full bg-amber-400 transition-all"
+                                style={{ width: `${percentage}%` }}
+                                aria-hidden="true"
+                              />
+                            </div>
+                            <div className="w-16 text-right text-xs text-slate-500">
+                              {item.count.toLocaleString()} ({percentage}%)
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </PageSection>
+
+                <PageSection
+                  title="Customer stories"
+                  description="Review individual submissions, including attachments captured at the time of feedback."
+                >
+                  {productReviews.length ? (
+                    <div className="space-y-4">
+                      {productReviews.map((review) => {
+                        const displayName =
+                          review.reviewerName?.trim() ||
+                          review.customerName?.trim() ||
+                          'Anonymous shopper';
+                        const reviewedOn = new Date(review.reviewedAt).toLocaleDateString();
+                        return (
+                          <article
+                            key={review.id}
+                            className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
+                          >
+                            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                              <div className="flex items-start gap-3">
+                                {review.reviewerAvatar?.url ? (
+                                  <img
+                                    src={review.reviewerAvatar.url}
+                                    alt=""
+                                    className="h-12 w-12 rounded-full border border-slate-200 object-cover"
+                                  />
+                                ) : (
+                                  <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-slate-200 text-sm font-semibold text-slate-600">
+                                    {displayName.charAt(0).toUpperCase()}
+                                  </span>
+                                )}
+                                <div>
+                                  <p className="text-sm font-semibold text-slate-900">{displayName}</p>
+                                  {review.customerName && (
+                                    <p className="text-xs text-slate-500">
+                                      Customer: {review.customerName}
+                                      {review.customerId ? ` · #${review.customerId}` : ''}
+                                    </p>
+                                  )}
+                                  <p className="mt-1 text-xs text-slate-400">Reviewed on {reviewedOn}</p>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2 text-sm font-semibold text-amber-500">
+                                {renderStars(Math.round(review.rating ?? 0))}
+                                <span className="text-slate-600">{review.rating.toFixed(1)}</span>
+                              </div>
+                            </div>
+
+                            <div className="mt-4 space-y-4 text-sm text-slate-700">
+                              <div className="text-xs uppercase tracking-wide text-slate-400">
+                                Product · {review.productName}
+                              </div>
+                              {review.comment ? (
+                                <p className="whitespace-pre-line leading-relaxed">{review.comment}</p>
+                              ) : (
+                                <p className="italic text-slate-500">No written comment provided.</p>
+                              )}
+                              {review.productCategories.length > 0 && (
+                                <div className="flex flex-wrap gap-2">
+                                  {review.productCategories.map((category) => (
+                                    <span
+                                      key={category.id}
+                                      className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-600"
+                                    >
+                                      {category.name}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                              {review.media.length > 0 && (
+                                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                                  {review.media.map((asset, index) =>
+                                    isVideoAsset(asset) ? (
+                                      <video
+                                        key={`${review.id}-video-${index}`}
+                                        controls
+                                        src={asset.url}
+                                        className="h-44 w-full rounded-xl border border-slate-200 object-cover shadow-sm"
+                                      />
+                                    ) : (
+                                      <img
+                                        key={`${review.id}-media-${index}`}
+                                        src={asset.url}
+                                        alt=""
+                                        className="h-44 w-full rounded-xl border border-slate-200 object-cover shadow-sm"
+                                      />
+                                    )
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </article>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="rounded-2xl border border-dashed border-slate-300 px-6 py-10 text-center text-sm text-slate-500">
+                      No reviews have been submitted for this product yet.
+                    </div>
+                  )}
+                </PageSection>
+              </div>
+            )}
           </div>
         </div>
         </div>
@@ -2548,6 +2960,7 @@ const ProductsPage = () => {
         open={mediaContext !== null}
         onClose={closeMediaDialog}
         onSelect={handleMediaSelect}
+        onUpload={handleMediaUpload}
       />
     </div>
   );

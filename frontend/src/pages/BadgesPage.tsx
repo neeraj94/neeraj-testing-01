@@ -236,19 +236,34 @@ const BadgesPage = () => {
     setIconPreview(null);
   };
 
-  const handleMediaUpload = async (file: File): Promise<MediaSelection> => {
-    const response = await iconUploadMutation.mutateAsync(file);
-    return {
-      url: response.url,
-      originalFilename: response.originalFilename,
-      mimeType: response.mimeType,
-      sizeBytes: response.sizeBytes
-    };
+  const handleMediaUpload = async (files: File[]): Promise<MediaSelection[]> => {
+    const selections: MediaSelection[] = [];
+    for (const file of files) {
+      try {
+        const response = await iconUploadMutation.mutateAsync(file);
+        selections.push({
+          url: response.url,
+          originalFilename: response.originalFilename,
+          mimeType: response.mimeType,
+          sizeBytes: response.sizeBytes
+        });
+      } catch (error) {
+        // errors are surfaced via mutation onError handler
+      }
+    }
+    if (!selections.length) {
+      throw new Error('No icon uploaded');
+    }
+    return selections;
   };
 
-  const handleMediaSelect = (selection: MediaSelection) => {
-    setForm((prev) => ({ ...prev, iconUrl: selection.url }));
-    setIconPreview(selection.url);
+  const handleMediaSelect = (selection: MediaSelection | MediaSelection[]) => {
+    const selected = Array.isArray(selection) ? selection[0] : selection;
+    if (!selected) {
+      return;
+    }
+    setForm((prev) => ({ ...prev, iconUrl: selected.url }));
+    setIconPreview(selected.url);
     setMediaLibraryOpen(false);
   };
 

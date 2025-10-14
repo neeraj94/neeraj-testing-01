@@ -236,26 +236,36 @@ const WedgesPage = () => {
     setMediaLibraryOpen(false);
   };
 
-  const handleMediaSelect = (selection: MediaSelection) => {
-    setForm((prev) => ({ ...prev, iconUrl: selection.url }));
-    setIconPreview(selection.url);
+  const handleMediaSelect = (selection: MediaSelection | MediaSelection[]) => {
+    const selected = Array.isArray(selection) ? selection[0] : selection;
+    if (!selected) {
+      return;
+    }
+    setForm((prev) => ({ ...prev, iconUrl: selected.url }));
+    setIconPreview(selected.url);
     closeMediaLibraryDialog();
   };
 
-  const handleMediaUpload = async (file: File): Promise<MediaSelection> => {
-    try {
-      const data = await iconUploadMutation.mutateAsync(file);
-      notify({ type: 'success', message: 'Icon uploaded successfully.' });
-      return {
-        url: data.url,
-        originalFilename: data.originalFilename ?? undefined,
-        mimeType: data.mimeType ?? undefined,
-        sizeBytes: data.sizeBytes ?? undefined
-      };
-    } catch (error) {
-      notify({ type: 'error', message: extractErrorMessage(error, 'Failed to upload icon.') });
-      throw error;
+  const handleMediaUpload = async (files: File[]): Promise<MediaSelection[]> => {
+    const selections: MediaSelection[] = [];
+    for (const file of files) {
+      try {
+        const data = await iconUploadMutation.mutateAsync(file);
+        notify({ type: 'success', message: 'Icon uploaded successfully.' });
+        selections.push({
+          url: data.url,
+          originalFilename: data.originalFilename ?? undefined,
+          mimeType: data.mimeType ?? undefined,
+          sizeBytes: data.sizeBytes ?? undefined
+        });
+      } catch (error) {
+        notify({ type: 'error', message: extractErrorMessage(error, 'Failed to upload icon.') });
+      }
     }
+    if (!selections.length) {
+      throw new Error('No icon uploaded');
+    }
+    return selections;
   };
 
   const handleIconRemove = () => {

@@ -6,6 +6,8 @@ import com.example.rbac.categories.model.Category;
 import com.example.rbac.finance.taxrate.model.TaxRate;
 import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.Fetch;
+import org.hibernate.annotations.FetchMode;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
@@ -47,6 +49,9 @@ public class Product {
 
     @Column(columnDefinition = "TEXT")
     private String description;
+
+    @Column(name = "short_description", columnDefinition = "TEXT")
+    private String shortDescription;
 
     @Column(name = "video_provider", length = 50)
     private String videoProvider;
@@ -154,11 +159,19 @@ public class Product {
 
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("displayOrder ASC")
+    @Fetch(FetchMode.SUBSELECT)
     private List<ProductGalleryImage> galleryImages = new ArrayList<>();
 
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("displayOrder ASC, id ASC")
+    @Fetch(FetchMode.SUBSELECT)
     private List<ProductVariant> variants = new ArrayList<>();
+
+    @ElementCollection
+    @CollectionTable(name = "product_expandable_sections", joinColumns = @JoinColumn(name = "product_id"))
+    @OrderColumn(name = "display_order")
+    @Fetch(FetchMode.SUBSELECT)
+    private List<ProductExpandableSection> expandableSections = new ArrayList<>();
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -238,6 +251,14 @@ public class Product {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public String getShortDescription() {
+        return shortDescription;
+    }
+
+    public void setShortDescription(String shortDescription) {
+        this.shortDescription = shortDescription;
     }
 
     public String getVideoProvider() {
@@ -446,6 +467,14 @@ public class Product {
 
     public void setVariants(List<ProductVariant> variants) {
         this.variants = variants;
+    }
+
+    public List<ProductExpandableSection> getExpandableSections() {
+        return expandableSections;
+    }
+
+    public void setExpandableSections(List<ProductExpandableSection> expandableSections) {
+        this.expandableSections = expandableSections;
     }
 
     public Instant getCreatedAt() {

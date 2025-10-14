@@ -4,7 +4,9 @@ import com.example.rbac.attributes.model.AttributeValue;
 import com.example.rbac.products.dto.*;
 import com.example.rbac.products.model.MediaAsset;
 import com.example.rbac.products.model.Product;
+import com.example.rbac.products.model.ProductExpandableSection;
 import com.example.rbac.products.model.ProductGalleryImage;
+import com.example.rbac.products.model.ProductReview;
 import com.example.rbac.products.model.ProductVariant;
 import com.example.rbac.products.model.ProductVariantMedia;
 import com.example.rbac.products.model.ProductVariantValue;
@@ -18,6 +20,12 @@ import java.util.stream.Collectors;
 
 @Component
 public class ProductMapper {
+
+    private final ProductReviewMapper productReviewMapper;
+
+    public ProductMapper(ProductReviewMapper productReviewMapper) {
+        this.productReviewMapper = productReviewMapper;
+    }
 
     public ProductSummaryDto toSummary(Product product) {
         ProductSummaryDto dto = new ProductSummaryDto();
@@ -37,6 +45,10 @@ public class ProductMapper {
     }
 
     public ProductDto toDto(Product product) {
+        return toDto(product, List.of());
+    }
+
+    public ProductDto toDto(Product product, List<ProductReview> reviews) {
         ProductDto dto = new ProductDto();
         dto.setId(product.getId());
         dto.setName(product.getName());
@@ -46,6 +58,7 @@ public class ProductMapper {
         dto.setFeatured(product.isFeatured());
         dto.setTodaysDeal(product.isTodaysDeal());
         dto.setDescription(product.getDescription());
+        dto.setShortDescription(product.getShortDescription());
         dto.setVideoProvider(product.getVideoProvider());
         dto.setVideoUrl(product.getVideoUrl());
         dto.setGallery(mapGallery(product.getGalleryImages()));
@@ -57,6 +70,8 @@ public class ProductMapper {
         dto.setAttributes(mapAttributes(product));
         dto.setPricing(mapPricing(product));
         dto.setVariants(mapVariants(product.getVariants()));
+        dto.setExpandableSections(mapExpandableSections(product.getExpandableSections()));
+        dto.setReviews(productReviewMapper.toDtoList(reviews));
         dto.setCreatedAt(product.getCreatedAt());
         dto.setUpdatedAt(product.getUpdatedAt());
         if (product.getBrand() != null) {
@@ -102,6 +117,20 @@ public class ProductMapper {
         seo.setCanonicalUrl(product.getMetaCanonicalUrl());
         seo.setImage(mapMedia(product.getMetaImage()));
         return seo;
+    }
+
+    private List<ProductExpandableSectionDto> mapExpandableSections(List<ProductExpandableSection> sections) {
+        if (sections == null || sections.isEmpty()) {
+            return List.of();
+        }
+        return sections.stream()
+                .map(section -> {
+                    ProductExpandableSectionDto dto = new ProductExpandableSectionDto();
+                    dto.setTitle(section.getTitle());
+                    dto.setContent(section.getContent());
+                    return dto;
+                })
+                .collect(Collectors.toList());
     }
 
     private List<ProductCategoryDto> mapCategories(Product product) {
