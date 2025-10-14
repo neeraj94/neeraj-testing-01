@@ -76,6 +76,7 @@ public class ProductService {
     public ProductDto get(Long id) {
         Product product = productRepository.findDetailedById(id)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Product not found"));
+        initializeDetailedAssociations(product);
         return productMapper.toDto(product, productReviewRepository.findByProductIdOrderByReviewedAtDesc(id));
     }
 
@@ -93,9 +94,68 @@ public class ProductService {
     public ProductDto update(Long id, CreateProductRequest request) {
         Product product = productRepository.findDetailedById(id)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Product not found"));
+        initializeDetailedAssociations(product);
         applyRequest(product, request, false);
         Product saved = productRepository.save(product);
         return productMapper.toDto(saved, productReviewRepository.findByProductIdOrderByReviewedAtDesc(saved.getId()));
+    }
+
+    private void initializeDetailedAssociations(Product product) {
+        if (product.getAttributeValues() != null) {
+            product.getAttributeValues().forEach(value -> {
+                if (value.getAttribute() != null) {
+                    value.getAttribute().getName();
+                }
+            });
+        }
+        if (product.getCategories() != null) {
+            product.getCategories().forEach(category -> category.getName());
+        }
+        if (product.getTaxRates() != null) {
+            product.getTaxRates().forEach(rate -> rate.getName());
+        }
+        if (product.getGalleryImages() != null) {
+            product.getGalleryImages().forEach(image -> {
+                if (image.getMedia() != null) {
+                    image.getMedia().getUrl();
+                }
+            });
+        }
+        if (product.getVariants() != null) {
+            product.getVariants().forEach(variant -> {
+                if (variant.getValues() != null) {
+                    variant.getValues().forEach(value -> {
+                        if (value.getAttributeValue() != null && value.getAttributeValue().getAttribute() != null) {
+                            value.getAttributeValue().getAttribute().getName();
+                        }
+                    });
+                }
+                if (variant.getMedia() != null) {
+                    variant.getMedia().forEach(media -> {
+                        if (media.getMedia() != null) {
+                            media.getMedia().getUrl();
+                        }
+                    });
+                }
+            });
+        }
+        if (product.getExpandableSections() != null) {
+            product.getExpandableSections().forEach(section -> {
+                section.getTitle();
+                section.getContent();
+            });
+        }
+        if (product.getInfoSections() != null) {
+            product.getInfoSections().forEach(section -> {
+                section.getTitle();
+                if (section.getBulletPoints() != null) {
+                    section.getBulletPoints().size();
+                }
+            });
+        }
+        if (product.getTags() != null) {
+            product.getTags().size();
+        }
     }
 
     @Transactional
