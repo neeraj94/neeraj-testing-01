@@ -259,12 +259,12 @@ const ProfilePage = () => {
           <h2 className="text-lg font-semibold text-slate-800">Personal information</h2>
           <p className="mt-1 text-sm text-slate-500">This information is used across the workspace to identify you.</p>
           <div className="mt-4 flex flex-wrap items-center gap-4">
-            <div className="h-20 w-20 overflow-hidden rounded-full border border-slate-200 bg-slate-100">
+            <div className="aspect-square w-20 overflow-hidden rounded-full border border-slate-200 bg-slate-100">
               {profileImage?.url ? (
                 <img
                   src={profileImage.url}
                   alt="Profile avatar"
-                  className="h-full w-full object-cover"
+                  className="h-full w-full object-cover object-center"
                 />
               ) : (
                 <div className="flex h-full w-full items-center justify-center text-lg font-semibold text-slate-500">

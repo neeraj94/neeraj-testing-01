@@ -23,6 +23,9 @@ public class Customer {
     @Column(columnDefinition = "text")
     private String address;
 
+    @Column(name = "profile_image_url", length = 500)
+    private String profileImageUrl;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -79,6 +82,14 @@ public class Customer {
 
     public void setAddress(String address) {
         this.address = address;
+    }
+
+    public String getProfileImageUrl() {
+        return profileImageUrl;
+    }
+
+    public void setProfileImageUrl(String profileImageUrl) {
+        this.profileImageUrl = profileImageUrl;
     }
 
     public Instant getCreatedAt() {

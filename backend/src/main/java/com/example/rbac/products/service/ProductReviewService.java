@@ -120,7 +120,14 @@ public class ProductReviewService {
             reviewerName = customer.getName();
         }
         review.setReviewerName(reviewerName);
-        review.setReviewerAvatar(toMediaAsset(request.getReviewerAvatar()));
+        MediaAsset reviewerAvatar = toMediaAsset(request.getReviewerAvatar());
+        if (customer != null && (reviewerAvatar == null || !StringUtils.hasText(reviewerAvatar.getUrl()))) {
+            MediaAsset customerAvatar = fromProfileImage(customer.getProfileImageUrl());
+            if (customerAvatar != null) {
+                reviewerAvatar = customerAvatar;
+            }
+        }
+        review.setReviewerAvatar(reviewerAvatar);
         review.setRating(request.getRating());
         review.setComment(trimToNull(request.getComment()));
         review.setReviewedAt(request.getReviewedAt() != null ? request.getReviewedAt() : Instant.now());
@@ -175,6 +182,7 @@ public class ProductReviewService {
             }
             if (review.getCustomer() != null) {
                 review.getCustomer().getName();
+                review.getCustomer().getProfileImageUrl();
             }
             review.getMedia().size();
         }
@@ -190,6 +198,15 @@ public class ProductReviewService {
         asset.setOriginalFilename(trimToNull(request.getOriginalFilename()));
         asset.setMimeType(trimToNull(request.getMimeType()));
         asset.setSizeBytes(request.getSizeBytes());
+        return asset;
+    }
+
+    private MediaAsset fromProfileImage(String url) {
+        if (!StringUtils.hasText(url)) {
+            return null;
+        }
+        MediaAsset asset = new MediaAsset();
+        asset.setUrl(url.trim());
         return asset;
     }
 

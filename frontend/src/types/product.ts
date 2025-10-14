@@ -59,6 +59,10 @@ export interface CreateProductPayload {
   };
   attributes: SelectedAttributePayload[];
   variants: CreateProductVariantPayload[];
+  expandableSections: {
+    title: string;
+    content: string;
+  }[];
   infoSections: {
     title: string;
     content: string;

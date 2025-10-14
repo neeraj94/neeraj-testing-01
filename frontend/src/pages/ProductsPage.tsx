@@ -627,11 +627,13 @@ const ProductsPage = () => {
   };
 
   const openEditForm = (productId: number) => {
+    resetFormState();
     setActiveTab('basic');
-    setPanelMode('edit');
     setShowValidation(false);
     editInitializedRef.current = false;
+    queryClient.removeQueries({ queryKey: ['products', 'detail', productId], exact: true });
     setEditingId(productId);
+    setPanelMode('edit');
   };
 
   const handleDelete = async (product: ProductSummary) => {
@@ -1215,6 +1217,16 @@ const ProductsPage = () => {
           media: variant?.media ?? []
         };
       }),
+      expandableSections: expandableSections
+        .map((section) => {
+          const title = section.title.trim();
+          const content = section.content.trim();
+          return {
+            title,
+            content
+          };
+        })
+        .filter((section) => section.title.length > 0 || section.content.length > 0),
       infoSections: form.infoSections.map((section) => ({
         title: section.title.trim(),
         content: section.content,
