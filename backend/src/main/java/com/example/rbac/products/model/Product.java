@@ -18,7 +18,9 @@ import java.util.List;
 import java.util.Set;
 
 @Entity
-@Table(name = "products")
+@Table(name = "products", uniqueConstraints = {
+        @UniqueConstraint(name = "uk_products_sku", columnNames = "sku")
+})
 public class Product {
 
     @Id
@@ -101,8 +103,17 @@ public class Product {
     @Column(name = "meta_canonical_url", length = 255)
     private String metaCanonicalUrl;
 
-    @Column(name = "price_tag", length = 120)
-    private String priceTag;
+    @Column(name = "discount_start_at")
+    private Instant discountStartAt;
+
+    @Column(name = "discount_end_at")
+    private Instant discountEndAt;
+
+    @ElementCollection
+    @CollectionTable(name = "product_tags", joinColumns = @JoinColumn(name = "product_id"))
+    @Column(name = "tag_value", length = 120)
+    @OrderColumn(name = "display_order")
+    private List<String> tags = new ArrayList<>();
 
     @Column(name = "unit_price", precision = 12, scale = 2)
     private BigDecimal unitPrice;
@@ -123,7 +134,7 @@ public class Product {
     @Column(name = "stock_quantity")
     private Integer stockQuantity;
 
-    @Column(length = 160)
+    @Column(length = 160, nullable = false)
     private String sku;
 
     @Column(name = "external_link", length = 500)
@@ -336,14 +347,6 @@ public class Product {
         this.metaCanonicalUrl = metaCanonicalUrl;
     }
 
-    public String getPriceTag() {
-        return priceTag;
-    }
-
-    public void setPriceTag(String priceTag) {
-        this.priceTag = priceTag;
-    }
-
     public BigDecimal getUnitPrice() {
         return unitPrice;
     }
@@ -382,6 +385,30 @@ public class Product {
 
     public void setDiscountMaxQuantity(Integer discountMaxQuantity) {
         this.discountMaxQuantity = discountMaxQuantity;
+    }
+
+    public Instant getDiscountStartAt() {
+        return discountStartAt;
+    }
+
+    public void setDiscountStartAt(Instant discountStartAt) {
+        this.discountStartAt = discountStartAt;
+    }
+
+    public Instant getDiscountEndAt() {
+        return discountEndAt;
+    }
+
+    public void setDiscountEndAt(Instant discountEndAt) {
+        this.discountEndAt = discountEndAt;
+    }
+
+    public List<String> getTags() {
+        return tags;
+    }
+
+    public void setTags(List<String> tags) {
+        this.tags = tags;
     }
 
     public Integer getStockQuantity() {

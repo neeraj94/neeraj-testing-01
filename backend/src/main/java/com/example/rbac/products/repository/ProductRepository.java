@@ -35,4 +35,6 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
             "infoSections.bulletPoints"
     })
     Optional<Product> findDetailedById(Long id);
+
+    boolean existsBySku(String sku);
 }
