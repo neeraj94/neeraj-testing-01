@@ -1,17 +1,26 @@
-import { useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import PageHeader from '../components/PageHeader';
 import PageSection from '../components/PageSection';
 import PaginationControls from '../components/PaginationControls';
 import MediaLibraryDialog from '../components/MediaLibraryDialog';
+import ImagePreview from '../components/ImagePreview';
+import StarRating from '../components/StarRating';
 import { useToast } from '../components/ToastProvider';
+import { useConfirm } from '../components/ConfirmDialogProvider';
 import { useAppSelector } from '../app/hooks';
 import { hasAnyPermission } from '../utils/permissions';
 import type { PermissionKey } from '../types/auth';
 import api from '../services/http';
 import { extractErrorMessage } from '../utils/errors';
 import { formatCurrency } from '../utils/currency';
-import type { ProductReviewPage, CreateProductReviewPayload, ProductDetail, ProductSummary } from '../types/product';
+import type {
+  ProductReviewPage,
+  CreateProductReviewPayload,
+  ProductDetail,
+  ProductSummary,
+  ProductReview
+} from '../types/product';
 import type { CategoryPage } from '../types/category';
 import type { Pagination, Customer } from '../types/models';
 import type { MediaSelection } from '../types/uploaded-file';
@@ -24,19 +33,106 @@ interface UploadedFileUploadResponse {
   sizeBytes?: number | null;
 }
 
+type PanelMode = 'list' | 'create' | 'edit';
+type MediaDialogContext = 'attachments' | 'avatar';
+
 const DEFAULT_PAGE_SIZE = 10;
 const PAGE_SIZE_OPTIONS = [10, 25, 50];
 
+const MEDIA_FILTERS: Record<MediaDialogContext, string[]> = {
+  attachments: ['PRODUCT_MEDIA', 'PRODUCT_GALLERY_IMAGE', 'PRODUCT_VARIANT_IMAGE'],
+  avatar: ['USER_PROFILE', 'PRODUCT_MEDIA']
+};
+
+const mediaAssetToSelection = (
+  asset?: {
+    url: string;
+    storageKey?: string | null;
+    originalFilename?: string | null;
+    mimeType?: string | null;
+    sizeBytes?: number | null;
+  } | null
+): MediaSelection | null => {
+  if (!asset || !asset.url) {
+    return null;
+  }
+  return {
+    url: asset.url,
+    storageKey: asset.storageKey ?? null,
+    originalFilename: asset.originalFilename ?? null,
+    mimeType: asset.mimeType ?? null,
+    sizeBytes: asset.sizeBytes ?? null
+  };
+};
+
+const toDateInput = (iso?: string | null) => {
+  if (!iso) {
+    return '';
+  }
+  const date = new Date(iso);
+  if (!Number.isFinite(date.getTime())) {
+    return '';
+  }
+  const pad = (value: number) => String(value).padStart(2, '0');
+  const year = date.getUTCFullYear();
+  const month = pad(date.getUTCMonth() + 1);
+  const day = pad(date.getUTCDate());
+  return `${year}-${month}-${day}`;
+};
+
+const toIsoDate = (value: string): string | undefined => {
+  const normalized = value.trim();
+  if (!normalized) {
+    return undefined;
+  }
+  const date = new Date(`${normalized}T00:00:00Z`);
+  return Number.isFinite(date.getTime()) ? date.toISOString() : undefined;
+};
+
+const createEmptyForm = () => ({
+  productId: '',
+  customerId: '',
+  reviewerName: '',
+  rating: '5',
+  reviewDate: new Date().toISOString().slice(0, 10),
+  comment: ''
+});
+
+type ReviewFormState = ReturnType<typeof createEmptyForm>;
+
+const isVideoAsset = (asset: { url: string; mimeType?: string | null }) => {
+  if (asset.mimeType && asset.mimeType.toLowerCase().startsWith('video/')) {
+    return true;
+  }
+  return /\.(mp4|webm|ogg|mov)$/i.test(asset.url);
+};
+
 const ReviewsPage = () => {
   const queryClient = useQueryClient();
+  const confirm = useConfirm();
   const { notify } = useToast();
   const permissions = useAppSelector((state) => state.auth.permissions);
   const baseCurrency = useAppSelector((state) => state.settings.theme.baseCurrency);
 
-  const canManageReviews = useMemo(
-    () => hasAnyPermission(permissions as PermissionKey[], ['PRODUCT_CREATE', 'PRODUCT_UPDATE']),
+  const canViewReviews = useMemo(
+    () => hasAnyPermission(permissions as PermissionKey[], ['PRODUCT_REVIEW_VIEW']),
     [permissions]
   );
+  const canCreateReviews = useMemo(
+    () => hasAnyPermission(permissions as PermissionKey[], ['PRODUCT_REVIEW_CREATE']),
+    [permissions]
+  );
+  const canUpdateReviews = useMemo(
+    () => hasAnyPermission(permissions as PermissionKey[], ['PRODUCT_REVIEW_UPDATE']),
+    [permissions]
+  );
+  const canDeleteReviews = useMemo(
+    () => hasAnyPermission(permissions as PermissionKey[], ['PRODUCT_REVIEW_DELETE']),
+    [permissions]
+  );
+
+  const [panelMode, setPanelMode] = useState<PanelMode>('list');
+  const [editingId, setEditingId] = useState<number | null>(null);
 
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
@@ -45,37 +141,12 @@ const ReviewsPage = () => {
   const [customerFilter, setCustomerFilter] = useState('');
   const [ratingFilter, setRatingFilter] = useState('');
 
-  const [manualReviewForm, setManualReviewForm] = useState({
-    productId: '',
-    customerId: '',
-    reviewerName: '',
-    rating: '5',
-    reviewDate: new Date().toISOString().slice(0, 10),
-    comment: ''
-  });
+  const [form, setForm] = useState<ReviewFormState>(createEmptyForm());
   const [reviewAttachments, setReviewAttachments] = useState<MediaSelection[]>([]);
   const [reviewerAvatar, setReviewerAvatar] = useState<MediaSelection | null>(null);
-  const [mediaDialogContext, setMediaDialogContext] = useState<'attachments' | 'avatar' | null>(null);
+  const [mediaDialogContext, setMediaDialogContext] = useState<MediaDialogContext | null>(null);
   const [ratingHover, setRatingHover] = useState<number | null>(null);
-
-  const MEDIA_FILTERS: Record<'attachments' | 'avatar', string[]> = {
-    attachments: ['PRODUCT_MEDIA', 'PRODUCT_GALLERY_IMAGE', 'PRODUCT_VARIANT_IMAGE'],
-    avatar: ['USER_PROFILE', 'PRODUCT_MEDIA']
-  };
-
-  const selectionFromUrl = (url?: string | null): MediaSelection | null => {
-    if (!url || !url.trim()) {
-      return null;
-    }
-    const trimmed = url.trim();
-    return {
-      url: trimmed,
-      storageKey: null,
-      originalFilename: null,
-      mimeType: undefined,
-      sizeBytes: undefined
-    };
-  };
+  const editInitializedRef = useRef(false);
 
   const productsQuery = useQuery({
     queryKey: ['reviews', 'products'],
@@ -107,7 +178,7 @@ const ReviewsPage = () => {
     }
   });
 
-  const reviewsQuery = useQuery({
+  const reviewsQuery = useQuery<ProductReviewPage>({
     queryKey: [
       'product-reviews',
       { page, pageSize, productFilter, categoryFilter, customerFilter, ratingFilter }
@@ -133,10 +204,12 @@ const ReviewsPage = () => {
       }
       const { data } = await api.get<ProductReviewPage>('/product-reviews', { params });
       return data;
-    }
+    },
+    enabled: canViewReviews
   });
 
-  const selectedProductId = manualReviewForm.productId ? Number(manualReviewForm.productId) : null;
+  const selectedProductId = form.productId ? Number(form.productId) : null;
+
   const selectedProductDetailQuery = useQuery({
     queryKey: ['reviews', 'product-detail', selectedProductId],
     queryFn: async () => {
@@ -149,7 +222,19 @@ const ReviewsPage = () => {
     enabled: Boolean(selectedProductId)
   });
 
-  const manualReviewMutation = useMutation({
+  const reviewDetailQuery = useQuery({
+    queryKey: ['product-reviews', 'detail', editingId],
+    queryFn: async () => {
+      if (!editingId) {
+        throw new Error('No review selected');
+      }
+      const { data } = await api.get<ProductReview>(`/product-reviews/${editingId}`);
+      return data;
+    },
+    enabled: panelMode === 'edit' && editingId !== null
+  });
+
+  const createReviewMutation = useMutation({
     mutationFn: async (payload: CreateProductReviewPayload) => {
       await api.post('/product-reviews', payload);
     },
@@ -159,7 +244,8 @@ const ReviewsPage = () => {
       if (variables.productId) {
         queryClient.invalidateQueries({ queryKey: ['products', 'detail', variables.productId] });
       }
-      resetManualReviewForm();
+      resetForm();
+      setPanelMode('list');
     },
     onError: (error: unknown) => {
       notify({
@@ -169,50 +255,144 @@ const ReviewsPage = () => {
     }
   });
 
-  const resetManualReviewForm = () => {
-    setManualReviewForm({
-      productId: '',
-      customerId: '',
-      reviewerName: '',
-      rating: '5',
-      reviewDate: new Date().toISOString().slice(0, 10),
-      comment: ''
-    });
+  const updateReviewMutation = useMutation({
+    mutationFn: async ({ id, payload }: { id: number; payload: CreateProductReviewPayload }) => {
+      await api.put(`/product-reviews/${id}`, payload);
+    },
+    onSuccess: (_data, variables) => {
+      notify({ type: 'success', message: 'Review updated successfully.' });
+      queryClient.invalidateQueries({ queryKey: ['product-reviews'] });
+      if (variables.payload.productId) {
+        queryClient.invalidateQueries({
+          queryKey: ['products', 'detail', variables.payload.productId]
+        });
+      }
+      closeForm();
+    },
+    onError: (error: unknown) => {
+      notify({
+        type: 'error',
+        message: extractErrorMessage(error, 'Unable to update review. Please try again later.')
+      });
+    }
+  });
+
+  const deleteReviewMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await api.delete(`/product-reviews/${id}`);
+    },
+    onSuccess: () => {
+      notify({ type: 'success', message: 'Review deleted successfully.' });
+      queryClient.invalidateQueries({ queryKey: ['product-reviews'] });
+    },
+    onError: (error: unknown) => {
+      notify({
+        type: 'error',
+        message: extractErrorMessage(error, 'Unable to delete review. Please try again later.')
+      });
+    }
+  });
+
+  const resetForm = () => {
+    setForm(createEmptyForm());
     setReviewAttachments([]);
     setReviewerAvatar(null);
     setRatingHover(null);
   };
 
-  const handleManualReviewSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!canManageReviews) {
-      notify({ type: 'error', message: 'You do not have permission to add manual reviews.' });
-      return;
-    }
-    if (!manualReviewForm.productId) {
-      notify({ type: 'error', message: 'Select a product before saving the review.' });
-      return;
-    }
-    const ratingNumber = Number(manualReviewForm.rating);
-    if (!Number.isFinite(ratingNumber) || ratingNumber < 1 || ratingNumber > 5) {
-      notify({ type: 'error', message: 'Choose a rating between 1 and 5 stars.' });
-      return;
-    }
+  const closeForm = () => {
+    resetForm();
+    setPanelMode('list');
+    setEditingId(null);
+    editInitializedRef.current = false;
+  };
 
-    const payload: CreateProductReviewPayload = {
-      productId: Number(manualReviewForm.productId),
-      customerId: manualReviewForm.customerId ? Number(manualReviewForm.customerId) : null,
-      reviewerName: manualReviewForm.reviewerName.trim() || undefined,
-      reviewerAvatar: reviewerAvatar ?? undefined,
-      rating: ratingNumber,
-      comment: manualReviewForm.comment.trim() || undefined,
-      reviewedAt: manualReviewForm.reviewDate
-        ? new Date(`${manualReviewForm.reviewDate}T00:00:00Z`).toISOString()
-        : undefined,
-      media: reviewAttachments
-    };
+  const openCreateForm = () => {
+    if (!canCreateReviews) {
+      notify({ type: 'error', message: 'You do not have permission to add reviews.' });
+      return;
+    }
+    resetForm();
+    setPanelMode('create');
+    setEditingId(null);
+  };
 
-    manualReviewMutation.mutate(payload);
+  const openEditForm = (id: number) => {
+    if (!canUpdateReviews) {
+      notify({ type: 'error', message: 'You do not have permission to edit reviews.' });
+      return;
+    }
+    resetForm();
+    setPanelMode('edit');
+    setEditingId(id);
+    editInitializedRef.current = false;
+  };
+
+  const populateFormFromReview = (review: ProductReview) => {
+    setForm({
+      productId: review.productId ? String(review.productId) : '',
+      customerId: review.customerId ? String(review.customerId) : '',
+      reviewerName: review.reviewerName ?? '',
+      rating: review.rating != null ? String(review.rating) : '5',
+      reviewDate: toDateInput(review.reviewedAt) || new Date().toISOString().slice(0, 10),
+      comment: review.comment ?? ''
+    });
+    const mediaSelections = (review.media ?? [])
+      .map((asset) => mediaAssetToSelection(asset))
+      .filter((asset): asset is MediaSelection => Boolean(asset));
+    setReviewAttachments(mediaSelections);
+    setReviewerAvatar(mediaAssetToSelection(review.reviewerAvatar));
+    setRatingHover(null);
+  };
+
+  useEffect(() => {
+    if (panelMode !== 'edit') {
+      editInitializedRef.current = false;
+      return;
+    }
+    if (reviewDetailQuery.isLoading || reviewDetailQuery.isError || !reviewDetailQuery.data) {
+      return;
+    }
+    if (editInitializedRef.current) {
+      return;
+    }
+    populateFormFromReview(reviewDetailQuery.data);
+    editInitializedRef.current = true;
+  }, [panelMode, reviewDetailQuery.data, reviewDetailQuery.isLoading, reviewDetailQuery.isError]);
+
+  const products = productsQuery.data ?? [];
+  const categories = categoriesQuery.data ?? [];
+  const customers = customersQuery.data ?? [];
+  const reviews: ProductReview[] = reviewsQuery.data?.content ?? [];
+  const totalElements = reviewsQuery.data?.totalElements ?? 0;
+
+  const selectedCustomer = useMemo(
+    () => customers.find((customer) => String(customer.id) === form.customerId) ?? null,
+    [customers, form.customerId]
+  );
+
+  const ratingLabels: Record<number, string> = {
+    1: 'Needs work',
+    2: 'Below expectations',
+    3: 'Solid',
+    4: 'Great',
+    5: 'Outstanding'
+  };
+  const ratingValue = Number(form.rating) || 0;
+
+  const handleCustomerChange = (value: string) => {
+    const selected = customers.find((customer) => String(customer.id) === value) ?? null;
+    setForm((previous) => ({
+      ...previous,
+      customerId: value,
+      reviewerName: selected ? selected.name ?? '' : ''
+    }));
+    if (selected && selected.profileImageUrl) {
+      const avatar = mediaAssetToSelection({ url: selected.profileImageUrl });
+      setReviewerAvatar(avatar);
+    } else {
+      setReviewerAvatar(null);
+    }
   };
 
   const handleMediaUpload = async (files: File[]): Promise<MediaSelection[]> => {
@@ -259,7 +439,15 @@ const ReviewsPage = () => {
     }
   };
 
-  const openMediaDialog = (context: 'attachments' | 'avatar') => {
+  const openMediaDialog = (context: MediaDialogContext) => {
+    const canSubmit = panelMode === 'create' ? canCreateReviews : canUpdateReviews;
+    if (!canSubmit) {
+      notify({ type: 'error', message: 'You do not have permission to update review media.' });
+      return;
+    }
+    if (context === 'avatar' && form.customerId) {
+      return;
+    }
     setMediaDialogContext(context);
   };
 
@@ -288,91 +476,165 @@ const ReviewsPage = () => {
     setReviewAttachments((previous) => previous.filter((_, idx) => idx !== index));
   };
 
-  const products = productsQuery.data ?? [];
-  const categories = categoriesQuery.data ?? [];
-  const customers = customersQuery.data ?? [];
-  const reviews = reviewsQuery.data?.content ?? [];
-  const totalElements = reviewsQuery.data?.totalElements ?? 0;
-
-  const ratingLabels: Record<number, string> = {
-    1: 'Needs work',
-    2: 'Below expectations',
-    3: 'Solid',
-    4: 'Great',
-    5: 'Outstanding'
+  const handleDeleteReview = async (review: ProductReview) => {
+    if (!canDeleteReviews) {
+      notify({ type: 'error', message: 'You do not have permission to delete reviews.' });
+      return;
+    }
+    const confirmed = await confirm({
+      title: 'Delete review?',
+      description: `Delete review from "${review.reviewerName ?? review.customerName ?? 'Anonymous shopper'}"? This action cannot be undone.`,
+      confirmLabel: 'Delete',
+      tone: 'danger'
+    });
+    if (!confirmed) {
+      return;
+    }
+    await deleteReviewMutation.mutateAsync(review.id);
   };
-  const ratingValue = Number(manualReviewForm.rating) || 0;
 
-  const handleCustomerChange = (value: string) => {
-    const selected = customers.find((customer) => String(customer.id) === value) ?? null;
-    setManualReviewForm((previous) => ({
-      ...previous,
-      customerId: value,
-      reviewerName: selected ? selected.name ?? '' : ''
-    }));
-    if (selected && selected.profileImageUrl) {
-      const nextAvatar = selectionFromUrl(selected.profileImageUrl);
-      setReviewerAvatar(nextAvatar);
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const isCreateMode = panelMode === 'create';
+    const isEditMode = panelMode === 'edit';
+    const canSubmit = isCreateMode ? canCreateReviews : canUpdateReviews;
+    if (!canSubmit) {
+      notify({ type: 'error', message: 'You do not have permission to save reviews.' });
+      return;
+    }
+    if (createReviewMutation.isPending || updateReviewMutation.isPending) {
+      return;
+    }
+    if (!form.productId) {
+      notify({ type: 'error', message: 'Select a product before saving the review.' });
+      return;
+    }
+    const ratingNumber = Number(form.rating);
+    if (!Number.isFinite(ratingNumber) || ratingNumber < 1 || ratingNumber > 5) {
+      notify({ type: 'error', message: 'Choose a rating between 1 and 5 stars.' });
+      return;
+    }
+
+    const payload: CreateProductReviewPayload = {
+      productId: Number(form.productId),
+      customerId: form.customerId ? Number(form.customerId) : null,
+      reviewerName: form.customerId ? undefined : form.reviewerName.trim() || undefined,
+      reviewerAvatar: form.customerId ? undefined : reviewerAvatar ?? undefined,
+      rating: Math.round(ratingNumber),
+      comment: form.comment.trim() || undefined,
+      reviewedAt: toIsoDate(form.reviewDate),
+      media: reviewAttachments
+    };
+
+    if (isEditMode && editingId != null) {
+      updateReviewMutation.mutate({ id: editingId, payload });
     } else {
-      setReviewerAvatar(null);
+      createReviewMutation.mutate(payload);
     }
   };
 
-  const renderStars = (rating: number) => (
-    <span className="inline-flex items-center gap-0.5 text-base leading-none">
-      {Array.from({ length: 5 }).map((_, index) => (
-        <span key={index} className={index < rating ? 'text-amber-400' : 'text-slate-300'}>
-          ★
-        </span>
+  const handleCancel = () => {
+    if (panelMode === 'edit' && reviewDetailQuery.data) {
+      populateFormFromReview(reviewDetailQuery.data);
+      return;
+    }
+    closeForm();
+  };
+
+  const renderAttachmentPreviews = (canSubmit: boolean) => (
+    <div className="flex flex-wrap gap-3">
+      {reviewAttachments.map((asset, index) => (
+        <div
+          key={`${asset.url}-${index}`}
+          className="group relative h-20 w-20 overflow-hidden rounded-xl border border-slate-200"
+        >
+          <ImagePreview src={asset.url} alt="Review attachment" className="h-full w-full" aspectClassName="" />
+          {canSubmit && (
+            <button
+              type="button"
+              onClick={() => removeAttachment(index)}
+              className="absolute right-1 top-1 hidden rounded-full bg-white/90 p-1 text-xs text-slate-600 shadow-sm transition group-hover:flex"
+              aria-label="Remove attachment"
+            >
+              ✕
+            </button>
+          )}
+        </div>
       ))}
-      <span className="sr-only">{`${rating} out of 5 stars`}</span>
-    </span>
+      {canSubmit && (
+        <button
+          type="button"
+          onClick={() => openMediaDialog('attachments')}
+          className="flex h-20 w-20 items-center justify-center rounded-xl border border-dashed border-slate-300 text-xs font-semibold text-slate-500 transition hover:border-primary hover:text-primary"
+        >
+          Add media
+        </button>
+      )}
+    </div>
   );
 
-  const isVideoAsset = (asset: { url: string; mimeType?: string | null }) => {
-    if (asset.mimeType && asset.mimeType.toLowerCase().startsWith('video/')) {
-      return true;
+  const renderForm = () => {
+    const isCreateMode = panelMode === 'create';
+    const isEditMode = panelMode === 'edit';
+    const canSubmit = isCreateMode ? canCreateReviews : canUpdateReviews;
+    const isSaving = createReviewMutation.isPending || updateReviewMutation.isPending;
+
+    if (isEditMode && reviewDetailQuery.isLoading && !editInitializedRef.current) {
+      return (
+        <PageSection title="Loading review details">
+          <div className="flex items-center gap-3 text-sm text-slate-600">
+            <span className="inline-flex h-2.5 w-2.5 animate-pulse rounded-full bg-primary" />
+            Loading review details…
+          </div>
+        </PageSection>
+      );
     }
-    return /\.(mp4|webm|ogg|mov)$/i.test(asset.url);
-  };
 
-  const selectedCustomer = useMemo(
-    () => customers.find((customer) => String(customer.id) === manualReviewForm.customerId) ?? null,
-    [customers, manualReviewForm.customerId]
-  );
+    if (isEditMode && reviewDetailQuery.isError && !reviewDetailQuery.data) {
+      return (
+        <PageSection title="Unable to load review">
+          <div className="space-y-3 text-sm text-slate-600">
+            <p>We couldn’t load this review right now. Please try again.</p>
+            <button
+              type="button"
+              onClick={() => reviewDetailQuery.refetch()}
+              className="inline-flex items-center justify-center rounded-full border border-primary px-4 py-2 text-sm font-semibold text-primary transition hover:bg-primary/10"
+            >
+              Retry
+            </button>
+          </div>
+        </PageSection>
+      );
+    }
 
-  const selectedProductCategories = selectedProductDetailQuery.data?.categories ?? [];
-
-  return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Reviews"
-        description="Monitor customer sentiment, curate featured testimonials, and manage review content across the catalog."
-      />
-
-      <PageSection
-        title="Create manual review"
-        description="Add curated testimonials or post-purchase feedback captured outside the storefront."
-      >
-        <form onSubmit={handleManualReviewSubmit} className="space-y-6">
+    return (
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <PageSection
+          title={isCreateMode ? 'Add manual review' : 'Edit review'}
+          description={
+            isCreateMode
+              ? 'Capture testimonials collected offline and feature them alongside storefront reviews.'
+              : 'Update the review content, rating, or attribution to keep information accurate.'
+          }
+        >
           <div className="grid gap-6 lg:grid-cols-2">
             <div className="space-y-5">
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700" htmlFor="manual-review-product">
+                <label className="text-sm font-medium text-slate-700" htmlFor="review-product">
                   Product
                 </label>
                 <select
-                  id="manual-review-product"
-                  value={manualReviewForm.productId}
+                  id="review-product"
+                  value={form.productId}
                   onChange={(event) =>
-                    setManualReviewForm((previous) => ({
+                    setForm((previous) => ({
                       ...previous,
                       productId: event.target.value
                     }))
                   }
                   className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                   required
-                  disabled={!canManageReviews}
+                  disabled={!canSubmit}
                 >
                   <option value="">Select a product</option>
                   {products.map((product) => (
@@ -386,26 +648,26 @@ const ReviewsPage = () => {
               {selectedProductDetailQuery.data && (
                 <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4 shadow-inner">
                   <div className="flex items-center gap-3">
-                    {selectedProductDetailQuery.data.thumbnail?.url ? (
-                      <div className="aspect-square w-16 overflow-hidden rounded-lg border border-slate-200 bg-white">
-                        <img
-                          src={selectedProductDetailQuery.data.thumbnail.url}
-                          alt=""
-                          className="h-full w-full object-cover object-center"
-                        />
-                      </div>
-                    ) : (
-                      <div className="flex aspect-square w-16 items-center justify-center rounded-lg border border-dashed border-slate-300 text-xs text-slate-400">
-                        No image
-                      </div>
-                    )}
+                    <ImagePreview
+                      src={selectedProductDetailQuery.data.thumbnail?.url}
+                      mimeType={selectedProductDetailQuery.data.thumbnail?.mimeType ?? null}
+                      alt={`${selectedProductDetailQuery.data.name} thumbnail`}
+                      className="h-16 w-16 rounded-lg border border-slate-200 bg-white"
+                      aspectClassName=""
+                      fallback={
+                        <div className="flex h-full w-full items-center justify-center text-xs text-slate-400">No image</div>
+                      }
+                    />
                     <div className="space-y-1">
                       <p className="text-sm font-semibold text-slate-900">
                         {selectedProductDetailQuery.data.name}
                       </p>
                       <p className="text-xs text-slate-500">
                         {selectedProductDetailQuery.data.pricing.unitPrice != null
-                          ? formatCurrency(selectedProductDetailQuery.data.pricing.unitPrice, baseCurrency)
+                          ? formatCurrency(
+                              selectedProductDetailQuery.data.pricing.unitPrice,
+                              baseCurrency
+                            )
                           : 'Price unavailable'}
                       </p>
                       {selectedProductDetailQuery.data.pricing.sku && (
@@ -415,31 +677,19 @@ const ReviewsPage = () => {
                       )}
                     </div>
                   </div>
-                  {selectedProductCategories.length > 0 && (
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {selectedProductCategories.map((category) => (
-                        <span
-                          key={category.id}
-                          className="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-600"
-                        >
-                          {category.name}
-                        </span>
-                      ))}
-                    </div>
-                  )}
                 </div>
               )}
 
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700" htmlFor="manual-review-customer">
+                <label className="text-sm font-medium text-slate-700" htmlFor="review-customer">
                   Customer (optional)
                 </label>
                 <select
-                  id="manual-review-customer"
-                  value={manualReviewForm.customerId}
+                  id="review-customer"
+                  value={form.customerId}
                   onChange={(event) => handleCustomerChange(event.target.value)}
                   className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                  disabled={!canManageReviews}
+                  disabled={!canSubmit}
                 >
                   <option value="">Guest / anonymous</option>
                   {customers.map((customer) => (
@@ -448,258 +698,186 @@ const ReviewsPage = () => {
                     </option>
                   ))}
                 </select>
+                {selectedCustomer && (
+                  <p className="text-xs text-slate-500">
+                    Name and avatar use customer details. Clear the selection to customise.
+                  </p>
+                )}
               </div>
 
-              {selectedCustomer && (
-                <div className="rounded-xl border border-slate-200 bg-white/70 p-4 shadow-sm">
-                  <div className="flex items-center gap-3">
-                    {selectedCustomer.profileImageUrl ? (
-                      <div className="aspect-square w-12 overflow-hidden rounded-full border border-slate-200 bg-slate-100">
-                        <img
-                          src={selectedCustomer.profileImageUrl}
-                          alt=""
-                          className="h-full w-full object-cover object-center"
-                        />
-                      </div>
-                    ) : (
-                      <span className="inline-flex aspect-square w-12 items-center justify-center rounded-full bg-slate-200 text-sm font-semibold text-slate-600">
-                        {selectedCustomer.name.charAt(0).toUpperCase()}
-                      </span>
-                    )}
-                    <div className="space-y-1">
-                      <p className="text-sm font-semibold text-slate-900">{selectedCustomer.name}</p>
-                      {selectedCustomer.email && <p className="text-xs text-slate-500">{selectedCustomer.email}</p>}
-                      {selectedCustomer.phone && <p className="text-xs text-slate-500">{selectedCustomer.phone}</p>}
-                    </div>
-                  </div>
-                  <p className="mt-3 text-xs text-slate-500">
-                    Their profile details are linked automatically. Clear the selection for a custom reviewer.
-                  </p>
-                </div>
-              )}
-
-              <div className="space-y-1">
-                <label className="text-sm font-medium text-slate-700" htmlFor="manual-review-name">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-700" htmlFor="reviewer-name">
                   Reviewer name
                 </label>
                 <input
-                  id="manual-review-name"
+                  id="reviewer-name"
                   type="text"
-                  value={manualReviewForm.reviewerName}
+                  value={form.reviewerName}
                   onChange={(event) =>
-                    setManualReviewForm((previous) => ({
+                    setForm((previous) => ({
                       ...previous,
                       reviewerName: event.target.value
                     }))
                   }
                   placeholder="E.g. Priya Sharma"
                   className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                  disabled={!canManageReviews || Boolean(manualReviewForm.customerId)}
+                  disabled={!canSubmit || Boolean(form.customerId)}
                 />
-                {manualReviewForm.customerId && (
-                  <p className="text-xs text-slate-500">Select “Guest / anonymous” to type a custom name.</p>
-                )}
               </div>
 
               <div className="space-y-2">
-                <span className="text-sm font-medium text-slate-700">Rating</span>
-                <div className={`flex flex-col gap-2 ${!canManageReviews ? 'opacity-60' : ''}`}>
-                  <div className="flex items-center gap-1">
-                    {Array.from({ length: 5 }).map((_, index) => {
-                      const score = index + 1;
-                      const active = ratingHover != null ? score <= ratingHover : score <= ratingValue;
-                      return (
-                        <button
-                          key={score}
-                          type="button"
-                          className={`transition focus:outline-none ${
-                            active ? 'text-amber-400' : 'text-slate-300'
-                          } ${
-                            canManageReviews ? 'hover:text-amber-400 focus:ring-2 focus:ring-amber-200 rounded-full p-0.5' : ''
-                          }`}
-                          onMouseEnter={() => canManageReviews && setRatingHover(score)}
-                          onMouseLeave={() => canManageReviews && setRatingHover(null)}
-                          onClick={() => {
-                            if (!canManageReviews) {
-                              return;
-                            }
-                            setManualReviewForm((previous) => ({ ...previous, rating: String(score) }));
-                          }}
-                          disabled={!canManageReviews}
-                          aria-label={`${score} star${score === 1 ? '' : 's'}`}
-                        >
-                          <svg viewBox="0 0 24 24" fill="currentColor" className="h-7 w-7">
-                            <path d="M11.48 3.499a.75.75 0 011.04.335l1.875 3.804 4.2.611a.75.75 0 01.416 1.28l-3.037 2.96.717 4.186a.75.75 0 01-1.088.791L12 15.347l-3.763 1.98a.75.75 0 01-1.088-.79l.717-4.187-3.037-2.96a.75.75 0 01.416-1.28l4.2-.611 1.875-3.804a.75.75 0 01.358-.335z" />
-                          </svg>
-                        </button>
-                      );
-                    })}
+                <span className="text-sm font-medium text-slate-700">Reviewer avatar</span>
+                <div className="flex items-center gap-3">
+                  <ImagePreview
+                    src={reviewerAvatar?.url || selectedCustomer?.profileImageUrl}
+                    alt="Reviewer avatar preview"
+                    className="h-16 w-16 overflow-hidden rounded-full border border-slate-200 bg-slate-100"
+                    aspectClassName=""
+                    mode="cover"
+                    fallback={
+                      <div className="flex h-full w-full items-center justify-center rounded-full bg-slate-200 text-sm font-semibold text-slate-600">
+                        {(form.reviewerName || selectedCustomer?.name || 'A').charAt(0).toUpperCase()}
+                      </div>
+                    }
+                  />
+                  <div className="flex flex-col gap-2">
+                    <button
+                      type="button"
+                      onClick={() => openMediaDialog('avatar')}
+                      className="inline-flex items-center justify-center rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 transition hover:border-slate-400 hover:text-slate-900 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"
+                      disabled={!canSubmit || Boolean(form.customerId)}
+                    >
+                      {reviewerAvatar ? 'Change avatar' : 'Upload avatar'}
+                    </button>
+                    {reviewerAvatar && !form.customerId && (
+                      <button
+                        type="button"
+                        onClick={() => setReviewerAvatar(null)}
+                        className="inline-flex items-center justify-center rounded-full border border-slate-200 px-4 py-1.5 text-xs font-medium text-slate-500 transition hover:border-slate-300 hover:text-slate-800"
+                      >
+                        Remove
+                      </button>
+                    )}
                   </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-5">
+              <div className="space-y-2">
+                <span className="text-sm font-medium text-slate-700">Rating</span>
+                <div className={`flex flex-col gap-2 ${!canSubmit ? 'opacity-60' : ''}`}>
+                  <StarRating
+                    value={ratingValue}
+                    min={1}
+                    max={5}
+                    allowHalf={false}
+                    disabled={!canSubmit}
+                    onChange={(next) => {
+                      if (!canSubmit) {
+                        return;
+                      }
+                      setForm((previous) => ({ ...previous, rating: String(Math.round(next)) }));
+                    }}
+                    onHoverChange={(next) => setRatingHover(next)}
+                    ariaLabel="Select review rating"
+                  />
                   <div className="text-xs text-slate-500">
                     {ratingHover
-                      ? `${ratingHover} / 5 · ${ratingLabels[ratingHover] ?? 'Select a rating'}`
-                      : ratingValue
-                        ? `${ratingValue} / 5 · ${ratingLabels[ratingValue] ?? 'Select a rating'}`
-                        : 'Select a rating'}
+                      ? ratingLabels[Math.round(ratingHover as number)] ?? ''
+                      : ratingLabels[Math.round(ratingValue)] ?? ''}
                   </div>
                 </div>
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700" htmlFor="manual-review-date">
+                <label className="text-sm font-medium text-slate-700" htmlFor="review-date">
                   Review date
                 </label>
                 <input
-                  id="manual-review-date"
+                  id="review-date"
                   type="date"
-                  value={manualReviewForm.reviewDate}
+                  value={form.reviewDate}
                   onChange={(event) =>
-                    setManualReviewForm((previous) => ({
+                    setForm((previous) => ({
                       ...previous,
                       reviewDate: event.target.value
                     }))
                   }
                   className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                  disabled={!canManageReviews}
+                  disabled={!canSubmit}
                 />
               </div>
-            </div>
 
-            <div className="space-y-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700" htmlFor="manual-review-comment">
+                <label className="text-sm font-medium text-slate-700" htmlFor="review-comment">
                   Comment
                 </label>
                 <textarea
-                  id="manual-review-comment"
-                  value={manualReviewForm.comment}
+                  id="review-comment"
+                  rows={6}
+                  value={form.comment}
                   onChange={(event) =>
-                    setManualReviewForm((previous) => ({
+                    setForm((previous) => ({
                       ...previous,
                       comment: event.target.value
                     }))
                   }
-                  rows={6}
-                  placeholder="Share the customer's story, highlight use cases, or capture qualitative feedback."
+                  placeholder="Share highlights, quotes, or customer sentiments."
                   className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                  disabled={!canManageReviews}
+                  disabled={!canSubmit}
                 />
               </div>
 
+              <div className="space-y-2">
+                <span className="text-sm font-medium text-slate-700">Attachments</span>
+                {renderAttachmentPreviews(canSubmit)}
+              </div>
             </div>
           </div>
+        </PageSection>
 
-          <div className="grid gap-4 lg:grid-cols-2">
-            <div className="space-y-2">
-              <p className="text-sm font-medium text-slate-700">Review media</p>
-              <div className="flex flex-wrap gap-3">
-                {reviewAttachments.map((asset, index) => (
-                  <div
-                    key={`${asset.url}-${index}`}
-                    className="relative aspect-square w-24 overflow-hidden rounded-xl border border-slate-200 bg-slate-50 shadow-sm"
-                  >
-                    {isVideoAsset(asset) ? (
-                      <video src={asset.url} className="h-full w-full object-cover object-center" controls />
-                    ) : (
-                      <img src={asset.url} alt="" className="h-full w-full object-cover object-center" />
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => removeAttachment(index)}
-                      className="absolute right-1 top-1 inline-flex h-6 w-6 items-center justify-center rounded-full bg-rose-500 text-xs font-semibold text-white shadow-sm"
-                      aria-label="Remove attachment"
-                      disabled={!canManageReviews}
-                    >
-                      ×
-                    </button>
-                  </div>
-                ))}
-                <button
-                  type="button"
-                  onClick={() => openMediaDialog('attachments')}
-                  className="inline-flex aspect-square w-24 items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white text-sm text-slate-500 transition hover:border-slate-400 hover:text-slate-700"
-                  disabled={!canManageReviews}
-                >
-                  Add media
-                </button>
-              </div>
-              <p className="text-xs text-slate-500">
-                Attach lifestyle photos or video testimonials. These assets will surface alongside the review.
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <p className="text-sm font-medium text-slate-700">Reviewer avatar</p>
-              <div className="flex items-center gap-4">
-                {reviewerAvatar?.url ? (
-                  <div className="aspect-square w-16 overflow-hidden rounded-full border border-slate-200 bg-slate-100 shadow-sm">
-                    <img
-                      src={reviewerAvatar.url}
-                      alt=""
-                      className="h-full w-full object-cover object-center"
-                    />
-                  </div>
-                ) : (
-                  <div className="flex aspect-square w-16 items-center justify-center rounded-full border border-dashed border-slate-300 bg-slate-50 text-sm font-semibold text-slate-500">
-                    {manualReviewForm.reviewerName
-                      ? manualReviewForm.reviewerName.charAt(0).toUpperCase()
-                      : '👤'}
-                  </div>
-                )}
-                <div className="space-x-2">
-                  <button
-                    type="button"
-                    onClick={() => openMediaDialog('avatar')}
-                    className="rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 transition hover:border-slate-400 hover:text-slate-900"
-                    disabled={!canManageReviews}
-                  >
-                    {reviewerAvatar ? 'Replace avatar' : 'Upload avatar'}
-                  </button>
-                  {reviewerAvatar && (
-                    <button
-                      type="button"
-                      onClick={() => setReviewerAvatar(null)}
-                      className="text-sm font-medium text-rose-500 transition hover:text-rose-600 disabled:opacity-60"
-                      disabled={!canManageReviews}
-                    >
-                      Remove
-                    </button>
-                  )}
-                </div>
-              </div>
-              <p className="text-xs text-slate-500">
-                We’ll default to the customer’s profile photo when available. Upload a custom avatar to override it.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            {!canManageReviews && (
-              <p className="text-sm text-rose-500">
-                You need product creation or update permissions to add manual reviews.
-              </p>
+        <div className="flex flex-col items-stretch gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:px-6">
+          <div className="text-sm text-slate-500">
+            {!canSubmit && (
+              <span>
+                You do not have permission to {isCreateMode ? 'create' : 'update'} reviews. Contact an administrator to request
+                access.
+              </span>
             )}
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={resetManualReviewForm}
-                className="rounded-full border border-slate-300 px-5 py-2 text-sm font-semibold text-slate-600 transition hover:border-slate-400 hover:text-slate-900"
-                disabled={manualReviewMutation.isPending}
-              >
-                Reset
-              </button>
-              <button
-                type="submit"
-                className="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-primary/90"
-                disabled={!canManageReviews || manualReviewMutation.isPending}
-              >
-                {manualReviewMutation.isPending ? 'Saving…' : 'Save review'}
-              </button>
-            </div>
           </div>
-        </form>
-      </PageSection>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <button
+              type="button"
+              onClick={handleCancel}
+              className="inline-flex items-center justify-center rounded-full border border-slate-300 px-5 py-2 text-sm font-semibold text-slate-600 transition hover:border-slate-400 hover:text-slate-900"
+            >
+              {isEditMode ? 'Reset changes' : 'Cancel'}
+            </button>
+            <button
+              type="button"
+              onClick={closeForm}
+              className="inline-flex items-center justify-center rounded-full border border-slate-200 px-5 py-2 text-sm font-semibold text-slate-500 transition hover:border-slate-300 hover:text-slate-800"
+            >
+              Back to list
+            </button>
+            <button
+              type="submit"
+              disabled={!canSubmit || isSaving}
+              className={`inline-flex items-center justify-center rounded-full px-6 py-2 text-sm font-semibold text-white shadow-sm transition focus:outline-none focus:ring-2 focus:ring-primary/30 ${
+                !canSubmit || isSaving ? 'bg-slate-400' : 'bg-primary hover:bg-primary/90'
+              }`}
+            >
+              {isSaving ? 'Saving…' : isCreateMode ? 'Save review' : 'Update review'}
+            </button>
+          </div>
+        </div>
+      </form>
+    );
+  };
 
+  const renderList = () => (
+    <div className="space-y-6">
       <PageSection
         title="Filter reviews"
         description="Narrow results by product, category, customer, or rating."
@@ -797,118 +975,234 @@ const ReviewsPage = () => {
 
       <PageSection
         padded={false}
-        bodyClassName="flex flex-col"
         title="All reviews"
-        description="View every submission along with attachments and customer context."
+        description="View, edit, and curate testimonials from every channel."
       >
-        <div className="space-y-4 px-4 py-4 sm:px-6">
-          {reviewsQuery.isLoading ? (
-            <div className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-600">
-              Loading reviews…
-            </div>
-          ) : reviews.length ? (
-            reviews.map((review) => {
-              const displayName =
-                review.reviewerName?.trim() || review.customerName?.trim() || 'Anonymous shopper';
-              const reviewedOn = new Date(review.reviewedAt).toLocaleDateString();
-              return (
-                <article key={review.id} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                    <div className="flex items-start gap-3">
-                                {review.reviewerAvatar?.url ? (
-                                  <img
-                                    src={review.reviewerAvatar.url}
-                                    alt=""
-                                    className="h-12 w-12 rounded-full border border-slate-200 object-cover object-center"
-                                  />
-                      ) : (
-                        <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-slate-200 text-sm font-semibold text-slate-600">
-                          {displayName.charAt(0).toUpperCase()}
-                        </span>
-                      )}
-                      <div>
-                        <p className="text-sm font-semibold text-slate-900">{displayName}</p>
-                        <p className="text-xs text-slate-500">Product · {review.productName}</p>
-                        <p className="mt-1 text-xs text-slate-400">Reviewed on {reviewedOn}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm font-semibold text-amber-500">
-                      {renderStars(Math.round(review.rating ?? 0))}
-                      <span className="text-slate-600">{review.rating.toFixed(1)}</span>
-                    </div>
-                  </div>
-
-                  <div className="mt-4 space-y-4 text-sm text-slate-700">
-                    {review.comment ? (
-                      <p className="whitespace-pre-line leading-relaxed">{review.comment}</p>
-                    ) : (
-                      <p className="italic text-slate-500">No written comment provided.</p>
-                    )}
-
-                    {review.productCategories.length > 0 && (
-                      <div className="flex flex-wrap gap-2">
-                        {review.productCategories.map((category) => (
-                          <span
-                            key={category.id}
-                            className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-600"
-                          >
-                            {category.name}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-
-                            {review.media.length > 0 && (
-                      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                        {review.media.map((asset, index) =>
-                          isVideoAsset(asset) ? (
-                            <video
-                              key={`${review.id}-video-${index}`}
-                              src={asset.url}
-                              controls
-                              className="aspect-video w-full rounded-xl border border-slate-200 object-cover object-center shadow-sm"
-                            />
-                          ) : (
-                            <img
-                              key={`${review.id}-media-${index}`}
-                              src={asset.url}
-                              alt=""
-                              className="aspect-video w-full rounded-xl border border-slate-200 object-cover object-center shadow-sm"
-                            />
-                          )
+        {!canViewReviews ? (
+          <div className="px-6 py-10 text-center text-sm text-slate-500">
+            You do not have permission to view existing reviews.
+          </div>
+        ) : reviewsQuery.isLoading && !reviews.length ? (
+          <div className="px-6 py-10 text-center text-sm text-slate-500">Loading reviews…</div>
+        ) : reviews.length ? (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-slate-200">
+              <thead className="bg-slate-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Reviewer</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Product</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Rating</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Reviewed on</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Media</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Comment</th>
+                  {(canUpdateReviews || canDeleteReviews) && (
+                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Actions
+                    </th>
+                  )}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 bg-white">
+                {reviews.map((review) => {
+                  const displayName =
+                    review.reviewerName?.trim() || review.customerName?.trim() || 'Anonymous shopper';
+                  const reviewedOn = new Date(review.reviewedAt).toLocaleDateString();
+                  const productName = review.productName;
+                  return (
+                    <tr key={review.id} className="hover:bg-slate-50/60">
+                      <td className="px-4 py-4">
+                        <div className="flex items-center gap-3">
+                          <ImagePreview
+                            src={review.reviewerAvatar?.url}
+                            mimeType={review.reviewerAvatar?.mimeType ?? null}
+                            alt={`${displayName} avatar`}
+                            className="h-10 w-10 rounded-full border border-slate-200 bg-slate-100"
+                            aspectClassName=""
+                            fallback={
+                              <div className="flex h-full w-full items-center justify-center rounded-full bg-slate-200 text-xs font-semibold text-slate-600">
+                                {displayName.charAt(0).toUpperCase()}
+                              </div>
+                            }
+                          />
+                          <div>
+                            <p className="text-sm font-semibold text-slate-900">{displayName}</p>
+                            {review.customerName && (
+                              <p className="text-xs text-slate-500">Customer · {review.customerName}</p>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-4 text-sm text-slate-700">
+                        <div className="font-medium text-slate-800">{productName}</div>
+                        {review.productCategories.length > 0 && (
+                          <div className="mt-1 flex flex-wrap gap-1">
+                            {review.productCategories.map((category) => (
+                              <span
+                                key={category.id}
+                                className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-medium text-slate-500"
+                              >
+                                {category.name}
+                              </span>
+                            ))}
+                          </div>
                         )}
-                      </div>
-                    )}
-                  </div>
-                </article>
-              );
-            })
-          ) : (
-            <div className="rounded-xl border border-dashed border-slate-300 px-6 py-10 text-center text-sm text-slate-500">
-              No reviews found for the selected filters.
-            </div>
-          )}
-        </div>
-
-        <PaginationControls
-          page={page}
-          pageSize={pageSize}
-          totalElements={totalElements}
-          pageSizeOptions={PAGE_SIZE_OPTIONS}
-          onPageChange={setPage}
-          onPageSizeChange={(size) => {
-            setPageSize(size);
-            setPage(0);
-          }}
-          isLoading={reviewsQuery.isLoading}
-        />
+                      </td>
+                      <td className="px-4 py-4">
+                        <div className="flex items-center gap-2 text-sm font-semibold text-amber-500">
+                          <StarRating
+                            value={review.rating}
+                            min={0}
+                            readOnly
+                            size="sm"
+                            ariaLabel={`Rating ${review.rating.toFixed(1)} out of 5`}
+                          />
+                          <span className="text-slate-600">{review.rating.toFixed(1)}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-4 text-sm text-slate-600">{reviewedOn}</td>
+                      <td className="px-4 py-4">
+                        {review.media.length ? (
+                          <div className="flex flex-wrap gap-2">
+                            {review.media.slice(0, 3).map((asset, index) =>
+                              isVideoAsset(asset) ? (
+                                <span
+                                  key={`${review.id}-video-${index}`}
+                                  className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-600"
+                                >
+                                  Video
+                                </span>
+                              ) : (
+                                <ImagePreview
+                                  key={`${review.id}-media-${index}`}
+                                  src={asset.url}
+                                  mimeType={asset.mimeType ?? null}
+                                  alt="Review media"
+                                  width={48}
+                                  height={48}
+                                  className="rounded-lg border border-slate-200"
+                                  aspectClassName=""
+                                />
+                              )
+                            )}
+                            {review.media.length > 3 && (
+                              <span className="text-xs text-slate-500">+{review.media.length - 3} more</span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-sm text-slate-400">—</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-4 text-sm text-slate-600">
+                        <div className="max-w-xs truncate" title={review.comment ?? ''}>
+                          {review.comment ? review.comment : <span className="text-slate-400">No comment</span>}
+                        </div>
+                      </td>
+                      {(canUpdateReviews || canDeleteReviews) && (
+                        <td className="px-4 py-4">
+                          <div className="flex justify-end gap-2">
+                            {canUpdateReviews && (
+                              <button
+                                type="button"
+                                onClick={() => openEditForm(review.id)}
+                                className="rounded-full border border-slate-200 p-2 text-slate-500 transition hover:border-slate-300 hover:text-slate-800"
+                                aria-label={`Edit review from ${displayName}`}
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+                                  <path d="M15.414 2.586a2 2 0 0 0-2.828 0L3 12.172V17h4.828l9.586-9.586a2 2 0 0 0 0-2.828l-2-2Zm-2.121 1.415 2 2L13 8.293l-2-2 2.293-2.292ZM5 13.414 11.293 7.12l1.586 1.586L6.586 15H5v-1.586Z" />
+                                </svg>
+                              </button>
+                            )}
+                            {canDeleteReviews && (
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteReview(review)}
+                                className="rounded-full border border-rose-200 p-2 text-rose-500 transition hover:border-rose-300 hover:text-rose-600"
+                                aria-label={`Delete review from ${displayName}`}
+                              >
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth={1.5}
+                                  className="h-4 w-4"
+                                >
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 7h12" />
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M10 11v6" />
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M14 11v6" />
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 7V4h6v3m2 0v12a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V7h12Z" />
+                                </svg>
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="px-6 py-10 text-center text-sm text-slate-500">
+            No reviews found for the selected filters.
+          </div>
+        )}
       </PageSection>
+
+      <PaginationControls
+        page={page}
+        pageSize={pageSize}
+        totalElements={totalElements}
+        pageSizeOptions={PAGE_SIZE_OPTIONS}
+        onPageChange={setPage}
+        onPageSizeChange={(size) => {
+          setPageSize(size);
+          setPage(0);
+        }}
+        isLoading={reviewsQuery.isLoading}
+      />
+    </div>
+  );
+
+  const headerActions =
+    panelMode === 'list'
+      ? canCreateReviews
+        ? (
+            <button
+              type="button"
+              onClick={openCreateForm}
+              className="inline-flex items-center justify-center rounded-full bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-primary/90"
+            >
+              Add review
+            </button>
+          )
+        : null
+      : (
+          <button
+            type="button"
+            onClick={closeForm}
+            className="inline-flex items-center justify-center rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-slate-400 hover:text-slate-900"
+          >
+            Back to reviews
+          </button>
+        );
+
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        title="Reviews"
+        description="Monitor customer sentiment, curate featured testimonials, and manage review content across the catalog."
+        actions={headerActions}
+      />
+
+      {panelMode === 'list' ? renderList() : renderForm()}
 
       <MediaLibraryDialog
         open={mediaDialogContext !== null}
         onClose={closeMediaDialog}
         onSelect={handleMediaSelect}
-        onUpload={handleMediaUpload}
+        onUpload={mediaDialogContext ? handleMediaUpload : undefined}
         onUploadComplete={handleMediaSelect}
         moduleFilters={mediaDialogContext ? MEDIA_FILTERS[mediaDialogContext] : undefined}
       />

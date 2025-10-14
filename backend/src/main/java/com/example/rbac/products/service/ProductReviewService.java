@@ -68,6 +68,14 @@ public class ProductReviewService {
     }
 
     @Transactional(readOnly = true)
+    public ProductReviewDto get(Long id) {
+        ProductReview review = productReviewRepository.findById(id)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Review not found"));
+        initializeAssociations(List.of(review));
+        return productReviewMapper.toDto(review);
+    }
+
+    @Transactional(readOnly = true)
     public List<ProductReview> listForProduct(Long productId) {
         List<ProductReview> reviews = productReviewRepository.findByProductIdOrderByReviewedAtDesc(productId);
         initializeAssociations(reviews);

@@ -25,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
+import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -38,6 +39,7 @@ public class ProductService {
     private final AttributeValueRepository attributeValueRepository;
     private final ProductMapper productMapper;
     private final ProductReviewRepository productReviewRepository;
+    private final SkuGenerator skuGenerator;
 
     public ProductService(ProductRepository productRepository,
                           BrandRepository brandRepository,
@@ -45,7 +47,8 @@ public class ProductService {
                           TaxRateRepository taxRateRepository,
                           AttributeValueRepository attributeValueRepository,
                           ProductMapper productMapper,
-                          ProductReviewRepository productReviewRepository) {
+                          ProductReviewRepository productReviewRepository,
+                          SkuGenerator skuGenerator) {
         this.productRepository = productRepository;
         this.brandRepository = brandRepository;
         this.categoryRepository = categoryRepository;
@@ -53,6 +56,7 @@ public class ProductService {
         this.attributeValueRepository = attributeValueRepository;
         this.productMapper = productMapper;
         this.productReviewRepository = productReviewRepository;
+        this.skuGenerator = skuGenerator;
     }
 
     @Transactional(readOnly = true)
@@ -72,14 +76,17 @@ public class ProductService {
     public ProductDto get(Long id) {
         Product product = productRepository.findDetailedById(id)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Product not found"));
+        initializeDetailedAssociations(product);
         return productMapper.toDto(product, productReviewRepository.findByProductIdOrderByReviewedAtDesc(id));
     }
 
     @Transactional
     public ProductDto create(CreateProductRequest request) {
         Product product = new Product();
-        applyRequest(product, request);
-        Product saved = productRepository.save(product);
+        product.setSku(skuGenerator.generatePlaceholder());
+        applyRequest(product, request, true);
+        Product saved = productRepository.saveAndFlush(product);
+        ensureGeneratedSku(saved);
         return productMapper.toDto(saved, List.of());
     }
 
@@ -87,9 +94,68 @@ public class ProductService {
     public ProductDto update(Long id, CreateProductRequest request) {
         Product product = productRepository.findDetailedById(id)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Product not found"));
-        applyRequest(product, request);
+        initializeDetailedAssociations(product);
+        applyRequest(product, request, false);
         Product saved = productRepository.save(product);
         return productMapper.toDto(saved, productReviewRepository.findByProductIdOrderByReviewedAtDesc(saved.getId()));
+    }
+
+    private void initializeDetailedAssociations(Product product) {
+        if (product.getAttributeValues() != null) {
+            product.getAttributeValues().forEach(value -> {
+                if (value.getAttribute() != null) {
+                    value.getAttribute().getName();
+                }
+            });
+        }
+        if (product.getCategories() != null) {
+            product.getCategories().forEach(category -> category.getName());
+        }
+        if (product.getTaxRates() != null) {
+            product.getTaxRates().forEach(rate -> rate.getName());
+        }
+        if (product.getGalleryImages() != null) {
+            product.getGalleryImages().forEach(image -> {
+                if (image.getMedia() != null) {
+                    image.getMedia().getUrl();
+                }
+            });
+        }
+        if (product.getVariants() != null) {
+            product.getVariants().forEach(variant -> {
+                if (variant.getValues() != null) {
+                    variant.getValues().forEach(value -> {
+                        if (value.getAttributeValue() != null && value.getAttributeValue().getAttribute() != null) {
+                            value.getAttributeValue().getAttribute().getName();
+                        }
+                    });
+                }
+                if (variant.getMedia() != null) {
+                    variant.getMedia().forEach(media -> {
+                        if (media.getMedia() != null) {
+                            media.getMedia().getUrl();
+                        }
+                    });
+                }
+            });
+        }
+        if (product.getExpandableSections() != null) {
+            product.getExpandableSections().forEach(section -> {
+                section.getTitle();
+                section.getContent();
+            });
+        }
+        if (product.getInfoSections() != null) {
+            product.getInfoSections().forEach(section -> {
+                section.getTitle();
+                if (section.getBulletPoints() != null) {
+                    section.getBulletPoints().size();
+                }
+            });
+        }
+        if (product.getTags() != null) {
+            product.getTags().size();
+        }
     }
 
     @Transactional
@@ -99,7 +165,7 @@ public class ProductService {
         productRepository.delete(product);
     }
 
-    private void applyRequest(Product product, CreateProductRequest request) {
+    private void applyRequest(Product product, CreateProductRequest request, boolean creating) {
         product.setName(request.getName().trim());
         product.setUnit(request.getUnit().trim());
         product.setWeightKg(request.getWeightKg());
@@ -143,14 +209,26 @@ public class ProductService {
         if (pricing == null) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "Pricing details are required");
         }
+
+        if (creating) {
+            if (StringUtils.hasText(pricing.getSku())) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, "SKU is managed automatically and cannot be specified");
+            }
+        } else if (StringUtils.hasText(pricing.getSku()) && !pricing.getSku().equals(product.getSku())) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "SKU cannot be modified after creation");
+        }
+
+        validateDiscountWindow(pricing);
+
         product.setUnitPrice(pricing.getUnitPrice());
         product.setDiscountType(pricing.getDiscountType());
         product.setDiscountValue(pricing.getDiscountValue());
         product.setDiscountMinQuantity(pricing.getDiscountMinQuantity());
         product.setDiscountMaxQuantity(pricing.getDiscountMaxQuantity());
-        product.setPriceTag(trimToNull(pricing.getPriceTag()));
+        product.setDiscountStartAt(pricing.getDiscountStartAt());
+        product.setDiscountEndAt(pricing.getDiscountEndAt());
+        replaceTags(product, pricing.getTags());
         product.setStockQuantity(pricing.getStockQuantity());
-        product.setSku(trimToNull(pricing.getSku()));
         product.setExternalLink(trimToNull(pricing.getExternalLink()));
         product.setExternalLinkButton(trimToNull(pricing.getExternalLinkButton()));
         product.setLowStockWarning(pricing.getLowStockWarning());
@@ -190,6 +268,64 @@ public class ProductService {
         rebuildVariants(product, request.getVariants(), attributeValueMap);
 
         rebuildInfoSections(product, request.getInfoSections());
+    }
+
+    private void ensureGeneratedSku(Product product) {
+        if (!skuGenerator.isPlaceholder(product.getSku())) {
+            return;
+        }
+        long seed = skuGenerator.initialSequence(product);
+        for (int attempt = 0; attempt < 20; attempt++) {
+            String candidate = skuGenerator.generate(product, seed + attempt);
+            if (!productRepository.existsBySku(candidate)) {
+                product.setSku(candidate);
+                productRepository.saveAndFlush(product);
+                return;
+            }
+        }
+        throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "Unable to allocate a unique SKU");
+    }
+
+    private void validateDiscountWindow(ProductPricingRequest pricing) {
+        Instant start = pricing.getDiscountStartAt();
+        Instant end = pricing.getDiscountEndAt();
+        if (start != null && end != null && end.isBefore(start)) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Discount end date must be on or after the start date");
+        }
+    }
+
+    private void replaceTags(Product product, List<String> tags) {
+        List<String> normalized = normalizeTags(tags);
+        List<String> target = product.getTags();
+        if (target == null) {
+            target = new ArrayList<>();
+            product.setTags(target);
+        } else {
+            target.clear();
+        }
+        target.addAll(normalized);
+    }
+
+    private List<String> normalizeTags(List<String> tags) {
+        if (CollectionUtils.isEmpty(tags)) {
+            return List.of();
+        }
+        List<String> normalized = new ArrayList<>();
+        for (String tag : tags) {
+            String value = trimToNull(tag);
+            if (value == null) {
+                continue;
+            }
+            if (value.length() > 120) {
+                value = value.substring(0, 120);
+            }
+            String candidate = value;
+            boolean exists = normalized.stream().anyMatch(existing -> existing.equalsIgnoreCase(candidate));
+            if (!exists) {
+                normalized.add(value);
+            }
+        }
+        return normalized;
     }
 
     private void rebuildGallery(Product product, List<MediaSelectionRequest> gallery) {

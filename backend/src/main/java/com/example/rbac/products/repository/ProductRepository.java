@@ -22,17 +22,9 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
             "categories",
             "taxRates",
             "attributeValues",
-            "attributeValues.attribute",
-            "galleryImages",
-            "galleryImages.media",
-            "variants",
-            "variants.values",
-            "variants.values.attributeValue",
-            "variants.values.attributeValue.attribute",
-            "variants.media",
-            "variants.media.media",
-            "infoSections",
-            "infoSections.bulletPoints"
+            "attributeValues.attribute"
     })
     Optional<Product> findDetailedById(Long id);
+
+    boolean existsBySku(String sku);
 }
