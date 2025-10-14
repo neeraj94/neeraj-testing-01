@@ -218,7 +218,18 @@ const App = () => {
           >
             <Route path="products" element={<ProductsPage />} />
           </Route>
-          <Route element={<PermissionRoute required={['PRODUCT_VIEW', 'PRODUCT_REVIEW_VIEW']} />}>
+          <Route
+            element={
+              <PermissionRoute
+                required={[
+                  'PRODUCT_REVIEW_VIEW',
+                  'PRODUCT_REVIEW_CREATE',
+                  'PRODUCT_REVIEW_UPDATE',
+                  'PRODUCT_REVIEW_DELETE'
+                ]}
+              />
+            }
+          >
             <Route path="reviews" element={<ReviewsPage />} />
           </Route>
           <Route element={<PermissionRoute required={['SHIPPING_AREA_VIEW']} />}>

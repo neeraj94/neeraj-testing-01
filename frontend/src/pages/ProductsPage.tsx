@@ -5,6 +5,9 @@ import PageSection from '../components/PageSection';
 import PaginationControls from '../components/PaginationControls';
 import MediaLibraryDialog from '../components/MediaLibraryDialog';
 import RichTextEditor from '../components/RichTextEditor';
+import TagsInput from '../components/TagsInput';
+import StarRating from '../components/StarRating';
+import ImagePreview from '../components/ImagePreview';
 import { useToast } from '../components/ToastProvider';
 import { useConfirm } from '../components/ConfirmDialogProvider';
 import { useAppSelector } from '../app/hooks';
@@ -45,7 +48,9 @@ interface ProductFormState {
   discountType: DiscountType;
   discountMinQuantity: string;
   discountMaxQuantity: string;
-  priceTag: string;
+  discountStartAt: string;
+  discountEndAt: string;
+  tags: string[];
   stockQuantity: string;
   sku: string;
   externalLink: string;
@@ -139,7 +144,9 @@ const defaultFormState: ProductFormState = {
   discountType: 'FLAT',
   discountMinQuantity: '',
   discountMaxQuantity: '',
-  priceTag: '',
+  discountStartAt: '',
+  discountEndAt: '',
+  tags: [],
   stockQuantity: '',
   sku: '',
   externalLink: '',
@@ -218,6 +225,7 @@ type ValidationMessages = {
   categories?: string;
   description?: string;
   unitPrice?: string;
+  discountWindow?: string;
 };
 
 const validationFieldTab: Record<keyof ValidationMessages, TabId> = {
@@ -226,7 +234,8 @@ const validationFieldTab: Record<keyof ValidationMessages, TabId> = {
   unit: 'basic',
   categories: 'basic',
   description: 'basic',
-  unitPrice: 'pricing'
+  unitPrice: 'pricing',
+  discountWindow: 'pricing'
 };
 
 const DEFAULT_PAGE_SIZE = 10;
@@ -251,6 +260,23 @@ const mediaAssetToSelection = (
     mimeType: asset.mimeType ?? null,
     sizeBytes: asset.sizeBytes ?? null
   };
+};
+
+const toDateTimeInput = (iso?: string | null) => {
+  if (!iso) {
+    return '';
+  }
+  const date = new Date(iso);
+  if (!Number.isFinite(date.getTime())) {
+    return '';
+  }
+  const pad = (value: number) => String(value).padStart(2, '0');
+  const year = date.getFullYear();
+  const month = pad(date.getMonth() + 1);
+  const day = pad(date.getDate());
+  const hours = pad(date.getHours());
+  const minutes = pad(date.getMinutes());
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
 };
 
 const buildCategoryTree = (categories: Category[]): CategoryTreeNode[] => {
@@ -296,6 +322,15 @@ const parseNumber = (value: string): number | null => {
   return Number.isFinite(parsed) ? parsed : null;
 };
 
+const toIsoOrNull = (value: string): string | null => {
+  const normalized = value.trim();
+  if (!normalized) {
+    return null;
+  }
+  const date = new Date(normalized);
+  return Number.isFinite(date.getTime()) ? date.toISOString() : null;
+};
+
 const formatVariantLabel = (combination: VariantCombinationValue[]) =>
   combination.map((part) => `${part.attributeName}: ${part.valueName}`).join(' · ');
 const ProductsPage = () => {
@@ -319,6 +354,10 @@ const ProductsPage = () => {
   const [thumbnail, setThumbnail] = useState<MediaSelection | null>(null);
   const [pdfSpecification, setPdfSpecification] = useState<MediaSelection | null>(null);
   const [metaImage, setMetaImage] = useState<MediaSelection | null>(null);
+  const [frequentlyBoughtProducts, setFrequentlyBoughtProducts] = useState<ProductSummary[]>([]);
+  const [frequentlyBoughtCategoryIds, setFrequentlyBoughtCategoryIds] = useState<number[]>([]);
+  const [frequentlyBoughtSearch, setFrequentlyBoughtSearch] = useState('');
+  const [frequentlyBoughtCategorySearch, setFrequentlyBoughtCategorySearch] = useState('');
   const [expandableSections, setExpandableSections] = useState<ExpandableSectionFormState[]>([]);
   const [mediaContext, setMediaContext] = useState<MediaDialogContext | null>(null);
   const [selectedAttributes, setSelectedAttributes] = useState<AttributeSelection[]>([]);
@@ -411,6 +450,25 @@ const ProductsPage = () => {
 
   const products = productsQuery.data?.content ?? [];
   const totalElements = productsQuery.data?.totalElements ?? 0;
+
+  const frequentlyBoughtSearchTerm = frequentlyBoughtSearch.trim();
+  const frequentlyBoughtSuggestionsQuery = useQuery({
+    queryKey: ['products', 'suggestions', frequentlyBoughtSearchTerm],
+    queryFn: async () => {
+      const term = frequentlyBoughtSearchTerm;
+      if (term.length < 2) {
+        return [] as ProductSummary[];
+      }
+      const { data } = await api.get<ProductSummaryPage>('/products', {
+        params: { page: 0, size: 10, search: term }
+      });
+      return data.content ?? [];
+    },
+    enabled: frequentlyBoughtSearchTerm.length >= 2,
+    staleTime: 60_000
+  });
+
+  const frequentlyBoughtSuggestions = frequentlyBoughtSuggestionsQuery.data ?? [];
 
   const categoryTree = useMemo(
     () => buildCategoryTree(categoriesQuery.data ?? []),
@@ -689,7 +747,9 @@ const ProductsPage = () => {
         product.pricing.discountMaxQuantity != null
           ? String(product.pricing.discountMaxQuantity)
           : '',
-      priceTag: product.pricing.priceTag ?? '',
+      discountStartAt: toDateTimeInput(product.pricing.discountStartAt ?? null),
+      discountEndAt: toDateTimeInput(product.pricing.discountEndAt ?? null),
+      tags: [...(product.pricing.tags ?? [])],
       stockQuantity: product.pricing.stockQuantity != null ? String(product.pricing.stockQuantity) : '',
       sku: product.pricing.sku ?? '',
       externalLink: product.pricing.externalLink ?? '',
@@ -714,6 +774,12 @@ const ProductsPage = () => {
     setThumbnail(mediaAssetToSelection(product.thumbnail));
     setPdfSpecification(mediaAssetToSelection(product.pdfSpecification));
     setMetaImage(mediaAssetToSelection(product.seo.image));
+    const sanitizedFrequentlyBought = (product.frequentlyBoughtProducts ?? [])
+      .filter((item) => item.id !== product.id);
+    setFrequentlyBoughtProducts(sanitizedFrequentlyBought);
+    setFrequentlyBoughtCategoryIds([...(product.frequentlyBoughtCategoryIds ?? [])]);
+    setFrequentlyBoughtSearch('');
+    setFrequentlyBoughtCategorySearch('');
     setExpandableSections(
       (product.expandableSections ?? []).map((section) => ({
         id: generateSectionId(),
@@ -817,10 +883,84 @@ const ProductsPage = () => {
     return map;
   }, [categoriesQuery.data]);
 
+  const categoryPathMap = useMemo(() => {
+    const categories = categoriesQuery.data ?? [];
+    const lookup = new Map<number, Category>();
+    categories.forEach((category) => {
+      lookup.set(category.id, category);
+    });
+    const cache = new Map<number, string>();
+    const resolvePath = (category: Category | undefined): string => {
+      if (!category) {
+        return '';
+      }
+      if (cache.has(category.id)) {
+        return cache.get(category.id) ?? category.name;
+      }
+      const segments: string[] = [];
+      let current: Category | undefined = category;
+      const visited = new Set<number>();
+      while (current && !visited.has(current.id)) {
+        segments.unshift(current.name);
+        visited.add(current.id);
+        current = current.parentId ? lookup.get(current.parentId) : undefined;
+      }
+      const path = segments.filter(Boolean).join(' › ');
+      cache.set(category.id, path);
+      return path;
+    };
+    const map = new Map<number, string>();
+    categories.forEach((category) => {
+      map.set(category.id, resolvePath(category));
+    });
+    return map;
+  }, [categoriesQuery.data]);
+
+  const frequentlyBoughtCategoryOptions = useMemo(
+    () =>
+      Array.from(categoryPathMap.entries())
+        .map(([id, label]) => ({ id, label }))
+        .sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: 'base' })),
+    [categoryPathMap]
+  );
+
+  const filteredFrequentlyBoughtCategories = useMemo(() => {
+    const term = frequentlyBoughtCategorySearch.trim().toLowerCase();
+    const options = frequentlyBoughtCategoryOptions;
+    if (!term) {
+      return options.slice(0, 30);
+    }
+    return options.filter((option) => option.label.toLowerCase().includes(term)).slice(0, 30);
+  }, [frequentlyBoughtCategoryOptions, frequentlyBoughtCategorySearch]);
+
+  const selectedFrequentlyBoughtCategories = useMemo(
+    () =>
+      frequentlyBoughtCategoryIds.map((id) => ({
+        id,
+        label: categoryPathMap.get(id) ?? `Category #${id}`
+      })),
+    [frequentlyBoughtCategoryIds, categoryPathMap]
+  );
+
   const selectedTaxes = useMemo(() => {
     const taxes = taxRatesQuery.data ?? [];
     return taxes.filter((tax) => selectedTaxIds.includes(tax.id));
   }, [taxRatesQuery.data, selectedTaxIds]);
+
+  const activeProductId = panelMode === 'edit' && productDetailQuery.data ? productDetailQuery.data.id : null;
+
+  const filteredFrequentlyBoughtProductSuggestions = useMemo(() => {
+    if (!frequentlyBoughtSuggestions.length) {
+      return [] as ProductSummary[];
+    }
+    const selectedIds = new Set(frequentlyBoughtProducts.map((product) => product.id));
+    return frequentlyBoughtSuggestions.filter((suggestion) => {
+      if (activeProductId != null && suggestion.id === activeProductId) {
+        return false;
+      }
+      return !selectedIds.has(suggestion.id);
+    });
+  }, [frequentlyBoughtSuggestions, frequentlyBoughtProducts, activeProductId]);
 
   const sanitizedDescription = useMemo(() => {
     const html = form.description || '';
@@ -853,12 +993,23 @@ const ProductsPage = () => {
     if (!sanitizedDescription) {
       messages.description = 'Describe the product to help merchandisers and SEO.';
     }
+    const startValue = form.discountStartAt.trim();
+    const endValue = form.discountEndAt.trim();
+    if (startValue && endValue) {
+      const start = new Date(startValue);
+      const end = new Date(endValue);
+      if (Number.isFinite(start.getTime()) && Number.isFinite(end.getTime()) && end < start) {
+        messages.discountWindow = 'Discount end must be on or after the start.';
+      }
+    }
     return messages;
   }, [
     form.name,
     form.brandId,
     form.unit,
     form.unitPrice,
+    form.discountStartAt,
+    form.discountEndAt,
     selectedCategoryIds,
     sanitizedDescription,
     unitMode
@@ -893,17 +1044,6 @@ const ProductsPage = () => {
       productReviews.reduce((sum, review) => sum + (review.rating ?? 0), 0) / productReviews.length;
     return { total: productReviews.length, average, breakdown };
   }, [productReviews]);
-
-  const renderStars = (rating: number) => (
-    <span className="inline-flex items-center gap-0.5 text-base leading-none">
-      {Array.from({ length: 5 }).map((_, index) => (
-        <span key={index} className={index < rating ? 'text-amber-400' : 'text-slate-300'}>
-          ★
-        </span>
-      ))}
-      <span className="sr-only">{`${rating} out of 5 stars`}</span>
-    </span>
-  );
 
   const isVideoAsset = (asset: { url: string; mimeType?: string | null }) => {
     if (asset.mimeType && asset.mimeType.toLowerCase().startsWith('video/')) {
@@ -1107,14 +1247,41 @@ const ProductsPage = () => {
       };
     });
   };
+
+  const handleAddFrequentlyBoughtProduct = (product: ProductSummary) => {
+    setFrequentlyBoughtProducts((previous) => {
+      if (previous.some((item) => item.id === product.id)) {
+        return previous;
+      }
+      return [...previous, product];
+    });
+    setFrequentlyBoughtSearch('');
+  };
+
+  const handleRemoveFrequentlyBoughtProduct = (productId: number) => {
+    setFrequentlyBoughtProducts((previous) => previous.filter((item) => item.id !== productId));
+  };
+
+  const handleToggleFrequentlyBoughtCategory = (categoryId: number) => {
+    setFrequentlyBoughtCategoryIds((previous) =>
+      previous.includes(categoryId)
+        ? previous.filter((id) => id !== categoryId)
+        : [...previous, categoryId]
+    );
+  };
+
   const resetFormState = () => {
-    setForm({ ...defaultFormState, infoSections: [] });
+    setForm({ ...defaultFormState, infoSections: [], tags: [] });
     setSelectedCategoryIds([]);
     setSelectedTaxIds([]);
     setGallery([]);
     setThumbnail(null);
     setPdfSpecification(null);
     setMetaImage(null);
+    setFrequentlyBoughtProducts([]);
+    setFrequentlyBoughtCategoryIds([]);
+    setFrequentlyBoughtSearch('');
+    setFrequentlyBoughtCategorySearch('');
     setExpandableSections([]);
     setSelectedAttributes([]);
     setVariants({});
@@ -1161,6 +1328,10 @@ const ProductsPage = () => {
       return;
     }
 
+    const discountStartAt = toIsoOrNull(form.discountStartAt);
+    const discountEndAt = toIsoOrNull(form.discountEndAt);
+    const tags = form.tags.map((tag) => tag.trim()).filter((tag) => tag.length > 0);
+
     const payload: CreateProductPayload = {
       name: form.name.trim(),
       brandId: form.brandId ? Number(form.brandId) : null,
@@ -1191,7 +1362,9 @@ const ProductsPage = () => {
         discountValue: parseNumber(form.discountValue),
         discountMinQuantity: parseNumber(form.discountMinQuantity),
         discountMaxQuantity: parseNumber(form.discountMaxQuantity),
-        priceTag: form.priceTag.trim(),
+        discountStartAt,
+        discountEndAt,
+        tags,
         stockQuantity: parseNumber(form.stockQuantity),
         sku: form.sku.trim(),
         externalLink: form.externalLink.trim(),
@@ -1234,7 +1407,11 @@ const ProductsPage = () => {
           .split('\n')
           .map((line) => line.trim())
           .filter((line) => line.length > 0)
-      }))
+      })),
+      frequentlyBought: {
+        productIds: frequentlyBoughtProducts.map((product) => product.id),
+        categoryIds: frequentlyBoughtCategoryIds
+      }
     };
 
     if (isEditMode && editingId != null) {
@@ -2570,18 +2747,53 @@ const ProductsPage = () => {
                             className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                           />
                         </div>
-                        <div className="sm:col-span-2">
-                          <label htmlFor="price-tag" className="text-sm font-medium text-slate-700">
-                            Price tag label
+                        <div>
+                          <label htmlFor="discount-start" className="text-sm font-medium text-slate-700">
+                            Discount start (optional)
                           </label>
                           <input
-                            id="price-tag"
-                            type="text"
-                            value={form.priceTag}
-                            onChange={(event) => setForm((previous) => ({ ...previous, priceTag: event.target.value }))}
-                            placeholder="MSRP / Launch price"
+                            id="discount-start"
+                            type="datetime-local"
+                            value={form.discountStartAt}
+                            onChange={(event) =>
+                              setForm((previous) => ({ ...previous, discountStartAt: event.target.value }))
+                            }
                             className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                           />
+                        </div>
+                        <div>
+                          <label htmlFor="discount-end" className="text-sm font-medium text-slate-700">
+                            Discount end (optional)
+                          </label>
+                          <input
+                            id="discount-end"
+                            type="datetime-local"
+                            value={form.discountEndAt}
+                            onChange={(event) =>
+                              setForm((previous) => ({ ...previous, discountEndAt: event.target.value }))
+                            }
+                            className={`mt-1 w-full rounded-lg border px-3 py-2 text-sm text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 ${
+                              visibleValidation.discountWindow ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-200' : 'border-slate-300 focus:border-primary'
+                            }`}
+                          />
+                          {visibleValidation.discountWindow && (
+                            <p className="mt-1 text-xs text-rose-500">{visibleValidation.discountWindow}</p>
+                          )}
+                        </div>
+                        <div className="sm:col-span-2">
+                          <label htmlFor="product-tags" className="text-sm font-medium text-slate-700">
+                            Tags
+                          </label>
+                          <p className="mt-1 text-xs text-slate-500">Add merchandising or campaign labels to help merchandising and reporting.</p>
+                          <div className="mt-2">
+                            <TagsInput
+                              id="product-tags"
+                              value={form.tags}
+                              onChange={(tags) => setForm((previous) => ({ ...previous, tags }))}
+                              placeholder="Type a tag and press Enter"
+                              maxTags={25}
+                            />
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -2612,10 +2824,11 @@ const ProductsPage = () => {
                             id="sku"
                             type="text"
                             value={form.sku}
-                            onChange={(event) => setForm((previous) => ({ ...previous, sku: event.target.value }))}
-                            placeholder="AUR-SHOE-001"
-                            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                            readOnly
+                            placeholder="Auto-generated after save"
+                            className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500 shadow-inner focus:outline-none"
                           />
+                          <p className="mt-1 text-xs text-slate-500">SKUs are generated automatically from brand, category, and product details.</p>
                         </div>
                         <div>
                           <label htmlFor="external-link" className="text-sm font-medium text-slate-700">
@@ -2911,10 +3124,238 @@ const ProductsPage = () => {
             {activeTab === 'frequentlyBought' && (
               <PageSection
                 title="Frequently bought together"
-                description="Cross-sell complementary products to raise average order value."
+                description="Cross-sell complementary items and categories to raise average order value."
               >
-                <div className="rounded-xl border border-dashed border-slate-300 px-6 py-10 text-center text-sm text-slate-500">
-                  Build bundled recommendations here later. Link accessories, add-ons, or service plans to this product.
+                <div className="grid gap-6 lg:grid-cols-2">
+                  <div className="space-y-5">
+                    <div>
+                      <label className="text-sm font-medium text-slate-700" htmlFor="frequently-bought-search">
+                        Add specific products
+                      </label>
+                      <p className="mt-1 text-xs text-slate-500">
+                        Search the catalog to recommend accessories, bundles, or compatible upgrades.
+                      </p>
+                      <div className="mt-2 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <input
+                            id="frequently-bought-search"
+                            type="text"
+                            value={frequentlyBoughtSearch}
+                            onChange={(event) => setFrequentlyBoughtSearch(event.target.value)}
+                            placeholder="Search products by name or SKU"
+                            className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                          />
+                          {frequentlyBoughtSearch && (
+                            <button
+                              type="button"
+                              onClick={() => setFrequentlyBoughtSearch('')}
+                              className="rounded-full border border-slate-200 px-3 py-1 text-xs font-medium text-slate-500 transition hover:border-slate-300 hover:text-slate-800"
+                            >
+                              Clear
+                            </button>
+                          )}
+                        </div>
+                        {frequentlyBoughtSearchTerm.length >= 2 ? (
+                          <div className="max-h-64 overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+                            {frequentlyBoughtSuggestionsQuery.isLoading ? (
+                              <div className="px-4 py-3 text-sm text-slate-500">Searching…</div>
+                            ) : frequentlyBoughtSuggestionsQuery.isError ? (
+                              <div className="px-4 py-3 text-sm text-rose-500">
+                                Unable to load suggestions right now. Try again in a moment.
+                              </div>
+                            ) : filteredFrequentlyBoughtProductSuggestions.length ? (
+                              filteredFrequentlyBoughtProductSuggestions.map((product) => (
+                                <button
+                                  key={product.id}
+                                  type="button"
+                                  onClick={() => handleAddFrequentlyBoughtProduct(product)}
+                                  className="flex w-full items-center gap-3 border-b border-slate-100 px-4 py-3 text-left transition hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 last:border-b-0"
+                                >
+                                  <ImagePreview
+                                    src={product.thumbnailUrl ?? undefined}
+                                    mimeType={null}
+                                    alt={`${product.name} thumbnail`}
+                                    className="h-12 w-12 overflow-hidden rounded-lg border border-slate-200 bg-slate-100"
+                                    aspectClassName=""
+                                    mode="contain"
+                                    fallback={
+                                      <div className="flex h-full w-full items-center justify-center text-xs font-semibold text-slate-500">
+                                        {product.name.charAt(0).toUpperCase()}
+                                      </div>
+                                    }
+                                  />
+                                  <div className="flex-1">
+                                    <p className="text-sm font-medium text-slate-900">{product.name}</p>
+                                    <div className="mt-0.5 flex flex-wrap items-center gap-x-3 text-xs text-slate-500">
+                                      <span>SKU · {product.sku}</span>
+                                      {product.unitPrice != null && (
+                                        <span>{formatCurrency(product.unitPrice, baseCurrency)}</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <span className="text-xs font-semibold uppercase text-primary">Add</span>
+                                </button>
+                              ))
+                            ) : (
+                              <div className="px-4 py-3 text-sm text-slate-500">
+                                No products match “{frequentlyBoughtSearchTerm}”.
+                              </div>
+                            )}
+                          </div>
+                        ) : frequentlyBoughtSearchTerm.length > 0 ? (
+                          <p className="text-xs text-slate-500">Enter at least two characters to search.</p>
+                        ) : null}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-sm font-medium text-slate-700">Selected products</h4>
+                        {frequentlyBoughtProducts.length > 0 && (
+                          <span className="text-xs text-slate-500">{frequentlyBoughtProducts.length} selected</span>
+                        )}
+                      </div>
+                      <p className="mt-1 text-xs text-slate-500">
+                        These items will appear in the order listed below on the product detail page.
+                      </p>
+                      {frequentlyBoughtProducts.length ? (
+                        <ul className="mt-3 space-y-3">
+                          {frequentlyBoughtProducts.map((product) => (
+                            <li
+                              key={product.id}
+                              className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm"
+                            >
+                              <div className="flex items-center gap-3">
+                                <ImagePreview
+                                  src={product.thumbnailUrl ?? undefined}
+                                  mimeType={null}
+                                  alt={`${product.name} thumbnail`}
+                                  className="h-12 w-12 overflow-hidden rounded-lg border border-slate-200 bg-slate-100"
+                                  aspectClassName=""
+                                  mode="contain"
+                                  fallback={
+                                    <div className="flex h-full w-full items-center justify-center text-xs font-semibold text-slate-500">
+                                      {product.name.charAt(0).toUpperCase()}
+                                    </div>
+                                  }
+                                />
+                                <div>
+                                  <p className="text-sm font-medium text-slate-900">{product.name}</p>
+                                  <p className="text-xs text-slate-500">SKU · {product.sku}</p>
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveFrequentlyBoughtProduct(product.id)}
+                                className="rounded-full border border-slate-200 p-1.5 text-slate-500 transition hover:border-slate-300 hover:text-slate-800"
+                                aria-label={`Remove ${product.name} from frequently bought together`}
+                              >
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  viewBox="0 0 20 20"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth={1.5}
+                                  className="h-4 w-4"
+                                >
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 6l8 8M14 6l-8 8" />
+                                </svg>
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <div className="mt-3 rounded-xl border border-dashed border-slate-300 px-4 py-6 text-center text-sm text-slate-500">
+                          No products selected yet. Use the search above to add complementary items.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="space-y-5">
+                    <div>
+                      <label className="text-sm font-medium text-slate-700" htmlFor="frequently-bought-category-search">
+                        Include entire categories
+                      </label>
+                      <p className="mt-1 text-xs text-slate-500">
+                        Automatically surface products from these categories alongside this item.
+                      </p>
+                      <div className="mt-2 space-y-2">
+                        <input
+                          id="frequently-bought-category-search"
+                          type="text"
+                          value={frequentlyBoughtCategorySearch}
+                          onChange={(event) => setFrequentlyBoughtCategorySearch(event.target.value)}
+                          placeholder="Search categories"
+                          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                        />
+                        <div className="max-h-64 overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-inner">
+                          {categoriesQuery.isLoading ? (
+                            <div className="px-4 py-3 text-sm text-slate-500">Loading categories…</div>
+                          ) : filteredFrequentlyBoughtCategories.length ? (
+                            filteredFrequentlyBoughtCategories.map((option) => {
+                              const checked = frequentlyBoughtCategoryIds.includes(option.id);
+                              return (
+                                <label
+                                  key={option.id}
+                                  className={`flex items-center justify-between gap-2 border-b border-slate-100 px-4 py-2 text-sm transition last:border-b-0 ${
+                                    checked ? 'bg-primary/5' : 'hover:bg-slate-50'
+                                  }`}
+                                >
+                                  <span className="flex items-center gap-2 text-slate-600">
+                                    <input
+                                      type="checkbox"
+                                      checked={checked}
+                                      onChange={() => handleToggleFrequentlyBoughtCategory(option.id)}
+                                      className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary/40"
+                                    />
+                                    {option.label}
+                                  </span>
+                                  {checked && <span className="text-[11px] font-semibold uppercase text-primary">Selected</span>}
+                                </label>
+                              );
+                            })
+                          ) : (
+                            <div className="px-4 py-3 text-sm text-slate-500">
+                              {frequentlyBoughtCategorySearch.trim()
+                                ? `No categories match “${frequentlyBoughtCategorySearch.trim()}”.`
+                                : 'No categories available.'}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    {selectedFrequentlyBoughtCategories.length > 0 && (
+                      <div>
+                        <h4 className="text-sm font-medium text-slate-700">Selected categories</h4>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          {selectedFrequentlyBoughtCategories.map((category) => (
+                            <span
+                              key={category.id}
+                              className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs text-primary"
+                            >
+                              {category.label}
+                              <button
+                                type="button"
+                                onClick={() => handleToggleFrequentlyBoughtCategory(category.id)}
+                                className="text-primary/70 transition hover:text-primary"
+                                aria-label={`Remove ${category.label}`}
+                              >
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  viewBox="0 0 20 20"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth={1.5}
+                                  className="h-3.5 w-3.5"
+                                >
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 6l8 8M14 6l-8 8" />
+                                </svg>
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </PageSection>
             )}
@@ -2933,7 +3374,16 @@ const ProductsPage = () => {
                           <span className="text-4xl font-semibold text-slate-900">
                             {reviewSummary.total ? reviewSummary.average.toFixed(1) : '—'}
                           </span>
-                          {reviewSummary.total > 0 && renderStars(Math.round(reviewSummary.average))}
+                          {reviewSummary.total > 0 && (
+                            <StarRating
+                              value={reviewSummary.average}
+                              min={0}
+                              allowHalf
+                              readOnly
+                              size="lg"
+                              ariaLabel="Average product rating"
+                            />
+                          )}
                         </div>
                       </div>
                       <p className="mt-6 text-sm text-slate-600">
@@ -3010,7 +3460,13 @@ const ProductsPage = () => {
                                 </div>
                               </div>
                               <div className="flex items-center gap-2 text-sm font-semibold text-amber-500">
-                                {renderStars(Math.round(review.rating ?? 0))}
+                                <StarRating
+                                  value={review.rating}
+                                  min={0}
+                                  readOnly
+                                  size="md"
+                                  ariaLabel={`Rating ${review.rating.toFixed(1)} out of 5`}
+                                />
                                 <span className="text-slate-600">{review.rating.toFixed(1)}</span>
                               </div>
                             </div>

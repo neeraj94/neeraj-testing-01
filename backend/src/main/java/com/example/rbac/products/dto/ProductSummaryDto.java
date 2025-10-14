@@ -15,6 +15,7 @@ public class ProductSummaryDto {
     private String brandName;
     private int categoryCount;
     private int variantCount;
+    private String thumbnailUrl;
     private Instant createdAt;
     private Instant updatedAt;
 
@@ -96,6 +97,14 @@ public class ProductSummaryDto {
 
     public void setVariantCount(int variantCount) {
         this.variantCount = variantCount;
+    }
+
+    public String getThumbnailUrl() {
+        return thumbnailUrl;
+    }
+
+    public void setThumbnailUrl(String thumbnailUrl) {
+        this.thumbnailUrl = thumbnailUrl;
     }
 
     public Instant getCreatedAt() {
