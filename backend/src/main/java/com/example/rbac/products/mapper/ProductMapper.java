@@ -223,7 +223,9 @@ public class ProductMapper {
         pricing.setDiscountValue(product.getDiscountValue());
         pricing.setDiscountMinQuantity(product.getDiscountMinQuantity());
         pricing.setDiscountMaxQuantity(product.getDiscountMaxQuantity());
-        pricing.setPriceTag(product.getPriceTag());
+        pricing.setDiscountStartAt(product.getDiscountStartAt());
+        pricing.setDiscountEndAt(product.getDiscountEndAt());
+        pricing.setTags(product.getTags() != null ? List.copyOf(product.getTags()) : List.of());
         pricing.setStockQuantity(product.getStockQuantity());
         pricing.setSku(product.getSku());
         pricing.setExternalLink(product.getExternalLink());
