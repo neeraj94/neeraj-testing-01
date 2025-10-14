@@ -41,6 +41,8 @@ public class CreateUserRequest {
 
     private String emailSignature;
 
+    private String profileImageUrl;
+
     public String getEmail() {
         return email;
     }
@@ -151,5 +153,13 @@ public class CreateUserRequest {
 
     public void setEmailSignature(String emailSignature) {
         this.emailSignature = emailSignature;
+    }
+
+    public String getProfileImageUrl() {
+        return profileImageUrl;
+    }
+
+    public void setProfileImageUrl(String profileImageUrl) {
+        this.profileImageUrl = profileImageUrl;
     }
 }

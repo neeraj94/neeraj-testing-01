@@ -118,6 +118,7 @@ public class UserService {
         user.setLinkedinUrl(normalize(request.getLinkedinUrl()));
         user.setSkypeId(normalize(request.getSkypeId()));
         user.setEmailSignature(normalizeMultiline(request.getEmailSignature()));
+        user.setProfileImageUrl(normalize(request.getProfileImageUrl()));
         user.setLoginAttempts(0);
         user.setLockedAt(null);
         if (request.getRoleIds() != null && !request.getRoleIds().isEmpty()) {
@@ -171,6 +172,7 @@ public class UserService {
         user.setLinkedinUrl(normalize(request.getLinkedinUrl()));
         user.setSkypeId(normalize(request.getSkypeId()));
         user.setEmailSignature(normalizeMultiline(request.getEmailSignature()));
+        user.setProfileImageUrl(normalize(request.getProfileImageUrl()));
         if (request.getPassword() != null && !request.getPassword().isBlank()) {
             user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
         }
@@ -272,6 +274,7 @@ public class UserService {
         user.setLinkedinUrl(normalize(request.getLinkedinUrl()));
         user.setSkypeId(normalize(request.getSkypeId()));
         user.setEmailSignature(normalizeMultiline(request.getEmailSignature()));
+        user.setProfileImageUrl(normalize(request.getProfileImageUrl()));
         if (StringUtils.hasText(request.getNewPassword())) {
             if (!StringUtils.hasText(request.getOldPassword())) {
                 throw new ApiException(HttpStatus.BAD_REQUEST, "Current password is required to set a new password");

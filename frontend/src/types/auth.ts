@@ -21,6 +21,7 @@ export interface UserSummary {
   linkedinUrl?: string | null;
   skypeId?: string | null;
   emailSignature?: string | null;
+  profileImageUrl?: string | null;
   emailVerifiedAt?: string | null;
   loginAttempts: number;
   lockedAt?: string | null;
