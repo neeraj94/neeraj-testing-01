@@ -286,9 +286,12 @@ const ProductsPage = () => {
   const [expandedCategories, setExpandedCategories] = useState<Set<number>>(() => new Set());
   const [brandDropdownOpen, setBrandDropdownOpen] = useState(false);
   const [taxDropdownOpen, setTaxDropdownOpen] = useState(false);
+  const [brandSearch, setBrandSearch] = useState('');
+  const [showValidation, setShowValidation] = useState(false);
 
   const brandDropdownRef = useRef<HTMLDivElement | null>(null);
   const taxDropdownRef = useRef<HTMLDivElement | null>(null);
+  const brandSearchInputRef = useRef<HTMLInputElement | null>(null);
   const editInitializedRef = useRef(false);
 
   const canCreate = useMemo(
@@ -469,8 +472,17 @@ const ProductsPage = () => {
     };
 
     if (brandDropdownOpen) {
+      const timeout = window.setTimeout(() => {
+        brandSearchInputRef.current?.focus();
+      }, 0);
       document.addEventListener('mousedown', handleClickAway);
+      return () => {
+        window.clearTimeout(timeout);
+        document.removeEventListener('mousedown', handleClickAway);
+      };
     }
+
+    setBrandSearch('');
 
     return () => {
       document.removeEventListener('mousedown', handleClickAway);
@@ -574,6 +586,7 @@ const ProductsPage = () => {
   const openEditForm = (productId: number) => {
     setActiveTab('basic');
     setPanelMode('edit');
+    setShowValidation(false);
     setEditingId(productId);
   };
 
@@ -692,11 +705,13 @@ const ProductsPage = () => {
     }
 
     setActiveTab('basic');
+    setShowValidation(false);
   };
 
   const handleResetClick = () => {
     if (panelMode === 'edit' && productDetailQuery.data) {
       populateFormFromProduct(productDetailQuery.data);
+      setShowValidation(false);
       return;
     }
     resetFormState();
@@ -721,6 +736,15 @@ const ProductsPage = () => {
     const brands = brandsQuery.data ?? [];
     return brands.find((brand) => String(brand.id) === form.brandId) ?? null;
   }, [brandsQuery.data, form.brandId]);
+
+  const filteredBrands = useMemo(() => {
+    const brands = brandsQuery.data ?? [];
+    const term = brandSearch.trim().toLowerCase();
+    if (!term) {
+      return brands;
+    }
+    return brands.filter((brand) => brand.name.toLowerCase().includes(term));
+  }, [brandsQuery.data, brandSearch]);
 
   const categoriesById = useMemo(() => {
     const map = new Map<number, Category>();
@@ -780,6 +804,11 @@ const ProductsPage = () => {
   const validationMessages = useMemo(
     () => Object.values(validation).filter((message): message is string => Boolean(message)),
     [validation]
+  );
+
+  const visibleValidation = useMemo<ValidationMessages>(
+    () => (showValidation ? validation : {}),
+    [showValidation, validation]
   );
 
   const toggleCategorySelection = (categoryId: number) => {
@@ -892,6 +921,8 @@ const ProductsPage = () => {
     setBrandDropdownOpen(false);
     setTaxDropdownOpen(false);
     setActiveTab('basic');
+    setBrandSearch('');
+    setShowValidation(false);
   };
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
@@ -912,6 +943,8 @@ const ProductsPage = () => {
     if (isSaving) {
       return;
     }
+
+    setShowValidation(true);
 
     const blockingFields = Object.entries(validation).filter(([, message]) => Boolean(message)) as [
       keyof ValidationMessages,
@@ -1137,16 +1170,29 @@ const ProductsPage = () => {
 
     return (
       <PageSection padded={false} bodyClassName="flex flex-col">
-        <div className="flex flex-col gap-4 border-b border-slate-200 bg-slate-50 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-          <input
-            type="search"
-            value={searchDraft}
-            onChange={(event) => setSearchDraft(event.target.value)}
-            placeholder="Search products"
-            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:max-w-xs"
-          />
-          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            {totalElements.toLocaleString()} item{totalElements === 1 ? '' : 's'}
+        <div className="flex flex-col gap-3 border-b border-slate-200 bg-slate-50 px-4 py-4 sm:px-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:gap-3">
+              <input
+                type="search"
+                value={searchDraft}
+                onChange={(event) => setSearchDraft(event.target.value)}
+                placeholder="Search products"
+                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:max-w-sm"
+              />
+              {canCreate && (
+                <button
+                  type="button"
+                  onClick={openCreateForm}
+                  className="inline-flex items-center justify-center rounded-full bg-primary px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                >
+                  Add product
+                </button>
+              )}
+            </div>
+            <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              {totalElements.toLocaleString()} item{totalElements === 1 ? '' : 's'}
+            </div>
           </div>
         </div>
 
@@ -1315,403 +1361,478 @@ const ProductsPage = () => {
 
             <div className="space-y-6 px-4 py-6 sm:px-6">
               {activeTab === 'basic' && (
-              <PageSection
-                title="Basic information"
-                description="Capture the core catalog attributes, merchandising units, and customer-facing messaging."
-              >
-                <div className="grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
-                  <div className="space-y-4">
-                    <div>
-                      <label htmlFor="product-name" className="text-sm font-medium text-slate-700">
-                        Product name
-                      </label>
-                      <input
-                        id="product-name"
-                        type="text"
-                        value={form.name}
-                        onChange={(event) => setForm((previous) => ({ ...previous, name: event.target.value }))}
-                        className={inputClassNames(Boolean(validation.name))}
-                        placeholder="Aurora Running Shoe"
-                        required
-                        aria-invalid={Boolean(validation.name)}
-                      />
-                      {validation.name && <p className="mt-1 text-xs text-rose-500">{validation.name}</p>}
-                    </div>
+                <PageSection
+                  title="Basic information"
+                  description="Capture the core catalog attributes, merchandising units, and customer-facing messaging."
+                >
+                  <div className="grid gap-8 lg:grid-cols-2">
+                    <div className="space-y-6">
+                      <div className="space-y-2">
+                        <label htmlFor="product-name" className="text-sm font-medium text-slate-700">
+                          Product name
+                        </label>
+                        <input
+                          id="product-name"
+                          type="text"
+                          value={form.name}
+                          onChange={(event) => setForm((previous) => ({ ...previous, name: event.target.value }))}
+                          className={inputClassNames(Boolean(visibleValidation.name))}
+                          placeholder="Aurora Running Shoe"
+                          required
+                          aria-invalid={Boolean(visibleValidation.name)}
+                        />
+                        {visibleValidation.name && <p className="text-xs text-rose-500">{visibleValidation.name}</p>}
+                      </div>
 
-                    <div ref={brandDropdownRef} className="relative">
-                      <span className="text-sm font-medium text-slate-700">Brand</span>
-                      <button
-                        type="button"
-                        onClick={() => setBrandDropdownOpen((open) => !open)}
-                        className={`mt-1 flex w-full items-center justify-between rounded-lg border bg-white px-3 py-2 text-left text-sm text-slate-900 shadow-sm focus:outline-none focus:ring-2 ${
-                          validation.brandId
-                            ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-200'
-                            : 'border-slate-300 focus:border-primary focus:ring-primary/20'
-                        }`}
-                        aria-expanded={brandDropdownOpen}
-                        aria-haspopup="listbox"
-                      >
-                        {selectedBrand ? (
-                          <span className="flex items-center gap-3">
-                            {selectedBrand.logoUrl ? (
-                              <img src={selectedBrand.logoUrl} alt="" className="h-6 w-6 rounded-full object-cover" />
-                            ) : (
-                              <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-slate-200 text-xs font-semibold text-slate-600">
-                                {selectedBrand.name.charAt(0).toUpperCase()}
-                              </span>
-                            )}
-                            <span>{selectedBrand.name}</span>
-                          </span>
-                        ) : (
-                          <span className="text-slate-400">Select a brand</span>
-                        )}
-                        <span className="text-slate-400">▾</span>
-                      </button>
-                      {validation.brandId && <p className="mt-1 text-xs text-rose-500">{validation.brandId}</p>}
-                      {brandDropdownOpen && (
-                        <div className="absolute z-20 mt-2 max-h-64 w-full overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-xl">
-                          {(brandsQuery.data ?? []).map((brand) => (
-                            <button
-                              key={brand.id}
-                              type="button"
-                              onClick={() => {
-                                setForm((previous) => ({ ...previous, brandId: String(brand.id) }));
-                                setBrandDropdownOpen(false);
-                              }}
-                              className={`flex w-full items-center gap-3 px-4 py-2 text-left text-sm transition hover:bg-slate-50 ${
-                                form.brandId === String(brand.id) ? 'bg-primary/5 text-primary' : 'text-slate-700'
-                              }`}
-                              role="option"
-                              aria-selected={form.brandId === String(brand.id)}
-                            >
-                              {brand.logoUrl ? (
-                                <img src={brand.logoUrl} alt="" className="h-6 w-6 rounded-full object-cover" />
+                      <div ref={brandDropdownRef} className="relative space-y-2">
+                        <span className="text-sm font-medium text-slate-700">Brand</span>
+                        <button
+                          type="button"
+                          onClick={() => setBrandDropdownOpen((open) => !open)}
+                          className={`flex w-full items-center justify-between rounded-lg border bg-white px-3 py-2 text-left text-sm text-slate-900 shadow-sm focus:outline-none focus:ring-2 ${
+                            visibleValidation.brandId
+                              ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-200'
+                              : 'border-slate-300 focus:border-primary focus:ring-primary/20'
+                          }`}
+                          aria-expanded={brandDropdownOpen}
+                          aria-haspopup="listbox"
+                        >
+                          {selectedBrand ? (
+                            <span className="flex items-center gap-3">
+                              {selectedBrand.logoUrl ? (
+                                <img src={selectedBrand.logoUrl} alt="" className="h-6 w-6 rounded-full object-cover" />
                               ) : (
                                 <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-slate-200 text-xs font-semibold text-slate-600">
-                                  {brand.name.charAt(0).toUpperCase()}
+                                  {selectedBrand.name.charAt(0).toUpperCase()}
                                 </span>
                               )}
-                              <span>{brand.name}</span>
-                            </button>
-                          ))}
-                          {!brandsQuery.data?.length && (
-                            <div className="px-4 py-3 text-sm text-slate-500">No brands available yet.</div>
+                              <span>{selectedBrand.name}</span>
+                            </span>
+                          ) : (
+                            <span className="text-slate-400">Select a brand</span>
                           )}
-                        </div>
-                      )}
-                    </div>
+                          <span className="text-slate-400">▾</span>
+                        </button>
+                        {visibleValidation.brandId && (
+                          <p className="text-xs text-rose-500">{visibleValidation.brandId}</p>
+                        )}
+                        {brandDropdownOpen && (
+                          <div className="absolute z-20 mt-2 w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
+                            <div className="flex items-center gap-2 border-b border-slate-100 px-3 py-2">
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                viewBox="0 0 20 20"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="1.5"
+                                className="h-4 w-4 text-slate-400"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  d="M19 19l-4.35-4.35m1.35-3.65a5 5 0 1 1-10 0 5 5 0 0 1 10 0Z"
+                                />
+                              </svg>
+                              <input
+                                ref={brandSearchInputRef}
+                                type="search"
+                                value={brandSearch}
+                                onChange={(event) => setBrandSearch(event.target.value)}
+                                placeholder="Search brands"
+                                className="w-full border-none bg-transparent text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none"
+                              />
+                              {brandSearch && (
+                                <button
+                                  type="button"
+                                  onClick={() => setBrandSearch('')}
+                                  className="text-xs font-medium text-slate-400 transition hover:text-slate-600"
+                                >
+                                  Clear
+                                </button>
+                              )}
+                            </div>
+                            <div className="max-h-64 overflow-y-auto py-1">
+                              {brandsQuery.isLoading ? (
+                                <div className="px-4 py-3 text-sm text-slate-500">Loading brands…</div>
+                              ) : !(brandsQuery.data ?? []).length ? (
+                                <div className="px-4 py-3 text-sm text-slate-500">No brands available yet.</div>
+                              ) : filteredBrands.length ? (
+                                filteredBrands.map((brand) => (
+                                  <button
+                                    key={brand.id}
+                                    type="button"
+                                    onClick={() => {
+                                      setForm((previous) => ({ ...previous, brandId: String(brand.id) }));
+                                      setBrandDropdownOpen(false);
+                                      setBrandSearch('');
+                                    }}
+                                    className={`flex w-full items-center gap-3 px-4 py-2 text-left text-sm transition hover:bg-slate-50 ${
+                                      form.brandId === String(brand.id) ? 'bg-primary/5 text-primary' : 'text-slate-700'
+                                    }`}
+                                    role="option"
+                                    aria-selected={form.brandId === String(brand.id)}
+                                  >
+                                    {brand.logoUrl ? (
+                                      <img src={brand.logoUrl} alt="" className="h-6 w-6 rounded-full object-cover" />
+                                    ) : (
+                                      <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-slate-200 text-xs font-semibold text-slate-600">
+                                        {brand.name.charAt(0).toUpperCase()}
+                                      </span>
+                                    )}
+                                    <span>{brand.name}</span>
+                                  </button>
+                                ))
+                              ) : (
+                                <div className="px-4 py-3 text-sm text-slate-500">No brands match your search.</div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
 
-                    <div>
-                      <label className="text-sm font-medium text-slate-700">Unit</label>
-                      {unitMode === 'preset' ? (
-                        <select
-                          value={
-                            unitOptions.includes(form.unit as (typeof unitOptions)[number]) ? form.unit : ''
-                          }
-                          onChange={(event) => {
-                            const value = event.target.value;
-                            if (value === CUSTOM_UNIT_OPTION) {
-                              setUnitMode('custom');
-                              setForm((previous) => ({ ...previous, unit: '' }));
-                              return;
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-slate-700">Unit</label>
+                        {unitMode === 'preset' ? (
+                          <select
+                            value={
+                              unitOptions.includes(form.unit as (typeof unitOptions)[number]) ? form.unit : ''
                             }
-                            setForm((previous) => ({ ...previous, unit: value }));
-                          }}
-                          className={inputClassNames(Boolean(validation.unit))}
-                          aria-invalid={Boolean(validation.unit)}
-                        >
-                          <option value="">Select a unit</option>
-                          {unitOptions.map((option) => (
-                            <option key={option} value={option}>
-                              {option}
-                            </option>
-                          ))}
-                          <option value={CUSTOM_UNIT_OPTION}>Other (custom)</option>
-                        </select>
-                      ) : (
-                        <div className="space-y-2">
-                          <input
-                            type="text"
-                            value={form.unit}
-                            onChange={(event) =>
-                              setForm((previous) => ({ ...previous, unit: event.target.value }))
-                            }
-                            placeholder="Enter custom unit"
-                            className={inputClassNames(Boolean(validation.unit))}
-                            aria-invalid={Boolean(validation.unit)}
-                          />
-                          <div>
+                            onChange={(event) => {
+                              const value = event.target.value;
+                              if (value === CUSTOM_UNIT_OPTION) {
+                                setUnitMode('custom');
+                                setForm((previous) => ({ ...previous, unit: '' }));
+                                return;
+                              }
+                              setForm((previous) => ({ ...previous, unit: value }));
+                            }}
+                            className={inputClassNames(Boolean(visibleValidation.unit))}
+                            aria-invalid={Boolean(visibleValidation.unit)}
+                          >
+                            <option value="">Select a unit</option>
+                            {unitOptions.map((option) => (
+                              <option key={option} value={option}>
+                                {option}
+                              </option>
+                            ))}
+                            <option value={CUSTOM_UNIT_OPTION}>Other (custom)</option>
+                          </select>
+                        ) : (
+                          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+                            <div className="flex-1">
+                              <input
+                                type="text"
+                                value={form.unit}
+                                onChange={(event) =>
+                                  setForm((previous) => ({ ...previous, unit: event.target.value }))
+                                }
+                                className={inputClassNames(Boolean(visibleValidation.unit))}
+                                placeholder="Enter unit label"
+                                aria-invalid={Boolean(visibleValidation.unit)}
+                              />
+                            </div>
                             <button
                               type="button"
                               onClick={() => {
                                 setUnitMode('preset');
-                                setForm((previous) => ({ ...previous, unit: '' }));
+                                setForm((previous) => ({
+                                  ...previous,
+                                  unit: unitOptions.includes(previous.unit as (typeof unitOptions)[number])
+                                    ? previous.unit
+                                    : ''
+                                }));
                               }}
-                              className="text-xs font-semibold text-primary transition hover:text-primary/80"
+                              className="inline-flex items-center justify-center rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 transition hover:border-slate-400 hover:text-slate-900"
                             >
-                              Choose from preset list
+                              Use presets
                             </button>
                           </div>
-                        </div>
-                      )}
-                      {validation.unit && <p className="mt-1 text-xs text-rose-500">{validation.unit}</p>}
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                      <div>
-                        <label htmlFor="product-weight" className="text-sm font-medium text-slate-700">
-                          Weight (kg)
-                        </label>
-                        <input
-                          id="product-weight"
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={form.weightKg}
-                          onChange={(event) => setForm((previous) => ({ ...previous, weightKg: event.target.value }))}
-                          placeholder="0.75"
-                          className={inputClassNames(false)}
-                        />
-                      </div>
-                      <div>
-                        <label htmlFor="product-min-qty" className="text-sm font-medium text-slate-700">
-                          Minimum purchase quantity
-                        </label>
-                        <input
-                          id="product-min-qty"
-                          type="number"
-                          min="1"
-                          step="1"
-                          value={form.minPurchaseQuantity}
-                          onChange={(event) =>
-                            setForm((previous) => ({ ...previous, minPurchaseQuantity: event.target.value }))
-                          }
-                          placeholder="1"
-                          className={inputClassNames(false)}
-                        />
-                      </div>
-                    </div>
-
-                    <fieldset className="space-y-3 rounded-xl border border-slate-200 px-4 py-4">
-                      <legend className="text-sm font-semibold text-slate-700">Status flags</legend>
-                      <div className="flex flex-col gap-3 sm:flex-row">
-                        <div>
-                          <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Featured</span>
-                          <div className="mt-2 flex items-center gap-4 text-sm text-slate-600">
-                            <label className="flex items-center gap-2">
-                              <input
-                                type="radio"
-                                name="featured"
-                                value="yes"
-                                checked={form.featured === 'yes'}
-                                onChange={(event) =>
-                                  setForm((previous) => ({ ...previous, featured: event.target.value as 'yes' | 'no' }))
-                                }
-                                className="h-4 w-4 border-slate-300 text-primary focus:ring-primary"
-                              />
-                              Yes
-                            </label>
-                            <label className="flex items-center gap-2">
-                              <input
-                                type="radio"
-                                name="featured"
-                                value="no"
-                                checked={form.featured === 'no'}
-                                onChange={(event) =>
-                                  setForm((previous) => ({ ...previous, featured: event.target.value as 'yes' | 'no' }))
-                                }
-                                className="h-4 w-4 border-slate-300 text-primary focus:ring-primary"
-                              />
-                              No
-                            </label>
-                          </div>
-                        </div>
-                        <div>
-                          <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-                            Today’s deal
-                          </span>
-                          <div className="mt-2 flex items-center gap-4 text-sm text-slate-600">
-                            <label className="flex items-center gap-2">
-                              <input
-                                type="radio"
-                                name="todaysDeal"
-                                value="yes"
-                                checked={form.todaysDeal === 'yes'}
-                                onChange={(event) =>
-                                  setForm((previous) => ({ ...previous, todaysDeal: event.target.value as 'yes' | 'no' }))
-                                }
-                                className="h-4 w-4 border-slate-300 text-primary focus:ring-primary"
-                              />
-                              Yes
-                            </label>
-                            <label className="flex items-center gap-2">
-                              <input
-                                type="radio"
-                                name="todaysDeal"
-                                value="no"
-                                checked={form.todaysDeal === 'no'}
-                                onChange={(event) =>
-                                  setForm((previous) => ({ ...previous, todaysDeal: event.target.value as 'yes' | 'no' }))
-                                }
-                                className="h-4 w-4 border-slate-300 text-primary focus:ring-primary"
-                              />
-                              No
-                            </label>
-                          </div>
-                        </div>
-                      </div>
-                    </fieldset>
-                  </div>
-
-                  <div className="space-y-4">
-                    <div>
-                      <span className="text-sm font-medium text-slate-700">Categories</span>
-                      <p className="mt-1 text-xs text-slate-500">
-                        Select where the product appears in the catalog hierarchy. Expand parent categories to reveal
-                        children.
-                      </p>
-                      <div
-                        className={`mt-3 max-h-64 space-y-3 overflow-y-auto rounded-xl border bg-white p-4 ${
-                          validation.categories ? 'border-rose-500' : 'border-slate-200'
-                        }`}
-                      >
-                        {categoriesQuery.isLoading ? (
-                          <p className="text-sm text-slate-500">Loading categories…</p>
-                        ) : !categoryTree.length ? (
-                          <p className="text-sm text-slate-500">No categories available yet.</p>
-                        ) : (
-                          renderCategoryNodes(categoryTree)
+                        )}
+                        {visibleValidation.unit && (
+                          <p className="text-xs text-rose-500">{visibleValidation.unit}</p>
                         )}
                       </div>
-                      {validation.categories && (
-                        <p className="mt-1 text-xs text-rose-500">{validation.categories}</p>
-                      )}
-                      {selectedCategoryIds.length > 0 && (
-                        <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                          Selected:
-                          {selectedCategoryIds.map((categoryId) => {
-                            const category = categoriesById.get(categoryId);
-                            return (
-                              <span
-                                key={categoryId}
-                                className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-[11px] font-medium text-primary"
-                              >
-                                {category?.name ?? `Category #${categoryId}`}
-                                <button
-                                  type="button"
-                                  onClick={() => toggleCategorySelection(categoryId)}
-                                  className="text-primary/70 transition hover:text-primary"
-                                >
-                                  ×
-                                </button>
-                              </span>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
 
-                    <div ref={taxDropdownRef} className="relative">
-                      <span className="text-sm font-medium text-slate-700">Applicable taxes</span>
-                      <p className="mt-1 text-xs text-slate-500">
-                        Attach one or multiple tax profiles for accurate checkout calculations.
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => setTaxDropdownOpen((open) => !open)}
-                        className="mt-2 flex w-full items-center justify-between rounded-lg border border-slate-300 bg-white px-3 py-2 text-left text-sm text-slate-900 shadow-sm transition focus:outline-none focus:ring-2 focus:ring-primary/20"
-                        aria-expanded={taxDropdownOpen}
-                        aria-haspopup="listbox"
-                      >
-                        {selectedTaxes.length ? (
-                          <span className="flex flex-wrap items-center gap-2">
-                            {selectedTaxes.slice(0, 3).map((tax) => (
-                              <span
-                                key={tax.id}
-                                className="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-[11px] font-medium text-primary"
-                              >
-                                {tax.name}
-                              </span>
-                            ))}
-                            {selectedTaxes.length > 3 && (
-                              <span className="text-xs text-slate-500">+{selectedTaxes.length - 3} more</span>
-                            )}
-                          </span>
-                        ) : (
-                          <span className="text-slate-400">Select taxes</span>
-                        )}
-                        <span className="text-slate-400">▾</span>
-                      </button>
-                      {taxDropdownOpen && (
-                        <div className="absolute z-20 mt-2 max-h-64 w-full overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-xl">
-                          {taxRatesQuery.isLoading ? (
-                            <div className="px-4 py-3 text-sm text-slate-500">Loading taxes…</div>
-                          ) : !(taxRatesQuery.data ?? []).length ? (
-                            <div className="px-4 py-3 text-sm text-slate-500">No tax rates configured yet.</div>
-                          ) : (
-                            (taxRatesQuery.data ?? []).map((tax) => (
-                              <label
-                                key={tax.id}
-                                className="flex items-center justify-between gap-3 px-4 py-2 text-sm text-slate-700 transition hover:bg-slate-50"
-                              >
-                                <span>
-                                  <span className="font-medium">{tax.name}</span>
-                                  <span className="ml-2 text-xs text-slate-500">
-                                    {tax.rateType === 'PERCENTAGE'
-                                      ? `${tax.rateValue}%`
-                                      : `Flat ${tax.rateValue}`}
-                                  </span>
-                                </span>
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="space-y-2">
+                          <label htmlFor="product-weight" className="text-sm font-medium text-slate-700">
+                            Weight (kg)
+                          </label>
+                          <input
+                            id="product-weight"
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={form.weightKg}
+                            onChange={(event) =>
+                              setForm((previous) => ({ ...previous, weightKg: event.target.value }))
+                            }
+                            placeholder="0.45"
+                            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                          />
+                          <p className="text-xs text-slate-500">Optional — helps calculate shipping estimates.</p>
+                        </div>
+                        <div className="space-y-2">
+                          <label htmlFor="product-min-quantity" className="text-sm font-medium text-slate-700">
+                            Minimum purchase quantity
+                          </label>
+                          <input
+                            id="product-min-quantity"
+                            type="number"
+                            min="1"
+                            step="1"
+                            value={form.minPurchaseQuantity}
+                            onChange={(event) =>
+                              setForm((previous) => ({
+                                ...previous,
+                                minPurchaseQuantity: event.target.value
+                              }))
+                            }
+                            placeholder="1"
+                            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                          />
+                          <p className="text-xs text-slate-500">
+                            Leave blank to allow purchases of any quantity.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="rounded-xl border border-slate-200/80 bg-slate-50/60 p-4">
+                        <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+                          Merchandising flags
+                        </span>
+                        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                          <div>
+                            <span className="text-sm font-medium text-slate-700">Featured</span>
+                            <div className="mt-2 flex items-center gap-4 text-sm text-slate-600">
+                              <label className="flex items-center gap-2">
                                 <input
-                                  type="checkbox"
-                                  className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary"
-                                  checked={selectedTaxIds.includes(tax.id)}
-                                  onChange={() => toggleTaxSelection(tax.id)}
+                                  type="radio"
+                                  name="featured"
+                                  value="yes"
+                                  checked={form.featured === 'yes'}
+                                  onChange={(event) =>
+                                    setForm((previous) => ({
+                                      ...previous,
+                                      featured: event.target.value as 'yes' | 'no'
+                                    }))
+                                  }
+                                  className="h-4 w-4 border-slate-300 text-primary focus:ring-primary"
                                 />
+                                Yes
                               </label>
-                            ))
+                              <label className="flex items-center gap-2">
+                                <input
+                                  type="radio"
+                                  name="featured"
+                                  value="no"
+                                  checked={form.featured === 'no'}
+                                  onChange={(event) =>
+                                    setForm((previous) => ({
+                                      ...previous,
+                                      featured: event.target.value as 'yes' | 'no'
+                                    }))
+                                  }
+                                  className="h-4 w-4 border-slate-300 text-primary focus:ring-primary"
+                                />
+                                No
+                              </label>
+                            </div>
+                          </div>
+                          <div>
+                            <span className="text-sm font-medium text-slate-700">Today’s deal</span>
+                            <div className="mt-2 flex items-center gap-4 text-sm text-slate-600">
+                              <label className="flex items-center gap-2">
+                                <input
+                                  type="radio"
+                                  name="todaysDeal"
+                                  value="yes"
+                                  checked={form.todaysDeal === 'yes'}
+                                  onChange={(event) =>
+                                    setForm((previous) => ({
+                                      ...previous,
+                                      todaysDeal: event.target.value as 'yes' | 'no'
+                                    }))
+                                  }
+                                  className="h-4 w-4 border-slate-300 text-primary focus:ring-primary"
+                                />
+                                Yes
+                              </label>
+                              <label className="flex items-center gap-2">
+                                <input
+                                  type="radio"
+                                  name="todaysDeal"
+                                  value="no"
+                                  checked={form.todaysDeal === 'no'}
+                                  onChange={(event) =>
+                                    setForm((previous) => ({
+                                      ...previous,
+                                      todaysDeal: event.target.value as 'yes' | 'no'
+                                    }))
+                                  }
+                                  className="h-4 w-4 border-slate-300 text-primary focus:ring-primary"
+                                />
+                                No
+                              </label>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-6">
+                      <div className="space-y-2">
+                        <span className="text-sm font-medium text-slate-700">Categories</span>
+                        <p className="text-xs text-slate-500">
+                          Select where the product appears in the catalog hierarchy. Expand parent categories to reveal
+                          children.
+                        </p>
+                        <div
+                          className={`mt-2 max-h-64 space-y-3 overflow-y-auto rounded-xl border bg-white p-4 ${
+                            visibleValidation.categories ? 'border-rose-500' : 'border-slate-200'
+                          }`}
+                        >
+                          {categoriesQuery.isLoading ? (
+                            <p className="text-sm text-slate-500">Loading categories…</p>
+                          ) : !categoryTree.length ? (
+                            <p className="text-sm text-slate-500">No categories available yet.</p>
+                          ) : (
+                            renderCategoryNodes(categoryTree)
                           )}
                         </div>
-                      )}
+                        {visibleValidation.categories && (
+                          <p className="text-xs text-rose-500">{visibleValidation.categories}</p>
+                        )}
+                        {selectedCategoryIds.length > 0 && (
+                          <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                            Selected:
+                            {selectedCategoryIds.map((categoryId) => {
+                              const category = categoriesById.get(categoryId);
+                              return (
+                                <span
+                                  key={categoryId}
+                                  className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-[11px] font-medium text-primary"
+                                >
+                                  {category?.name ?? `Category #${categoryId}`}
+                                  <button
+                                    type="button"
+                                    onClick={() => toggleCategorySelection(categoryId)}
+                                    className="text-primary/70 transition hover:text-primary"
+                                  >
+                                    ×
+                                  </button>
+                                </span>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+
+                      <div ref={taxDropdownRef} className="relative space-y-2">
+                        <span className="text-sm font-medium text-slate-700">Applicable taxes</span>
+                        <p className="text-xs text-slate-500">
+                          Attach one or multiple tax profiles for accurate checkout calculations.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => setTaxDropdownOpen((open) => !open)}
+                          className="flex w-full items-center justify-between rounded-lg border border-slate-300 bg-white px-3 py-2 text-left text-sm text-slate-900 shadow-sm transition focus:outline-none focus:ring-2 focus:ring-primary/20"
+                          aria-expanded={taxDropdownOpen}
+                          aria-haspopup="listbox"
+                        >
+                          {selectedTaxes.length ? (
+                            <span className="flex flex-wrap items-center gap-2">
+                              {selectedTaxes.slice(0, 3).map((tax) => (
+                                <span
+                                  key={tax.id}
+                                  className="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-[11px] font-medium text-primary"
+                                >
+                                  {tax.name}
+                                </span>
+                              ))}
+                              {selectedTaxes.length > 3 && (
+                                <span className="text-xs text-slate-500">+{selectedTaxes.length - 3} more</span>
+                              )}
+                            </span>
+                          ) : (
+                            <span className="text-slate-400">Select taxes</span>
+                          )}
+                          <span className="text-slate-400">▾</span>
+                        </button>
+                        {taxDropdownOpen && (
+                          <div className="absolute z-20 mt-2 w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
+                            {taxRatesQuery.isLoading ? (
+                              <div className="px-4 py-3 text-sm text-slate-500">Loading taxes…</div>
+                            ) : !(taxRatesQuery.data ?? []).length ? (
+                              <div className="px-4 py-3 text-sm text-slate-500">No tax rates configured yet.</div>
+                            ) : (
+                              <div className="max-h-64 overflow-y-auto py-1">
+                                {(taxRatesQuery.data ?? []).map((tax) => (
+                                  <label
+                                    key={tax.id}
+                                    className="flex items-center justify-between gap-3 px-4 py-2 text-sm text-slate-700 transition hover:bg-slate-50"
+                                  >
+                                    <span>
+                                      <span className="font-medium">{tax.name}</span>
+                                      <span className="ml-2 text-xs text-slate-500">
+                                        {tax.rateType === 'PERCENTAGE'
+                                          ? `${tax.rateValue}%`
+                                          : `Flat ${tax.rateValue}`}
+                                      </span>
+                                    </span>
+                                    <input
+                                      type="checkbox"
+                                      className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary"
+                                      checked={selectedTaxIds.includes(tax.id)}
+                                      onChange={() => toggleTaxSelection(tax.id)}
+                                    />
+                                  </label>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
 
-                    <div>
+                    <div className="lg:col-span-2 space-y-2">
                       <label className="text-sm font-medium text-slate-700">Description</label>
                       <RichTextEditor
                         value={form.description}
                         onChange={(value) => setForm((previous) => ({ ...previous, description: value }))}
-                        minHeight={200}
+                        minHeight={220}
                       />
-                      {validation.description && (
-                        <p className="mt-2 text-xs text-rose-500">{validation.description}</p>
+                      {visibleValidation.description && (
+                        <p className="text-xs text-rose-500">{visibleValidation.description}</p>
                       )}
                     </div>
                   </div>
-                </div>
-              </PageSection>
+                </PageSection>
               )}
             {activeTab === 'media' && (
               <PageSection
                 title="Media"
                 description="Manage gallery imagery, hero thumbnails, product videos, and supporting specification documents."
               >
-                <div className="grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
-                  <div className="space-y-4">
-                    <div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-slate-700">Gallery images</span>
+                <div className="grid gap-8 lg:grid-cols-2">
+                  <div className="space-y-6">
+                    <div className="rounded-xl border border-slate-200 p-4 shadow-sm">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                          <span className="text-sm font-medium text-slate-700">Gallery images</span>
+                          <p className="text-xs text-slate-500">
+                            Showcase multiple angles or lifestyle imagery. Upload as many visuals as you need.
+                          </p>
+                        </div>
                         <button
                           type="button"
                           onClick={() => openMediaDialog({ type: 'gallery' })}
-                          className="text-sm font-medium text-primary transition hover:text-primary/80"
+                          className="inline-flex items-center justify-center rounded-full border border-primary/40 px-4 py-2 text-sm font-semibold text-primary transition hover:border-primary hover:bg-primary/10"
                         >
                           Add images
                         </button>
                       </div>
-                      <p className="mt-1 text-xs text-slate-500">
-                        Showcase multiple angles or lifestyle imagery. You can attach as many visuals as needed.
-                      </p>
-                      <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
                         {gallery.map((item, index) => (
                           <div key={`${item.url}-${index}`} className="group relative overflow-hidden rounded-xl border border-slate-200">
                             <img src={item.url} alt="" className="h-32 w-full object-cover" />
@@ -1732,9 +1853,12 @@ const ProductsPage = () => {
                       </div>
                     </div>
 
-                    <div>
-                      <span className="text-sm font-medium text-slate-700">Video</span>
-                      <div className="mt-2 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div className="rounded-xl border border-slate-200 p-4 shadow-sm">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-slate-700">Product video</span>
+                        <span className="text-xs text-slate-400">Optional</span>
+                      </div>
+                      <div className="mt-4 grid gap-4 sm:grid-cols-2">
                         <div>
                           <label htmlFor="video-provider" className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
                             Provider
@@ -1769,49 +1893,47 @@ const ProductsPage = () => {
                     </div>
                   </div>
 
-                  <div className="space-y-4">
-                    <div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-slate-700">Thumbnail image</span>
+                  <div className="space-y-6">
+                    <div className="rounded-xl border border-slate-200 p-4 shadow-sm">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                          <span className="text-sm font-medium text-slate-700">Thumbnail image</span>
+                          <p className="text-xs text-slate-500">Primary image shown in product listings and highlights.</p>
+                        </div>
                         <button
                           type="button"
                           onClick={() => openMediaDialog({ type: 'thumbnail' })}
-                          className="text-sm font-medium text-primary transition hover:text-primary/80"
+                          className="inline-flex items-center justify-center rounded-full border border-primary/40 px-4 py-2 text-sm font-semibold text-primary transition hover:border-primary hover:bg-primary/10"
                         >
                           {thumbnail ? 'Replace' : 'Select thumbnail'}
                         </button>
                       </div>
-                      <p className="mt-1 text-xs text-slate-500">
-                        Primary image shown in cards and featured placements.
-                      </p>
-                      <div className="mt-3 h-40 overflow-hidden rounded-xl border border-dashed border-slate-300 bg-slate-50">
+                      <div className="mt-4 h-44 overflow-hidden rounded-xl border border-dashed border-slate-300 bg-slate-50">
                         {thumbnail ? (
                           <img src={thumbnail.url} alt="" className="h-full w-full object-cover" />
                         ) : (
-                          <div className="flex h-full items-center justify-center text-sm text-slate-500">
-                            No thumbnail selected yet.
-                          </div>
+                          <div className="flex h-full items-center justify-center text-sm text-slate-500">No thumbnail selected yet.</div>
                         )}
                       </div>
                     </div>
 
-                    <div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-slate-700">PDF specification</span>
+                    <div className="rounded-xl border border-slate-200 p-4 shadow-sm">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                          <span className="text-sm font-medium text-slate-700">PDF specification</span>
+                          <p className="text-xs text-slate-500">Attach specification sheets, size charts, or care guides.</p>
+                        </div>
                         <button
                           type="button"
                           onClick={() => openMediaDialog({ type: 'pdf' })}
-                          className="text-sm font-medium text-primary transition hover:text-primary/80"
+                          className="inline-flex items-center justify-center rounded-full border border-primary/40 px-4 py-2 text-sm font-semibold text-primary transition hover:border-primary hover:bg-primary/10"
                         >
                           {pdfSpecification ? 'Replace document' : 'Attach PDF'}
                         </button>
                       </div>
-                      <p className="mt-1 text-xs text-slate-500">
-                        Share sizing charts, care guides, or product specification sheets.
-                      </p>
                       {pdfSpecification ? (
-                        <div className="mt-3 flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
-                          <span>{pdfSpecification.originalFilename ?? 'Specification.pdf'}</span>
+                        <div className="mt-4 flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                          <span className="truncate pr-4">{pdfSpecification.originalFilename ?? 'Specification.pdf'}</span>
                           <button
                             type="button"
                             onClick={() => setPdfSpecification(null)}
@@ -1821,7 +1943,7 @@ const ProductsPage = () => {
                           </button>
                         </div>
                       ) : (
-                        <div className="mt-3 rounded-xl border border-dashed border-slate-300 px-4 py-6 text-sm text-slate-500">
+                        <div className="mt-4 rounded-xl border border-dashed border-slate-300 px-4 py-6 text-sm text-slate-500">
                           No document attached yet.
                         </div>
                       )}
@@ -1835,9 +1957,9 @@ const ProductsPage = () => {
                 title="Price & Stock"
                 description="Configure pricing, inventory, and attribute-driven variants. Base pricing powers quick calculations for every variant."
               >
-                <div className="grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
+                <div className="grid gap-8 xl:grid-cols-[320px_minmax(0,1fr)]">
                   <aside className="space-y-4">
-                    <div className="rounded-xl border border-slate-200 p-4">
+                    <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4 shadow-sm">
                       <h3 className="text-sm font-semibold text-slate-800">Attribute options</h3>
                       <p className="mt-1 text-xs text-slate-500">
                         Enable the attributes that should generate product variants. Select values for each attribute.
@@ -1902,9 +2024,10 @@ const ProductsPage = () => {
                   </aside>
 
                   <div className="space-y-6">
-                    <div className="grid gap-6 lg:grid-cols-2">
-                      <div className="space-y-4">
-                        <div>
+                    <div className="rounded-xl border border-slate-200 p-4 shadow-sm">
+                      <h3 className="text-sm font-semibold text-slate-800">Base pricing</h3>
+                      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                        <div className="sm:col-span-2">
                           <label htmlFor="unit-price" className="text-sm font-medium text-slate-700">
                             Unit price
                           </label>
@@ -1916,92 +2039,85 @@ const ProductsPage = () => {
                             value={form.unitPrice}
                             onChange={(event) => setForm((previous) => ({ ...previous, unitPrice: event.target.value }))}
                             placeholder="100.00"
-                            className={inputClassNames(Boolean(validation.unitPrice))}
-                            aria-invalid={Boolean(validation.unitPrice)}
+                            className={inputClassNames(Boolean(visibleValidation.unitPrice))}
+                            aria-invalid={Boolean(visibleValidation.unitPrice)}
                           />
-                          {validation.unitPrice && (
-                            <p className="mt-1 text-xs text-rose-500">{validation.unitPrice}</p>
+                          {visibleValidation.unitPrice && (
+                            <p className="mt-1 text-xs text-rose-500">{visibleValidation.unitPrice}</p>
                           )}
                         </div>
-
-                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                          <div>
-                            <label htmlFor="discount-value" className="text-sm font-medium text-slate-700">
-                              Discount value
-                            </label>
-                            <input
-                              id="discount-value"
-                              type="number"
-                              step="0.01"
-                              value={form.discountValue}
-                              onChange={(event) => setForm((previous) => ({ ...previous, discountValue: event.target.value }))}
-                              placeholder="10"
-                              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                            />
-                          </div>
-                          <div>
-                            <span className="text-sm font-medium text-slate-700">Discount type</span>
-                            <div className="mt-1 flex items-center gap-4 text-sm text-slate-600">
-                              {(['FLAT', 'PERCENTAGE'] as DiscountType[]).map((type) => (
-                                <label key={type} className="flex items-center gap-2">
-                                  <input
-                                    type="radio"
-                                    name="discountType"
-                                    value={type}
-                                    checked={form.discountType === type}
-                                    onChange={(event) =>
-                                      setForm((previous) => ({
-                                        ...previous,
-                                        discountType: event.target.value as DiscountType
-                                      }))
-                                    }
-                                    className="h-4 w-4 border-slate-300 text-primary focus:ring-primary"
-                                  />
-                                  {type === 'FLAT' ? 'Flat amount' : 'Percentage'}
-                                </label>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                          <div>
-                            <label htmlFor="discount-min" className="text-sm font-medium text-slate-700">
-                              Discount min quantity
-                            </label>
-                            <input
-                              id="discount-min"
-                              type="number"
-                              min="0"
-                              step="1"
-                              value={form.discountMinQuantity}
-                              onChange={(event) =>
-                                setForm((previous) => ({ ...previous, discountMinQuantity: event.target.value }))
-                              }
-                              placeholder="1"
-                              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                            />
-                          </div>
-                          <div>
-                            <label htmlFor="discount-max" className="text-sm font-medium text-slate-700">
-                              Discount max quantity
-                            </label>
-                            <input
-                              id="discount-max"
-                              type="number"
-                              min="0"
-                              step="1"
-                              value={form.discountMaxQuantity}
-                              onChange={(event) =>
-                                setForm((previous) => ({ ...previous, discountMaxQuantity: event.target.value }))
-                              }
-                              placeholder="10"
-                              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                            />
-                          </div>
-                        </div>
-
                         <div>
+                          <label htmlFor="discount-value" className="text-sm font-medium text-slate-700">
+                            Discount value
+                          </label>
+                          <input
+                            id="discount-value"
+                            type="number"
+                            step="0.01"
+                            value={form.discountValue}
+                            onChange={(event) => setForm((previous) => ({ ...previous, discountValue: event.target.value }))}
+                            placeholder="10"
+                            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                          />
+                        </div>
+                        <div>
+                          <span className="text-sm font-medium text-slate-700">Discount type</span>
+                          <div className="mt-1 flex items-center gap-4 text-sm text-slate-600">
+                            {(['FLAT', 'PERCENTAGE'] as DiscountType[]).map((type) => (
+                              <label key={type} className="flex items-center gap-2">
+                                <input
+                                  type="radio"
+                                  name="discountType"
+                                  value={type}
+                                  checked={form.discountType === type}
+                                  onChange={(event) =>
+                                    setForm((previous) => ({
+                                      ...previous,
+                                      discountType: event.target.value as DiscountType
+                                    }))
+                                  }
+                                  className="h-4 w-4 border-slate-300 text-primary focus:ring-primary"
+                                />
+                                {type === 'FLAT' ? 'Flat amount' : 'Percentage'}
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                        <div>
+                          <label htmlFor="discount-min" className="text-sm font-medium text-slate-700">
+                            Discount min quantity
+                          </label>
+                          <input
+                            id="discount-min"
+                            type="number"
+                            min="0"
+                            step="1"
+                            value={form.discountMinQuantity}
+                            onChange={(event) =>
+                              setForm((previous) => ({ ...previous, discountMinQuantity: event.target.value }))
+                            }
+                            placeholder="1"
+                            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                          />
+                        </div>
+                        <div>
+                          <label htmlFor="discount-max" className="text-sm font-medium text-slate-700">
+                            Discount max quantity
+                          </label>
+                          <input
+                            id="discount-max"
+                            type="number"
+                            min="0"
+                            step="1"
+                            value={form.discountMaxQuantity}
+                            onChange={(event) =>
+                              setForm((previous) => ({ ...previous, discountMaxQuantity: event.target.value }))
+                            }
+                            placeholder="10"
+                            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                          />
+                        </div>
+                        <div className="sm:col-span-2">
                           <label htmlFor="price-tag" className="text-sm font-medium text-slate-700">
                             Price tag label
                           </label>
@@ -2015,8 +2131,11 @@ const ProductsPage = () => {
                           />
                         </div>
                       </div>
+                    </div>
 
-                      <div className="space-y-4">
+                    <div className="rounded-xl border border-slate-200 p-4 shadow-sm">
+                      <h3 className="text-sm font-semibold text-slate-800">Inventory & visibility</h3>
+                      <div className="mt-4 grid gap-4 sm:grid-cols-2">
                         <div>
                           <label htmlFor="stock-quantity" className="text-sm font-medium text-slate-700">
                             Stock quantity
@@ -2032,70 +2151,63 @@ const ProductsPage = () => {
                             className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                           />
                         </div>
-
-                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                          <div>
-                            <label htmlFor="sku" className="text-sm font-medium text-slate-700">
-                              SKU
-                            </label>
-                            <input
-                              id="sku"
-                              type="text"
-                              value={form.sku}
-                              onChange={(event) => setForm((previous) => ({ ...previous, sku: event.target.value }))}
-                              placeholder="AUR-SHOE-001"
-                              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                            />
-                          </div>
-                          <div>
-                            <label htmlFor="external-link" className="text-sm font-medium text-slate-700">
-                              External link
-                            </label>
-                            <input
-                              id="external-link"
-                              type="url"
-                              value={form.externalLink}
-                              onChange={(event) => setForm((previous) => ({ ...previous, externalLink: event.target.value }))}
-                              placeholder="https://brand.com/product"
-                              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                            />
-                          </div>
+                        <div>
+                          <label htmlFor="sku" className="text-sm font-medium text-slate-700">
+                            SKU
+                          </label>
+                          <input
+                            id="sku"
+                            type="text"
+                            value={form.sku}
+                            onChange={(event) => setForm((previous) => ({ ...previous, sku: event.target.value }))}
+                            placeholder="AUR-SHOE-001"
+                            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                          />
                         </div>
-
-                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                          <div>
-                            <label htmlFor="external-button" className="text-sm font-medium text-slate-700">
-                              External link button label
-                            </label>
-                            <input
-                              id="external-button"
-                              type="text"
-                              value={form.externalLinkButton}
-                              onChange={(event) =>
-                                setForm((previous) => ({ ...previous, externalLinkButton: event.target.value }))
-                              }
-                              placeholder="Shop now"
-                              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                            />
-                          </div>
-                          <div>
-                            <label htmlFor="low-stock" className="text-sm font-medium text-slate-700">
-                              Low stock warning threshold
-                            </label>
-                            <input
-                              id="low-stock"
-                              type="number"
-                              min="0"
-                              step="1"
-                              value={form.lowStockWarning}
-                              onChange={(event) => setForm((previous) => ({ ...previous, lowStockWarning: event.target.value }))}
-                              placeholder="20"
-                              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                            />
-                          </div>
+                        <div>
+                          <label htmlFor="external-link" className="text-sm font-medium text-slate-700">
+                            External link
+                          </label>
+                          <input
+                            id="external-link"
+                            type="url"
+                            value={form.externalLink}
+                            onChange={(event) => setForm((previous) => ({ ...previous, externalLink: event.target.value }))}
+                            placeholder="https://brand.com/product"
+                            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                          />
                         </div>
-
-                        <div className="space-y-3 rounded-xl border border-slate-200 px-4 py-4">
+                        <div>
+                          <label htmlFor="external-button" className="text-sm font-medium text-slate-700">
+                            External link button label
+                          </label>
+                          <input
+                            id="external-button"
+                            type="text"
+                            value={form.externalLinkButton}
+                            onChange={(event) =>
+                              setForm((previous) => ({ ...previous, externalLinkButton: event.target.value }))
+                            }
+                            placeholder="Shop now"
+                            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                          />
+                        </div>
+                        <div>
+                          <label htmlFor="low-stock" className="text-sm font-medium text-slate-700">
+                            Low stock warning threshold
+                          </label>
+                          <input
+                            id="low-stock"
+                            type="number"
+                            min="0"
+                            step="1"
+                            value={form.lowStockWarning}
+                            onChange={(event) => setForm((previous) => ({ ...previous, lowStockWarning: event.target.value }))}
+                            placeholder="20"
+                            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                          />
+                        </div>
+                        <div className="sm:col-span-2 space-y-3 rounded-xl border border-slate-200 px-4 py-4">
                           <span className="text-sm font-semibold text-slate-800">Stock visibility</span>
                           {stockVisibilityOptions.map((option) => (
                             <label key={option.value} className="flex items-start gap-3 text-sm text-slate-700">
@@ -2122,111 +2234,110 @@ const ProductsPage = () => {
                       </div>
                     </div>
 
-                    {variantCombinations.length > 0 ? (
-                      <div className="overflow-hidden rounded-xl border border-slate-200">
-                      <div className="border-b border-slate-200 bg-slate-50 px-4 py-3">
-                        <h3 className="text-sm font-semibold text-slate-800">Generated variants</h3>
-                        <p className="mt-1 text-xs text-slate-500">
-                          Each combination inherits the base price. Set price adjustments, dedicated SKUs, quantities, and
-                          attach tailored imagery per variant.
-                        </p>
+                    <div className="rounded-xl border border-slate-200 p-4 shadow-sm">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <h3 className="text-sm font-semibold text-slate-800">Variants</h3>
+                        <span className="text-xs text-slate-500">
+                          {variantCombinations.length} combination{variantCombinations.length === 1 ? '' : 's'} active
+                        </span>
                       </div>
-                      <div className="overflow-x-auto">
-                        <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
-                          <thead className="bg-slate-50 text-xs uppercase tracking-[0.2em] text-slate-500">
-                            <tr>
-                              <th className="px-4 py-3 font-semibold">Variant</th>
-                              <th className="px-4 py-3 font-semibold">Price adjustment</th>
-                              <th className="px-4 py-3 font-semibold">Final price</th>
-                              <th className="px-4 py-3 font-semibold">SKU</th>
-                              <th className="px-4 py-3 font-semibold">Quantity</th>
-                              <th className="px-4 py-3 font-semibold">Photos</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-slate-100 bg-white">
-                            {variantCombinations.map((combination) => {
-                              const key = combination.map((part) => part.valueId).join('-');
-                              const variant = variants[key];
-                              const basePrice = parseNumber(form.unitPrice) ?? 0;
-                              const priceAdjustment = parseNumber(variant?.priceAdjustment ?? '') ?? 0;
-                              const finalPrice = basePrice + priceAdjustment;
-                              return (
-                                <tr key={key}>
-                                  <td className="px-4 py-3 align-top text-slate-700">
-                                    <div className="font-semibold text-slate-900">{formatVariantLabel(combination)}</div>
-                                  </td>
-                                  <td className="px-4 py-3 align-top">
-                                    <input
-                                      type="number"
-                                      step="0.01"
-                                      value={variant?.priceAdjustment ?? ''}
-                                      onChange={(event) => handleVariantFieldChange(key, 'priceAdjustment', event.target.value)}
-                                      placeholder="10"
-                                      className="w-32 rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                                    />
-                                  </td>
-                                  <td className="px-4 py-3 align-top text-slate-700">
-                                    <div className="font-semibold text-slate-900">{finalPrice.toFixed(2)}</div>
-                                    <div className="text-xs text-slate-500">Base {basePrice.toFixed(2)}</div>
-                                  </td>
-                                  <td className="px-4 py-3 align-top">
-                                    <input
-                                      type="text"
-                                      value={variant?.sku ?? ''}
-                                      onChange={(event) => handleVariantFieldChange(key, 'sku', event.target.value)}
-                                      placeholder="AUR-SHOE-001-6"
-                                      className="w-40 rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                                    />
-                                  </td>
-                                  <td className="px-4 py-3 align-top">
-                                    <input
-                                      type="number"
-                                      min="0"
-                                      step="1"
-                                      value={variant?.quantity ?? ''}
-                                      onChange={(event) => handleVariantFieldChange(key, 'quantity', event.target.value)}
-                                      placeholder="50"
-                                      className="w-28 rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                                    />
-                                  </td>
-                                  <td className="px-4 py-3 align-top">
-                                    <div className="flex flex-col gap-2">
-                                      <button
-                                        type="button"
-                                        onClick={() => openMediaDialog({ type: 'variant', key })}
-                                        className="inline-flex items-center justify-center rounded-full bg-primary px-3 py-1 text-xs font-semibold text-white shadow-sm transition hover:bg-primary/90"
-                                      >
-                                        {variant?.media.length ? 'Add more photos' : 'Attach photos'}
-                                      </button>
-                                      <div className="flex flex-wrap gap-2">
-                                        {variant?.media.map((mediaItem, index) => (
-                                          <div key={`${mediaItem.url}-${index}`} className="relative h-12 w-12 overflow-hidden rounded-lg">
-                                            <img src={mediaItem.url} alt="" className="h-full w-full object-cover" />
+                      {variantCombinations.length > 0 ? (
+                        <div className="mt-4 overflow-x-auto">
+                          <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
+                            <thead className="bg-slate-50">
+                              <tr>
+                                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Variant</th>
+                                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Price adj.</th>
+                                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">SKU</th>
+                                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Quantity</th>
+                                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Photos</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                              {variantCombinations.map((combination) => {
+                                const key = combination.map((part) => part.valueId).join('-');
+                                const variant = variants[key];
+                                const priceAdjustment = variant?.priceAdjustment ?? '';
+                                const sku = variant?.sku ?? '';
+                                const quantity = variant?.quantity ?? '';
+                                const media = variant?.media ?? [];
+                                return (
+                                  <tr key={key} className="bg-white">
+                                    <td className="px-4 py-3 align-top text-slate-700">
+                                      <div className="font-medium text-slate-900">{formatVariantLabel(combination)}</div>
+                                      <div className="text-xs text-slate-500">
+                                        Final price calculated from base + adjustment.
+                                      </div>
+                                    </td>
+                                    <td className="px-4 py-3 align-top">
+                                      <input
+                                        type="number"
+                                        step="0.01"
+                                        value={priceAdjustment}
+                                        onChange={(event) => handleVariantFieldChange(key, 'priceAdjustment', event.target.value)}
+                                        placeholder="0"
+                                        className="w-28 rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                                      />
+                                    </td>
+                                    <td className="px-4 py-3 align-top">
+                                      <input
+                                        type="text"
+                                        value={sku}
+                                        onChange={(event) => handleVariantFieldChange(key, 'sku', event.target.value)}
+                                        placeholder="Variant SKU"
+                                        className="w-36 rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                                      />
+                                    </td>
+                                    <td className="px-4 py-3 align-top">
+                                      <input
+                                        type="number"
+                                        min="0"
+                                        step="1"
+                                        value={quantity}
+                                        onChange={(event) => handleVariantFieldChange(key, 'quantity', event.target.value)}
+                                        placeholder="0"
+                                        className="w-24 rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                                      />
+                                    </td>
+                                    <td className="px-4 py-3 align-top">
+                                      <div className="flex flex-wrap items-center gap-2">
+                                        {media.map((item, index) => (
+                                          <div
+                                            key={`${item.url}-${index}`}
+                                            className="group relative h-12 w-12 overflow-hidden rounded-lg border border-slate-200"
+                                          >
+                                            <img src={item.url} alt="" className="h-full w-full object-cover" />
                                             <button
                                               type="button"
                                               onClick={() => removeVariantMedia(key, index)}
-                                              className="absolute -right-2 -top-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-rose-600 text-[10px] font-bold text-white shadow-sm"
+                                              className="absolute -right-2 -top-2 hidden h-5 w-5 items-center justify-center rounded-full bg-rose-500 text-[10px] font-semibold text-white shadow-sm transition hover:bg-rose-600 group-hover:flex"
+                                              aria-label="Remove variant photo"
                                             >
                                               ×
                                             </button>
                                           </div>
                                         ))}
+                                        <button
+                                          type="button"
+                                          onClick={() => openMediaDialog({ type: 'variant', key })}
+                                          className="inline-flex items-center justify-center rounded-full border border-slate-300 px-3 py-1 text-xs font-semibold text-slate-600 transition hover:border-primary hover:text-primary"
+                                        >
+                                          {media.length ? 'Update photos' : 'Add photos'}
+                                        </button>
                                       </div>
-                                    </div>
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      ) : (
+                        <div className="mt-4 rounded-xl border border-dashed border-slate-300 px-4 py-6 text-sm text-slate-500">
+                          Select attribute values to generate variant combinations.
+                        </div>
+                      )}
                     </div>
-                  ) : (
-                    <div className="rounded-xl border border-dashed border-slate-300 px-6 py-8 text-center text-sm text-slate-500">
-                      Variants will appear here once you enable attributes and choose values. Without attributes the base pricing
-                      above will be used for the product.
-                    </div>
-                    )}
                   </div>
                 </div>
               </PageSection>
@@ -2360,7 +2471,7 @@ const ProductsPage = () => {
         <div className="flex flex-col items-stretch gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <div className="space-y-1 text-sm text-slate-500">
             {isLoading && <div>We are loading catalog data to help with product configuration…</div>}
-            {validationMessages.length > 0 && (
+            {showValidation && validationMessages.length > 0 && (
               <div className="text-amber-600">Complete the highlighted fields before saving.</div>
             )}
             {!canSubmit && (
