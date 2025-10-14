@@ -6,6 +6,7 @@ import com.example.rbac.products.model.MediaAsset;
 import com.example.rbac.products.model.Product;
 import com.example.rbac.products.model.ProductExpandableSection;
 import com.example.rbac.products.model.ProductGalleryImage;
+import com.example.rbac.products.model.ProductReview;
 import com.example.rbac.products.model.ProductVariant;
 import com.example.rbac.products.model.ProductVariantMedia;
 import com.example.rbac.products.model.ProductVariantValue;
@@ -19,6 +20,12 @@ import java.util.stream.Collectors;
 
 @Component
 public class ProductMapper {
+
+    private final ProductReviewMapper productReviewMapper;
+
+    public ProductMapper(ProductReviewMapper productReviewMapper) {
+        this.productReviewMapper = productReviewMapper;
+    }
 
     public ProductSummaryDto toSummary(Product product) {
         ProductSummaryDto dto = new ProductSummaryDto();
@@ -38,6 +45,10 @@ public class ProductMapper {
     }
 
     public ProductDto toDto(Product product) {
+        return toDto(product, List.of());
+    }
+
+    public ProductDto toDto(Product product, List<ProductReview> reviews) {
         ProductDto dto = new ProductDto();
         dto.setId(product.getId());
         dto.setName(product.getName());
@@ -60,6 +71,7 @@ public class ProductMapper {
         dto.setPricing(mapPricing(product));
         dto.setVariants(mapVariants(product.getVariants()));
         dto.setExpandableSections(mapExpandableSections(product.getExpandableSections()));
+        dto.setReviews(productReviewMapper.toDtoList(reviews));
         dto.setCreatedAt(product.getCreatedAt());
         dto.setUpdatedAt(product.getUpdatedAt());
         if (product.getBrand() != null) {

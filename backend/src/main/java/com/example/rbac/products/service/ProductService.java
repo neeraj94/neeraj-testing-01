@@ -14,6 +14,7 @@ import com.example.rbac.products.dto.*;
 import com.example.rbac.products.mapper.ProductMapper;
 import com.example.rbac.products.model.*;
 import com.example.rbac.products.repository.ProductRepository;
+import com.example.rbac.products.repository.ProductReviewRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -36,19 +37,22 @@ public class ProductService {
     private final TaxRateRepository taxRateRepository;
     private final AttributeValueRepository attributeValueRepository;
     private final ProductMapper productMapper;
+    private final ProductReviewRepository productReviewRepository;
 
     public ProductService(ProductRepository productRepository,
                           BrandRepository brandRepository,
                           CategoryRepository categoryRepository,
                           TaxRateRepository taxRateRepository,
                           AttributeValueRepository attributeValueRepository,
-                          ProductMapper productMapper) {
+                          ProductMapper productMapper,
+                          ProductReviewRepository productReviewRepository) {
         this.productRepository = productRepository;
         this.brandRepository = brandRepository;
         this.categoryRepository = categoryRepository;
         this.taxRateRepository = taxRateRepository;
         this.attributeValueRepository = attributeValueRepository;
         this.productMapper = productMapper;
+        this.productReviewRepository = productReviewRepository;
     }
 
     @Transactional(readOnly = true)
@@ -68,7 +72,7 @@ public class ProductService {
     public ProductDto get(Long id) {
         Product product = productRepository.findDetailedById(id)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Product not found"));
-        return productMapper.toDto(product);
+        return productMapper.toDto(product, productReviewRepository.findByProductIdOrderByReviewedAtDesc(id));
     }
 
     @Transactional
@@ -76,7 +80,7 @@ public class ProductService {
         Product product = new Product();
         applyRequest(product, request);
         Product saved = productRepository.save(product);
-        return productMapper.toDto(saved);
+        return productMapper.toDto(saved, List.of());
     }
 
     @Transactional
@@ -85,7 +89,7 @@ public class ProductService {
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Product not found"));
         applyRequest(product, request);
         Product saved = productRepository.save(product);
-        return productMapper.toDto(saved);
+        return productMapper.toDto(saved, productReviewRepository.findByProductIdOrderByReviewedAtDesc(saved.getId()));
     }
 
     @Transactional

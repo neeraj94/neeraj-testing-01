@@ -6,6 +6,8 @@ import com.example.rbac.categories.model.Category;
 import com.example.rbac.finance.taxrate.model.TaxRate;
 import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.Fetch;
+import org.hibernate.annotations.FetchMode;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
@@ -157,15 +159,18 @@ public class Product {
 
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("displayOrder ASC")
+    @Fetch(FetchMode.SUBSELECT)
     private List<ProductGalleryImage> galleryImages = new ArrayList<>();
 
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("displayOrder ASC, id ASC")
+    @Fetch(FetchMode.SUBSELECT)
     private List<ProductVariant> variants = new ArrayList<>();
 
     @ElementCollection
     @CollectionTable(name = "product_expandable_sections", joinColumns = @JoinColumn(name = "product_id"))
     @OrderColumn(name = "display_order")
+    @Fetch(FetchMode.SUBSELECT)
     private List<ProductExpandableSection> expandableSections = new ArrayList<>();
 
     @CreationTimestamp

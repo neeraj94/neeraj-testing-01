@@ -28,6 +28,7 @@ public class ProductDto {
     private ProductPricingDto pricing;
     private List<ProductVariantDto> variants;
     private List<ProductExpandableSectionDto> expandableSections;
+    private List<ProductReviewDto> reviews;
     private Instant createdAt;
     private Instant updatedAt;
 
@@ -205,6 +206,14 @@ public class ProductDto {
 
     public void setExpandableSections(List<ProductExpandableSectionDto> expandableSections) {
         this.expandableSections = expandableSections;
+    }
+
+    public List<ProductReviewDto> getReviews() {
+        return reviews;
+    }
+
+    public void setReviews(List<ProductReviewDto> reviews) {
+        this.reviews = reviews;
     }
 
     public Instant getCreatedAt() {

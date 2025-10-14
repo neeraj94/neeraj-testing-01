@@ -207,6 +207,15 @@ export const DEFAULT_NAVIGATION_MENU: NavigationNode[] = [
         group: false,
         permissions: ['PRODUCT_VIEW', 'PRODUCT_CREATE', 'PRODUCT_UPDATE'],
         children: []
+      },
+      {
+        key: 'reviews',
+        label: 'Reviews',
+        icon: '⭐',
+        path: '/admin/reviews',
+        group: false,
+        permissions: ['PRODUCT_VIEW'],
+        children: []
       }
     ]
   },
