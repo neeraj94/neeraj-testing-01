@@ -53,9 +53,6 @@ public class Product {
     @Column(columnDefinition = "TEXT")
     private String description;
 
-    @Column(name = "short_description", columnDefinition = "TEXT")
-    private String shortDescription;
-
     @Column(name = "video_provider", length = 50)
     private String videoProvider;
 
@@ -170,6 +167,11 @@ public class Product {
     @Fetch(FetchMode.SUBSELECT)
     private List<ProductVariant> variants = new ArrayList<>();
 
+    @ElementCollection
+    @CollectionTable(name = "product_expandable_sections", joinColumns = @JoinColumn(name = "product_id"))
+    @OrderColumn(name = "display_order")
+    private List<ProductExpandableSection> expandableSections = new ArrayList<>();
+
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("displayOrder ASC, id ASC")
     private List<ProductInfoSection> infoSections = new ArrayList<>();
@@ -260,14 +262,6 @@ public class Product {
 
     public void setDescription(String description) {
         this.description = description;
-    }
-
-    public String getShortDescription() {
-        return shortDescription;
-    }
-
-    public void setShortDescription(String shortDescription) {
-        this.shortDescription = shortDescription;
     }
 
     public String getVideoProvider() {
@@ -476,6 +470,14 @@ public class Product {
 
     public void setVariants(List<ProductVariant> variants) {
         this.variants = variants;
+    }
+
+    public List<ProductExpandableSection> getExpandableSections() {
+        return expandableSections;
+    }
+
+    public void setExpandableSections(List<ProductExpandableSection> expandableSections) {
+        this.expandableSections = expandableSections;
     }
 
     public List<ProductInfoSection> getInfoSections() {

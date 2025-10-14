@@ -108,7 +108,6 @@ public class ProductService {
         product.setTodaysDeal(request.isTodaysDeal());
         product.setShortDescription(trimToNull(request.getShortDescription()));
         product.setDescription(trimToNull(request.getDescription()));
-        product.setShortDescription(trimToNull(request.getShortDescription()));
         product.setVideoProvider(trimToNull(request.getVideoProvider()));
         product.setVideoUrl(trimToNull(request.getVideoUrl()));
 
@@ -212,6 +211,32 @@ public class ProductService {
             image.setMedia(mediaAsset);
             image.setDisplayOrder(index++);
             product.getGalleryImages().add(image);
+        }
+    }
+
+    private void rebuildExpandableSections(Product product, List<ProductExpandableSectionRequest> sections) {
+        List<ProductExpandableSection> expandableSections = product.getExpandableSections();
+        if (expandableSections == null) {
+            expandableSections = new ArrayList<>();
+            product.setExpandableSections(expandableSections);
+        }
+        expandableSections.clear();
+        if (CollectionUtils.isEmpty(sections)) {
+            return;
+        }
+        for (ProductExpandableSectionRequest sectionRequest : sections) {
+            if (sectionRequest == null) {
+                continue;
+            }
+            String title = trimToNull(sectionRequest.getTitle());
+            String content = trimToNull(sectionRequest.getContent());
+            if (title == null && content == null) {
+                continue;
+            }
+            ProductExpandableSection section = new ProductExpandableSection();
+            section.setTitle(title);
+            section.setContent(content);
+            expandableSections.add(section);
         }
     }
 
