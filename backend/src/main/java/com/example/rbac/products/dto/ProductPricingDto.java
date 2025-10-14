@@ -4,6 +4,8 @@ import com.example.rbac.products.model.DiscountType;
 import com.example.rbac.products.model.StockVisibilityState;
 
 import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.List;
 
 public class ProductPricingDto {
 
@@ -12,7 +14,9 @@ public class ProductPricingDto {
     private BigDecimal discountValue;
     private Integer discountMinQuantity;
     private Integer discountMaxQuantity;
-    private String priceTag;
+    private Instant discountStartAt;
+    private Instant discountEndAt;
+    private List<String> tags;
     private Integer stockQuantity;
     private String sku;
     private String externalLink;
@@ -60,12 +64,28 @@ public class ProductPricingDto {
         this.discountMaxQuantity = discountMaxQuantity;
     }
 
-    public String getPriceTag() {
-        return priceTag;
+    public Instant getDiscountStartAt() {
+        return discountStartAt;
     }
 
-    public void setPriceTag(String priceTag) {
-        this.priceTag = priceTag;
+    public void setDiscountStartAt(Instant discountStartAt) {
+        this.discountStartAt = discountStartAt;
+    }
+
+    public Instant getDiscountEndAt() {
+        return discountEndAt;
+    }
+
+    public void setDiscountEndAt(Instant discountEndAt) {
+        this.discountEndAt = discountEndAt;
+    }
+
+    public List<String> getTags() {
+        return tags;
+    }
+
+    public void setTags(List<String> tags) {
+        this.tags = tags;
     }
 
     public Integer getStockQuantity() {
