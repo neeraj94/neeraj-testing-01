@@ -34,6 +34,7 @@ public class UserMapper {
         dto.setLinkedinUrl(user.getLinkedinUrl());
         dto.setSkypeId(user.getSkypeId());
         dto.setEmailSignature(user.getEmailSignature());
+        dto.setProfileImageUrl(user.getProfileImageUrl());
         dto.setEmailVerifiedAt(user.getEmailVerifiedAt());
         dto.setLoginAttempts(user.getLoginAttempts());
         dto.setLockedAt(user.getLockedAt());

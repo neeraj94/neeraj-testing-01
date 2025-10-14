@@ -27,6 +27,8 @@ public class ProfileUpdateRequest {
 
     private String emailSignature;
 
+    private String profileImageUrl;
+
     private String oldPassword;
 
     @Size(min = 8)
@@ -128,5 +130,13 @@ public class ProfileUpdateRequest {
 
     public void setConfirmNewPassword(String confirmNewPassword) {
         this.confirmNewPassword = confirmNewPassword;
+    }
+
+    public String getProfileImageUrl() {
+        return profileImageUrl;
+    }
+
+    public void setProfileImageUrl(String profileImageUrl) {
+        this.profileImageUrl = profileImageUrl;
     }
 }

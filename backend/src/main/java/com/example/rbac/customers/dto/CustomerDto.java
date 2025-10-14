@@ -8,6 +8,7 @@ public class CustomerDto {
     private String email;
     private String phone;
     private String address;
+    private String profileImageUrl;
     private Instant createdAt;
     private Instant updatedAt;
 
@@ -49,6 +50,14 @@ public class CustomerDto {
 
     public void setAddress(String address) {
         this.address = address;
+    }
+
+    public String getProfileImageUrl() {
+        return profileImageUrl;
+    }
+
+    public void setProfileImageUrl(String profileImageUrl) {
+        this.profileImageUrl = profileImageUrl;
     }
 
     public Instant getCreatedAt() {

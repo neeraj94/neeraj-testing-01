@@ -1,10 +1,20 @@
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import api from '../services/http';
 import { useAppSelector, useAppDispatch } from '../app/hooks';
 import { loadCurrentUser } from '../features/auth/authSlice';
 import { useToast } from '../components/ToastProvider';
 import { extractErrorMessage } from '../utils/errors';
+import MediaLibraryDialog from '../components/MediaLibraryDialog';
+import type { MediaSelection } from '../types/uploaded-file';
+
+interface UploadedFileUploadResponse {
+  url: string;
+  storageKey?: string | null;
+  originalFilename?: string | null;
+  mimeType?: string | null;
+  sizeBytes?: number | null;
+}
 
 const ProfilePage = () => {
   const dispatch = useAppDispatch();
@@ -24,6 +34,10 @@ const ProfilePage = () => {
     confirmNewPassword: ''
   });
   const [error, setError] = useState<string | null>(null);
+  const [profileImage, setProfileImage] = useState<MediaSelection | null>(
+    user?.profileImageUrl ? { url: user.profileImageUrl } : null
+  );
+  const [mediaDialogOpen, setMediaDialogOpen] = useState(false);
   const { notify } = useToast();
 
   useEffect(() => {
@@ -39,7 +53,106 @@ const ProfilePage = () => {
       skypeId: user?.skypeId ?? '',
       emailSignature: user?.emailSignature ?? ''
     }));
-  }, [user?.firstName, user?.lastName, user?.email, user?.phoneNumber, user?.whatsappNumber, user?.facebookUrl, user?.linkedinUrl, user?.skypeId, user?.emailSignature]);
+  }, [
+    user?.firstName,
+    user?.lastName,
+    user?.email,
+    user?.phoneNumber,
+    user?.whatsappNumber,
+    user?.facebookUrl,
+    user?.linkedinUrl,
+    user?.skypeId,
+    user?.emailSignature
+  ]);
+
+  useEffect(() => {
+    if (user?.profileImageUrl) {
+      setProfileImage({ url: user.profileImageUrl });
+    } else {
+      setProfileImage(null);
+    }
+  }, [user?.profileImageUrl]);
+
+  const profileInitials = useMemo(() => {
+    if (user?.fullName?.trim()) {
+      const parts = user.fullName
+        .trim()
+        .split(' ')
+        .filter(Boolean)
+        .map((part) => part.charAt(0).toUpperCase());
+      return (parts[0] ?? 'U') + (parts[1] ?? '');
+    }
+    if (user?.firstName?.trim()) {
+      return user.firstName.trim().charAt(0).toUpperCase();
+    }
+    return 'U';
+  }, [user?.fullName, user?.firstName]);
+
+  const openMediaDialog = () => {
+    setMediaDialogOpen(true);
+  };
+
+  const closeMediaDialog = () => {
+    setMediaDialogOpen(false);
+  };
+
+  const handleProfileImageSelect = (selection: MediaSelection) => {
+    setProfileImage(selection);
+    closeMediaDialog();
+  };
+
+  const handleProfileImageUpload = async (files: File[]): Promise<MediaSelection[]> => {
+    const sanitized = files.filter(Boolean);
+    if (!sanitized.length) {
+      return [];
+    }
+    const formData = new FormData();
+    sanitized.forEach((file) => formData.append('files', file));
+    formData.append('module', 'USER_PROFILE');
+
+    try {
+      const { data } = await api.post<UploadedFileUploadResponse[]>('/uploaded-files/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      const selections = (data ?? [])
+        .filter((item): item is UploadedFileUploadResponse => Boolean(item && item.url))
+        .map((uploaded) => ({
+          url: uploaded.url,
+          storageKey: uploaded.storageKey ?? undefined,
+          originalFilename: uploaded.originalFilename ?? undefined,
+          mimeType: uploaded.mimeType ?? undefined,
+          sizeBytes: uploaded.sizeBytes ?? undefined
+        }));
+      if (!selections.length) {
+        throw new Error('Upload failed');
+      }
+      notify({
+        type: 'success',
+        message:
+          selections.length === 1
+            ? `Uploaded ${selections[0].originalFilename ?? 'file'} successfully.`
+            : `Uploaded ${selections.length} files successfully.`
+      });
+      return selections;
+    } catch (uploadError) {
+      notify({
+        type: 'error',
+        message: extractErrorMessage(uploadError, 'Unable to upload profile image. Please try again.')
+      });
+      throw uploadError;
+    }
+  };
+
+  const handleProfileImageUploadComplete = (selections: MediaSelection[]) => {
+    if (selections.length) {
+      setProfileImage(selections[0]);
+    }
+    closeMediaDialog();
+  };
+
+  const handleRemoveProfileImage = () => {
+    setProfileImage(null);
+  };
 
   const updateProfile = useMutation({
     mutationFn: async () => {
@@ -56,6 +169,7 @@ const ProfilePage = () => {
         linkedinUrl: form.linkedinUrl.trim() || undefined,
         skypeId: form.skypeId.trim() || undefined,
         emailSignature: form.emailSignature.trim() || undefined,
+        profileImageUrl: profileImage?.url ?? null,
         oldPassword: oldPassword ? oldPassword : undefined,
         newPassword: newPassword ? newPassword : undefined,
         confirmNewPassword: confirmPassword ? confirmPassword : undefined
@@ -144,6 +258,42 @@ const ProfilePage = () => {
         <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
           <h2 className="text-lg font-semibold text-slate-800">Personal information</h2>
           <p className="mt-1 text-sm text-slate-500">This information is used across the workspace to identify you.</p>
+          <div className="mt-4 flex flex-wrap items-center gap-4">
+            <div className="aspect-square w-20 overflow-hidden rounded-full border border-slate-200 bg-slate-100">
+              {profileImage?.url ? (
+                <img
+                  src={profileImage.url}
+                  alt="Profile avatar"
+                  className="h-full w-full object-cover object-center"
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center text-lg font-semibold text-slate-500">
+                  {profileInitials}
+                </div>
+              )}
+            </div>
+            <div className="flex flex-col gap-2">
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={openMediaDialog}
+                  className="inline-flex items-center justify-center rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 transition hover:border-slate-400 hover:text-slate-900"
+                >
+                  {profileImage ? 'Change photo' : 'Add photo'}
+                </button>
+                {profileImage && (
+                  <button
+                    type="button"
+                    onClick={handleRemoveProfileImage}
+                    className="inline-flex items-center justify-center rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-500 transition hover:border-slate-300 hover:text-slate-800"
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+              <p className="text-xs text-slate-500">Use a square image to keep your avatar crisp across the app.</p>
+            </div>
+          </div>
           <div className="mt-4 grid gap-4 md:grid-cols-2">
             <div>
               <label className="block text-sm font-medium text-slate-600">First name</label>
@@ -300,6 +450,7 @@ const ProfilePage = () => {
                 newPassword: '',
                 confirmNewPassword: ''
               });
+              setProfileImage(user?.profileImageUrl ? { url: user.profileImageUrl } : null);
               setError(null);
             }}
           >
@@ -315,6 +466,15 @@ const ProfilePage = () => {
         </div>
         {error && <p className="text-sm text-red-600">{error}</p>}
       </form>
+      <MediaLibraryDialog
+        open={mediaDialogOpen}
+        onClose={closeMediaDialog}
+        onSelect={handleProfileImageSelect}
+        onUpload={handleProfileImageUpload}
+        onUploadComplete={handleProfileImageUploadComplete}
+        moduleFilters={['USER_PROFILE']}
+        title="Select profile image"
+      />
     </div>
   );
 };

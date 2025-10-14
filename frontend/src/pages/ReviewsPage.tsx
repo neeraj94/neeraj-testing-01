@@ -10,6 +10,7 @@ import { hasAnyPermission } from '../utils/permissions';
 import type { PermissionKey } from '../types/auth';
 import api from '../services/http';
 import { extractErrorMessage } from '../utils/errors';
+import { formatCurrency } from '../utils/currency';
 import type { ProductReviewPage, CreateProductReviewPayload, ProductDetail, ProductSummary } from '../types/product';
 import type { CategoryPage } from '../types/category';
 import type { Pagination, Customer } from '../types/models';
@@ -30,6 +31,7 @@ const ReviewsPage = () => {
   const queryClient = useQueryClient();
   const { notify } = useToast();
   const permissions = useAppSelector((state) => state.auth.permissions);
+  const baseCurrency = useAppSelector((state) => state.settings.theme.baseCurrency);
 
   const canManageReviews = useMemo(
     () => hasAnyPermission(permissions as PermissionKey[], ['PRODUCT_CREATE', 'PRODUCT_UPDATE']),
@@ -54,6 +56,26 @@ const ReviewsPage = () => {
   const [reviewAttachments, setReviewAttachments] = useState<MediaSelection[]>([]);
   const [reviewerAvatar, setReviewerAvatar] = useState<MediaSelection | null>(null);
   const [mediaDialogContext, setMediaDialogContext] = useState<'attachments' | 'avatar' | null>(null);
+  const [ratingHover, setRatingHover] = useState<number | null>(null);
+
+  const MEDIA_FILTERS: Record<'attachments' | 'avatar', string[]> = {
+    attachments: ['PRODUCT_MEDIA', 'PRODUCT_GALLERY_IMAGE', 'PRODUCT_VARIANT_IMAGE'],
+    avatar: ['USER_PROFILE', 'PRODUCT_MEDIA']
+  };
+
+  const selectionFromUrl = (url?: string | null): MediaSelection | null => {
+    if (!url || !url.trim()) {
+      return null;
+    }
+    const trimmed = url.trim();
+    return {
+      url: trimmed,
+      storageKey: null,
+      originalFilename: null,
+      mimeType: undefined,
+      sizeBytes: undefined
+    };
+  };
 
   const productsQuery = useQuery({
     queryKey: ['reviews', 'products'],
@@ -158,6 +180,7 @@ const ReviewsPage = () => {
     });
     setReviewAttachments([]);
     setReviewerAvatar(null);
+    setRatingHover(null);
   };
 
   const handleManualReviewSubmit = (event: FormEvent<HTMLFormElement>) => {
@@ -201,7 +224,8 @@ const ReviewsPage = () => {
     sanitized.forEach((file) => {
       formData.append('files', file);
     });
-    formData.append('module', 'PRODUCT_MEDIA');
+    const context = mediaDialogContext ?? 'attachments';
+    formData.append('module', context === 'avatar' ? 'USER_PROFILE' : 'PRODUCT_MEDIA');
     try {
       const { data } = await api.post<UploadedFileUploadResponse[]>('/uploaded-files/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
@@ -270,6 +294,30 @@ const ReviewsPage = () => {
   const reviews = reviewsQuery.data?.content ?? [];
   const totalElements = reviewsQuery.data?.totalElements ?? 0;
 
+  const ratingLabels: Record<number, string> = {
+    1: 'Needs work',
+    2: 'Below expectations',
+    3: 'Solid',
+    4: 'Great',
+    5: 'Outstanding'
+  };
+  const ratingValue = Number(manualReviewForm.rating) || 0;
+
+  const handleCustomerChange = (value: string) => {
+    const selected = customers.find((customer) => String(customer.id) === value) ?? null;
+    setManualReviewForm((previous) => ({
+      ...previous,
+      customerId: value,
+      reviewerName: selected ? selected.name ?? '' : ''
+    }));
+    if (selected && selected.profileImageUrl) {
+      const nextAvatar = selectionFromUrl(selected.profileImageUrl);
+      setReviewerAvatar(nextAvatar);
+    } else {
+      setReviewerAvatar(null);
+    }
+  };
+
   const renderStars = (rating: number) => (
     <span className="inline-flex items-center gap-0.5 text-base leading-none">
       {Array.from({ length: 5 }).map((_, index) => (
@@ -308,7 +356,7 @@ const ReviewsPage = () => {
       >
         <form onSubmit={handleManualReviewSubmit} className="space-y-6">
           <div className="grid gap-6 lg:grid-cols-2">
-            <div className="space-y-4">
+            <div className="space-y-5">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-slate-700" htmlFor="manual-review-product">
                   Product
@@ -335,6 +383,53 @@ const ReviewsPage = () => {
                 </select>
               </div>
 
+              {selectedProductDetailQuery.data && (
+                <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4 shadow-inner">
+                  <div className="flex items-center gap-3">
+                    {selectedProductDetailQuery.data.thumbnail?.url ? (
+                      <div className="aspect-square w-16 overflow-hidden rounded-lg border border-slate-200 bg-white">
+                        <img
+                          src={selectedProductDetailQuery.data.thumbnail.url}
+                          alt=""
+                          className="h-full w-full object-cover object-center"
+                        />
+                      </div>
+                    ) : (
+                      <div className="flex aspect-square w-16 items-center justify-center rounded-lg border border-dashed border-slate-300 text-xs text-slate-400">
+                        No image
+                      </div>
+                    )}
+                    <div className="space-y-1">
+                      <p className="text-sm font-semibold text-slate-900">
+                        {selectedProductDetailQuery.data.name}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        {selectedProductDetailQuery.data.pricing.unitPrice != null
+                          ? formatCurrency(selectedProductDetailQuery.data.pricing.unitPrice, baseCurrency)
+                          : 'Price unavailable'}
+                      </p>
+                      {selectedProductDetailQuery.data.pricing.sku && (
+                        <p className="text-xs text-slate-400">
+                          SKU · {selectedProductDetailQuery.data.pricing.sku}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  {selectedProductCategories.length > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {selectedProductCategories.map((category) => (
+                        <span
+                          key={category.id}
+                          className="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-600"
+                        >
+                          {category.name}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="space-y-2">
                 <label className="text-sm font-medium text-slate-700" htmlFor="manual-review-customer">
                   Customer (optional)
@@ -342,17 +437,7 @@ const ReviewsPage = () => {
                 <select
                   id="manual-review-customer"
                   value={manualReviewForm.customerId}
-                  onChange={(event) => {
-                    const value = event.target.value;
-                    setManualReviewForm((previous) => ({
-                      ...previous,
-                      customerId: value,
-                      reviewerName:
-                        value && customers.length
-                          ? customers.find((customer) => String(customer.id) === value)?.name ?? previous.reviewerName
-                          : previous.reviewerName
-                    }));
-                  }}
+                  onChange={(event) => handleCustomerChange(event.target.value)}
                   className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                   disabled={!canManageReviews}
                 >
@@ -363,12 +448,37 @@ const ReviewsPage = () => {
                     </option>
                   ))}
                 </select>
-                {selectedCustomer?.email && (
-                  <p className="text-xs text-slate-500">{selectedCustomer.email}</p>
-                )}
               </div>
 
-              <div className="space-y-2">
+              {selectedCustomer && (
+                <div className="rounded-xl border border-slate-200 bg-white/70 p-4 shadow-sm">
+                  <div className="flex items-center gap-3">
+                    {selectedCustomer.profileImageUrl ? (
+                      <div className="aspect-square w-12 overflow-hidden rounded-full border border-slate-200 bg-slate-100">
+                        <img
+                          src={selectedCustomer.profileImageUrl}
+                          alt=""
+                          className="h-full w-full object-cover object-center"
+                        />
+                      </div>
+                    ) : (
+                      <span className="inline-flex aspect-square w-12 items-center justify-center rounded-full bg-slate-200 text-sm font-semibold text-slate-600">
+                        {selectedCustomer.name.charAt(0).toUpperCase()}
+                      </span>
+                    )}
+                    <div className="space-y-1">
+                      <p className="text-sm font-semibold text-slate-900">{selectedCustomer.name}</p>
+                      {selectedCustomer.email && <p className="text-xs text-slate-500">{selectedCustomer.email}</p>}
+                      {selectedCustomer.phone && <p className="text-xs text-slate-500">{selectedCustomer.phone}</p>}
+                    </div>
+                  </div>
+                  <p className="mt-3 text-xs text-slate-500">
+                    Their profile details are linked automatically. Clear the selection for a custom reviewer.
+                  </p>
+                </div>
+              )}
+
+              <div className="space-y-1">
                 <label className="text-sm font-medium text-slate-700" htmlFor="manual-review-name">
                   Reviewer name
                 </label>
@@ -384,52 +494,74 @@ const ReviewsPage = () => {
                   }
                   placeholder="E.g. Priya Sharma"
                   className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                  disabled={!canManageReviews}
+                  disabled={!canManageReviews || Boolean(manualReviewForm.customerId)}
                 />
+                {manualReviewForm.customerId && (
+                  <p className="text-xs text-slate-500">Select “Guest / anonymous” to type a custom name.</p>
+                )}
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-700" htmlFor="manual-review-rating">
-                    Rating
-                  </label>
-                  <select
-                    id="manual-review-rating"
-                    value={manualReviewForm.rating}
-                    onChange={(event) =>
-                      setManualReviewForm((previous) => ({
-                        ...previous,
-                        rating: event.target.value
-                      }))
-                    }
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                    disabled={!canManageReviews}
-                  >
-                    {[5, 4, 3, 2, 1].map((score) => (
-                      <option key={score} value={score}>
-                        {score} star{score === 1 ? '' : 's'}
-                      </option>
-                    ))}
-                  </select>
+              <div className="space-y-2">
+                <span className="text-sm font-medium text-slate-700">Rating</span>
+                <div className={`flex flex-col gap-2 ${!canManageReviews ? 'opacity-60' : ''}`}>
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: 5 }).map((_, index) => {
+                      const score = index + 1;
+                      const active = ratingHover != null ? score <= ratingHover : score <= ratingValue;
+                      return (
+                        <button
+                          key={score}
+                          type="button"
+                          className={`transition focus:outline-none ${
+                            active ? 'text-amber-400' : 'text-slate-300'
+                          } ${
+                            canManageReviews ? 'hover:text-amber-400 focus:ring-2 focus:ring-amber-200 rounded-full p-0.5' : ''
+                          }`}
+                          onMouseEnter={() => canManageReviews && setRatingHover(score)}
+                          onMouseLeave={() => canManageReviews && setRatingHover(null)}
+                          onClick={() => {
+                            if (!canManageReviews) {
+                              return;
+                            }
+                            setManualReviewForm((previous) => ({ ...previous, rating: String(score) }));
+                          }}
+                          disabled={!canManageReviews}
+                          aria-label={`${score} star${score === 1 ? '' : 's'}`}
+                        >
+                          <svg viewBox="0 0 24 24" fill="currentColor" className="h-7 w-7">
+                            <path d="M11.48 3.499a.75.75 0 011.04.335l1.875 3.804 4.2.611a.75.75 0 01.416 1.28l-3.037 2.96.717 4.186a.75.75 0 01-1.088.791L12 15.347l-3.763 1.98a.75.75 0 01-1.088-.79l.717-4.187-3.037-2.96a.75.75 0 01.416-1.28l4.2-.611 1.875-3.804a.75.75 0 01.358-.335z" />
+                          </svg>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div className="text-xs text-slate-500">
+                    {ratingHover
+                      ? `${ratingHover} / 5 · ${ratingLabels[ratingHover] ?? 'Select a rating'}`
+                      : ratingValue
+                        ? `${ratingValue} / 5 · ${ratingLabels[ratingValue] ?? 'Select a rating'}`
+                        : 'Select a rating'}
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-700" htmlFor="manual-review-date">
-                    Review date
-                  </label>
-                  <input
-                    id="manual-review-date"
-                    type="date"
-                    value={manualReviewForm.reviewDate}
-                    onChange={(event) =>
-                      setManualReviewForm((previous) => ({
-                        ...previous,
-                        reviewDate: event.target.value
-                      }))
-                    }
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                    disabled={!canManageReviews}
-                  />
-                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-700" htmlFor="manual-review-date">
+                  Review date
+                </label>
+                <input
+                  id="manual-review-date"
+                  type="date"
+                  value={manualReviewForm.reviewDate}
+                  onChange={(event) =>
+                    setManualReviewForm((previous) => ({
+                      ...previous,
+                      reviewDate: event.target.value
+                    }))
+                  }
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  disabled={!canManageReviews}
+                />
               </div>
             </div>
 
@@ -454,21 +586,6 @@ const ReviewsPage = () => {
                 />
               </div>
 
-              {selectedProductCategories.length > 0 && (
-                <div className="space-y-1">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Product categories</p>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedProductCategories.map((category) => (
-                      <span
-                        key={category.id}
-                        className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-600"
-                      >
-                        {category.name}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
           </div>
 
@@ -477,24 +594,19 @@ const ReviewsPage = () => {
               <p className="text-sm font-medium text-slate-700">Review media</p>
               <div className="flex flex-wrap gap-3">
                 {reviewAttachments.map((asset, index) => (
-                  <div key={`${asset.url}-${index}`} className="relative">
+                  <div
+                    key={`${asset.url}-${index}`}
+                    className="relative aspect-square w-24 overflow-hidden rounded-xl border border-slate-200 bg-slate-50 shadow-sm"
+                  >
                     {isVideoAsset(asset) ? (
-                      <video
-                        src={asset.url}
-                        className="h-24 w-24 rounded-lg border border-slate-200 object-cover shadow-sm"
-                        controls
-                      />
+                      <video src={asset.url} className="h-full w-full object-cover object-center" controls />
                     ) : (
-                      <img
-                        src={asset.url}
-                        alt=""
-                        className="h-24 w-24 rounded-lg border border-slate-200 object-cover shadow-sm"
-                      />
+                      <img src={asset.url} alt="" className="h-full w-full object-cover object-center" />
                     )}
                     <button
                       type="button"
                       onClick={() => removeAttachment(index)}
-                      className="absolute -right-2 -top-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-rose-500 text-xs font-semibold text-white shadow"
+                      className="absolute right-1 top-1 inline-flex h-6 w-6 items-center justify-center rounded-full bg-rose-500 text-xs font-semibold text-white shadow-sm"
                       aria-label="Remove attachment"
                       disabled={!canManageReviews}
                     >
@@ -505,7 +617,7 @@ const ReviewsPage = () => {
                 <button
                   type="button"
                   onClick={() => openMediaDialog('attachments')}
-                  className="inline-flex h-24 w-24 items-center justify-center rounded-lg border border-dashed border-slate-300 text-sm text-slate-500 transition hover:border-slate-400 hover:text-slate-700"
+                  className="inline-flex aspect-square w-24 items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white text-sm text-slate-500 transition hover:border-slate-400 hover:text-slate-700"
                   disabled={!canManageReviews}
                 >
                   Add media
@@ -520,17 +632,19 @@ const ReviewsPage = () => {
               <p className="text-sm font-medium text-slate-700">Reviewer avatar</p>
               <div className="flex items-center gap-4">
                 {reviewerAvatar?.url ? (
-                  <img
-                    src={reviewerAvatar.url}
-                    alt=""
-                    className="h-16 w-16 rounded-full border border-slate-200 object-cover shadow-sm"
-                  />
+                  <div className="aspect-square w-16 overflow-hidden rounded-full border border-slate-200 bg-slate-100 shadow-sm">
+                    <img
+                      src={reviewerAvatar.url}
+                      alt=""
+                      className="h-full w-full object-cover object-center"
+                    />
+                  </div>
                 ) : (
-                  <span className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-slate-200 text-sm font-semibold text-slate-600">
+                  <div className="flex aspect-square w-16 items-center justify-center rounded-full border border-dashed border-slate-300 bg-slate-50 text-sm font-semibold text-slate-500">
                     {manualReviewForm.reviewerName
                       ? manualReviewForm.reviewerName.charAt(0).toUpperCase()
                       : '👤'}
-                  </span>
+                  </div>
                 )}
                 <div className="space-x-2">
                   <button
@@ -545,7 +659,7 @@ const ReviewsPage = () => {
                     <button
                       type="button"
                       onClick={() => setReviewerAvatar(null)}
-                      className="text-sm font-medium text-rose-500 transition hover:text-rose-600"
+                      className="text-sm font-medium text-rose-500 transition hover:text-rose-600 disabled:opacity-60"
                       disabled={!canManageReviews}
                     >
                       Remove
@@ -701,12 +815,12 @@ const ReviewsPage = () => {
                 <article key={review.id} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <div className="flex items-start gap-3">
-                      {review.reviewerAvatar?.url ? (
-                        <img
-                          src={review.reviewerAvatar.url}
-                          alt=""
-                          className="h-12 w-12 rounded-full border border-slate-200 object-cover"
-                        />
+                                {review.reviewerAvatar?.url ? (
+                                  <img
+                                    src={review.reviewerAvatar.url}
+                                    alt=""
+                                    className="h-12 w-12 rounded-full border border-slate-200 object-cover object-center"
+                                  />
                       ) : (
                         <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-slate-200 text-sm font-semibold text-slate-600">
                           {displayName.charAt(0).toUpperCase()}
@@ -744,7 +858,7 @@ const ReviewsPage = () => {
                       </div>
                     )}
 
-                    {review.media.length > 0 && (
+                            {review.media.length > 0 && (
                       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                         {review.media.map((asset, index) =>
                           isVideoAsset(asset) ? (
@@ -752,14 +866,14 @@ const ReviewsPage = () => {
                               key={`${review.id}-video-${index}`}
                               src={asset.url}
                               controls
-                              className="h-44 w-full rounded-xl border border-slate-200 object-cover shadow-sm"
+                              className="aspect-video w-full rounded-xl border border-slate-200 object-cover object-center shadow-sm"
                             />
                           ) : (
                             <img
                               key={`${review.id}-media-${index}`}
                               src={asset.url}
                               alt=""
-                              className="h-44 w-full rounded-xl border border-slate-200 object-cover shadow-sm"
+                              className="aspect-video w-full rounded-xl border border-slate-200 object-cover object-center shadow-sm"
                             />
                           )
                         )}
@@ -795,6 +909,8 @@ const ReviewsPage = () => {
         onClose={closeMediaDialog}
         onSelect={handleMediaSelect}
         onUpload={handleMediaUpload}
+        onUploadComplete={handleMediaSelect}
+        moduleFilters={mediaDialogContext ? MEDIA_FILTERS[mediaDialogContext] : undefined}
       />
     </div>
   );

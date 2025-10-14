@@ -31,7 +31,6 @@ export interface CreateProductPayload {
   todaysDeal: boolean;
   shortDescription: string;
   description: string;
-  shortDescription: string;
   gallery: MediaSelection[];
   thumbnail?: MediaSelection | null;
   videoProvider: string;
@@ -60,6 +59,10 @@ export interface CreateProductPayload {
   };
   attributes: SelectedAttributePayload[];
   variants: CreateProductVariantPayload[];
+  expandableSections: {
+    title: string;
+    content: string;
+  }[];
   infoSections: {
     title: string;
     content: string;
@@ -181,6 +184,12 @@ export interface ProductDetailInfoSection {
   bulletPoints: string[];
 }
 
+export interface ProductDetailExpandableSection {
+  id?: number;
+  title?: string | null;
+  content?: string | null;
+}
+
 export interface ProductDetail {
   id: number;
   name: string;
@@ -192,7 +201,6 @@ export interface ProductDetail {
   todaysDeal: boolean;
   shortDescription: string;
   description: string;
-  shortDescription: string;
   videoProvider: string;
   videoUrl: string;
   gallery: ProductMediaAsset[];
@@ -205,6 +213,8 @@ export interface ProductDetail {
   pricing: ProductDetailPricing;
   variants: ProductDetailVariant[];
   infoSections: ProductDetailInfoSection[];
+  expandableSections?: ProductDetailExpandableSection[];
+  reviews?: ProductReview[];
   createdAt: string;
   updatedAt: string;
 }

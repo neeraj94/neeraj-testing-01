@@ -17,6 +17,7 @@ public class CustomerMapper {
         dto.setEmail(customer.getEmail());
         dto.setPhone(customer.getPhone());
         dto.setAddress(customer.getAddress());
+        dto.setProfileImageUrl(customer.getProfileImageUrl());
         dto.setCreatedAt(customer.getCreatedAt());
         dto.setUpdatedAt(customer.getUpdatedAt());
         return dto;

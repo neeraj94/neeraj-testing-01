@@ -10,6 +10,7 @@ import com.example.rbac.products.model.ProductReview;
 import com.example.rbac.products.model.ProductVariant;
 import com.example.rbac.products.model.ProductVariantMedia;
 import com.example.rbac.products.model.ProductVariantValue;
+import com.example.rbac.products.model.ProductInfoSection;
 import org.springframework.stereotype.Component;
 
 import java.util.Comparator;
@@ -59,7 +60,6 @@ public class ProductMapper {
         dto.setTodaysDeal(product.isTodaysDeal());
         dto.setShortDescription(product.getShortDescription());
         dto.setDescription(product.getDescription());
-        dto.setShortDescription(product.getShortDescription());
         dto.setVideoProvider(product.getVideoProvider());
         dto.setVideoUrl(product.getVideoUrl());
         dto.setGallery(mapGallery(product.getGalleryImages()));
@@ -71,6 +71,7 @@ public class ProductMapper {
         dto.setAttributes(mapAttributes(product));
         dto.setPricing(mapPricing(product));
         dto.setVariants(mapVariants(product.getVariants()));
+        dto.setExpandableSections(mapExpandableSections(product.getExpandableSections()));
         dto.setInfoSections(mapInfoSections(product.getInfoSections()));
         dto.setCreatedAt(product.getCreatedAt());
         dto.setUpdatedAt(product.getUpdatedAt());

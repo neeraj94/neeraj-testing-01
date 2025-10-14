@@ -8,13 +8,14 @@ import com.example.rbac.customers.dto.CustomerRequest;
 import com.example.rbac.customers.mapper.CustomerMapper;
 import com.example.rbac.customers.model.Customer;
 import com.example.rbac.customers.repository.CustomerRepository;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -49,6 +50,7 @@ public class CustomerService {
         customer.setEmail(request.getEmail());
         customer.setPhone(request.getPhone());
         customer.setAddress(request.getAddress());
+        customer.setProfileImageUrl(trimToNull(request.getProfileImageUrl()));
         customer = customerRepository.save(customer);
         CustomerDto dto = customerMapper.toDto(customer);
         activityRecorder.record("Customers", "CREATE", "Created customer " + customer.getName(), "SUCCESS", buildContext(customer));
@@ -71,6 +73,7 @@ public class CustomerService {
         customer.setEmail(request.getEmail());
         customer.setPhone(request.getPhone());
         customer.setAddress(request.getAddress());
+        customer.setProfileImageUrl(trimToNull(request.getProfileImageUrl()));
         customer = customerRepository.save(customer);
         CustomerDto dto = customerMapper.toDto(customer);
         activityRecorder.record("Customers", "UPDATE", "Updated customer " + customer.getName(), "SUCCESS", buildContext(customer));
@@ -100,5 +103,9 @@ public class CustomerService {
             context.put("email", customer.getEmail());
         }
         return context;
+    }
+
+    private String trimToNull(String value) {
+        return StringUtils.hasText(value) ? value.trim() : null;
     }
 }

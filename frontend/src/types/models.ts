@@ -57,6 +57,7 @@ export interface Customer {
   email?: string;
   phone?: string;
   address?: string;
+  profileImageUrl?: string | null;
 }
 
 export interface InvoiceItem {
