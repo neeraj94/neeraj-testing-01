@@ -6,6 +6,7 @@ import { loadCurrentUser } from '../features/auth/authSlice';
 import { useToast } from '../components/ToastProvider';
 import { extractErrorMessage } from '../utils/errors';
 import MediaLibraryDialog from '../components/MediaLibraryDialog';
+import ImagePreview from '../components/ImagePreview';
 import type { MediaSelection } from '../types/uploaded-file';
 
 interface UploadedFileUploadResponse {
@@ -259,19 +260,18 @@ const ProfilePage = () => {
           <h2 className="text-lg font-semibold text-slate-800">Personal information</h2>
           <p className="mt-1 text-sm text-slate-500">This information is used across the workspace to identify you.</p>
           <div className="mt-4 flex flex-wrap items-center gap-4">
-            <div className="aspect-square w-20 overflow-hidden rounded-full border border-slate-200 bg-slate-100">
-              {profileImage?.url ? (
-                <img
-                  src={profileImage.url}
-                  alt="Profile avatar"
-                  className="h-full w-full object-cover object-center"
-                />
-              ) : (
+            <ImagePreview
+              src={profileImage?.url}
+              alt="Profile avatar"
+              mode="contain"
+              aspectClassName="aspect-square"
+              className="h-20 w-20 overflow-hidden rounded-full border border-slate-200 bg-slate-100"
+              fallback={
                 <div className="flex h-full w-full items-center justify-center text-lg font-semibold text-slate-500">
                   {profileInitials}
                 </div>
-              )}
-            </div>
+              }
+            />
             <div className="flex flex-col gap-2">
               <div className="flex flex-wrap gap-2">
                 <button
