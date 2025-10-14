@@ -19,6 +19,7 @@ import type { MediaSelection } from '../types/uploaded-file';
 import type {
   CreateProductPayload,
   DiscountType,
+  ProductAssetUploadResponse,
   ProductDetail,
   ProductSummary,
   ProductSummaryPage,
@@ -34,6 +35,7 @@ interface ProductFormState {
   minPurchaseQuantity: string;
   featured: 'yes' | 'no';
   todaysDeal: 'yes' | 'no';
+  shortDescription: string;
   description: string;
   videoProvider: string;
   videoUrl: string;
@@ -53,10 +55,19 @@ interface ProductFormState {
   metaDescription: string;
   metaKeywords: string;
   metaCanonicalUrl: string;
+  infoSections: ProductInfoSectionFormState[];
 }
 
 interface CategoryTreeNode extends Category {
   children: CategoryTreeNode[];
+}
+
+interface ProductInfoSectionFormState {
+  id: string;
+  title: string;
+  content: string;
+  bulletsText: string;
+  expanded: boolean;
 }
 
 interface AttributeSelection {
@@ -88,6 +99,14 @@ type MediaDialogContext =
   | { type: 'metaImage' }
   | { type: 'variant'; key: string };
 
+const MEDIA_MODULE_FILTERS: Record<MediaDialogContext['type'], string[]> = {
+  gallery: ['PRODUCT_GALLERY_IMAGE'],
+  thumbnail: ['PRODUCT_THUMBNAIL'],
+  pdf: ['PRODUCT_PDF_SPEC'],
+  metaImage: ['PRODUCT_META_IMAGE'],
+  variant: ['PRODUCT_VARIANT_IMAGE']
+};
+
 const defaultFormState: ProductFormState = {
   name: '',
   brandId: '',
@@ -96,6 +115,7 @@ const defaultFormState: ProductFormState = {
   minPurchaseQuantity: '',
   featured: 'no',
   todaysDeal: 'no',
+  shortDescription: '',
   description: '',
   videoProvider: 'YOUTUBE',
   videoUrl: '',
@@ -114,7 +134,8 @@ const defaultFormState: ProductFormState = {
   metaTitle: '',
   metaDescription: '',
   metaKeywords: '',
-  metaCanonicalUrl: ''
+  metaCanonicalUrl: '',
+  infoSections: []
 };
 
 const unitOptions = [
@@ -272,7 +293,7 @@ const ProductsPage = () => {
   const [searchDraft, setSearchDraft] = useState('');
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState<TabId>('basic');
-  const [form, setForm] = useState<ProductFormState>(defaultFormState);
+  const [form, setForm] = useState<ProductFormState>({ ...defaultFormState, infoSections: [] });
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<number[]>([]);
   const [selectedTaxIds, setSelectedTaxIds] = useState<number[]>([]);
   const [gallery, setGallery] = useState<MediaSelection[]>([]);
@@ -293,6 +314,8 @@ const ProductsPage = () => {
   const taxDropdownRef = useRef<HTMLDivElement | null>(null);
   const brandSearchInputRef = useRef<HTMLInputElement | null>(null);
   const editInitializedRef = useRef(false);
+
+  const createSectionId = () => `section-${Math.random().toString(36).slice(2, 10)}-${Date.now()}`;
 
   const canCreate = useMemo(
     () => hasAnyPermission(permissions as PermissionKey[], ['PRODUCT_CREATE']),
@@ -611,6 +634,14 @@ const ProductsPage = () => {
   };
 
   const populateFormFromProduct = (product: ProductDetail) => {
+    const sectionForms: ProductInfoSectionFormState[] = (product.infoSections ?? []).map((section, index) => ({
+      id: `section-${section.id ?? index}-${index}`,
+      title: section.title ?? '',
+      content: section.content ?? '',
+      bulletsText: (section.bulletPoints ?? []).join('\n'),
+      expanded: index === 0
+    }));
+
     setForm({
       name: product.name ?? '',
       brandId: product.brand ? String(product.brand.id) : '',
@@ -620,6 +651,7 @@ const ProductsPage = () => {
         product.minPurchaseQuantity != null ? String(product.minPurchaseQuantity) : '',
       featured: product.featured ? 'yes' : 'no',
       todaysDeal: product.todaysDeal ? 'yes' : 'no',
+      shortDescription: product.shortDescription ?? '',
       description: product.description ?? '',
       videoProvider: product.videoProvider ?? 'YOUTUBE',
       videoUrl: product.videoUrl ?? '',
@@ -645,7 +677,8 @@ const ProductsPage = () => {
       metaTitle: product.seo.title ?? '',
       metaDescription: product.seo.description ?? '',
       metaKeywords: product.seo.keywords ?? '',
-      metaCanonicalUrl: product.seo.canonicalUrl ?? ''
+      metaCanonicalUrl: product.seo.canonicalUrl ?? '',
+      infoSections: sectionForms
     });
 
     setSelectedCategoryIds(product.categories.map((category) => category.id));
@@ -873,6 +906,64 @@ const ProductsPage = () => {
     );
   };
 
+  const addInfoSection = () => {
+    setForm((previous) => ({
+      ...previous,
+      infoSections: [
+        ...previous.infoSections,
+        {
+          id: createSectionId(),
+          title: '',
+          content: '',
+          bulletsText: '',
+          expanded: true
+        }
+      ]
+    }));
+  };
+
+  const updateInfoSection = (id: string, changes: Partial<ProductInfoSectionFormState>) => {
+    setForm((previous) => ({
+      ...previous,
+      infoSections: previous.infoSections.map((section) =>
+        section.id === id ? { ...section, ...changes } : section
+      )
+    }));
+  };
+
+  const removeInfoSection = (id: string) => {
+    setForm((previous) => ({
+      ...previous,
+      infoSections: previous.infoSections.filter((section) => section.id !== id)
+    }));
+  };
+
+  const toggleInfoSection = (id: string) => {
+    setForm((previous) => ({
+      ...previous,
+      infoSections: previous.infoSections.map((section) =>
+        section.id === id ? { ...section, expanded: !section.expanded } : section
+      )
+    }));
+  };
+
+  const moveInfoSection = (id: string, direction: 'up' | 'down') => {
+    setForm((previous) => {
+      const index = previous.infoSections.findIndex((section) => section.id === id);
+      if (index === -1) {
+        return previous;
+      }
+      const targetIndex = direction === 'up' ? index - 1 : index + 1;
+      if (targetIndex < 0 || targetIndex >= previous.infoSections.length) {
+        return previous;
+      }
+      const nextSections = [...previous.infoSections];
+      const [moved] = nextSections.splice(index, 1);
+      nextSections.splice(targetIndex, 0, moved);
+      return { ...previous, infoSections: nextSections };
+    });
+  };
+
   const removeGalleryItem = (index: number) => {
     setGallery((previous) => previous.filter((_, itemIndex) => itemIndex !== index));
   };
@@ -908,7 +999,7 @@ const ProductsPage = () => {
     });
   };
   const resetFormState = () => {
-    setForm(defaultFormState);
+    setForm({ ...defaultFormState, infoSections: [] });
     setSelectedCategoryIds([]);
     setSelectedTaxIds([]);
     setGallery([]);
@@ -970,6 +1061,7 @@ const ProductsPage = () => {
       categoryIds: selectedCategoryIds,
       featured: form.featured === 'yes',
       todaysDeal: form.todaysDeal === 'yes',
+      shortDescription: form.shortDescription.trim(),
       description: form.description,
       gallery,
       thumbnail,
@@ -1014,7 +1106,15 @@ const ProductsPage = () => {
           quantity: variant ? parseNumber(variant.quantity) : null,
           media: variant?.media ?? []
         };
-      })
+      }),
+      infoSections: form.infoSections.map((section) => ({
+        title: section.title.trim(),
+        content: section.content,
+        bulletPoints: section.bulletsText
+          .split('\n')
+          .map((line) => line.trim())
+          .filter((line) => line.length > 0)
+      }))
     };
 
     if (isEditMode && editingId != null) {
@@ -1075,6 +1175,107 @@ const ProductsPage = () => {
     setMediaContext(null);
   };
 
+  const handleMediaUpload = async (files: File[]): Promise<MediaSelection[]> => {
+    if (!mediaContext) {
+      return [];
+    }
+    const formData = new FormData();
+    files.forEach((file) => formData.append('files', file));
+
+    let endpoint: string | null = null;
+    switch (mediaContext.type) {
+      case 'gallery':
+        endpoint = '/products/assets/gallery';
+        break;
+      case 'thumbnail':
+        endpoint = '/products/assets/thumbnail';
+        break;
+      case 'pdf':
+        endpoint = '/products/assets/pdf';
+        break;
+      case 'metaImage':
+        endpoint = '/products/assets/meta-image';
+        break;
+      case 'variant':
+        endpoint = '/products/assets/variant';
+        break;
+      default:
+        endpoint = null;
+    }
+
+    if (!endpoint) {
+      return [];
+    }
+
+    try {
+      const { data } = await api.post<ProductAssetUploadResponse[]>(endpoint, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
+      return data.map((item) => ({
+        url: item.url,
+        storageKey: item.storageKey ?? null,
+        originalFilename: item.originalFilename ?? null,
+        mimeType: item.mimeType ?? null,
+        sizeBytes: item.sizeBytes ?? null
+      }));
+    } catch (error) {
+      notify({
+        type: 'error',
+        message: extractErrorMessage(error, 'Unable to upload files. Please try again.')
+      });
+      throw error;
+    }
+  };
+
+  const handleMediaUploadComplete = (selections: MediaSelection[]) => {
+    if (!mediaContext || selections.length === 0) {
+      return;
+    }
+
+    switch (mediaContext.type) {
+      case 'gallery':
+        setGallery((previous) => [...previous, ...selections]);
+        break;
+      case 'thumbnail':
+        setThumbnail(selections[0]);
+        break;
+      case 'pdf':
+        setPdfSpecification(selections[0]);
+        break;
+      case 'metaImage':
+        setMetaImage(selections[0]);
+        break;
+      case 'variant':
+        setVariants((previous) => {
+          const variant = previous[mediaContext.key];
+          if (!variant) {
+            return previous;
+          }
+          return {
+            ...previous,
+            [mediaContext.key]: {
+              ...variant,
+              media: [...variant.media, ...selections]
+            }
+          };
+        });
+        break;
+      default:
+        break;
+    }
+
+    notify({
+      type: 'success',
+      message:
+        selections.length > 1
+          ? 'Uploaded files added to the product.'
+          : 'Uploaded file added to the product.'
+    });
+
+    setMediaContext(null);
+  };
+
   const handleMediaSelect = (selection: MediaSelection) => {
     if (!mediaContext) {
       return;
@@ -1111,6 +1312,11 @@ const ProductsPage = () => {
       default:
         break;
     }
+
+    notify({
+      type: 'success',
+      message: 'Media item attached to the product.'
+    });
 
     setMediaContext(null);
   };
@@ -1795,16 +2001,150 @@ const ProductsPage = () => {
                       </div>
                     </div>
 
-                    <div className="lg:col-span-2 space-y-2">
-                      <label className="text-sm font-medium text-slate-700">Description</label>
-                      <RichTextEditor
-                        value={form.description}
-                        onChange={(value) => setForm((previous) => ({ ...previous, description: value }))}
-                        minHeight={220}
-                      />
-                      {visibleValidation.description && (
-                        <p className="text-xs text-rose-500">{visibleValidation.description}</p>
-                      )}
+                    <div className="lg:col-span-2 space-y-6">
+                      <div className="space-y-2">
+                        <label htmlFor="product-short-description" className="text-sm font-medium text-slate-700">
+                          Short description <span className="text-xs font-normal text-slate-400">(optional)</span>
+                        </label>
+                        <textarea
+                          id="product-short-description"
+                          value={form.shortDescription}
+                          onChange={(event) =>
+                            setForm((previous) => ({ ...previous, shortDescription: event.target.value }))
+                          }
+                          placeholder="Summarize the product in a couple of sentences for quick merchandising callouts."
+                          className="min-h-[90px] w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                        />
+                        <p className="text-xs text-slate-500">
+                          Appears near the buy box and in marketing snippets. Aim for 1–2 punchy sentences.
+                        </p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-slate-700">Description</label>
+                        <RichTextEditor
+                          value={form.description}
+                          onChange={(value) => setForm((previous) => ({ ...previous, description: value }))}
+                          minHeight={220}
+                        />
+                        {visibleValidation.description && (
+                          <p className="text-xs text-rose-500">{visibleValidation.description}</p>
+                        )}
+                      </div>
+
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <span className="text-sm font-medium text-slate-700">Expandable info sections</span>
+                            <p className="text-xs text-slate-500">
+                              Create accordion-style content blocks for specifications, care instructions, or FAQs.
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={addInfoSection}
+                            className="inline-flex items-center justify-center rounded-full border border-primary/60 px-4 py-1.5 text-sm font-semibold text-primary transition hover:border-primary hover:bg-primary/10"
+                          >
+                            Add section
+                          </button>
+                        </div>
+
+                        {form.infoSections.length ? (
+                          <div className="space-y-3">
+                            {form.infoSections.map((section, index) => (
+                              <div key={section.id} className="rounded-xl border border-slate-200 shadow-sm">
+                                <button
+                                  type="button"
+                                  onClick={() => toggleInfoSection(section.id)}
+                                  className="flex w-full items-center justify-between gap-3 rounded-t-xl bg-slate-50 px-4 py-3 text-left text-sm font-medium text-slate-700 hover:bg-slate-100"
+                                >
+                                  <span>
+                                    {section.title.trim() || `Section ${index + 1}`}
+                                    {section.title.trim() ? null : (
+                                      <span className="ml-2 text-xs font-normal text-slate-400">(Untitled)</span>
+                                    )}
+                                  </span>
+                                  <span className="text-slate-400">{section.expanded ? '▴' : '▾'}</span>
+                                </button>
+                                {section.expanded && (
+                                  <div className="space-y-4 border-t border-slate-200 px-4 py-4">
+                                    <div className="grid gap-4 sm:grid-cols-[1fr_auto] sm:items-start">
+                                      <div className="space-y-2">
+                                        <label className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+                                          Section title
+                                        </label>
+                                        <input
+                                          type="text"
+                                          value={section.title}
+                                          onChange={(event) =>
+                                            updateInfoSection(section.id, { title: event.target.value })
+                                          }
+                                          placeholder="e.g. Material & care"
+                                          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                                        />
+                                      </div>
+                                      <div className="flex flex-wrap gap-2 sm:justify-end">
+                                        <button
+                                          type="button"
+                                          onClick={() => moveInfoSection(section.id, 'up')}
+                                          className="inline-flex items-center justify-center rounded-full border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-slate-400 hover:text-slate-900"
+                                          disabled={index === 0}
+                                        >
+                                          Move up
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => moveInfoSection(section.id, 'down')}
+                                          className="inline-flex items-center justify-center rounded-full border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-slate-400 hover:text-slate-900"
+                                          disabled={index === form.infoSections.length - 1}
+                                        >
+                                          Move down
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => removeInfoSection(section.id)}
+                                          className="inline-flex items-center justify-center rounded-full border border-rose-200 px-3 py-1.5 text-xs font-medium text-rose-600 transition hover:bg-rose-50"
+                                        >
+                                          Remove
+                                        </button>
+                                      </div>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                      <label className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+                                        Body content
+                                      </label>
+                                      <RichTextEditor
+                                        value={section.content}
+                                        onChange={(value) => updateInfoSection(section.id, { content: value })}
+                                        minHeight={180}
+                                      />
+                                    </div>
+
+                                    <div className="space-y-2">
+                                      <label className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+                                        Bullet points <span className="font-normal lowercase text-slate-400">(optional)</span>
+                                      </label>
+                                      <textarea
+                                        value={section.bulletsText}
+                                        onChange={(event) =>
+                                          updateInfoSection(section.id, { bulletsText: event.target.value })
+                                        }
+                                        placeholder="Add each point on a new line"
+                                        className="min-h-[80px] w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                                      />
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="rounded-xl border border-dashed border-slate-300 px-4 py-6 text-sm text-slate-500">
+                            No expandable sections yet. Use “Add section” to create feature highlights or FAQs.
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </PageSection>
@@ -2548,6 +2888,9 @@ const ProductsPage = () => {
         open={mediaContext !== null}
         onClose={closeMediaDialog}
         onSelect={handleMediaSelect}
+        onUpload={mediaContext ? handleMediaUpload : undefined}
+        onUploadComplete={handleMediaUploadComplete}
+        moduleFilters={mediaContext ? MEDIA_MODULE_FILTERS[mediaContext.type] : undefined}
       />
     </div>
   );

@@ -45,6 +45,7 @@ public class ProductMapper {
         dto.setMinPurchaseQuantity(product.getMinPurchaseQuantity());
         dto.setFeatured(product.isFeatured());
         dto.setTodaysDeal(product.isTodaysDeal());
+        dto.setShortDescription(product.getShortDescription());
         dto.setDescription(product.getDescription());
         dto.setVideoProvider(product.getVideoProvider());
         dto.setVideoUrl(product.getVideoUrl());
@@ -57,6 +58,7 @@ public class ProductMapper {
         dto.setAttributes(mapAttributes(product));
         dto.setPricing(mapPricing(product));
         dto.setVariants(mapVariants(product.getVariants()));
+        dto.setInfoSections(mapInfoSections(product.getInfoSections()));
         dto.setCreatedAt(product.getCreatedAt());
         dto.setUpdatedAt(product.getUpdatedAt());
         if (product.getBrand() != null) {
@@ -114,6 +116,22 @@ public class ProductMapper {
                     ProductCategoryDto dto = new ProductCategoryDto();
                     dto.setId(category.getId());
                     dto.setName(category.getName());
+                    return dto;
+                })
+                .collect(Collectors.toList());
+    }
+
+    private List<ProductInfoSectionDto> mapInfoSections(List<ProductInfoSection> sections) {
+        if (sections == null || sections.isEmpty()) {
+            return List.of();
+        }
+        return sections.stream()
+                .map(section -> {
+                    ProductInfoSectionDto dto = new ProductInfoSectionDto();
+                    dto.setId(section.getId());
+                    dto.setTitle(section.getTitle());
+                    dto.setContent(section.getContent());
+                    dto.setBulletPoints(section.getBulletPoints() != null ? List.copyOf(section.getBulletPoints()) : List.of());
                     return dto;
                 })
                 .collect(Collectors.toList());

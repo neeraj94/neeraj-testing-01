@@ -45,6 +45,9 @@ public class Product {
     @Column(name = "todays_deal", nullable = false)
     private boolean todaysDeal;
 
+    @Column(name = "short_description", columnDefinition = "TEXT")
+    private String shortDescription;
+
     @Column(columnDefinition = "TEXT")
     private String description;
 
@@ -160,6 +163,10 @@ public class Product {
     @OrderBy("displayOrder ASC, id ASC")
     private List<ProductVariant> variants = new ArrayList<>();
 
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("displayOrder ASC, id ASC")
+    private List<ProductInfoSection> infoSections = new ArrayList<>();
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
@@ -230,6 +237,14 @@ public class Product {
 
     public void setTodaysDeal(boolean todaysDeal) {
         this.todaysDeal = todaysDeal;
+    }
+
+    public String getShortDescription() {
+        return shortDescription;
+    }
+
+    public void setShortDescription(String shortDescription) {
+        this.shortDescription = shortDescription;
     }
 
     public String getDescription() {
@@ -446,6 +461,14 @@ public class Product {
 
     public void setVariants(List<ProductVariant> variants) {
         this.variants = variants;
+    }
+
+    public List<ProductInfoSection> getInfoSections() {
+        return infoSections;
+    }
+
+    public void setInfoSections(List<ProductInfoSection> infoSections) {
+        this.infoSections = infoSections;
     }
 
     public Instant getCreatedAt() {

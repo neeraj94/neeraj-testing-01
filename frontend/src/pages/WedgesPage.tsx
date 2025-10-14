@@ -242,16 +242,22 @@ const WedgesPage = () => {
     closeMediaLibraryDialog();
   };
 
-  const handleMediaUpload = async (file: File): Promise<MediaSelection> => {
+  const handleMediaUpload = async (files: File[]): Promise<MediaSelection[]> => {
+    const [file] = files;
+    if (!file) {
+      return [];
+    }
     try {
       const data = await iconUploadMutation.mutateAsync(file);
       notify({ type: 'success', message: 'Icon uploaded successfully.' });
-      return {
-        url: data.url,
-        originalFilename: data.originalFilename ?? undefined,
-        mimeType: data.mimeType ?? undefined,
-        sizeBytes: data.sizeBytes ?? undefined
-      };
+      return [
+        {
+          url: data.url,
+          originalFilename: data.originalFilename ?? undefined,
+          mimeType: data.mimeType ?? undefined,
+          sizeBytes: data.sizeBytes ?? undefined
+        }
+      ];
     } catch (error) {
       notify({ type: 'error', message: extractErrorMessage(error, 'Failed to upload icon.') });
       throw error;

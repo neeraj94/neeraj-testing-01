@@ -18,7 +18,8 @@ interface MediaLibraryDialogProps {
   moduleFilters?: string[];
   title?: string;
   onSelect: (selection: MediaSelection) => void;
-  onUpload?: (file: File) => Promise<MediaSelection>;
+  onUpload?: (files: File[]) => Promise<MediaSelection[]>;
+  onUploadComplete?: (selections: MediaSelection[]) => void;
 }
 
 const FILE_TYPE_OPTIONS = [
@@ -35,7 +36,8 @@ const MediaLibraryDialog = ({
   moduleFilters,
   title = 'Uploaded files',
   onSelect,
-  onUpload
+  onUpload,
+  onUploadComplete
 }: MediaLibraryDialogProps) => {
   const [page, setPage] = useState(0);
   const [size, setSize] = useState(12);
@@ -156,16 +158,23 @@ const MediaLibraryDialog = ({
     if (!onUpload) {
       return;
     }
-    const file = event.target.files?.[0];
-    if (!file) {
+    const files = event.target.files ? Array.from(event.target.files) : [];
+    if (files.length === 0) {
       return;
     }
     try {
       setUploading(true);
-      const result = await onUpload(file);
+      const results = await onUpload(files);
       await filesQuery.refetch();
-      onSelect(result);
-      onClose();
+      if (results.length > 0) {
+        if (onUploadComplete) {
+          onUploadComplete(results);
+          onClose();
+        } else {
+          onSelect(results[0]);
+          onClose();
+        }
+      }
     } catch (error) {
       // errors handled by caller toast
     } finally {
@@ -190,6 +199,7 @@ const MediaLibraryDialog = ({
                 <input
                   ref={fileInputRef}
                   type="file"
+                  multiple
                   className="hidden"
                   onChange={handleFileChange}
                 />
@@ -199,7 +209,7 @@ const MediaLibraryDialog = ({
                   disabled={uploading}
                   className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white shadow hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {uploading ? 'Uploading…' : 'Upload new'}
+                  {uploading ? 'Uploading…' : 'Upload file(s)'}
                 </button>
               </Fragment>
             )}

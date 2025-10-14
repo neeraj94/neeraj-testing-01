@@ -208,14 +208,20 @@ const BadgeCategoriesPage = () => {
     setIconPreview(null);
   };
 
-  const handleMediaUpload = async (file: File): Promise<MediaSelection> => {
+  const handleMediaUpload = async (files: File[]): Promise<MediaSelection[]> => {
+    const [file] = files;
+    if (!file) {
+      return [];
+    }
     const response = await iconUploadMutation.mutateAsync(file);
-    return {
-      url: response.url,
-      originalFilename: response.originalFilename,
-      mimeType: response.mimeType,
-      sizeBytes: response.sizeBytes
-    };
+    return [
+      {
+        url: response.url,
+        originalFilename: response.originalFilename,
+        mimeType: response.mimeType,
+        sizeBytes: response.sizeBytes
+      }
+    ];
   };
 
   const handleMediaSelect = (selection: MediaSelection) => {

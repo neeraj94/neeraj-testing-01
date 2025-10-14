@@ -380,14 +380,20 @@ const CategoriesPage = () => {
     setCoverPreview(url);
   };
 
-  const handleMediaUpload = async (type: AssetUploadType, file: File): Promise<MediaSelection> => {
+  const handleMediaUpload = async (type: AssetUploadType, files: File[]): Promise<MediaSelection[]> => {
+    const [file] = files;
+    if (!file) {
+      return [];
+    }
     const result = await assetUploadMutation.mutateAsync({ type, file });
-    return {
-      url: result.data.url,
-      originalFilename: result.data.originalFilename,
-      mimeType: result.data.mimeType,
-      sizeBytes: result.data.sizeBytes
-    };
+    return [
+      {
+        url: result.data.url,
+        originalFilename: result.data.originalFilename,
+        mimeType: result.data.mimeType,
+        sizeBytes: result.data.sizeBytes
+      }
+    ];
   };
 
   const handleMediaSelect = (type: AssetUploadType | null, selection: MediaSelection) => {
@@ -912,7 +918,7 @@ const CategoriesPage = () => {
         }}
         onUpload={
           mediaLibraryTarget
-            ? (file) => handleMediaUpload(mediaLibraryTarget, file)
+            ? (files) => handleMediaUpload(mediaLibraryTarget, files)
             : undefined
         }
       />
