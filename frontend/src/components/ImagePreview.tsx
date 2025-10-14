@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
+import { isProbablyImage, resolveMediaUrl } from '../utils/media';
 
 export interface ImagePreviewProps {
   src?: string | null;
@@ -35,27 +36,12 @@ const ImagePreview = ({
 
   const [hasError, setHasError] = useState(false);
 
-  const sanitizedSrc = useMemo(() => {
-    if (!src) {
-      return null;
-    }
-    const trimmed = `${src}`.trim();
-    if (!trimmed) {
-      return null;
-    }
-    if (trimmed.startsWith('data:') || trimmed.startsWith('blob:')) {
-      return trimmed;
-    }
-    try {
-      return encodeURI(trimmed);
-    } catch (error) {
-      return trimmed.replace(/\s+/g, (match) => (match ? '%20' : match));
-    }
-  }, [src]);
+  const sanitizedSrc = useMemo(() => resolveMediaUrl(src ?? null), [src]);
+  const canRenderImage = useMemo(() => isProbablyImage(mimeType), [mimeType]);
 
   useEffect(() => {
     setHasError(false);
-  }, [sanitizedSrc, mimeType]);
+  }, [sanitizedSrc, canRenderImage]);
 
   const renderFallback = () =>
     fallback ?? (
@@ -71,16 +57,20 @@ const ImagePreview = ({
 
   const objectClass = mode === 'contain' ? 'object-contain' : 'object-cover';
 
+  const shouldRenderImage = Boolean(sanitizedSrc && !hasError && canRenderImage);
+
   return (
     <div className={containerClass} style={style}>
-      {sanitizedSrc && !hasError ? (
+      {shouldRenderImage ? (
         <img
-          key={sanitizedSrc}
-          src={sanitizedSrc}
+          key={sanitizedSrc ?? 'image-preview'}
+          src={sanitizedSrc ?? undefined}
           alt={alt}
           className={`h-full w-full ${objectClass} object-center`}
+          loading="lazy"
           onError={() => setHasError(true)}
           onLoad={() => setHasError(false)}
+          draggable={false}
         />
       ) : (
         renderFallback()
