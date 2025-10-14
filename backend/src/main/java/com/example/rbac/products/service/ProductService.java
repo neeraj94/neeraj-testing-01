@@ -259,7 +259,8 @@ public class ProductService {
             if (value.length() > 120) {
                 value = value.substring(0, 120);
             }
-            boolean exists = normalized.stream().anyMatch(existing -> existing.equalsIgnoreCase(value));
+            String candidate = value;
+            boolean exists = normalized.stream().anyMatch(existing -> existing.equalsIgnoreCase(candidate));
             if (!exists) {
                 normalized.add(value);
             }
