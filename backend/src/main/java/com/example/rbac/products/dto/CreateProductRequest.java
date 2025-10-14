@@ -72,6 +72,47 @@ public class CreateProductRequest {
     @Valid
     private List<ProductInfoSectionRequest> infoSections = new ArrayList<>();
 
+    private List<Long> frequentlyBoughtProductIds = new ArrayList<>();
+
+    private List<Long> frequentlyBoughtCategoryIds = new ArrayList<>();
+
+    public void setFrequentlyBought(FrequentlyBoughtSelection frequentlyBought) {
+        if (frequentlyBought == null) {
+            this.frequentlyBoughtProductIds = new ArrayList<>();
+            this.frequentlyBoughtCategoryIds = new ArrayList<>();
+            return;
+        }
+        if (frequentlyBought.getProductIds() != null) {
+            this.frequentlyBoughtProductIds = new ArrayList<>(frequentlyBought.getProductIds());
+        }
+        if (frequentlyBought.getCategoryIds() != null) {
+            this.frequentlyBoughtCategoryIds = new ArrayList<>(frequentlyBought.getCategoryIds());
+        }
+    }
+
+    public static class FrequentlyBoughtSelection {
+
+        private List<Long> productIds = new ArrayList<>();
+
+        private List<Long> categoryIds = new ArrayList<>();
+
+        public List<Long> getProductIds() {
+            return productIds;
+        }
+
+        public void setProductIds(List<Long> productIds) {
+            this.productIds = productIds;
+        }
+
+        public List<Long> getCategoryIds() {
+            return categoryIds;
+        }
+
+        public void setCategoryIds(List<Long> categoryIds) {
+            this.categoryIds = categoryIds;
+        }
+    }
+
     public String getName() {
         return name;
     }
@@ -246,5 +287,21 @@ public class CreateProductRequest {
 
     public void setInfoSections(List<ProductInfoSectionRequest> infoSections) {
         this.infoSections = infoSections;
+    }
+
+    public List<Long> getFrequentlyBoughtProductIds() {
+        return frequentlyBoughtProductIds;
+    }
+
+    public void setFrequentlyBoughtProductIds(List<Long> frequentlyBoughtProductIds) {
+        this.frequentlyBoughtProductIds = frequentlyBoughtProductIds;
+    }
+
+    public List<Long> getFrequentlyBoughtCategoryIds() {
+        return frequentlyBoughtCategoryIds;
+    }
+
+    public void setFrequentlyBoughtCategoryIds(List<Long> frequentlyBoughtCategoryIds) {
+        this.frequentlyBoughtCategoryIds = frequentlyBoughtCategoryIds;
     }
 }

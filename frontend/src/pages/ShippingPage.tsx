@@ -76,7 +76,7 @@ const sortByEnabledThenName = <T extends { enabled?: boolean; name: string }>(it
     return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
   });
 
-const AreaShippingPage = () => {
+const AreaShippingManager = () => {
   const queryClient = useQueryClient();
   const { notify } = useToast();
   const permissions = useAppSelector((state) => state.auth.permissions);
@@ -1283,43 +1283,96 @@ const AreaShippingPage = () => {
   );
 
   return (
-    <>
-      <PageHeader
-        title="Area-wise Shipping"
-        description="Toggle available destinations and fine-tune delivery rates by country, state, and city."
-      />
-      <PageSection>
-        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <div className="grid border-b border-slate-200 lg:grid-cols-[240px,1fr]">
-            <nav className="flex shrink-0 flex-row gap-2 border-b border-slate-200 bg-slate-50 px-6 py-4 text-sm font-semibold text-slate-600 lg:flex-col lg:border-b-0 lg:border-r">
-              {[
-                { key: 'countries', label: 'Countries' },
-                { key: 'states', label: 'States' },
-                { key: 'cities', label: 'Cities' }
-              ].map((tab) => (
-                <button
-                  key={tab.key}
-                  type="button"
-                  onClick={() => setActiveTab(tab.key as TabKey)}
-                  className={`rounded-lg px-3 py-2 text-left transition ${
-                    activeTab === tab.key ? 'bg-primary/10 text-primary' : 'text-slate-600 hover:bg-slate-100'
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </nav>
-            <div className="flex-1 px-6 py-6">
-              {activeTab === 'countries' && renderCountryTab()}
-              {activeTab === 'states' && renderStateTab()}
-              {activeTab === 'cities' && renderCityTab()}
-            </div>
-          </div>
+    <PageSection
+      title="Area-wide shipping"
+      description="Toggle available destinations and fine-tune delivery rates by country, state, and city."
+      padded={false}
+      bodyClassName="lg:flex"
+    >
+      <div className="grid w-full border-t border-slate-200 lg:grid-cols-[240px,1fr] lg:border-t-0 lg:divide-x lg:divide-slate-200">
+        <nav className="flex shrink-0 flex-row gap-2 border-b border-slate-200 bg-slate-50 px-6 py-4 text-sm font-semibold text-slate-600 lg:h-full lg:flex-col lg:border-b-0">
+          {[
+            { key: 'countries', label: 'Countries' },
+            { key: 'states', label: 'States' },
+            { key: 'cities', label: 'Cities' }
+          ].map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => setActiveTab(tab.key as TabKey)}
+              className={`rounded-lg px-3 py-2 text-left transition ${
+                activeTab === tab.key ? 'bg-primary/10 text-primary' : 'text-slate-600 hover:bg-slate-100'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </nav>
+        <div className="flex-1 px-6 py-6">
+          {activeTab === 'countries' && renderCountryTab()}
+          {activeTab === 'states' && renderStateTab()}
+          {activeTab === 'cities' && renderCityTab()}
         </div>
-      </PageSection>
-    </>
+      </div>
+    </PageSection>
   );
 };
 
-export default AreaShippingPage;
+const CarrierShippingPlaceholder = () => (
+  <PageSection
+    title="Carrier-wide shipping"
+    description="Configure carrier-based pricing, service levels, and transit promises."
+  >
+    <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50/70 px-6 py-10 text-center text-sm text-slate-500">
+      Carrier integrations are coming soon. Use this space to connect logistics partners, negotiate rates, and
+      publish carrier-specific delivery options.
+    </div>
+  </PageSection>
+);
+
+type ShippingSection = 'area' | 'carrier';
+
+const ShippingPage = () => {
+  const [activeSection, setActiveSection] = useState<ShippingSection>('area');
+
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        title="Shipping"
+        description="Manage location-based delivery rules today and prepare for carrier-based fulfillment tomorrow."
+      />
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <nav className="flex flex-wrap gap-2 border-b border-slate-200 bg-slate-50 px-4 py-3 sm:px-6">
+          {[
+            { key: 'area' as ShippingSection, label: 'Area-wide shipping' },
+            { key: 'carrier' as ShippingSection, label: 'Carrier-wide shipping' }
+          ].map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => setActiveSection(tab.key)}
+              className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                activeSection === tab.key
+                  ? 'bg-primary text-white shadow'
+                  : 'bg-white text-slate-600 hover:bg-slate-100'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </nav>
+      </div>
+      <div className="space-y-6">
+        <div className={activeSection === 'area' ? 'block' : 'hidden'} aria-hidden={activeSection !== 'area'}>
+          <AreaShippingManager />
+        </div>
+        <div className={activeSection === 'carrier' ? 'block' : 'hidden'} aria-hidden={activeSection !== 'carrier'}>
+          <CarrierShippingPlaceholder />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default ShippingPage;
 
