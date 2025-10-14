@@ -548,7 +548,13 @@ const ReviewsPage = () => {
           key={`${asset.url}-${index}`}
           className="group relative h-20 w-20 overflow-hidden rounded-xl border border-slate-200"
         >
-          <ImagePreview src={asset.url} alt="Review attachment" className="h-full w-full" aspectClassName="" />
+          <ImagePreview
+            src={asset.url}
+            alt="Review attachment"
+            className="h-full w-full"
+            aspectClassName=""
+            mode="contain"
+          />
           {canSubmit && (
             <button
               type="button"
@@ -654,6 +660,7 @@ const ReviewsPage = () => {
                       alt={`${selectedProductDetailQuery.data.name} thumbnail`}
                       className="h-16 w-16 rounded-lg border border-slate-200 bg-white"
                       aspectClassName=""
+                      mode="contain"
                       fallback={
                         <div className="flex h-full w-full items-center justify-center text-xs text-slate-400">No image</div>
                       }
@@ -733,7 +740,7 @@ const ReviewsPage = () => {
                     alt="Reviewer avatar preview"
                     className="h-16 w-16 overflow-hidden rounded-full border border-slate-200 bg-slate-100"
                     aspectClassName=""
-                    mode="cover"
+                    mode="contain"
                     fallback={
                       <div className="flex h-full w-full items-center justify-center rounded-full bg-slate-200 text-sm font-semibold text-slate-600">
                         {(form.reviewerName || selectedCustomer?.name || 'A').charAt(0).toUpperCase()}
@@ -1018,6 +1025,7 @@ const ReviewsPage = () => {
                             alt={`${displayName} avatar`}
                             className="h-10 w-10 rounded-full border border-slate-200 bg-slate-100"
                             aspectClassName=""
+                            mode="contain"
                             fallback={
                               <div className="flex h-full w-full items-center justify-center rounded-full bg-slate-200 text-xs font-semibold text-slate-600">
                                 {displayName.charAt(0).toUpperCase()}
@@ -1081,6 +1089,7 @@ const ReviewsPage = () => {
                                   height={48}
                                   className="rounded-lg border border-slate-200"
                                   aspectClassName=""
+                                  mode="contain"
                                 />
                               )
                             )}

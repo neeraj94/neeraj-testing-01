@@ -74,6 +74,7 @@ public class ProductMapper {
         dto.setVariants(mapVariants(product.getVariants()));
         dto.setExpandableSections(mapExpandableSections(product.getExpandableSections()));
         dto.setInfoSections(mapInfoSections(product.getInfoSections()));
+        dto.setReviews(productReviewMapper.toDtoList(reviews));
         dto.setCreatedAt(product.getCreatedAt());
         dto.setUpdatedAt(product.getUpdatedAt());
         if (product.getBrand() != null) {
