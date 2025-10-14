@@ -263,8 +263,10 @@ const ProfilePage = () => {
             <ImagePreview
               src={profileImage?.url}
               alt="Profile avatar"
+              mimeType={profileImage?.mimeType ?? null}
               aspectClassName="aspect-square"
               className="h-20 w-20 overflow-hidden rounded-full border border-slate-200 bg-slate-100"
+              mode="cover"
               fallback={
                 <div className="flex h-full w-full items-center justify-center text-lg font-semibold text-slate-500">
                   {profileInitials}

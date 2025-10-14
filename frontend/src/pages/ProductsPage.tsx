@@ -3338,7 +3338,7 @@ const ProductsPage = () => {
                                       />
                                       <ImagePreview
                                         src={product.thumbnailUrl ?? undefined}
-                                        mimeType={null}
+                                        mimeType={product.thumbnailMimeType ?? null}
                                         alt={`${product.name} thumbnail`}
                                         className="h-12 w-12 overflow-hidden rounded-lg border border-slate-200 bg-slate-100"
                                         aspectClassName=""
@@ -3396,7 +3396,7 @@ const ProductsPage = () => {
                               <div className="flex items-center gap-3">
                                 <ImagePreview
                                   src={product.thumbnailUrl ?? undefined}
-                                  mimeType={null}
+                                  mimeType={product.thumbnailMimeType ?? null}
                                   alt={`${product.name} thumbnail`}
                                   className="h-12 w-12 overflow-hidden rounded-lg border border-slate-200 bg-slate-100"
                                   aspectClassName=""
@@ -3610,10 +3610,12 @@ const ProductsPage = () => {
                             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                               <div className="flex items-start gap-3">
                                 {review.reviewerAvatar?.url ? (
-                                  <img
+                                  <ImagePreview
                                     src={review.reviewerAvatar.url}
-                                    alt=""
-                                    className="h-12 w-12 rounded-full border border-slate-200 object-cover"
+                                    mimeType={review.reviewerAvatar.mimeType ?? null}
+                                    alt={`${displayName} avatar`}
+                                    className="h-12 w-12 overflow-hidden rounded-full border border-slate-200 bg-slate-100"
+                                    aspectClassName=""
                                   />
                                 ) : (
                                   <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-slate-200 text-sm font-semibold text-slate-600">
@@ -3709,11 +3711,13 @@ const ProductsPage = () => {
                                         className="h-44 w-full rounded-xl border border-slate-200 object-cover shadow-sm"
                                       />
                                     ) : (
-                                      <img
+                                      <ImagePreview
                                         key={`${review.id}-media-${index}`}
                                         src={asset.url}
-                                        alt=""
-                                        className="h-44 w-full rounded-xl border border-slate-200 object-cover shadow-sm"
+                                        mimeType={asset.mimeType ?? null}
+                                        alt="Review media"
+                                        className="h-44 w-full overflow-hidden rounded-xl border border-slate-200 bg-slate-100 shadow-sm"
+                                        aspectClassName=""
                                       />
                                     )
                                   )}

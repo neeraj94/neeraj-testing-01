@@ -233,10 +233,10 @@ export const DEFAULT_NAVIGATION_MENU: NavigationNode[] = [
     permissions: [],
     children: [
       {
-        key: 'areaShipping',
-        label: 'Area-wise shipping',
+        key: 'shippingOverview',
+        label: 'Shipping overview',
         icon: '🗺️',
-        path: '/admin/shipping/area',
+        path: '/admin/shipping',
         group: false,
         permissions: ['SHIPPING_AREA_VIEW'],
         children: []

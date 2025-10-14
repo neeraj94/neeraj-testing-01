@@ -373,10 +373,10 @@ public class SetupService {
             )),
             MenuDefinition.group("shipping", "Shipping", "🚚", List.of(
                     MenuDefinition.item(
-                            "areaShipping",
-                            "Area-wise shipping",
+                            "shippingOverview",
+                            "Shipping overview",
                             "🗺️",
-                            "/admin/shipping/area",
+                            "/admin/shipping",
                             List.of("SHIPPING_AREA_VIEW")
                     )
             )),

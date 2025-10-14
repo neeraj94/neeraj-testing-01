@@ -623,6 +623,7 @@ const ReviewsPage = () => {
             className="h-full w-full"
             aspectClassName=""
             mode="contain"
+            mimeType={asset.mimeType ?? null}
           />
           {canSubmit && (
             <button
@@ -807,6 +808,7 @@ const ReviewsPage = () => {
                   <ImagePreview
                     src={reviewerAvatar?.url || selectedCustomer?.profileImageUrl}
                     alt="Reviewer avatar preview"
+                    mimeType={reviewerAvatar?.mimeType ?? null}
                     className="h-16 w-16 overflow-hidden rounded-full border border-slate-200 bg-slate-100"
                     aspectClassName=""
                     mode="contain"

@@ -94,6 +94,7 @@ export interface ProductSummary {
   categoryCount: number;
   variantCount: number;
   thumbnailUrl?: string | null;
+  thumbnailMimeType?: string | null;
   createdAt: string;
   updatedAt: string;
 }

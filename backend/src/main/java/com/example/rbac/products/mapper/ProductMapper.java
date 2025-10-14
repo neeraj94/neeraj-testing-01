@@ -43,6 +43,7 @@ public class ProductMapper {
         dto.setCategoryCount(product.getCategories() != null ? product.getCategories().size() : 0);
         dto.setVariantCount(product.getVariants() != null ? product.getVariants().size() : 0);
         dto.setThumbnailUrl(product.getThumbnail() != null ? product.getThumbnail().getUrl() : null);
+        dto.setThumbnailMimeType(product.getThumbnail() != null ? product.getThumbnail().getMimeType() : null);
         dto.setCreatedAt(product.getCreatedAt());
         dto.setUpdatedAt(product.getUpdatedAt());
         return dto;

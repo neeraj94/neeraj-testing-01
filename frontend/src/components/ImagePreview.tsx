@@ -46,7 +46,14 @@ const ImagePreview = ({
       return false;
     }
     if (mimeType) {
-      return !mimeType.toLowerCase().startsWith('image/');
+      const normalizedMime = mimeType.toLowerCase();
+      if (normalizedMime.startsWith('image/')) {
+        return false;
+      }
+      if (normalizedMime === 'application/octet-stream' || normalizedMime === 'binary/octet-stream') {
+        return false;
+      }
+      return true;
     }
     const normalized = src.trim().toLowerCase();
     if (normalized.startsWith('data:')) {

@@ -16,6 +16,7 @@ public class ProductSummaryDto {
     private int categoryCount;
     private int variantCount;
     private String thumbnailUrl;
+    private String thumbnailMimeType;
     private Instant createdAt;
     private Instant updatedAt;
 
@@ -105,6 +106,14 @@ public class ProductSummaryDto {
 
     public void setThumbnailUrl(String thumbnailUrl) {
         this.thumbnailUrl = thumbnailUrl;
+    }
+
+    public String getThumbnailMimeType() {
+        return thumbnailMimeType;
+    }
+
+    public void setThumbnailMimeType(String thumbnailMimeType) {
+        this.thumbnailMimeType = thumbnailMimeType;
     }
 
     public Instant getCreatedAt() {
