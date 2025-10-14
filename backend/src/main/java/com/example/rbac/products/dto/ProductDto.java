@@ -15,6 +15,7 @@ public class ProductDto {
     private boolean featured;
     private boolean todaysDeal;
     private String description;
+    private String shortDescription;
     private String videoProvider;
     private String videoUrl;
     private List<MediaAssetDto> gallery;
@@ -26,6 +27,7 @@ public class ProductDto {
     private List<ProductAttributeDto> attributes;
     private ProductPricingDto pricing;
     private List<ProductVariantDto> variants;
+    private List<ProductExpandableSectionDto> expandableSections;
     private Instant createdAt;
     private Instant updatedAt;
 
@@ -99,6 +101,14 @@ public class ProductDto {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public String getShortDescription() {
+        return shortDescription;
+    }
+
+    public void setShortDescription(String shortDescription) {
+        this.shortDescription = shortDescription;
     }
 
     public String getVideoProvider() {
@@ -187,6 +197,14 @@ public class ProductDto {
 
     public void setVariants(List<ProductVariantDto> variants) {
         this.variants = variants;
+    }
+
+    public List<ProductExpandableSectionDto> getExpandableSections() {
+        return expandableSections;
+    }
+
+    public void setExpandableSections(List<ProductExpandableSectionDto> expandableSections) {
+        this.expandableSections = expandableSections;
     }
 
     public Instant getCreatedAt() {

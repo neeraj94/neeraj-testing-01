@@ -17,8 +17,8 @@ interface MediaLibraryDialogProps {
   onClose: () => void;
   moduleFilters?: string[];
   title?: string;
-  onSelect: (selection: MediaSelection) => void;
-  onUpload?: (file: File) => Promise<MediaSelection>;
+  onSelect: (selection: MediaSelection | MediaSelection[]) => void;
+  onUpload?: (files: File[]) => Promise<MediaSelection | MediaSelection[]>;
 }
 
 const FILE_TYPE_OPTIONS = [
@@ -156,18 +156,28 @@ const MediaLibraryDialog = ({
     if (!onUpload) {
       return;
     }
-    const file = event.target.files?.[0];
-    if (!file) {
+    const files = event.target.files ? Array.from(event.target.files).filter(Boolean) : [];
+    if (!files.length) {
       return;
     }
     try {
       setUploading(true);
-      const result = await onUpload(file);
+      const result = await onUpload(files);
+      const selections = Array.isArray(result)
+        ? result.filter((item): item is MediaSelection => Boolean(item))
+        : result
+        ? [result]
+        : [];
       await filesQuery.refetch();
-      onSelect(result);
-      onClose();
+      if (selections.length === 1) {
+        onSelect(selections[0]);
+        onClose();
+      } else if (selections.length > 1) {
+        onSelect(selections);
+        onClose();
+      }
     } catch (error) {
-      // errors handled by caller toast
+      // upload errors are surfaced by the caller via toast notifications
     } finally {
       setUploading(false);
       if (event.target) {
@@ -190,6 +200,7 @@ const MediaLibraryDialog = ({
                 <input
                   ref={fileInputRef}
                   type="file"
+                  multiple
                   className="hidden"
                   onChange={handleFileChange}
                 />

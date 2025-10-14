@@ -40,7 +40,7 @@ public class ProductController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAuthority('PRODUCT_UPDATE')")
+    @PreAuthorize("hasAnyAuthority('PRODUCT_UPDATE','PRODUCT_CREATE')")
     public ProductDto update(@PathVariable("id") Long id, @Valid @RequestBody CreateProductRequest request) {
         return productService.update(id, request);
     }

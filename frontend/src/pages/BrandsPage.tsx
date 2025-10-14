@@ -257,19 +257,34 @@ const BrandsPage = () => {
     setLogoPreview(null);
   };
 
-  const handleMediaUpload = async (file: File): Promise<MediaSelection> => {
-    const response = await logoUploadMutation.mutateAsync(file);
-    return {
-      url: response.url,
-      originalFilename: response.originalFilename,
-      mimeType: response.mimeType,
-      sizeBytes: response.sizeBytes
-    };
+  const handleMediaUpload = async (files: File[]): Promise<MediaSelection[]> => {
+    const selections: MediaSelection[] = [];
+    for (const file of files) {
+      try {
+        const response = await logoUploadMutation.mutateAsync(file);
+        selections.push({
+          url: response.url,
+          originalFilename: response.originalFilename,
+          mimeType: response.mimeType,
+          sizeBytes: response.sizeBytes
+        });
+      } catch (error) {
+        // errors handled by mutation onError handler
+      }
+    }
+    if (!selections.length) {
+      throw new Error('No logo uploaded');
+    }
+    return selections;
   };
 
-  const handleMediaSelect = (selection: MediaSelection) => {
-    setForm((prev) => ({ ...prev, logoUrl: selection.url }));
-    setLogoPreview(selection.url);
+  const handleMediaSelect = (selection: MediaSelection | MediaSelection[]) => {
+    const selected = Array.isArray(selection) ? selection[0] : selection;
+    if (!selected) {
+      return;
+    }
+    setForm((prev) => ({ ...prev, logoUrl: selected.url }));
+    setLogoPreview(selected.url);
     setMediaLibraryOpen(false);
   };
 

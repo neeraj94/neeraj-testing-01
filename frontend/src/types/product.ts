@@ -30,6 +30,7 @@ export interface CreateProductPayload {
   featured: boolean;
   todaysDeal: boolean;
   description: string;
+  shortDescription: string;
   gallery: MediaSelection[];
   thumbnail?: MediaSelection | null;
   videoProvider: string;
@@ -58,6 +59,7 @@ export interface CreateProductPayload {
   };
   attributes: SelectedAttributePayload[];
   variants: CreateProductVariantPayload[];
+  expandableSections: { title: string; content: string }[];
 }
 
 export interface ProductMediaAsset {
@@ -147,6 +149,7 @@ export interface ProductDetail {
   featured: boolean;
   todaysDeal: boolean;
   description: string;
+  shortDescription: string;
   videoProvider: string;
   videoUrl: string;
   gallery: ProductMediaAsset[];
@@ -158,6 +161,7 @@ export interface ProductDetail {
   attributes: ProductDetailAttribute[];
   pricing: ProductDetailPricing;
   variants: ProductDetailVariant[];
+  expandableSections: { title: string; content: string }[];
   createdAt: string;
   updatedAt: string;
 }

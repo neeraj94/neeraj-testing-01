@@ -12,7 +12,8 @@ public enum UploadedFileModule {
     BADGE_CATEGORY_ICON("Badge category", "Icon"),
     BLOG_BANNER_IMAGE("Blog", "Banner image"),
     BLOG_META_IMAGE("Blog", "Meta image"),
-    WEDGE_ICON("Wedge", "Icon");
+    WEDGE_ICON("Wedge", "Icon"),
+    PRODUCT_MEDIA("Product", "Media library");
 
     private final String featureName;
     private final String contextLabel;
