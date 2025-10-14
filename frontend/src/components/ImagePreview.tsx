@@ -41,22 +41,28 @@ const ImagePreview = ({
     setHasError(false);
   }, [src, mimeType]);
 
-  const isImage = useMemo(() => {
-    if (mimeType && mimeType.toLowerCase().startsWith('image/')) {
-      return true;
-    }
+  const isExplicitlyNonImage = useMemo(() => {
     if (!src) {
       return false;
     }
+    if (mimeType) {
+      return !mimeType.toLowerCase().startsWith('image/');
+    }
     const normalized = src.trim().toLowerCase();
-    if (normalized.startsWith('data:image')) {
+    if (normalized.startsWith('data:')) {
+      if (normalized.startsWith('data:image')) {
+        return false;
+      }
       return true;
     }
     if (normalized.startsWith('blob:')) {
-      return true;
+      return false;
     }
     const cleanSrc = src.split('?')[0] ?? '';
-    return IMAGE_EXTENSIONS.test(cleanSrc);
+    if (IMAGE_EXTENSIONS.test(cleanSrc)) {
+      return false;
+    }
+    return false;
   }, [src, mimeType]);
 
   const renderFallback = () =>
@@ -75,12 +81,13 @@ const ImagePreview = ({
 
   return (
     <div className={containerClass} style={style}>
-      {src && isImage && !hasError ? (
+      {src && !isExplicitlyNonImage && !hasError ? (
         <img
           src={src}
           alt={alt}
           className={`h-full w-full ${objectClass} object-center`}
           onError={() => setHasError(true)}
+          onLoad={() => setHasError(false)}
         />
       ) : (
         renderFallback()

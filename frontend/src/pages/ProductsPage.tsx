@@ -21,9 +21,11 @@ import type { Attribute, AttributePage, AttributeValue } from '../types/attribut
 import type { MediaSelection } from '../types/uploaded-file';
 import type {
   CreateProductPayload,
+  CreateProductReviewPayload,
   DiscountType,
   ProductAssetUploadResponse,
   ProductDetail,
+  ProductReview,
   ProductSummary,
   ProductSummaryPage,
   StockVisibilityState
@@ -262,6 +264,27 @@ const mediaAssetToSelection = (
   };
 };
 
+const reviewToPayload = (
+  review: ProductReview,
+  overrides: Partial<CreateProductReviewPayload> = {}
+): CreateProductReviewPayload => {
+  const media = (review.media ?? [])
+    .map((asset) => mediaAssetToSelection(asset))
+    .filter((asset): asset is MediaSelection => Boolean(asset));
+  const payload: CreateProductReviewPayload = {
+    productId: review.productId,
+    customerId: review.customerId,
+    reviewerName: review.customerId ? undefined : review.reviewerName ?? undefined,
+    reviewerAvatar: review.customerId ? undefined : mediaAssetToSelection(review.reviewerAvatar) ?? undefined,
+    rating: review.rating,
+    comment: review.comment ?? undefined,
+    reviewedAt: review.reviewedAt,
+    media,
+    published: review.published
+  };
+  return { ...payload, ...overrides };
+};
+
 const toDateTimeInput = (iso?: string | null) => {
   if (!iso) {
     return '';
@@ -370,6 +393,7 @@ const ProductsPage = () => {
   const [taxDropdownOpen, setTaxDropdownOpen] = useState(false);
   const [brandSearch, setBrandSearch] = useState('');
   const [showValidation, setShowValidation] = useState(false);
+  const [reviewVisibilityUpdatingId, setReviewVisibilityUpdatingId] = useState<number | null>(null);
 
   const brandDropdownRef = useRef<HTMLDivElement | null>(null);
   const taxDropdownRef = useRef<HTMLDivElement | null>(null);
@@ -388,6 +412,10 @@ const ProductsPage = () => {
   );
   const canDelete = useMemo(
     () => hasAnyPermission(permissions as PermissionKey[], ['PRODUCT_DELETE']),
+    [permissions]
+  );
+  const canUpdateReviews = useMemo(
+    () => hasAnyPermission(permissions as PermissionKey[], ['PRODUCT_REVIEW_UPDATE']),
     [permissions]
   );
 
@@ -689,6 +717,34 @@ const ProductsPage = () => {
         type: 'error',
         message: extractErrorMessage(error, 'Unable to delete product. Please try again later.')
       });
+    }
+  });
+
+  const toggleReviewVisibilityMutation = useMutation({
+    mutationFn: async ({ review, published }: { review: ProductReview; published: boolean }) => {
+      const payload = reviewToPayload(review, { published });
+      await api.put(`/product-reviews/${review.id}`, payload);
+      return { review, published };
+    },
+    onMutate: ({ review }) => {
+      setReviewVisibilityUpdatingId(review.id);
+    },
+    onSuccess: (_data, variables) => {
+      notify({
+        type: 'success',
+        message: variables.published ? 'Review enabled successfully.' : 'Review hidden successfully.'
+      });
+      queryClient.invalidateQueries({ queryKey: ['products', 'detail', variables.review.productId] });
+      queryClient.invalidateQueries({ queryKey: ['product-reviews'] });
+    },
+    onError: (error: unknown) => {
+      notify({
+        type: 'error',
+        message: extractErrorMessage(error, 'Unable to update review visibility. Please try again later.')
+      });
+    },
+    onSettled: () => {
+      setReviewVisibilityUpdatingId(null);
     }
   });
 
@@ -1295,6 +1351,20 @@ const ProductsPage = () => {
         [variantKey]: { ...variant, [field]: value }
       };
     });
+  };
+
+  const handleProductReviewVisibilityChange = (review: ProductReview, published: boolean) => {
+    if (!canUpdateReviews) {
+      notify({ type: 'error', message: 'You do not have permission to update reviews.' });
+      return;
+    }
+    if (review.published === published) {
+      return;
+    }
+    if (toggleReviewVisibilityMutation.isPending && reviewVisibilityUpdatingId === review.id) {
+      return;
+    }
+    toggleReviewVisibilityMutation.mutate({ review, published });
   };
 
   const handleToggleFrequentlyBoughtProduct = (product: ProductSummary) => {
@@ -3529,6 +3599,9 @@ const ProductsPage = () => {
                           review.customerName?.trim() ||
                           'Anonymous shopper';
                         const reviewedOn = new Date(review.reviewedAt).toLocaleDateString();
+                        const visibilityUpdating =
+                          reviewVisibilityUpdatingId === review.id && toggleReviewVisibilityMutation.isPending;
+                        const disableVisibilityControls = !canUpdateReviews || visibilityUpdating;
                         return (
                           <article
                             key={review.id}
@@ -3558,15 +3631,49 @@ const ProductsPage = () => {
                                   <p className="mt-1 text-xs text-slate-400">Reviewed on {reviewedOn}</p>
                                 </div>
                               </div>
-                              <div className="flex items-center gap-2 text-sm font-semibold text-amber-500">
-                                <StarRating
-                                  value={review.rating}
-                                  min={0}
-                                  readOnly
-                                  size="md"
-                                  ariaLabel={`Rating ${review.rating.toFixed(1)} out of 5`}
-                                />
-                                <span className="text-slate-600">{review.rating.toFixed(1)}</span>
+                              <div className="flex flex-col items-start gap-3 sm:items-end">
+                                <div className="flex items-center gap-2 text-sm font-semibold text-amber-500">
+                                  <StarRating
+                                    value={review.rating}
+                                    min={0}
+                                    readOnly
+                                    size="md"
+                                    ariaLabel={`Rating ${review.rating.toFixed(1)} out of 5`}
+                                  />
+                                  <span className="text-slate-600">{review.rating.toFixed(1)}</span>
+                                </div>
+                                <fieldset
+                                  className="flex flex-wrap items-center gap-4"
+                                  aria-label="Review visibility"
+                                >
+                                  <label className="inline-flex items-center gap-2 text-sm text-slate-600">
+                                    <input
+                                      type="radio"
+                                      name={`product-review-${review.id}-visibility`}
+                                      value="visible"
+                                      checked={review.published}
+                                      onChange={() => handleProductReviewVisibilityChange(review, true)}
+                                      disabled={disableVisibilityControls}
+                                      className="h-4 w-4 border-slate-300 text-primary focus:ring-primary/40 disabled:cursor-not-allowed"
+                                    />
+                                    <span>Visible</span>
+                                  </label>
+                                  <label className="inline-flex items-center gap-2 text-sm text-slate-600">
+                                    <input
+                                      type="radio"
+                                      name={`product-review-${review.id}-visibility`}
+                                      value="hidden"
+                                      checked={!review.published}
+                                      onChange={() => handleProductReviewVisibilityChange(review, false)}
+                                      disabled={disableVisibilityControls}
+                                      className="h-4 w-4 border-slate-300 text-primary focus:ring-primary/40 disabled:cursor-not-allowed"
+                                    />
+                                    <span>Hidden</span>
+                                  </label>
+                                </fieldset>
+                                {visibilityUpdating && (
+                                  <p className="text-xs text-slate-400">Updating…</p>
+                                )}
                               </div>
                             </div>
 
