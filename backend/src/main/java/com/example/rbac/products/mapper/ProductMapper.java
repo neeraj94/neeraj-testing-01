@@ -12,11 +12,13 @@ import com.example.rbac.products.model.ProductVariantMedia;
 import com.example.rbac.products.model.ProductVariantValue;
 import com.example.rbac.products.model.ProductInfoSection;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Component
@@ -40,6 +42,7 @@ public class ProductMapper {
         dto.setBrandName(product.getBrand() != null ? product.getBrand().getName() : null);
         dto.setCategoryCount(product.getCategories() != null ? product.getCategories().size() : 0);
         dto.setVariantCount(product.getVariants() != null ? product.getVariants().size() : 0);
+        dto.setThumbnailUrl(product.getThumbnail() != null ? product.getThumbnail().getUrl() : null);
         dto.setCreatedAt(product.getCreatedAt());
         dto.setUpdatedAt(product.getUpdatedAt());
         return dto;
@@ -73,6 +76,9 @@ public class ProductMapper {
         dto.setVariants(mapVariants(product.getVariants()));
         dto.setExpandableSections(mapExpandableSections(product.getExpandableSections()));
         dto.setInfoSections(mapInfoSections(product.getInfoSections()));
+        dto.setReviews(productReviewMapper.toDtoList(reviews));
+        dto.setFrequentlyBoughtProducts(mapFrequentlyBoughtProducts(product.getFrequentlyBoughtProducts()));
+        dto.setFrequentlyBoughtCategoryIds(mapFrequentlyBoughtCategoryIds(product.getFrequentlyBoughtCategories()));
         dto.setCreatedAt(product.getCreatedAt());
         dto.setUpdatedAt(product.getUpdatedAt());
         if (product.getBrand() != null) {
@@ -165,6 +171,27 @@ public class ProductMapper {
                 .collect(Collectors.toList());
     }
 
+    private List<ProductSummaryDto> mapFrequentlyBoughtProducts(Set<Product> relatedProducts) {
+        if (relatedProducts == null || relatedProducts.isEmpty()) {
+            return List.of();
+        }
+        return relatedProducts.stream()
+                .filter(Objects::nonNull)
+                .map(this::toSummary)
+                .collect(Collectors.toList());
+    }
+
+    private List<Long> mapFrequentlyBoughtCategoryIds(Set<com.example.rbac.categories.model.Category> categories) {
+        if (categories == null || categories.isEmpty()) {
+            return List.of();
+        }
+        return categories.stream()
+                .filter(Objects::nonNull)
+                .map(com.example.rbac.categories.model.Category::getId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+    }
+
     private List<ProductTaxRateDto> mapTaxRates(Product product) {
         if (product.getTaxRates() == null) {
             return List.of();
@@ -223,7 +250,16 @@ public class ProductMapper {
         pricing.setDiscountValue(product.getDiscountValue());
         pricing.setDiscountMinQuantity(product.getDiscountMinQuantity());
         pricing.setDiscountMaxQuantity(product.getDiscountMaxQuantity());
-        pricing.setPriceTag(product.getPriceTag());
+        pricing.setDiscountStartAt(product.getDiscountStartAt());
+        pricing.setDiscountEndAt(product.getDiscountEndAt());
+        List<String> tags = product.getTags() == null
+                ? List.of()
+                : product.getTags().stream()
+                .filter(Objects::nonNull)
+                .map(String::trim)
+                .filter(StringUtils::hasText)
+                .collect(Collectors.toList());
+        pricing.setTags(tags);
         pricing.setStockQuantity(product.getStockQuantity());
         pricing.setSku(product.getSku());
         pricing.setExternalLink(product.getExternalLink());
