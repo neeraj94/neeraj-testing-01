@@ -1,11 +1,21 @@
 ALTER TABLE products
-    ADD COLUMN short_description TEXT AFTER description;
+    ADD COLUMN short_description TEXT AFTER todays_deal;
 
-CREATE TABLE product_expandable_sections (
+CREATE TABLE product_info_sections (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
     product_id BIGINT NOT NULL,
-    display_order INT NOT NULL,
-    title VARCHAR(200),
+    title VARCHAR(200) NOT NULL,
     content TEXT,
-    PRIMARY KEY (product_id, display_order),
-    CONSTRAINT fk_product_sections_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+    display_order INT,
+    created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+    CONSTRAINT fk_product_info_sections_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+);
+
+CREATE TABLE product_info_section_bullets (
+    section_id BIGINT NOT NULL,
+    bullet_order INT NOT NULL,
+    bullet_text VARCHAR(500) NOT NULL,
+    PRIMARY KEY (section_id, bullet_order),
+    CONSTRAINT fk_product_info_section_bullets_section FOREIGN KEY (section_id) REFERENCES product_info_sections(id) ON DELETE CASCADE
 );

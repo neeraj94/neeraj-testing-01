@@ -31,7 +31,8 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
             "variants.values.attributeValue.attribute",
             "variants.media",
             "variants.media.media",
-            "expandableSections"
+            "infoSections",
+            "infoSections.bulletPoints"
     })
     Optional<Product> findDetailedById(Long id);
 }

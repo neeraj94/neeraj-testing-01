@@ -13,7 +13,11 @@ public enum UploadedFileModule {
     BLOG_BANNER_IMAGE("Blog", "Banner image"),
     BLOG_META_IMAGE("Blog", "Meta image"),
     WEDGE_ICON("Wedge", "Icon"),
-    PRODUCT_MEDIA("Product", "Media library");
+    PRODUCT_GALLERY_IMAGE("Product", "Gallery image"),
+    PRODUCT_THUMBNAIL("Product", "Thumbnail"),
+    PRODUCT_META_IMAGE("Product", "Meta image"),
+    PRODUCT_PDF_SPEC("Product", "Specification"),
+    PRODUCT_VARIANT_IMAGE("Product", "Variant image");
 
     private final String featureName;
     private final String contextLabel;

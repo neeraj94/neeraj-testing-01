@@ -17,8 +17,9 @@ interface MediaLibraryDialogProps {
   onClose: () => void;
   moduleFilters?: string[];
   title?: string;
-  onSelect: (selection: MediaSelection | MediaSelection[]) => void;
-  onUpload?: (files: File[]) => Promise<MediaSelection | MediaSelection[]>;
+  onSelect: (selection: MediaSelection) => void;
+  onUpload?: (files: File[]) => Promise<MediaSelection[]>;
+  onUploadComplete?: (selections: MediaSelection[]) => void;
 }
 
 const FILE_TYPE_OPTIONS = [
@@ -35,7 +36,8 @@ const MediaLibraryDialog = ({
   moduleFilters,
   title = 'Uploaded files',
   onSelect,
-  onUpload
+  onUpload,
+  onUploadComplete
 }: MediaLibraryDialogProps) => {
   const [page, setPage] = useState(0);
   const [size, setSize] = useState(12);
@@ -156,25 +158,22 @@ const MediaLibraryDialog = ({
     if (!onUpload) {
       return;
     }
-    const files = event.target.files ? Array.from(event.target.files).filter(Boolean) : [];
-    if (!files.length) {
+    const files = event.target.files ? Array.from(event.target.files) : [];
+    if (files.length === 0) {
       return;
     }
     try {
       setUploading(true);
-      const result = await onUpload(files);
-      const selections = Array.isArray(result)
-        ? result.filter((item): item is MediaSelection => Boolean(item))
-        : result
-        ? [result]
-        : [];
+      const results = await onUpload(files);
       await filesQuery.refetch();
-      if (selections.length === 1) {
-        onSelect(selections[0]);
-        onClose();
-      } else if (selections.length > 1) {
-        onSelect(selections);
-        onClose();
+      if (results.length > 0) {
+        if (onUploadComplete) {
+          onUploadComplete(results);
+          onClose();
+        } else {
+          onSelect(results[0]);
+          onClose();
+        }
       }
     } catch (error) {
       // upload errors are surfaced by the caller via toast notifications
@@ -210,7 +209,7 @@ const MediaLibraryDialog = ({
                   disabled={uploading}
                   className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white shadow hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {uploading ? 'Uploading…' : 'Upload new'}
+                  {uploading ? 'Uploading…' : 'Upload file(s)'}
                 </button>
               </Fragment>
             )}

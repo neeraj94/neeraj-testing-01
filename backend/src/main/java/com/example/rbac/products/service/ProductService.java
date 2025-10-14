@@ -106,6 +106,7 @@ public class ProductService {
         product.setMinPurchaseQuantity(request.getMinPurchaseQuantity());
         product.setFeatured(request.isFeatured());
         product.setTodaysDeal(request.isTodaysDeal());
+        product.setShortDescription(trimToNull(request.getShortDescription()));
         product.setDescription(trimToNull(request.getDescription()));
         product.setShortDescription(trimToNull(request.getShortDescription()));
         product.setVideoProvider(trimToNull(request.getVideoProvider()));
@@ -188,6 +189,8 @@ public class ProductService {
         product.getAttributeValues().addAll(resolveSelectedAttributeValues(request, attributeValueMap));
 
         rebuildVariants(product, request.getVariants(), attributeValueMap);
+
+        rebuildInfoSections(product, request.getInfoSections());
     }
 
     private void rebuildGallery(Product product, List<MediaSelectionRequest> gallery) {
@@ -329,24 +332,32 @@ public class ProductService {
         }
     }
 
-    private void rebuildExpandableSections(Product product, List<ProductExpandableSectionRequest> sections) {
-        product.getExpandableSections().clear();
+    private void rebuildInfoSections(Product product, List<ProductInfoSectionRequest> sections) {
+        product.getInfoSections().clear();
         if (CollectionUtils.isEmpty(sections)) {
             return;
         }
-        for (ProductExpandableSectionRequest section : sections) {
-            if (section == null) {
+        int order = 0;
+        for (ProductInfoSectionRequest sectionRequest : sections) {
+            if (sectionRequest == null || !StringUtils.hasText(sectionRequest.getTitle())) {
                 continue;
             }
-            String title = trimToNull(section.getTitle());
-            String content = trimToNull(section.getContent());
-            if (title == null && content == null) {
-                continue;
+            ProductInfoSection section = new ProductInfoSection();
+            section.setProduct(product);
+            section.setTitle(sectionRequest.getTitle().trim());
+            section.setContent(trimToNull(sectionRequest.getContent()));
+            section.setDisplayOrder(order++);
+
+            List<String> bulletPoints = new ArrayList<>();
+            if (!CollectionUtils.isEmpty(sectionRequest.getBulletPoints())) {
+                for (String bullet : sectionRequest.getBulletPoints()) {
+                    if (StringUtils.hasText(bullet)) {
+                        bulletPoints.add(bullet.trim());
+                    }
+                }
             }
-            ProductExpandableSection entity = new ProductExpandableSection();
-            entity.setTitle(title);
-            entity.setContent(content);
-            product.getExpandableSections().add(entity);
+            section.setBulletPoints(bulletPoints);
+            product.getInfoSections().add(section);
         }
     }
 

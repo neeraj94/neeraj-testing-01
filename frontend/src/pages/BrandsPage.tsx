@@ -258,24 +258,19 @@ const BrandsPage = () => {
   };
 
   const handleMediaUpload = async (files: File[]): Promise<MediaSelection[]> => {
-    const selections: MediaSelection[] = [];
-    for (const file of files) {
-      try {
-        const response = await logoUploadMutation.mutateAsync(file);
-        selections.push({
-          url: response.url,
-          originalFilename: response.originalFilename,
-          mimeType: response.mimeType,
-          sizeBytes: response.sizeBytes
-        });
-      } catch (error) {
-        // errors handled by mutation onError handler
+    const [file] = files;
+    if (!file) {
+      return [];
+    }
+    const response = await logoUploadMutation.mutateAsync(file);
+    return [
+      {
+        url: response.url,
+        originalFilename: response.originalFilename,
+        mimeType: response.mimeType,
+        sizeBytes: response.sizeBytes
       }
-    }
-    if (!selections.length) {
-      throw new Error('No logo uploaded');
-    }
-    return selections;
+    ];
   };
 
   const handleMediaSelect = (selection: MediaSelection | MediaSelection[]) => {

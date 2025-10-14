@@ -247,23 +247,24 @@ const WedgesPage = () => {
   };
 
   const handleMediaUpload = async (files: File[]): Promise<MediaSelection[]> => {
-    const selections: MediaSelection[] = [];
-    for (const file of files) {
-      try {
-        const data = await iconUploadMutation.mutateAsync(file);
-        notify({ type: 'success', message: 'Icon uploaded successfully.' });
-        selections.push({
+    const [file] = files;
+    if (!file) {
+      return [];
+    }
+    try {
+      const data = await iconUploadMutation.mutateAsync(file);
+      notify({ type: 'success', message: 'Icon uploaded successfully.' });
+      return [
+        {
           url: data.url,
           originalFilename: data.originalFilename ?? undefined,
           mimeType: data.mimeType ?? undefined,
           sizeBytes: data.sizeBytes ?? undefined
-        });
-      } catch (error) {
-        notify({ type: 'error', message: extractErrorMessage(error, 'Failed to upload icon.') });
-      }
-    }
-    if (!selections.length) {
-      throw new Error('No icon uploaded');
+        }
+      ];
+    } catch (error) {
+      notify({ type: 'error', message: extractErrorMessage(error, 'Failed to upload icon.') });
+      throw error;
     }
     return selections;
   };

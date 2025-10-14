@@ -264,30 +264,31 @@ const BlogPostsPage = () => {
     if (!mediaLibraryTarget) {
       throw new Error('No media target selected.');
     }
-    const selections: MediaSelection[] = [];
-    for (const file of files) {
-      try {
-        const formData = new FormData();
-        formData.append('file', file);
-        const usage = mediaLibraryTarget === 'bannerImage' ? 'BANNER' : 'META';
-        const { data } = await api.post<BlogMediaUploadResponse>('/blog/media', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-          params: { usage }
-        });
-        notify({ type: 'success', message: 'Media uploaded successfully.' });
-        selections.push({
+    const [file] = files;
+    if (!file) {
+      return [];
+    }
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const usage = mediaLibraryTarget === 'bannerImage' ? 'BANNER' : 'META';
+      const { data } = await api.post<BlogMediaUploadResponse>('/blog/media', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        params: { usage }
+      });
+      notify({ type: 'success', message: 'Media uploaded successfully.' });
+      return [
+        {
           url: data.url,
           storageKey: data.key,
           originalFilename: data.originalFilename ?? undefined,
           mimeType: data.mimeType ?? undefined,
           sizeBytes: data.sizeBytes ?? undefined
-        });
-      } catch (error) {
-        notify({ type: 'error', message: extractErrorMessage(error, 'Failed to upload media.') });
-      }
-    }
-    if (!selections.length) {
-      throw new Error('No media uploaded');
+        }
+      ];
+    } catch (error) {
+      notify({ type: 'error', message: extractErrorMessage(error, 'Failed to upload media.') });
+      throw error;
     }
     return selections;
   };

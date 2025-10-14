@@ -29,6 +29,9 @@ public class CreateProductRequest {
 
     private boolean todaysDeal;
 
+    @Size(max = 500, message = "Short description must be at most 500 characters")
+    private String shortDescription;
+
     private String description;
 
     private String shortDescription;
@@ -66,7 +69,7 @@ public class CreateProductRequest {
     private List<ProductVariantRequest> variants = new ArrayList<>();
 
     @Valid
-    private List<ProductExpandableSectionRequest> expandableSections = new ArrayList<>();
+    private List<ProductInfoSectionRequest> infoSections = new ArrayList<>();
 
     public String getName() {
         return name;
@@ -122,6 +125,14 @@ public class CreateProductRequest {
 
     public void setTodaysDeal(boolean todaysDeal) {
         this.todaysDeal = todaysDeal;
+    }
+
+    public String getShortDescription() {
+        return shortDescription;
+    }
+
+    public void setShortDescription(String shortDescription) {
+        this.shortDescription = shortDescription;
     }
 
     public String getDescription() {
@@ -228,11 +239,11 @@ public class CreateProductRequest {
         this.variants = variants;
     }
 
-    public List<ProductExpandableSectionRequest> getExpandableSections() {
-        return expandableSections;
+    public List<ProductInfoSectionRequest> getInfoSections() {
+        return infoSections;
     }
 
-    public void setExpandableSections(List<ProductExpandableSectionRequest> expandableSections) {
-        this.expandableSections = expandableSections;
+    public void setInfoSections(List<ProductInfoSectionRequest> infoSections) {
+        this.infoSections = infoSections;
     }
 }

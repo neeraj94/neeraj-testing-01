@@ -47,6 +47,9 @@ public class Product {
     @Column(name = "todays_deal", nullable = false)
     private boolean todaysDeal;
 
+    @Column(name = "short_description", columnDefinition = "TEXT")
+    private String shortDescription;
+
     @Column(columnDefinition = "TEXT")
     private String description;
 
@@ -167,11 +170,9 @@ public class Product {
     @Fetch(FetchMode.SUBSELECT)
     private List<ProductVariant> variants = new ArrayList<>();
 
-    @ElementCollection
-    @CollectionTable(name = "product_expandable_sections", joinColumns = @JoinColumn(name = "product_id"))
-    @OrderColumn(name = "display_order")
-    @Fetch(FetchMode.SUBSELECT)
-    private List<ProductExpandableSection> expandableSections = new ArrayList<>();
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("displayOrder ASC, id ASC")
+    private List<ProductInfoSection> infoSections = new ArrayList<>();
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -243,6 +244,14 @@ public class Product {
 
     public void setTodaysDeal(boolean todaysDeal) {
         this.todaysDeal = todaysDeal;
+    }
+
+    public String getShortDescription() {
+        return shortDescription;
+    }
+
+    public void setShortDescription(String shortDescription) {
+        this.shortDescription = shortDescription;
     }
 
     public String getDescription() {
@@ -469,12 +478,12 @@ public class Product {
         this.variants = variants;
     }
 
-    public List<ProductExpandableSection> getExpandableSections() {
-        return expandableSections;
+    public List<ProductInfoSection> getInfoSections() {
+        return infoSections;
     }
 
-    public void setExpandableSections(List<ProductExpandableSection> expandableSections) {
-        this.expandableSections = expandableSections;
+    public void setInfoSections(List<ProductInfoSection> infoSections) {
+        this.infoSections = infoSections;
     }
 
     public Instant getCreatedAt() {

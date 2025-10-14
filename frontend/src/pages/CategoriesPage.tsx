@@ -381,24 +381,19 @@ const CategoriesPage = () => {
   };
 
   const handleMediaUpload = async (type: AssetUploadType, files: File[]): Promise<MediaSelection[]> => {
-    const selections: MediaSelection[] = [];
-    for (const file of files) {
-      try {
-        const result = await assetUploadMutation.mutateAsync({ type, file });
-        selections.push({
-          url: result.data.url,
-          originalFilename: result.data.originalFilename,
-          mimeType: result.data.mimeType,
-          sizeBytes: result.data.sizeBytes
-        });
-      } catch (error) {
-        // errors are surfaced via assetUploadMutation onError handler
+    const [file] = files;
+    if (!file) {
+      return [];
+    }
+    const result = await assetUploadMutation.mutateAsync({ type, file });
+    return [
+      {
+        url: result.data.url,
+        originalFilename: result.data.originalFilename,
+        mimeType: result.data.mimeType,
+        sizeBytes: result.data.sizeBytes
       }
-    }
-    if (!selections.length) {
-      throw new Error('No media uploaded');
-    }
-    return selections;
+    ];
   };
 
   const handleMediaSelect = (type: AssetUploadType | null, selection: MediaSelection | MediaSelection[]) => {

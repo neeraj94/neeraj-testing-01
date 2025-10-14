@@ -14,6 +14,7 @@ public class ProductDto {
     private Integer minPurchaseQuantity;
     private boolean featured;
     private boolean todaysDeal;
+    private String shortDescription;
     private String description;
     private String shortDescription;
     private String videoProvider;
@@ -27,8 +28,7 @@ public class ProductDto {
     private List<ProductAttributeDto> attributes;
     private ProductPricingDto pricing;
     private List<ProductVariantDto> variants;
-    private List<ProductExpandableSectionDto> expandableSections;
-    private List<ProductReviewDto> reviews;
+    private List<ProductInfoSectionDto> infoSections;
     private Instant createdAt;
     private Instant updatedAt;
 
@@ -94,6 +94,14 @@ public class ProductDto {
 
     public void setTodaysDeal(boolean todaysDeal) {
         this.todaysDeal = todaysDeal;
+    }
+
+    public String getShortDescription() {
+        return shortDescription;
+    }
+
+    public void setShortDescription(String shortDescription) {
+        this.shortDescription = shortDescription;
     }
 
     public String getDescription() {
@@ -200,20 +208,12 @@ public class ProductDto {
         this.variants = variants;
     }
 
-    public List<ProductExpandableSectionDto> getExpandableSections() {
-        return expandableSections;
+    public List<ProductInfoSectionDto> getInfoSections() {
+        return infoSections;
     }
 
-    public void setExpandableSections(List<ProductExpandableSectionDto> expandableSections) {
-        this.expandableSections = expandableSections;
-    }
-
-    public List<ProductReviewDto> getReviews() {
-        return reviews;
-    }
-
-    public void setReviews(List<ProductReviewDto> reviews) {
-        this.reviews = reviews;
+    public void setInfoSections(List<ProductInfoSectionDto> infoSections) {
+        this.infoSections = infoSections;
     }
 
     public Instant getCreatedAt() {
