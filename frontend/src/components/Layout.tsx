@@ -247,6 +247,8 @@ const Layout = () => {
     return (initials[0] ?? 'U') + (initials[1] ?? '');
   };
 
+  const userAvatarUrl = user?.profileImageUrl?.trim() ? user.profileImageUrl : null;
+
   const handleLogout = async () => {
     if (refreshToken) {
       try {
@@ -339,9 +341,17 @@ const Layout = () => {
                 isSidebarCondensed ? 'lg:flex-col lg:items-center lg:gap-3 lg:px-0 lg:py-4' : ''
               }`}
             >
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
-                {getInitials()}
-              </div>
+              {userAvatarUrl ? (
+                <img
+                  src={userAvatarUrl}
+                  alt={user?.fullName ?? 'Profile avatar'}
+                  className="h-12 w-12 rounded-full object-cover"
+                />
+              ) : (
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+                  {getInitials()}
+                </div>
+              )}
               {!isSidebarCondensed && user && (
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold text-slate-800">{user.fullName}</p>

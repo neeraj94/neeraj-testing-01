@@ -19,7 +19,7 @@ public class ProductReviewController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAuthority('PRODUCT_VIEW')")
+    @PreAuthorize("hasAnyAuthority('PRODUCT_VIEW', 'PRODUCT_REVIEW_VIEW')")
     public PageResponse<ProductReviewDto> list(@RequestParam(name = "page", defaultValue = "0") Integer page,
                                                @RequestParam(name = "size", defaultValue = "20") Integer size,
                                                @RequestParam(name = "productId", required = false) Long productId,
