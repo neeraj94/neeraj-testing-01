@@ -57,16 +57,44 @@ export const resolveMediaUrl = (value?: string | null): string | null => {
   }
 };
 
-export const isProbablyImage = (mimeType?: string | null): boolean => {
-  if (!mimeType) {
-    return true;
+const imageExtensionRegex = /\.(avif|bmp|gif|heic|heif|ico|jpeg|jpg|png|svg|tif|tiff|webp)(?:$|\?)/i;
+
+export const isProbablyImage = (mimeType?: string | null, source?: string | null): boolean => {
+  if (mimeType) {
+    const normalized = mimeType.trim().toLowerCase();
+    if (!normalized) {
+      return true;
+    }
+    if (
+      normalized.startsWith('image/') ||
+      normalized === 'application/octet-stream' ||
+      normalized === 'binary/octet-stream'
+    ) {
+      return true;
+    }
+    if (normalized.includes('jpeg') || normalized.includes('jpg') || normalized.includes('png')) {
+      return true;
+    }
+    if (normalized.includes('webp') || normalized.includes('gif') || normalized.includes('bmp')) {
+      return true;
+    }
+    if (normalized.includes('svg') || normalized.includes('heic') || normalized.includes('heif')) {
+      return true;
+    }
   }
-  const normalized = mimeType.trim().toLowerCase();
-  if (!normalized) {
-    return true;
+
+  if (source) {
+    const trimmed = source.trim();
+    if (!trimmed) {
+      return !mimeType;
+    }
+    if (/^data:image\//i.test(trimmed) || /^blob:/i.test(trimmed)) {
+      return true;
+    }
+    if (imageExtensionRegex.test(trimmed)) {
+      return true;
+    }
   }
-  if (normalized === 'application/octet-stream' || normalized === 'binary/octet-stream') {
-    return true;
-  }
-  return normalized.startsWith('image/');
+
+  return !mimeType;
 };

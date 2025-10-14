@@ -37,7 +37,7 @@ const ImagePreview = ({
   const [hasError, setHasError] = useState(false);
 
   const sanitizedSrc = useMemo(() => resolveMediaUrl(src ?? null), [src]);
-  const canRenderImage = useMemo(() => isProbablyImage(mimeType), [mimeType]);
+  const canRenderImage = useMemo(() => isProbablyImage(mimeType, sanitizedSrc), [mimeType, sanitizedSrc]);
 
   useEffect(() => {
     setHasError(false);
