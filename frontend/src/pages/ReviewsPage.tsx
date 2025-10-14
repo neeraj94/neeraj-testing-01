@@ -152,6 +152,13 @@ const ReviewsPage = () => {
     () => hasAnyPermission(permissions as PermissionKey[], ['PRODUCT_REVIEW_DELETE']),
     [permissions]
   );
+  const canDeleteReviews = useMemo(
+    () => hasAnyPermission(permissions as PermissionKey[], ['PRODUCT_REVIEW_DELETE']),
+    [permissions]
+  );
+
+  const [panelMode, setPanelMode] = useState<PanelMode>('list');
+  const [editingId, setEditingId] = useState<number | null>(null);
 
   const [panelMode, setPanelMode] = useState<PanelMode>('list');
   const [editingId, setEditingId] = useState<number | null>(null);
