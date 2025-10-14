@@ -12,6 +12,7 @@ import com.example.rbac.products.model.ProductVariantMedia;
 import com.example.rbac.products.model.ProductVariantValue;
 import com.example.rbac.products.model.ProductInfoSection;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 import java.util.Comparator;
 import java.util.List;
@@ -225,7 +226,14 @@ public class ProductMapper {
         pricing.setDiscountMaxQuantity(product.getDiscountMaxQuantity());
         pricing.setDiscountStartAt(product.getDiscountStartAt());
         pricing.setDiscountEndAt(product.getDiscountEndAt());
-        pricing.setTags(product.getTags() != null ? List.copyOf(product.getTags()) : List.of());
+        List<String> tags = product.getTags() == null
+                ? List.of()
+                : product.getTags().stream()
+                .filter(Objects::nonNull)
+                .map(String::trim)
+                .filter(StringUtils::hasText)
+                .collect(Collectors.toList());
+        pricing.setTags(tags);
         pricing.setStockQuantity(product.getStockQuantity());
         pricing.setSku(product.getSku());
         pricing.setExternalLink(product.getExternalLink());

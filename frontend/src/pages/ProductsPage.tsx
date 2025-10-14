@@ -5,6 +5,8 @@ import PageSection from '../components/PageSection';
 import PaginationControls from '../components/PaginationControls';
 import MediaLibraryDialog from '../components/MediaLibraryDialog';
 import RichTextEditor from '../components/RichTextEditor';
+import TagsInput from '../components/TagsInput';
+import StarRating from '../components/StarRating';
 import { useToast } from '../components/ToastProvider';
 import { useConfirm } from '../components/ConfirmDialogProvider';
 import { useAppSelector } from '../app/hooks';
@@ -45,7 +47,9 @@ interface ProductFormState {
   discountType: DiscountType;
   discountMinQuantity: string;
   discountMaxQuantity: string;
-  priceTag: string;
+  discountStartAt: string;
+  discountEndAt: string;
+  tags: string[];
   stockQuantity: string;
   sku: string;
   externalLink: string;
@@ -139,7 +143,9 @@ const defaultFormState: ProductFormState = {
   discountType: 'FLAT',
   discountMinQuantity: '',
   discountMaxQuantity: '',
-  priceTag: '',
+  discountStartAt: '',
+  discountEndAt: '',
+  tags: [],
   stockQuantity: '',
   sku: '',
   externalLink: '',
@@ -218,6 +224,7 @@ type ValidationMessages = {
   categories?: string;
   description?: string;
   unitPrice?: string;
+  discountWindow?: string;
 };
 
 const validationFieldTab: Record<keyof ValidationMessages, TabId> = {
@@ -226,7 +233,8 @@ const validationFieldTab: Record<keyof ValidationMessages, TabId> = {
   unit: 'basic',
   categories: 'basic',
   description: 'basic',
-  unitPrice: 'pricing'
+  unitPrice: 'pricing',
+  discountWindow: 'pricing'
 };
 
 const DEFAULT_PAGE_SIZE = 10;
@@ -251,6 +259,23 @@ const mediaAssetToSelection = (
     mimeType: asset.mimeType ?? null,
     sizeBytes: asset.sizeBytes ?? null
   };
+};
+
+const toDateTimeInput = (iso?: string | null) => {
+  if (!iso) {
+    return '';
+  }
+  const date = new Date(iso);
+  if (!Number.isFinite(date.getTime())) {
+    return '';
+  }
+  const pad = (value: number) => String(value).padStart(2, '0');
+  const year = date.getFullYear();
+  const month = pad(date.getMonth() + 1);
+  const day = pad(date.getDate());
+  const hours = pad(date.getHours());
+  const minutes = pad(date.getMinutes());
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
 };
 
 const buildCategoryTree = (categories: Category[]): CategoryTreeNode[] => {
@@ -294,6 +319,15 @@ const parseNumber = (value: string): number | null => {
   }
   const parsed = Number(normalized);
   return Number.isFinite(parsed) ? parsed : null;
+};
+
+const toIsoOrNull = (value: string): string | null => {
+  const normalized = value.trim();
+  if (!normalized) {
+    return null;
+  }
+  const date = new Date(normalized);
+  return Number.isFinite(date.getTime()) ? date.toISOString() : null;
 };
 
 const formatVariantLabel = (combination: VariantCombinationValue[]) =>
@@ -689,7 +723,9 @@ const ProductsPage = () => {
         product.pricing.discountMaxQuantity != null
           ? String(product.pricing.discountMaxQuantity)
           : '',
-      priceTag: product.pricing.priceTag ?? '',
+      discountStartAt: toDateTimeInput(product.pricing.discountStartAt ?? null),
+      discountEndAt: toDateTimeInput(product.pricing.discountEndAt ?? null),
+      tags: [...(product.pricing.tags ?? [])],
       stockQuantity: product.pricing.stockQuantity != null ? String(product.pricing.stockQuantity) : '',
       sku: product.pricing.sku ?? '',
       externalLink: product.pricing.externalLink ?? '',
@@ -853,12 +889,23 @@ const ProductsPage = () => {
     if (!sanitizedDescription) {
       messages.description = 'Describe the product to help merchandisers and SEO.';
     }
+    const startValue = form.discountStartAt.trim();
+    const endValue = form.discountEndAt.trim();
+    if (startValue && endValue) {
+      const start = new Date(startValue);
+      const end = new Date(endValue);
+      if (Number.isFinite(start.getTime()) && Number.isFinite(end.getTime()) && end < start) {
+        messages.discountWindow = 'Discount end must be on or after the start.';
+      }
+    }
     return messages;
   }, [
     form.name,
     form.brandId,
     form.unit,
     form.unitPrice,
+    form.discountStartAt,
+    form.discountEndAt,
     selectedCategoryIds,
     sanitizedDescription,
     unitMode
@@ -893,17 +940,6 @@ const ProductsPage = () => {
       productReviews.reduce((sum, review) => sum + (review.rating ?? 0), 0) / productReviews.length;
     return { total: productReviews.length, average, breakdown };
   }, [productReviews]);
-
-  const renderStars = (rating: number) => (
-    <span className="inline-flex items-center gap-0.5 text-base leading-none">
-      {Array.from({ length: 5 }).map((_, index) => (
-        <span key={index} className={index < rating ? 'text-amber-400' : 'text-slate-300'}>
-          ★
-        </span>
-      ))}
-      <span className="sr-only">{`${rating} out of 5 stars`}</span>
-    </span>
-  );
 
   const isVideoAsset = (asset: { url: string; mimeType?: string | null }) => {
     if (asset.mimeType && asset.mimeType.toLowerCase().startsWith('video/')) {
@@ -1108,7 +1144,7 @@ const ProductsPage = () => {
     });
   };
   const resetFormState = () => {
-    setForm({ ...defaultFormState, infoSections: [] });
+    setForm({ ...defaultFormState, infoSections: [], tags: [] });
     setSelectedCategoryIds([]);
     setSelectedTaxIds([]);
     setGallery([]);
@@ -1161,6 +1197,10 @@ const ProductsPage = () => {
       return;
     }
 
+    const discountStartAt = toIsoOrNull(form.discountStartAt);
+    const discountEndAt = toIsoOrNull(form.discountEndAt);
+    const tags = form.tags.map((tag) => tag.trim()).filter((tag) => tag.length > 0);
+
     const payload: CreateProductPayload = {
       name: form.name.trim(),
       brandId: form.brandId ? Number(form.brandId) : null,
@@ -1191,7 +1231,9 @@ const ProductsPage = () => {
         discountValue: parseNumber(form.discountValue),
         discountMinQuantity: parseNumber(form.discountMinQuantity),
         discountMaxQuantity: parseNumber(form.discountMaxQuantity),
-        priceTag: form.priceTag.trim(),
+        discountStartAt,
+        discountEndAt,
+        tags,
         stockQuantity: parseNumber(form.stockQuantity),
         sku: form.sku.trim(),
         externalLink: form.externalLink.trim(),
@@ -2570,18 +2612,53 @@ const ProductsPage = () => {
                             className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                           />
                         </div>
-                        <div className="sm:col-span-2">
-                          <label htmlFor="price-tag" className="text-sm font-medium text-slate-700">
-                            Price tag label
+                        <div>
+                          <label htmlFor="discount-start" className="text-sm font-medium text-slate-700">
+                            Discount start (optional)
                           </label>
                           <input
-                            id="price-tag"
-                            type="text"
-                            value={form.priceTag}
-                            onChange={(event) => setForm((previous) => ({ ...previous, priceTag: event.target.value }))}
-                            placeholder="MSRP / Launch price"
+                            id="discount-start"
+                            type="datetime-local"
+                            value={form.discountStartAt}
+                            onChange={(event) =>
+                              setForm((previous) => ({ ...previous, discountStartAt: event.target.value }))
+                            }
                             className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                           />
+                        </div>
+                        <div>
+                          <label htmlFor="discount-end" className="text-sm font-medium text-slate-700">
+                            Discount end (optional)
+                          </label>
+                          <input
+                            id="discount-end"
+                            type="datetime-local"
+                            value={form.discountEndAt}
+                            onChange={(event) =>
+                              setForm((previous) => ({ ...previous, discountEndAt: event.target.value }))
+                            }
+                            className={`mt-1 w-full rounded-lg border px-3 py-2 text-sm text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 ${
+                              visibleValidation.discountWindow ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-200' : 'border-slate-300 focus:border-primary'
+                            }`}
+                          />
+                          {visibleValidation.discountWindow && (
+                            <p className="mt-1 text-xs text-rose-500">{visibleValidation.discountWindow}</p>
+                          )}
+                        </div>
+                        <div className="sm:col-span-2">
+                          <label htmlFor="product-tags" className="text-sm font-medium text-slate-700">
+                            Tags
+                          </label>
+                          <p className="mt-1 text-xs text-slate-500">Add merchandising or campaign labels to help merchandising and reporting.</p>
+                          <div className="mt-2">
+                            <TagsInput
+                              id="product-tags"
+                              value={form.tags}
+                              onChange={(tags) => setForm((previous) => ({ ...previous, tags }))}
+                              placeholder="Type a tag and press Enter"
+                              maxTags={25}
+                            />
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -2612,10 +2689,11 @@ const ProductsPage = () => {
                             id="sku"
                             type="text"
                             value={form.sku}
-                            onChange={(event) => setForm((previous) => ({ ...previous, sku: event.target.value }))}
-                            placeholder="AUR-SHOE-001"
-                            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                            readOnly
+                            placeholder="Auto-generated after save"
+                            className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500 shadow-inner focus:outline-none"
                           />
+                          <p className="mt-1 text-xs text-slate-500">SKUs are generated automatically from brand, category, and product details.</p>
                         </div>
                         <div>
                           <label htmlFor="external-link" className="text-sm font-medium text-slate-700">
@@ -2933,7 +3011,16 @@ const ProductsPage = () => {
                           <span className="text-4xl font-semibold text-slate-900">
                             {reviewSummary.total ? reviewSummary.average.toFixed(1) : '—'}
                           </span>
-                          {reviewSummary.total > 0 && renderStars(Math.round(reviewSummary.average))}
+                          {reviewSummary.total > 0 && (
+                            <StarRating
+                              value={reviewSummary.average}
+                              min={0}
+                              allowHalf
+                              readOnly
+                              size="lg"
+                              ariaLabel="Average product rating"
+                            />
+                          )}
                         </div>
                       </div>
                       <p className="mt-6 text-sm text-slate-600">
@@ -3010,7 +3097,13 @@ const ProductsPage = () => {
                                 </div>
                               </div>
                               <div className="flex items-center gap-2 text-sm font-semibold text-amber-500">
-                                {renderStars(Math.round(review.rating ?? 0))}
+                                <StarRating
+                                  value={review.rating}
+                                  min={0}
+                                  readOnly
+                                  size="md"
+                                  ariaLabel={`Rating ${review.rating.toFixed(1)} out of 5`}
+                                />
                                 <span className="text-slate-600">{review.rating.toFixed(1)}</span>
                               </div>
                             </div>
