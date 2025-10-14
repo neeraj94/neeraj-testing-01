@@ -1,7 +1,5 @@
 import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 
-const IMAGE_EXTENSIONS = /\.(jpe?g|png|gif|bmp|webp|svg)$/i;
-
 export interface ImagePreviewProps {
   src?: string | null;
   alt?: string;
@@ -37,40 +35,27 @@ const ImagePreview = ({
 
   const [hasError, setHasError] = useState(false);
 
+  const sanitizedSrc = useMemo(() => {
+    if (!src) {
+      return null;
+    }
+    const trimmed = `${src}`.trim();
+    if (!trimmed) {
+      return null;
+    }
+    if (trimmed.startsWith('data:') || trimmed.startsWith('blob:')) {
+      return trimmed;
+    }
+    try {
+      return encodeURI(trimmed);
+    } catch (error) {
+      return trimmed.replace(/\s+/g, (match) => (match ? '%20' : match));
+    }
+  }, [src]);
+
   useEffect(() => {
     setHasError(false);
-  }, [src, mimeType]);
-
-  const isExplicitlyNonImage = useMemo(() => {
-    if (!src) {
-      return false;
-    }
-    if (mimeType) {
-      const normalizedMime = mimeType.toLowerCase();
-      if (normalizedMime.startsWith('image/')) {
-        return false;
-      }
-      if (normalizedMime === 'application/octet-stream' || normalizedMime === 'binary/octet-stream') {
-        return false;
-      }
-      return true;
-    }
-    const normalized = src.trim().toLowerCase();
-    if (normalized.startsWith('data:')) {
-      if (normalized.startsWith('data:image')) {
-        return false;
-      }
-      return true;
-    }
-    if (normalized.startsWith('blob:')) {
-      return false;
-    }
-    const cleanSrc = src.split('?')[0] ?? '';
-    if (IMAGE_EXTENSIONS.test(cleanSrc)) {
-      return false;
-    }
-    return false;
-  }, [src, mimeType]);
+  }, [sanitizedSrc, mimeType]);
 
   const renderFallback = () =>
     fallback ?? (
@@ -88,9 +73,10 @@ const ImagePreview = ({
 
   return (
     <div className={containerClass} style={style}>
-      {src && !isExplicitlyNonImage && !hasError ? (
+      {sanitizedSrc && !hasError ? (
         <img
-          src={src}
+          key={sanitizedSrc}
+          src={sanitizedSrc}
           alt={alt}
           className={`h-full w-full ${objectClass} object-center`}
           onError={() => setHasError(true)}

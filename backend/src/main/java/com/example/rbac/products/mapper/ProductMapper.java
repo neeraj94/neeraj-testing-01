@@ -42,8 +42,9 @@ public class ProductMapper {
         dto.setBrandName(product.getBrand() != null ? product.getBrand().getName() : null);
         dto.setCategoryCount(product.getCategories() != null ? product.getCategories().size() : 0);
         dto.setVariantCount(product.getVariants() != null ? product.getVariants().size() : 0);
-        dto.setThumbnailUrl(product.getThumbnail() != null ? product.getThumbnail().getUrl() : null);
-        dto.setThumbnailMimeType(product.getThumbnail() != null ? product.getThumbnail().getMimeType() : null);
+        MediaAsset primaryMedia = resolvePrimaryMedia(product);
+        dto.setThumbnailUrl(primaryMedia != null ? primaryMedia.getUrl() : null);
+        dto.setThumbnailMimeType(primaryMedia != null ? primaryMedia.getMimeType() : null);
         dto.setCreatedAt(product.getCreatedAt());
         dto.setUpdatedAt(product.getUpdatedAt());
         return dto;
@@ -102,6 +103,25 @@ public class ProductMapper {
                 .map(this::mapMedia)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toList());
+    }
+
+    private MediaAsset resolvePrimaryMedia(Product product) {
+        if (product.getThumbnail() != null && StringUtils.hasText(product.getThumbnail().getUrl())) {
+            return product.getThumbnail();
+        }
+        if (product.getGalleryImages() == null || product.getGalleryImages().isEmpty()) {
+            return null;
+        }
+        return product.getGalleryImages().stream()
+                .filter(Objects::nonNull)
+                .sorted(Comparator
+                        .comparing((ProductGalleryImage image) -> image.getDisplayOrder() != null ? image.getDisplayOrder() : Integer.MAX_VALUE)
+                        .thenComparing(ProductGalleryImage::getId, Comparator.nullsLast(Long::compareTo)))
+                .map(ProductGalleryImage::getMedia)
+                .filter(Objects::nonNull)
+                .filter(media -> StringUtils.hasText(media.getUrl()))
+                .findFirst()
+                .orElse(null);
     }
 
     private MediaAssetDto mapMedia(MediaAsset asset) {
