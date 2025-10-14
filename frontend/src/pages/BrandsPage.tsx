@@ -273,9 +273,13 @@ const BrandsPage = () => {
     ];
   };
 
-  const handleMediaSelect = (selection: MediaSelection) => {
-    setForm((prev) => ({ ...prev, logoUrl: selection.url }));
-    setLogoPreview(selection.url);
+  const handleMediaSelect = (selection: MediaSelection | MediaSelection[]) => {
+    const selected = Array.isArray(selection) ? selection[0] : selection;
+    if (!selected) {
+      return;
+    }
+    setForm((prev) => ({ ...prev, logoUrl: selected.url }));
+    setLogoPreview(selected.url);
     setMediaLibraryOpen(false);
   };
 

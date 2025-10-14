@@ -396,11 +396,15 @@ const CategoriesPage = () => {
     ];
   };
 
-  const handleMediaSelect = (type: AssetUploadType | null, selection: MediaSelection) => {
+  const handleMediaSelect = (type: AssetUploadType | null, selection: MediaSelection | MediaSelection[]) => {
     if (!type) {
       return;
     }
-    applyAssetSelection(type, selection);
+    const selected = Array.isArray(selection) ? selection[0] : selection;
+    if (!selected) {
+      return;
+    }
+    applyAssetSelection(type, selected);
   };
 
   const pendingAssetType = assetUploadMutation.isPending ? assetUploadMutation.variables?.type : null;

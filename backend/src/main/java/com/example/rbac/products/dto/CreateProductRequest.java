@@ -34,6 +34,8 @@ public class CreateProductRequest {
 
     private String description;
 
+    private String shortDescription;
+
     @Size(max = 50, message = "Video provider must be at most 50 characters")
     private String videoProvider;
 
@@ -139,6 +141,14 @@ public class CreateProductRequest {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public String getShortDescription() {
+        return shortDescription;
+    }
+
+    public void setShortDescription(String shortDescription) {
+        this.shortDescription = shortDescription;
     }
 
     public String getVideoProvider() {

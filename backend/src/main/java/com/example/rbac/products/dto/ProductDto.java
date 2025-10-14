@@ -16,6 +16,7 @@ public class ProductDto {
     private boolean todaysDeal;
     private String shortDescription;
     private String description;
+    private String shortDescription;
     private String videoProvider;
     private String videoUrl;
     private List<MediaAssetDto> gallery;
@@ -109,6 +110,14 @@ public class ProductDto {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public String getShortDescription() {
+        return shortDescription;
+    }
+
+    public void setShortDescription(String shortDescription) {
+        this.shortDescription = shortDescription;
     }
 
     public String getVideoProvider() {

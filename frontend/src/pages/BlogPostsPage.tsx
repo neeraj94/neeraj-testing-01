@@ -244,14 +244,19 @@ const BlogPostsPage = () => {
     }
   };
 
-  const handleMediaSelect = (selection: MediaSelection) => {
+  const handleMediaSelect = (selection: MediaSelection | MediaSelection[]) => {
     if (!mediaLibraryTarget) {
       closeMediaLibrary();
       return;
     }
-    const key = resolveMediaKey(selection);
+    const selected = Array.isArray(selection) ? selection[0] : selection;
+    if (!selected) {
+      closeMediaLibrary();
+      return;
+    }
+    const key = resolveMediaKey(selected);
     setForm((prev) => ({ ...prev, [mediaLibraryTarget]: key ?? null }));
-    setMediaPreview((prev) => ({ ...prev, [mediaLibraryTarget]: selection.url }));
+    setMediaPreview((prev) => ({ ...prev, [mediaLibraryTarget]: selected.url }));
     closeMediaLibrary();
   };
 
@@ -285,6 +290,7 @@ const BlogPostsPage = () => {
       notify({ type: 'error', message: extractErrorMessage(error, 'Failed to upload media.') });
       throw error;
     }
+    return selections;
   };
 
   const handleMediaRemove = (target: 'bannerImage' | 'metaImage') => {

@@ -176,7 +176,7 @@ const MediaLibraryDialog = ({
         }
       }
     } catch (error) {
-      // errors handled by caller toast
+      // upload errors are surfaced by the caller via toast notifications
     } finally {
       setUploading(false);
       if (event.target) {

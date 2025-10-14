@@ -224,9 +224,13 @@ const BadgeCategoriesPage = () => {
     ];
   };
 
-  const handleMediaSelect = (selection: MediaSelection) => {
-    setForm((prev) => ({ ...prev, iconUrl: selection.url }));
-    setIconPreview(selection.url);
+  const handleMediaSelect = (selection: MediaSelection | MediaSelection[]) => {
+    const selected = Array.isArray(selection) ? selection[0] : selection;
+    if (!selected) {
+      return;
+    }
+    setForm((prev) => ({ ...prev, iconUrl: selected.url }));
+    setIconPreview(selected.url);
     setMediaLibraryOpen(false);
   };
 

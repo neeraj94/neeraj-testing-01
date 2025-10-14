@@ -31,6 +31,7 @@ export interface CreateProductPayload {
   todaysDeal: boolean;
   shortDescription: string;
   description: string;
+  shortDescription: string;
   gallery: MediaSelection[];
   thumbnail?: MediaSelection | null;
   videoProvider: string;
@@ -120,6 +121,36 @@ export interface ProductDetailVariant {
   media: ProductMediaAsset[];
 }
 
+export interface ProductReview {
+  id: number;
+  productId: number;
+  productName: string;
+  productCategories: { id: number; name: string }[];
+  customerId: number | null;
+  customerName: string | null;
+  reviewerName: string | null;
+  reviewerAvatar?: ProductMediaAsset | null;
+  rating: number;
+  comment: string | null;
+  reviewedAt: string;
+  media: ProductMediaAsset[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type ProductReviewPage = Pagination<ProductReview>;
+
+export interface CreateProductReviewPayload {
+  productId: number;
+  customerId?: number | null;
+  reviewerName?: string;
+  reviewerAvatar?: MediaSelection | null;
+  rating: number;
+  comment?: string;
+  reviewedAt?: string;
+  media: MediaSelection[];
+}
+
 export interface ProductDetailPricing {
   unitPrice: number | null;
   discountType: DiscountType;
@@ -161,6 +192,7 @@ export interface ProductDetail {
   todaysDeal: boolean;
   shortDescription: string;
   description: string;
+  shortDescription: string;
   videoProvider: string;
   videoUrl: string;
   gallery: ProductMediaAsset[];
