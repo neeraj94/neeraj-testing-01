@@ -70,10 +70,8 @@ export interface CreateProductPayload {
     content: string;
     bulletPoints: string[];
   }[];
-  frequentlyBought: {
-    productIds: number[];
-    categoryIds: number[];
-  };
+  frequentlyBoughtProductIds: number[];
+  frequentlyBoughtCategoryIds: number[];
 }
 
 export interface ProductMediaAsset {

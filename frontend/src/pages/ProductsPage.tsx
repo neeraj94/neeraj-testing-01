@@ -357,6 +357,8 @@ const ProductsPage = () => {
   const [frequentlyBoughtProducts, setFrequentlyBoughtProducts] = useState<ProductSummary[]>([]);
   const [frequentlyBoughtCategoryIds, setFrequentlyBoughtCategoryIds] = useState<number[]>([]);
   const [frequentlyBoughtSearch, setFrequentlyBoughtSearch] = useState('');
+  const [frequentlyBoughtDropdownOpen, setFrequentlyBoughtDropdownOpen] = useState(false);
+  const frequentlyBoughtDropdownRef = useRef<HTMLDivElement | null>(null);
   const [frequentlyBoughtCategorySearch, setFrequentlyBoughtCategorySearch] = useState('');
   const [expandableSections, setExpandableSections] = useState<ExpandableSectionFormState[]>([]);
   const [mediaContext, setMediaContext] = useState<MediaDialogContext | null>(null);
@@ -453,18 +455,20 @@ const ProductsPage = () => {
 
   const frequentlyBoughtSearchTerm = frequentlyBoughtSearch.trim();
   const frequentlyBoughtSuggestionsQuery = useQuery({
-    queryKey: ['products', 'suggestions', frequentlyBoughtSearchTerm],
+    queryKey: [
+      'products',
+      'frequently-bought-selector',
+      { term: frequentlyBoughtSearchTerm }
+    ],
     queryFn: async () => {
-      const term = frequentlyBoughtSearchTerm;
-      if (term.length < 2) {
-        return [] as ProductSummary[];
+      const params: Record<string, unknown> = { page: 0, size: 50 };
+      if (frequentlyBoughtSearchTerm) {
+        params.search = frequentlyBoughtSearchTerm;
       }
-      const { data } = await api.get<ProductSummaryPage>('/products', {
-        params: { page: 0, size: 10, search: term }
-      });
+      const { data } = await api.get<ProductSummaryPage>('/products', { params });
       return data.content ?? [];
     },
-    enabled: frequentlyBoughtSearchTerm.length >= 2,
+    enabled: frequentlyBoughtDropdownOpen,
     staleTime: 60_000
   });
 
@@ -492,6 +496,23 @@ const ProductsPage = () => {
     collect(categoryTree);
     setExpandedCategories(next);
   }, [categoryTree]);
+
+  useEffect(() => {
+    if (!frequentlyBoughtDropdownOpen) {
+      setFrequentlyBoughtSearch('');
+      return;
+    }
+    const handleClickAway = (event: MouseEvent) => {
+      if (
+        frequentlyBoughtDropdownRef.current &&
+        !frequentlyBoughtDropdownRef.current.contains(event.target as Node)
+      ) {
+        setFrequentlyBoughtDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickAway);
+    return () => document.removeEventListener('mousedown', handleClickAway);
+  }, [frequentlyBoughtDropdownOpen]);
 
   useEffect(() => {
     if (form.unit && !unitOptions.includes(form.unit as (typeof unitOptions)[number])) {
@@ -949,18 +970,46 @@ const ProductsPage = () => {
 
   const activeProductId = panelMode === 'edit' && productDetailQuery.data ? productDetailQuery.data.id : null;
 
-  const filteredFrequentlyBoughtProductSuggestions = useMemo(() => {
-    if (!frequentlyBoughtSuggestions.length) {
-      return [] as ProductSummary[];
-    }
-    const selectedIds = new Set(frequentlyBoughtProducts.map((product) => product.id));
-    return frequentlyBoughtSuggestions.filter((suggestion) => {
-      if (activeProductId != null && suggestion.id === activeProductId) {
-        return false;
+  const frequentlyBoughtSelectedIds = useMemo(
+    () => new Set(frequentlyBoughtProducts.map((product) => product.id)),
+    [frequentlyBoughtProducts]
+  );
+
+  const frequentlyBoughtDropdownOptions = useMemo(() => {
+    const options = new Map<number, ProductSummary>();
+    const selectionOrder = new Map<number, number>();
+    frequentlyBoughtProducts.forEach((product, index) => {
+      if (activeProductId != null && product.id === activeProductId) {
+        return;
       }
-      return !selectedIds.has(suggestion.id);
+      options.set(product.id, product);
+      selectionOrder.set(product.id, index);
     });
-  }, [frequentlyBoughtSuggestions, frequentlyBoughtProducts, activeProductId]);
+    frequentlyBoughtSuggestions.forEach((product) => {
+      if (activeProductId != null && product.id === activeProductId) {
+        return;
+      }
+      if (!options.has(product.id)) {
+        options.set(product.id, product);
+      }
+    });
+    return Array.from(options.values()).sort((a, b) => {
+      const aSelected = frequentlyBoughtSelectedIds.has(a.id);
+      const bSelected = frequentlyBoughtSelectedIds.has(b.id);
+      if (aSelected !== bSelected) {
+        return aSelected ? -1 : 1;
+      }
+      if (aSelected && bSelected) {
+        return (selectionOrder.get(a.id) ?? 0) - (selectionOrder.get(b.id) ?? 0);
+      }
+      return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+    });
+  }, [
+    frequentlyBoughtProducts,
+    frequentlyBoughtSuggestions,
+    activeProductId,
+    frequentlyBoughtSelectedIds
+  ]);
 
   const sanitizedDescription = useMemo(() => {
     const html = form.description || '';
@@ -1248,14 +1297,14 @@ const ProductsPage = () => {
     });
   };
 
-  const handleAddFrequentlyBoughtProduct = (product: ProductSummary) => {
+  const handleToggleFrequentlyBoughtProduct = (product: ProductSummary) => {
     setFrequentlyBoughtProducts((previous) => {
-      if (previous.some((item) => item.id === product.id)) {
-        return previous;
+      const exists = previous.some((item) => item.id === product.id);
+      if (exists) {
+        return previous.filter((item) => item.id !== product.id);
       }
       return [...previous, product];
     });
-    setFrequentlyBoughtSearch('');
   };
 
   const handleRemoveFrequentlyBoughtProduct = (productId: number) => {
@@ -1281,6 +1330,7 @@ const ProductsPage = () => {
     setFrequentlyBoughtProducts([]);
     setFrequentlyBoughtCategoryIds([]);
     setFrequentlyBoughtSearch('');
+    setFrequentlyBoughtDropdownOpen(false);
     setFrequentlyBoughtCategorySearch('');
     setExpandableSections([]);
     setSelectedAttributes([]);
@@ -1408,10 +1458,8 @@ const ProductsPage = () => {
           .map((line) => line.trim())
           .filter((line) => line.length > 0)
       })),
-      frequentlyBought: {
-        productIds: frequentlyBoughtProducts.map((product) => product.id),
-        categoryIds: frequentlyBoughtCategoryIds
-      }
+      frequentlyBoughtProductIds: frequentlyBoughtProducts.map((product) => product.id),
+      frequentlyBoughtCategoryIds
     };
 
     if (isEditMode && editingId != null) {
@@ -3129,82 +3177,133 @@ const ProductsPage = () => {
                 <div className="grid gap-6 lg:grid-cols-2">
                   <div className="space-y-5">
                     <div>
-                      <label className="text-sm font-medium text-slate-700" htmlFor="frequently-bought-search">
+                      <label className="text-sm font-medium text-slate-700" htmlFor="frequently-bought-selector">
                         Add specific products
                       </label>
                       <p className="mt-1 text-xs text-slate-500">
-                        Search the catalog to recommend accessories, bundles, or compatible upgrades.
+                        Browse or search the catalog, then select multiple items to surface together on the PDP.
                       </p>
-                      <div className="mt-2 space-y-2">
-                        <div className="flex items-center gap-2">
-                          <input
-                            id="frequently-bought-search"
-                            type="text"
-                            value={frequentlyBoughtSearch}
-                            onChange={(event) => setFrequentlyBoughtSearch(event.target.value)}
-                            placeholder="Search products by name or SKU"
-                            className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                          />
-                          {frequentlyBoughtSearch && (
-                            <button
-                              type="button"
-                              onClick={() => setFrequentlyBoughtSearch('')}
-                              className="rounded-full border border-slate-200 px-3 py-1 text-xs font-medium text-slate-500 transition hover:border-slate-300 hover:text-slate-800"
-                            >
-                              Clear
-                            </button>
-                          )}
-                        </div>
-                        {frequentlyBoughtSearchTerm.length >= 2 ? (
-                          <div className="max-h-64 overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-sm">
-                            {frequentlyBoughtSuggestionsQuery.isLoading ? (
-                              <div className="px-4 py-3 text-sm text-slate-500">Searching…</div>
-                            ) : frequentlyBoughtSuggestionsQuery.isError ? (
-                              <div className="px-4 py-3 text-sm text-rose-500">
-                                Unable to load suggestions right now. Try again in a moment.
+                      <div className="relative mt-2" ref={frequentlyBoughtDropdownRef}>
+                        <button
+                          type="button"
+                          id="frequently-bought-selector"
+                          onClick={() => {
+                            if (!frequentlyBoughtDropdownOpen) {
+                              void frequentlyBoughtSuggestionsQuery.refetch();
+                            }
+                            setFrequentlyBoughtDropdownOpen((previous) => !previous);
+                          }}
+                          aria-haspopup="listbox"
+                          aria-expanded={frequentlyBoughtDropdownOpen}
+                          className="flex w-full items-center justify-between gap-3 rounded-lg border border-slate-300 bg-white px-3 py-2 text-left text-sm shadow-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                        >
+                          <span className="truncate text-slate-600">
+                            {frequentlyBoughtProducts.length
+                              ? `${frequentlyBoughtProducts.length} product${
+                                  frequentlyBoughtProducts.length === 1 ? '' : 's'
+                                } selected`
+                              : 'Search or scroll to pick products'}
+                          </span>
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 20 20"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth={1.5}
+                            className={`h-4 w-4 text-slate-500 transition-transform ${
+                              frequentlyBoughtDropdownOpen ? 'rotate-180' : ''
+                            }`}
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 8l4 4 4-4" />
+                          </svg>
+                        </button>
+                        {frequentlyBoughtDropdownOpen && (
+                          <div className="absolute z-20 mt-2 w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
+                            <div className="border-b border-slate-100 p-3">
+                              <label htmlFor="frequently-bought-search" className="sr-only">
+                                Search products
+                              </label>
+                              <div className="relative flex items-center">
+                                <input
+                                  id="frequently-bought-search"
+                                  type="text"
+                                  value={frequentlyBoughtSearch}
+                                  onChange={(event) => setFrequentlyBoughtSearch(event.target.value)}
+                                  placeholder="Search products by name or SKU"
+                                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                                />
+                                {frequentlyBoughtSearch && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setFrequentlyBoughtSearch('')}
+                                    className="absolute right-2 rounded-full border border-slate-200 px-2 py-0.5 text-[11px] font-medium uppercase text-slate-500 transition hover:border-slate-300 hover:text-slate-700"
+                                  >
+                                    Clear
+                                  </button>
+                                )}
                               </div>
-                            ) : filteredFrequentlyBoughtProductSuggestions.length ? (
-                              filteredFrequentlyBoughtProductSuggestions.map((product) => (
-                                <button
-                                  key={product.id}
-                                  type="button"
-                                  onClick={() => handleAddFrequentlyBoughtProduct(product)}
-                                  className="flex w-full items-center gap-3 border-b border-slate-100 px-4 py-3 text-left transition hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 last:border-b-0"
-                                >
-                                  <ImagePreview
-                                    src={product.thumbnailUrl ?? undefined}
-                                    mimeType={null}
-                                    alt={`${product.name} thumbnail`}
-                                    className="h-12 w-12 overflow-hidden rounded-lg border border-slate-200 bg-slate-100"
-                                    aspectClassName=""
-                                    mode="contain"
-                                    fallback={
-                                      <div className="flex h-full w-full items-center justify-center text-xs font-semibold text-slate-500">
-                                        {product.name.charAt(0).toUpperCase()}
+                            </div>
+                            <div className="max-h-80 overflow-y-auto">
+                              {frequentlyBoughtSuggestionsQuery.isLoading ? (
+                                <div className="px-4 py-3 text-sm text-slate-500">Loading products…</div>
+                              ) : frequentlyBoughtSuggestionsQuery.isError ? (
+                                <div className="px-4 py-3 text-sm text-rose-500">
+                                  Unable to load product suggestions right now. Try again shortly.
+                                </div>
+                              ) : frequentlyBoughtDropdownOptions.length ? (
+                                frequentlyBoughtDropdownOptions.map((product) => {
+                                  const checked = frequentlyBoughtSelectedIds.has(product.id);
+                                  return (
+                                    <label
+                                      key={product.id}
+                                      className={`flex cursor-pointer items-center gap-3 border-b border-slate-100 px-4 py-3 text-sm transition last:border-b-0 ${
+                                        checked ? 'bg-primary/5' : 'hover:bg-slate-50'
+                                      }`}
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary/40"
+                                        checked={checked}
+                                        onChange={() => handleToggleFrequentlyBoughtProduct(product)}
+                                      />
+                                      <ImagePreview
+                                        src={product.thumbnailUrl ?? undefined}
+                                        mimeType={null}
+                                        alt={`${product.name} thumbnail`}
+                                        className="h-12 w-12 overflow-hidden rounded-lg border border-slate-200 bg-slate-100"
+                                        aspectClassName=""
+                                        mode="contain"
+                                        fallback={
+                                          <div className="flex h-full w-full items-center justify-center text-xs font-semibold text-slate-500">
+                                            {product.name.charAt(0).toUpperCase()}
+                                          </div>
+                                        }
+                                      />
+                                      <div className="min-w-0 flex-1">
+                                        <p className="truncate text-sm font-medium text-slate-900">{product.name}</p>
+                                        <div className="mt-0.5 flex flex-wrap items-center gap-x-3 text-xs text-slate-500">
+                                          <span>SKU · {product.sku}</span>
+                                          {product.unitPrice != null && (
+                                            <span>{formatCurrency(product.unitPrice, baseCurrency)}</span>
+                                          )}
+                                        </div>
                                       </div>
-                                    }
-                                  />
-                                  <div className="flex-1">
-                                    <p className="text-sm font-medium text-slate-900">{product.name}</p>
-                                    <div className="mt-0.5 flex flex-wrap items-center gap-x-3 text-xs text-slate-500">
-                                      <span>SKU · {product.sku}</span>
-                                      {product.unitPrice != null && (
-                                        <span>{formatCurrency(product.unitPrice, baseCurrency)}</span>
+                                      {checked && (
+                                        <span className="text-[11px] font-semibold uppercase text-primary">Selected</span>
                                       )}
-                                    </div>
-                                  </div>
-                                  <span className="text-xs font-semibold uppercase text-primary">Add</span>
-                                </button>
-                              ))
-                            ) : (
-                              <div className="px-4 py-3 text-sm text-slate-500">
-                                No products match “{frequentlyBoughtSearchTerm}”.
-                              </div>
-                            )}
+                                    </label>
+                                  );
+                                })
+                              ) : (
+                                <div className="px-4 py-3 text-sm text-slate-500">
+                                  {frequentlyBoughtSearchTerm
+                                    ? `No products match “${frequentlyBoughtSearchTerm}”.`
+                                    : 'No products available yet.'}
+                                </div>
+                              )}
+                            </div>
                           </div>
-                        ) : frequentlyBoughtSearchTerm.length > 0 ? (
-                          <p className="text-xs text-slate-500">Enter at least two characters to search.</p>
-                        ) : null}
+                        )}
                       </div>
                     </div>
                     <div>

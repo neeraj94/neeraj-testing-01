@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 
 const IMAGE_EXTENSIONS = /\.(jpe?g|png|gif|bmp|webp|svg)$/i;
 
@@ -14,17 +14,6 @@ export interface ImagePreviewProps {
   fallback?: ReactNode;
   children?: ReactNode;
 }
-
-const isLikelyImage = (src?: string | null, mimeType?: string | null) => {
-  if (mimeType && mimeType.toLowerCase().startsWith('image/')) {
-    return true;
-  }
-  if (!src) {
-    return false;
-  }
-  const cleanSrc = src.split('?')[0] ?? '';
-  return IMAGE_EXTENSIONS.test(cleanSrc);
-};
 
 const ImagePreview = ({
   src,
@@ -46,6 +35,30 @@ const ImagePreview = ({
     style.height = typeof height === 'number' ? `${height}px` : height;
   }
 
+  const [hasError, setHasError] = useState(false);
+
+  useEffect(() => {
+    setHasError(false);
+  }, [src, mimeType]);
+
+  const isImage = useMemo(() => {
+    if (mimeType && mimeType.toLowerCase().startsWith('image/')) {
+      return true;
+    }
+    if (!src) {
+      return false;
+    }
+    const normalized = src.trim().toLowerCase();
+    if (normalized.startsWith('data:image')) {
+      return true;
+    }
+    if (normalized.startsWith('blob:')) {
+      return true;
+    }
+    const cleanSrc = src.split('?')[0] ?? '';
+    return IMAGE_EXTENSIONS.test(cleanSrc);
+  }, [src, mimeType]);
+
   const renderFallback = () =>
     fallback ?? (
       <div className="flex h-full w-full items-center justify-center bg-slate-100 text-xs font-medium text-slate-400">
@@ -62,8 +75,13 @@ const ImagePreview = ({
 
   return (
     <div className={containerClass} style={style}>
-      {src && isLikelyImage(src, mimeType) ? (
-        <img src={src} alt={alt} className={`h-full w-full ${objectClass} object-center`} />
+      {src && isImage && !hasError ? (
+        <img
+          src={src}
+          alt={alt}
+          className={`h-full w-full ${objectClass} object-center`}
+          onError={() => setHasError(true)}
+        />
       ) : (
         renderFallback()
       )}
