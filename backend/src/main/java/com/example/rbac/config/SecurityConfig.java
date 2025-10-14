@@ -2,10 +2,10 @@ package com.example.rbac.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
-import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -19,6 +19,50 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
+    private static final String[] UPLOADED_FILE_BROWSE_AUTHORITIES = {
+            "UPLOADED_FILE_VIEW",
+            "UPLOADED_FILE_MANAGE",
+            "PRODUCT_VIEW",
+            "PRODUCT_CREATE",
+            "PRODUCT_UPDATE",
+            "BRAND_VIEW",
+            "BRAND_CREATE",
+            "BRAND_UPDATE",
+            "CATEGORY_VIEW",
+            "CATEGORY_CREATE",
+            "CATEGORY_UPDATE",
+            "BADGE_VIEW",
+            "BADGE_CREATE",
+            "BADGE_UPDATE",
+            "BADGE_CATEGORY_VIEW",
+            "BADGE_CATEGORY_CREATE",
+            "BADGE_CATEGORY_UPDATE",
+            "BLOG_POST_VIEW",
+            "BLOG_POST_CREATE",
+            "BLOG_POST_UPDATE",
+            "WEDGE_VIEW",
+            "WEDGE_CREATE",
+            "WEDGE_UPDATE"
+    };
+
+    private static final String[] UPLOADED_FILE_UPLOAD_AUTHORITIES = {
+            "UPLOADED_FILE_MANAGE",
+            "PRODUCT_CREATE",
+            "PRODUCT_UPDATE",
+            "BRAND_CREATE",
+            "BRAND_UPDATE",
+            "CATEGORY_CREATE",
+            "CATEGORY_UPDATE",
+            "BADGE_CREATE",
+            "BADGE_UPDATE",
+            "BADGE_CATEGORY_CREATE",
+            "BADGE_CATEGORY_UPDATE",
+            "BLOG_POST_CREATE",
+            "BLOG_POST_UPDATE",
+            "WEDGE_CREATE",
+            "WEDGE_UPDATE"
+    };
+
     public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
     }
@@ -31,7 +75,9 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/v1/auth/**", "/api/v1/settings/theme", "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/blog/public/**", "/api/v1/blog/media/**", "/api/v1/public/catalog/**", "/api/v1/brands/assets/**", "/api/v1/categories/assets/**", "/api/v1/badge-categories/assets/**", "/api/v1/badges/assets/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/v1/uploaded-files/**").hasAnyAuthority("UPLOADED_FILE_VIEW", "UPLOADED_FILE_MANAGE")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/uploaded-files/assets/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/uploaded-files/**").hasAnyAuthority(UPLOADED_FILE_BROWSE_AUTHORITIES)
+                        .requestMatchers(HttpMethod.POST, "/api/v1/uploaded-files/upload").hasAnyAuthority(UPLOADED_FILE_UPLOAD_AUTHORITIES)
                         .requestMatchers(HttpMethod.GET, "/api/v1/tax-rates/**").hasAuthority("TAX_RATE_VIEW")
                         .requestMatchers(HttpMethod.GET, "/api/v1/shipping/countries/**", "/api/v1/shipping/states/**", "/api/v1/shipping/cities/**").hasAnyAuthority("SHIPPING_AREA_VIEW", "SHIPPING_LOCATION_MANAGE")
                         .requestMatchers(HttpMethod.POST, "/api/v1/shipping/countries/**", "/api/v1/shipping/states/**", "/api/v1/shipping/cities/**").hasAuthority("SHIPPING_LOCATION_MANAGE")

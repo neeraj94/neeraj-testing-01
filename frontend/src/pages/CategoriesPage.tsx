@@ -380,21 +380,36 @@ const CategoriesPage = () => {
     setCoverPreview(url);
   };
 
-  const handleMediaUpload = async (type: AssetUploadType, file: File): Promise<MediaSelection> => {
-    const result = await assetUploadMutation.mutateAsync({ type, file });
-    return {
-      url: result.data.url,
-      originalFilename: result.data.originalFilename,
-      mimeType: result.data.mimeType,
-      sizeBytes: result.data.sizeBytes
-    };
+  const handleMediaUpload = async (type: AssetUploadType, files: File[]): Promise<MediaSelection[]> => {
+    const selections: MediaSelection[] = [];
+    for (const file of files) {
+      try {
+        const result = await assetUploadMutation.mutateAsync({ type, file });
+        selections.push({
+          url: result.data.url,
+          originalFilename: result.data.originalFilename,
+          mimeType: result.data.mimeType,
+          sizeBytes: result.data.sizeBytes
+        });
+      } catch (error) {
+        // errors are surfaced via assetUploadMutation onError handler
+      }
+    }
+    if (!selections.length) {
+      throw new Error('No media uploaded');
+    }
+    return selections;
   };
 
-  const handleMediaSelect = (type: AssetUploadType | null, selection: MediaSelection) => {
+  const handleMediaSelect = (type: AssetUploadType | null, selection: MediaSelection | MediaSelection[]) => {
     if (!type) {
       return;
     }
-    applyAssetSelection(type, selection);
+    const selected = Array.isArray(selection) ? selection[0] : selection;
+    if (!selected) {
+      return;
+    }
+    applyAssetSelection(type, selected);
   };
 
   const pendingAssetType = assetUploadMutation.isPending ? assetUploadMutation.variables?.type : null;
@@ -912,7 +927,7 @@ const CategoriesPage = () => {
         }}
         onUpload={
           mediaLibraryTarget
-            ? (file) => handleMediaUpload(mediaLibraryTarget, file)
+            ? (files) => handleMediaUpload(mediaLibraryTarget, files)
             : undefined
         }
       />

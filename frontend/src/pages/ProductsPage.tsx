@@ -35,6 +35,7 @@ interface ProductFormState {
   featured: 'yes' | 'no';
   todaysDeal: 'yes' | 'no';
   description: string;
+  shortDescription: string;
   videoProvider: string;
   videoUrl: string;
   unitPrice: string;
@@ -81,6 +82,20 @@ interface ProductVariantFormState {
   media: MediaSelection[];
 }
 
+interface ExpandableSectionFormState {
+  id: string;
+  title: string;
+  content: string;
+}
+
+interface UploadedFileUploadResponse {
+  url: string;
+  storageKey?: string | null;
+  originalFilename?: string | null;
+  mimeType?: string | null;
+  sizeBytes?: number | null;
+}
+
 type MediaDialogContext =
   | { type: 'gallery' }
   | { type: 'thumbnail' }
@@ -97,6 +112,7 @@ const defaultFormState: ProductFormState = {
   featured: 'no',
   todaysDeal: 'no',
   description: '',
+  shortDescription: '',
   videoProvider: 'YOUTUBE',
   videoUrl: '',
   unitPrice: '',
@@ -116,6 +132,8 @@ const defaultFormState: ProductFormState = {
   metaKeywords: '',
   metaCanonicalUrl: ''
 };
+
+const generateSectionId = () => Math.random().toString(36).slice(2, 10);
 
 const unitOptions = [
   'Piece',
@@ -279,6 +297,7 @@ const ProductsPage = () => {
   const [thumbnail, setThumbnail] = useState<MediaSelection | null>(null);
   const [pdfSpecification, setPdfSpecification] = useState<MediaSelection | null>(null);
   const [metaImage, setMetaImage] = useState<MediaSelection | null>(null);
+  const [expandableSections, setExpandableSections] = useState<ExpandableSectionFormState[]>([]);
   const [mediaContext, setMediaContext] = useState<MediaDialogContext | null>(null);
   const [selectedAttributes, setSelectedAttributes] = useState<AttributeSelection[]>([]);
   const [variants, setVariants] = useState<Record<string, ProductVariantFormState>>({});
@@ -299,7 +318,7 @@ const ProductsPage = () => {
     [permissions]
   );
   const canUpdate = useMemo(
-    () => hasAnyPermission(permissions as PermissionKey[], ['PRODUCT_UPDATE']),
+    () => hasAnyPermission(permissions as PermissionKey[], ['PRODUCT_UPDATE', 'PRODUCT_CREATE']),
     [permissions]
   );
   const canDelete = useMemo(
@@ -621,6 +640,7 @@ const ProductsPage = () => {
       featured: product.featured ? 'yes' : 'no',
       todaysDeal: product.todaysDeal ? 'yes' : 'no',
       description: product.description ?? '',
+      shortDescription: product.shortDescription ?? '',
       videoProvider: product.videoProvider ?? 'YOUTUBE',
       videoUrl: product.videoUrl ?? '',
       unitPrice: product.pricing.unitPrice != null ? String(product.pricing.unitPrice) : '',
@@ -658,6 +678,13 @@ const ProductsPage = () => {
     setThumbnail(mediaAssetToSelection(product.thumbnail));
     setPdfSpecification(mediaAssetToSelection(product.pdfSpecification));
     setMetaImage(mediaAssetToSelection(product.seo.image));
+    setExpandableSections(
+      (product.expandableSections ?? []).map((section) => ({
+        id: generateSectionId(),
+        title: section.title ?? '',
+        content: section.content ?? ''
+      }))
+    );
 
     const attributeCatalog = attributesQuery.data ?? [];
     const nextSelectedAttributes = product.attributes.map((attribute) => {
@@ -891,6 +918,47 @@ const ProductsPage = () => {
     });
   };
 
+  const addExpandableSection = () => {
+    setExpandableSections((previous) => [
+      ...previous,
+      { id: generateSectionId(), title: '', content: '' }
+    ]);
+  };
+
+  const updateExpandableSection = (id: string, field: 'title' | 'content', value: string) => {
+    setExpandableSections((previous) =>
+      previous.map((section) =>
+        section.id === id
+          ? {
+              ...section,
+              [field]: value
+            }
+          : section
+      )
+    );
+  };
+
+  const removeExpandableSection = (id: string) => {
+    setExpandableSections((previous) => previous.filter((section) => section.id !== id));
+  };
+
+  const moveExpandableSection = (id: string, direction: 'up' | 'down') => {
+    setExpandableSections((previous) => {
+      const index = previous.findIndex((section) => section.id === id);
+      if (index === -1) {
+        return previous;
+      }
+      const newIndex = direction === 'up' ? index - 1 : index + 1;
+      if (newIndex < 0 || newIndex >= previous.length) {
+        return previous;
+      }
+      const next = [...previous];
+      const [item] = next.splice(index, 1);
+      next.splice(newIndex, 0, item);
+      return next;
+    });
+  };
+
   const handleVariantFieldChange = (
     variantKey: string,
     field: 'priceAdjustment' | 'sku' | 'quantity',
@@ -915,6 +983,7 @@ const ProductsPage = () => {
     setThumbnail(null);
     setPdfSpecification(null);
     setMetaImage(null);
+    setExpandableSections([]);
     setSelectedAttributes([]);
     setVariants({});
     setUnitMode('preset');
@@ -971,6 +1040,7 @@ const ProductsPage = () => {
       featured: form.featured === 'yes',
       todaysDeal: form.todaysDeal === 'yes',
       description: form.description,
+      shortDescription: form.shortDescription.trim(),
       gallery,
       thumbnail,
       videoProvider: form.videoProvider,
@@ -1014,7 +1084,13 @@ const ProductsPage = () => {
           quantity: variant ? parseNumber(variant.quantity) : null,
           media: variant?.media ?? []
         };
-      })
+      }),
+      expandableSections: expandableSections
+        .map((section) => ({
+          title: section.title.trim(),
+          content: section.content.trim()
+        }))
+        .filter((section) => section.title || section.content)
     };
 
     if (isEditMode && editingId != null) {
@@ -1075,23 +1151,72 @@ const ProductsPage = () => {
     setMediaContext(null);
   };
 
-  const handleMediaSelect = (selection: MediaSelection) => {
+  const handleMediaUpload = async (files: File[]): Promise<MediaSelection[]> => {
+    const sanitized = files.filter(Boolean);
+    if (!sanitized.length) {
+      return [];
+    }
+    const formData = new FormData();
+    sanitized.forEach((file) => {
+      formData.append('files', file);
+    });
+    formData.append('module', 'PRODUCT_MEDIA');
+    try {
+      const { data } = await api.post<UploadedFileUploadResponse[]>('/uploaded-files/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      const selections = (data ?? [])
+        .filter((item): item is UploadedFileUploadResponse => Boolean(item && item.url))
+        .map((uploaded) => ({
+          url: uploaded.url,
+          storageKey: uploaded.storageKey ?? undefined,
+          originalFilename: uploaded.originalFilename ?? undefined,
+          mimeType: uploaded.mimeType ?? undefined,
+          sizeBytes: uploaded.sizeBytes ?? undefined
+        }));
+      if (!selections.length) {
+        throw new Error('Upload failed');
+      }
+      notify({
+        type: 'success',
+        message:
+          selections.length === 1
+            ? `Uploaded ${selections[0].originalFilename ?? 'file'} successfully.`
+            : `Uploaded ${selections.length} files successfully.`
+      });
+      return selections;
+    } catch (error) {
+      notify({
+        type: 'error',
+        message: extractErrorMessage(error, 'Unable to upload files. Please try again.')
+      });
+      throw error;
+    }
+  };
+
+  const handleMediaSelect = (selection: MediaSelection | MediaSelection[]) => {
     if (!mediaContext) {
+      return;
+    }
+
+    const selections = Array.isArray(selection) ? selection : [selection];
+    if (!selections.length) {
+      setMediaContext(null);
       return;
     }
 
     switch (mediaContext.type) {
       case 'gallery':
-        setGallery((previous) => [...previous, selection]);
+        setGallery((previous) => [...previous, ...selections]);
         break;
       case 'thumbnail':
-        setThumbnail(selection);
+        setThumbnail(selections[0]);
         break;
       case 'pdf':
-        setPdfSpecification(selection);
+        setPdfSpecification(selections[0]);
         break;
       case 'metaImage':
-        setMetaImage(selection);
+        setMetaImage(selections[0]);
         break;
       case 'variant':
         setVariants((previous) => {
@@ -1103,7 +1228,7 @@ const ProductsPage = () => {
             ...previous,
             [mediaContext.key]: {
               ...variant,
-              media: [...variant.media, selection]
+              media: [...variant.media, ...selections]
             }
           };
         });
@@ -1795,16 +1920,121 @@ const ProductsPage = () => {
                       </div>
                     </div>
 
-                    <div className="lg:col-span-2 space-y-2">
-                      <label className="text-sm font-medium text-slate-700">Description</label>
-                      <RichTextEditor
-                        value={form.description}
-                        onChange={(value) => setForm((previous) => ({ ...previous, description: value }))}
-                        minHeight={220}
-                      />
-                      {visibleValidation.description && (
-                        <p className="text-xs text-rose-500">{visibleValidation.description}</p>
-                      )}
+                    <div className="lg:col-span-2 space-y-6">
+                      <div className="space-y-2">
+                        <label htmlFor="short-description" className="text-sm font-medium text-slate-700">
+                          Short description
+                        </label>
+                        <textarea
+                          id="short-description"
+                          value={form.shortDescription}
+                          onChange={(event) =>
+                            setForm((previous) => ({ ...previous, shortDescription: event.target.value }))
+                          }
+                          rows={3}
+                          placeholder="Summarize the product in a sentence or two for quick merchandising callouts."
+                          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                        />
+                        <p className="text-xs text-slate-500">
+                          This appears alongside quick views, featured cards, and marketing placements.
+                        </p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-slate-700">Description</label>
+                        <RichTextEditor
+                          value={form.description}
+                          onChange={(value) => setForm((previous) => ({ ...previous, description: value }))}
+                          minHeight={220}
+                        />
+                        {visibleValidation.description && (
+                          <p className="text-xs text-rose-500">{visibleValidation.description}</p>
+                        )}
+                      </div>
+
+                      <div className="rounded-xl border border-slate-200 p-4 shadow-sm">
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div>
+                            <span className="text-sm font-medium text-slate-700">Expandable details</span>
+                            <p className="text-xs text-slate-500">
+                              Create accordion-style sections for specifications, materials, or FAQs.
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={addExpandableSection}
+                            className="inline-flex items-center justify-center rounded-full border border-primary/40 px-4 py-2 text-xs font-semibold text-primary transition hover:border-primary hover:bg-primary/10"
+                          >
+                            Add section
+                          </button>
+                        </div>
+                        {expandableSections.length ? (
+                          <div className="mt-4 space-y-4">
+                            {expandableSections.map((section, index) => (
+                              <div key={section.id} className="space-y-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+                                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                  <label className="flex-1">
+                                    <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Title</span>
+                                    <input
+                                      type="text"
+                                      value={section.title}
+                                      onChange={(event) =>
+                                        updateExpandableSection(section.id, 'title', event.target.value)
+                                      }
+                                      placeholder="e.g. Materials & care"
+                                      className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                                    />
+                                  </label>
+                                  <div className="flex items-center gap-2 self-start sm:self-auto">
+                                    <button
+                                      type="button"
+                                      onClick={() => moveExpandableSection(section.id, 'up')}
+                                      disabled={index === 0}
+                                      className="inline-flex items-center justify-center rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
+                                      aria-label="Move section up"
+                                    >
+                                      ↑
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => moveExpandableSection(section.id, 'down')}
+                                      disabled={index === expandableSections.length - 1}
+                                      className="inline-flex items-center justify-center rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
+                                      aria-label="Move section down"
+                                    >
+                                      ↓
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => removeExpandableSection(section.id)}
+                                      className="inline-flex items-center justify-center rounded-full border border-rose-200 px-3 py-1 text-xs font-semibold text-rose-500 transition hover:border-rose-300 hover:text-rose-600"
+                                      aria-label="Remove section"
+                                    >
+                                      Remove
+                                    </button>
+                                  </div>
+                                </div>
+                                <label className="block">
+                                  <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Content</span>
+                                  <textarea
+                                    value={section.content}
+                                    onChange={(event) =>
+                                      updateExpandableSection(section.id, 'content', event.target.value)
+                                    }
+                                    rows={4}
+                                    placeholder="Provide supporting details shown when the section expands."
+                                    className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                                  />
+                                </label>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="mt-4 rounded-lg border border-dashed border-slate-300 p-6 text-sm text-slate-500">
+                            No expandable sections yet. Use “Add section” to create product highlights or FAQs.
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </PageSection>
@@ -2548,6 +2778,7 @@ const ProductsPage = () => {
         open={mediaContext !== null}
         onClose={closeMediaDialog}
         onSelect={handleMediaSelect}
+        onUpload={handleMediaUpload}
       />
     </div>
   );

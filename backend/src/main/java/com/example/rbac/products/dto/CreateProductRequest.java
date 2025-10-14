@@ -31,6 +31,8 @@ public class CreateProductRequest {
 
     private String description;
 
+    private String shortDescription;
+
     @Size(max = 50, message = "Video provider must be at most 50 characters")
     private String videoProvider;
 
@@ -62,6 +64,9 @@ public class CreateProductRequest {
 
     @Valid
     private List<ProductVariantRequest> variants = new ArrayList<>();
+
+    @Valid
+    private List<ProductExpandableSectionRequest> expandableSections = new ArrayList<>();
 
     public String getName() {
         return name;
@@ -125,6 +130,14 @@ public class CreateProductRequest {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public String getShortDescription() {
+        return shortDescription;
+    }
+
+    public void setShortDescription(String shortDescription) {
+        this.shortDescription = shortDescription;
     }
 
     public String getVideoProvider() {
@@ -213,5 +226,13 @@ public class CreateProductRequest {
 
     public void setVariants(List<ProductVariantRequest> variants) {
         this.variants = variants;
+    }
+
+    public List<ProductExpandableSectionRequest> getExpandableSections() {
+        return expandableSections;
+    }
+
+    public void setExpandableSections(List<ProductExpandableSectionRequest> expandableSections) {
+        this.expandableSections = expandableSections;
     }
 }

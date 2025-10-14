@@ -103,6 +103,7 @@ public class ProductService {
         product.setFeatured(request.isFeatured());
         product.setTodaysDeal(request.isTodaysDeal());
         product.setDescription(trimToNull(request.getDescription()));
+        product.setShortDescription(trimToNull(request.getShortDescription()));
         product.setVideoProvider(trimToNull(request.getVideoProvider()));
         product.setVideoUrl(trimToNull(request.getVideoUrl()));
 
@@ -170,6 +171,7 @@ public class ProductService {
         product.setPdfSpecification(toMediaAsset(request.getPdfSpecification()));
 
         rebuildGallery(product, request.getGallery());
+        rebuildExpandableSections(product, request.getExpandableSections());
 
         Set<Long> attributeValueIds = collectAttributeValueIds(request);
         Map<Long, AttributeValue> attributeValueMap = attributeValueIds.isEmpty()
@@ -320,6 +322,27 @@ public class ProductService {
             variant.setMedia(mediaItems);
 
             product.getVariants().add(variant);
+        }
+    }
+
+    private void rebuildExpandableSections(Product product, List<ProductExpandableSectionRequest> sections) {
+        product.getExpandableSections().clear();
+        if (CollectionUtils.isEmpty(sections)) {
+            return;
+        }
+        for (ProductExpandableSectionRequest section : sections) {
+            if (section == null) {
+                continue;
+            }
+            String title = trimToNull(section.getTitle());
+            String content = trimToNull(section.getContent());
+            if (title == null && content == null) {
+                continue;
+            }
+            ProductExpandableSection entity = new ProductExpandableSection();
+            entity.setTitle(title);
+            entity.setContent(content);
+            product.getExpandableSections().add(entity);
         }
     }
 
