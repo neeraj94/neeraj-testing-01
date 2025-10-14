@@ -36,6 +36,8 @@ public class ProductReviewRequest {
     @Valid
     private List<MediaSelectionRequest> media = new ArrayList<>();
 
+    private Boolean published = Boolean.TRUE;
+
     public Long getProductId() {
         return productId;
     }
@@ -98,5 +100,13 @@ public class ProductReviewRequest {
 
     public void setMedia(List<MediaSelectionRequest> media) {
         this.media = media;
+    }
+
+    public Boolean getPublished() {
+        return published;
+    }
+
+    public void setPublished(Boolean published) {
+        this.published = published;
     }
 }
