@@ -437,10 +437,10 @@ public class ShippingLocationService {
     }
 
     private void ensureReferenceStates(ShippingCountry country) {
-        if (country == null || country.getId() == null || !StringUtils.hasText(country.getCode())) {
+        if (country == null || country.getId() == null) {
             return;
         }
-        List<String> referenceStates = shippingReferenceData.getStateNames(country.getCode());
+        List<String> referenceStates = shippingReferenceData.getStateNames(country.getCode(), country.getName());
         if (referenceStates.isEmpty()) {
             return;
         }
@@ -476,11 +476,13 @@ public class ShippingLocationService {
     }
 
     private void ensureReferenceCities(ShippingState state) {
-        if (state == null || state.getId() == null || state.getCountry() == null
-                || !StringUtils.hasText(state.getCountry().getCode())) {
+        if (state == null || state.getId() == null || state.getCountry() == null) {
             return;
         }
-        List<String> referenceCities = shippingReferenceData.getCityNames(state.getCountry().getCode(), state.getName());
+        List<String> referenceCities = shippingReferenceData.getCityNames(
+                state.getCountry().getCode(),
+                state.getCountry().getName(),
+                state.getName());
         if (referenceCities.isEmpty()) {
             return;
         }

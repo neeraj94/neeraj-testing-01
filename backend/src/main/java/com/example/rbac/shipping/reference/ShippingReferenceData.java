@@ -34,6 +34,7 @@ public class ShippingReferenceData {
     private final Resource indiaStatesResource;
 
     private final Map<String, Map<String, StateReference>> referenceStates = new LinkedHashMap<>();
+    private final Map<String, String> countryAliases = new LinkedHashMap<>();
 
     public ShippingReferenceData(ObjectMapper objectMapper,
                                  @Value("classpath:data/shipping/global_states_cities.json") Resource globalStatesResource,
@@ -49,37 +50,33 @@ public class ShippingReferenceData {
         loadIndiaStates();
     }
 
-    public List<String> getStateNames(String countryCode) {
-        Map<String, StateReference> states = referenceStates.get(normalizeCountryCode(countryCode));
-        if (states == null || states.isEmpty()) {
+    public List<String> getStateNames(String countryCode, String countryName) {
+        String normalizedCode = normalizeCountryCode(countryCode);
+        List<String> states = getStateNamesByCode(normalizedCode);
+        if (!states.isEmpty()) {
+            return states;
+        }
+        String resolvedCode = resolveCountryCodeByName(countryName);
+        if (resolvedCode == null || resolvedCode.equals(normalizedCode)) {
             return Collections.emptyList();
         }
-        return states.values().stream()
-                .map(StateReference::getDisplayName)
-                .sorted(String.CASE_INSENSITIVE_ORDER)
-                .toList();
+        return getStateNamesByCode(resolvedCode);
     }
 
-    public List<String> getCityNames(String countryCode, String stateName) {
+    public List<String> getCityNames(String countryCode, String countryName, String stateName) {
         if (!StringUtils.hasText(stateName)) {
             return Collections.emptyList();
         }
-        Map<String, StateReference> states = referenceStates.get(normalizeCountryCode(countryCode));
-        if (states == null || states.isEmpty()) {
+        String normalizedCode = normalizeCountryCode(countryCode);
+        List<String> cities = getCityNamesByCode(normalizedCode, stateName);
+        if (!cities.isEmpty()) {
+            return cities;
+        }
+        String resolvedCode = resolveCountryCodeByName(countryName);
+        if (resolvedCode == null || resolvedCode.equals(normalizedCode)) {
             return Collections.emptyList();
         }
-        String normalizedState = normalizeKey(stateName);
-        StateReference reference = Optional.ofNullable(states.get(normalizedState))
-                .orElseGet(() -> states.values().stream()
-                        .filter(state -> state.getDisplayName().equalsIgnoreCase(stateName))
-                        .findFirst()
-                        .orElse(null));
-        if (reference == null) {
-            return Collections.emptyList();
-        }
-        List<String> cities = new ArrayList<>(reference.getCities());
-        cities.sort(String.CASE_INSENSITIVE_ORDER);
-        return cities;
+        return getCityNamesByCode(resolvedCode, stateName);
     }
 
     private void loadGlobalStates() {
@@ -112,6 +109,8 @@ public class ShippingReferenceData {
             }
             CountrySeed indiaSeed = new CountrySeed();
             indiaSeed.setCode("IN");
+            indiaSeed.setName("India");
+            indiaSeed.setAliases(List.of("Republic of India", "Bharat"));
             indiaSeed.setStates(seeds);
             mergeCountrySeed(indiaSeed);
         } catch (IOException ex) {
@@ -124,6 +123,11 @@ public class ShippingReferenceData {
             return;
         }
         String countryCode = normalizeCountryCode(seed.getCode());
+        registerCountryAlias(countryCode, seed.getName());
+        if (seed.getAliases() != null) {
+            seed.getAliases().forEach(alias -> registerCountryAlias(countryCode, alias));
+        }
+        registerLocaleAliases(countryCode);
         Map<String, StateReference> states = referenceStates.computeIfAbsent(countryCode, key -> new LinkedHashMap<>());
         for (StateSeed stateSeed : seed.getStates()) {
             if (stateSeed == null || !StringUtils.hasText(stateSeed.getName())) {
@@ -160,6 +164,73 @@ public class ShippingReferenceData {
         return StringUtils.hasText(code) ? code.trim().toUpperCase(Locale.ENGLISH) : null;
     }
 
+    private List<String> getStateNamesByCode(String countryCode) {
+        if (countryCode == null) {
+            return Collections.emptyList();
+        }
+        Map<String, StateReference> states = referenceStates.get(countryCode);
+        if (states == null || states.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return states.values().stream()
+                .map(StateReference::getDisplayName)
+                .sorted(String.CASE_INSENSITIVE_ORDER)
+                .toList();
+    }
+
+    private List<String> getCityNamesByCode(String countryCode, String stateName) {
+        if (countryCode == null) {
+            return Collections.emptyList();
+        }
+        Map<String, StateReference> states = referenceStates.get(countryCode);
+        if (states == null || states.isEmpty()) {
+            return Collections.emptyList();
+        }
+        String normalizedState = normalizeKey(stateName);
+        StateReference reference = Optional.ofNullable(states.get(normalizedState))
+                .orElseGet(() -> states.values().stream()
+                        .filter(state -> state.getDisplayName().equalsIgnoreCase(stateName))
+                        .findFirst()
+                        .orElse(null));
+        if (reference == null) {
+            return Collections.emptyList();
+        }
+        List<String> cities = new ArrayList<>(reference.getCities());
+        cities.sort(String.CASE_INSENSITIVE_ORDER);
+        return cities;
+    }
+
+    private String resolveCountryCodeByName(String countryName) {
+        if (!StringUtils.hasText(countryName)) {
+            return null;
+        }
+        String key = normalizeKey(countryName);
+        if (key == null) {
+            return null;
+        }
+        return countryAliases.get(key);
+    }
+
+    private void registerCountryAlias(String countryCode, String alias) {
+        if (countryCode == null || !StringUtils.hasText(alias)) {
+            return;
+        }
+        String key = normalizeKey(alias);
+        if (key != null) {
+            countryAliases.putIfAbsent(key, countryCode);
+        }
+    }
+
+    private void registerLocaleAliases(String countryCode) {
+        if (countryCode == null) {
+            return;
+        }
+        registerCountryAlias(countryCode, countryCode);
+        Locale englishLocale = new Locale("", countryCode);
+        registerCountryAlias(countryCode, englishLocale.getDisplayCountry(Locale.ENGLISH));
+        registerCountryAlias(countryCode, englishLocale.getDisplayCountry(Locale.US));
+    }
+
     private String normalizeDisplayName(String value) {
         if (!StringUtils.hasText(value)) {
             return null;
@@ -175,6 +246,8 @@ public class ShippingReferenceData {
     private static class CountrySeed {
         private String code;
         private List<StateSeed> states;
+        private String name;
+        private List<String> aliases;
 
         public String getCode() {
             return code;
@@ -190,6 +263,22 @@ public class ShippingReferenceData {
 
         public void setStates(List<StateSeed> states) {
             this.states = states;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+
+        public List<String> getAliases() {
+            return aliases;
+        }
+
+        public void setAliases(List<String> aliases) {
+            this.aliases = aliases;
         }
     }
 
