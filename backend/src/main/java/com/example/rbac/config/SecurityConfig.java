@@ -74,7 +74,7 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/v1/auth/**", "/api/v1/settings/theme", "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/v1/blog/public/**", "/api/v1/blog/media/**", "/api/v1/public/catalog/**", "/api/v1/public/coupons/**", "/api/v1/brands/assets/**", "/api/v1/categories/assets/**", "/api/v1/badge-categories/assets/**", "/api/v1/badges/assets/**", "/api/v1/products/assets/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/blog/public/**", "/api/v1/blog/media/**", "/api/v1/public/catalog/**", "/api/v1/public/coupons/**", "/api/v1/public/products/**", "/api/v1/brands/assets/**", "/api/v1/categories/assets/**", "/api/v1/badge-categories/assets/**", "/api/v1/badges/assets/**", "/api/v1/products/assets/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/uploaded-files/**").hasAnyAuthority("UPLOADED_FILE_VIEW", "UPLOADED_FILE_MANAGE", "COUPON_MANAGE")
                         .requestMatchers(HttpMethod.GET, "/api/v1/tax-rates/**").hasAuthority("TAX_RATE_VIEW")
                         .requestMatchers(HttpMethod.GET, "/api/v1/shipping/countries/**", "/api/v1/shipping/states/**", "/api/v1/shipping/cities/**").hasAnyAuthority("SHIPPING_AREA_VIEW", "SHIPPING_LOCATION_MANAGE")

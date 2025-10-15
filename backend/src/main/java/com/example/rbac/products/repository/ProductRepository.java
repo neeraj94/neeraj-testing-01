@@ -22,6 +22,24 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     })
     Optional<Product> findDetailedById(Long id);
 
+    @EntityGraph(attributePaths = {
+            "brand",
+            "categories",
+            "galleryImages",
+            "variants",
+            "variants.values",
+            "variants.values.attributeValue",
+            "variants.values.attributeValue.attribute",
+            "variants.media",
+            "attributeValues",
+            "attributeValues.attribute",
+            "frequentlyBoughtProducts",
+            "frequentlyBoughtProducts.galleryImages",
+            "expandableSections",
+            "infoSections"
+    })
+    Optional<Product> findDetailedBySlugIgnoreCase(String slug);
+
     boolean existsBySku(String sku);
 
     boolean existsBySkuIgnoreCase(String sku);

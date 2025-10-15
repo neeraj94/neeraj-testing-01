@@ -119,7 +119,7 @@ const App = () => {
   }, [accessToken, refreshToken, dispatch]);
 
   const publicExact = ['/', '/login', '/signup', '/categories', '/brands', '/products/showcase', '/coupons'];
-  const publicPrefixes = ['/blog', '/products'];
+  const publicPrefixes = ['/blog', '/product', '/products'];
   const isPublicRoute =
     publicExact.includes(location.pathname) ||
     publicPrefixes.some((prefix) =>
@@ -144,7 +144,8 @@ const App = () => {
       <Route path="/categories" element={<PublicCategoriesPage />} />
       <Route path="/brands" element={<PublicBrandsPage />} />
       <Route path="/coupons" element={<PublicCouponsPage />} />
-      <Route path="/products/showcase" element={<PublicProductPage />} />
+      <Route path="/products/showcase" element={<Navigate to="/product/demo-product" replace />} />
+      <Route path="/product/:slug" element={<PublicProductPage />} />
       <Route element={<ProtectedRoute />}>
         <Route path="/admin" element={<Layout />}>
           <Route index element={<Navigate to="dashboard" replace />} />
