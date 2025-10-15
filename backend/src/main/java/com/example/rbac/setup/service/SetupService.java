@@ -363,15 +363,20 @@ public class SetupService {
                             "Reviews",
                             "⭐",
                             "/admin/reviews",
-                            List.of("PRODUCT_VIEW", "PRODUCT_REVIEW_VIEW")
+                            List.of(
+                                    "PRODUCT_REVIEW_VIEW",
+                                    "PRODUCT_REVIEW_CREATE",
+                                    "PRODUCT_REVIEW_UPDATE",
+                                    "PRODUCT_REVIEW_DELETE"
+                            )
                     )
             )),
             MenuDefinition.group("shipping", "Shipping", "🚚", List.of(
                     MenuDefinition.item(
-                            "areaShipping",
-                            "Area-wise shipping",
+                            "shippingOverview",
+                            "Shipping overview",
                             "🗺️",
-                            "/admin/shipping/area",
+                            "/admin/shipping",
                             List.of("SHIPPING_AREA_VIEW")
                     )
             )),

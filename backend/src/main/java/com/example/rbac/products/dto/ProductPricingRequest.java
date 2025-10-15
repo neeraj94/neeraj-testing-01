@@ -7,6 +7,9 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 
 public class ProductPricingRequest {
 
@@ -23,8 +26,12 @@ public class ProductPricingRequest {
 
     private Integer discountMaxQuantity;
 
-    @Size(max = 120, message = "Price tag must be at most 120 characters")
-    private String priceTag;
+    private Instant discountStartAt;
+
+    private Instant discountEndAt;
+
+    @Size(max = 25, message = "A maximum of 25 tags can be specified")
+    private List<String> tags = new ArrayList<>();
 
     private Integer stockQuantity;
 
@@ -82,12 +89,28 @@ public class ProductPricingRequest {
         this.discountMaxQuantity = discountMaxQuantity;
     }
 
-    public String getPriceTag() {
-        return priceTag;
+    public Instant getDiscountStartAt() {
+        return discountStartAt;
     }
 
-    public void setPriceTag(String priceTag) {
-        this.priceTag = priceTag;
+    public void setDiscountStartAt(Instant discountStartAt) {
+        this.discountStartAt = discountStartAt;
+    }
+
+    public Instant getDiscountEndAt() {
+        return discountEndAt;
+    }
+
+    public void setDiscountEndAt(Instant discountEndAt) {
+        this.discountEndAt = discountEndAt;
+    }
+
+    public List<String> getTags() {
+        return tags;
+    }
+
+    public void setTags(List<String> tags) {
+        this.tags = tags;
     }
 
     public Integer getStockQuantity() {

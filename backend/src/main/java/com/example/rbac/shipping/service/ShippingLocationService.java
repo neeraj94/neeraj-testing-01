@@ -6,6 +6,7 @@ import com.example.rbac.shipping.dto.*;
 import com.example.rbac.shipping.model.ShippingCity;
 import com.example.rbac.shipping.model.ShippingCountry;
 import com.example.rbac.shipping.model.ShippingState;
+import com.example.rbac.shipping.reference.ShippingReferenceData;
 import com.example.rbac.shipping.repository.ShippingAreaRateRepository;
 import com.example.rbac.shipping.repository.ShippingCityRepository;
 import com.example.rbac.shipping.repository.ShippingCountryRepository;
@@ -19,8 +20,12 @@ import org.springframework.util.StringUtils;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -30,18 +35,21 @@ public class ShippingLocationService {
     private final ShippingStateRepository stateRepository;
     private final ShippingCityRepository cityRepository;
     private final ShippingAreaRateRepository areaRateRepository;
+    private final ShippingReferenceData shippingReferenceData;
     private final ActivityRecorder activityRecorder;
 
     public ShippingLocationService(ShippingCountryRepository countryRepository,
                                    ShippingStateRepository stateRepository,
                                    ShippingCityRepository cityRepository,
                                    ShippingAreaRateRepository areaRateRepository,
-                                   ActivityRecorder activityRecorder) {
+                                   ActivityRecorder activityRecorder,
+                                   ShippingReferenceData shippingReferenceData) {
         this.countryRepository = countryRepository;
         this.stateRepository = stateRepository;
         this.cityRepository = cityRepository;
         this.areaRateRepository = areaRateRepository;
         this.activityRecorder = activityRecorder;
+        this.shippingReferenceData = shippingReferenceData;
     }
 
     public List<ShippingCountryDto> listCountries() {
@@ -130,16 +138,18 @@ public class ShippingLocationService {
     }
 
     public List<ShippingStateDto> listStates(Long countryId) {
-        ensureCountryExists(countryId);
-        return stateRepository.findByCountryIdOrderByEnabledDescNameAsc(countryId)
+        ShippingCountry country = getCountryOrThrow(countryId);
+        ensureReferenceStates(country);
+        return stateRepository.findByCountryIdOrderByEnabledDescNameAsc(country.getId())
                 .stream()
                 .map(this::toStateDto)
                 .collect(Collectors.toList());
     }
 
     public List<ShippingOptionDto> stateOptions(Long countryId) {
-        ensureCountryExists(countryId);
-        return stateRepository.findByCountryIdOrderByEnabledDescNameAsc(countryId)
+        ShippingCountry country = getCountryOrThrow(countryId);
+        ensureReferenceStates(country);
+        return stateRepository.findByCountryIdOrderByEnabledDescNameAsc(country.getId())
                 .stream()
                 .map(state -> new ShippingOptionDto(state.getId(), state.getName()))
                 .collect(Collectors.toList());
@@ -231,16 +241,20 @@ public class ShippingLocationService {
     }
 
     public List<ShippingCityDto> listCities(Long stateId) {
-        ensureStateExists(stateId);
-        return cityRepository.findByStateIdOrderByEnabledDescNameAsc(stateId)
+        ShippingState state = getStateOrThrow(stateId);
+        ensureReferenceStates(state.getCountry());
+        ensureReferenceCities(state);
+        return cityRepository.findByStateIdOrderByEnabledDescNameAsc(state.getId())
                 .stream()
                 .map(this::toCityDto)
                 .collect(Collectors.toList());
     }
 
     public List<ShippingOptionDto> cityOptions(Long stateId) {
-        ensureStateExists(stateId);
-        return cityRepository.findByStateIdOrderByEnabledDescNameAsc(stateId)
+        ShippingState state = getStateOrThrow(stateId);
+        ensureReferenceStates(state.getCountry());
+        ensureReferenceCities(state);
+        return cityRepository.findByStateIdOrderByEnabledDescNameAsc(state.getId())
                 .stream()
                 .map(city -> new ShippingOptionDto(city.getId(), city.getName()))
                 .collect(Collectors.toList());
@@ -422,6 +436,114 @@ public class ShippingLocationService {
         }
     }
 
+    private void ensureReferenceStates(ShippingCountry country) {
+        if (country == null || country.getId() == null) {
+            return;
+        }
+        List<String> referenceStates = shippingReferenceData.getStateNames(country.getCode(), country.getName());
+        if (referenceStates.isEmpty()) {
+            return;
+        }
+        List<ShippingState> existingStates = stateRepository.findByCountryIdOrderByNameAsc(country.getId());
+        Map<String, ShippingState> existingByKey = new HashMap<>();
+        for (ShippingState existing : existingStates) {
+            String key = normalizeKey(existing.getName());
+            if (key != null) {
+                existingByKey.putIfAbsent(key, existing);
+            }
+        }
+        boolean created = false;
+        for (String stateName : referenceStates) {
+            String normalizedName = normalizeName(stateName);
+            if (!StringUtils.hasText(normalizedName)) {
+                continue;
+            }
+            String key = normalizeKey(normalizedName);
+            if (key == null || existingByKey.containsKey(key)) {
+                continue;
+            }
+            ShippingState state = new ShippingState();
+            state.setCountry(country);
+            state.setName(normalizedName);
+            state.setEnabled(country.isEnabled());
+            ShippingState saved = stateRepository.save(state);
+            existingByKey.put(key, saved);
+            created = true;
+        }
+        if (created) {
+            stateRepository.flush();
+        }
+    }
+
+    private void ensureReferenceCities(ShippingState state) {
+        if (state == null || state.getId() == null || state.getCountry() == null) {
+            return;
+        }
+        List<String> referenceCities = shippingReferenceData.getCityNames(
+                state.getCountry().getCode(),
+                state.getCountry().getName(),
+                state.getName());
+        if (referenceCities.isEmpty()) {
+            return;
+        }
+        List<ShippingCity> existingCities = cityRepository.findByStateIdOrderByNameAsc(state.getId());
+        Set<String> existingKeys = new HashSet<>();
+        for (ShippingCity city : existingCities) {
+            String key = normalizeKey(city.getName());
+            if (key != null) {
+                existingKeys.add(key);
+            }
+        }
+        boolean created = false;
+        for (String cityName : referenceCities) {
+            String normalizedName = normalizeName(cityName);
+            if (!StringUtils.hasText(normalizedName)) {
+                continue;
+            }
+            String key = normalizeKey(normalizedName);
+            if (key == null || !existingKeys.add(key)) {
+                continue;
+            }
+            ShippingCity city = new ShippingCity();
+            city.setState(state);
+            city.setName(normalizedName);
+            city.setEnabled(state.isEnabled());
+            cityRepository.save(city);
+            created = true;
+        }
+        if (created) {
+            cityRepository.flush();
+        }
+    }
+
+    private ShippingCountry getCountryOrThrow(Long countryId) {
+        if (countryId == null) {
+            throw new ApiException(HttpStatus.NOT_FOUND, "Country not found");
+        }
+        return countryRepository.findById(countryId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Country not found"));
+    }
+
+    private ShippingState getStateOrThrow(Long stateId) {
+        if (stateId == null) {
+            throw new ApiException(HttpStatus.NOT_FOUND, "State not found");
+        }
+        return stateRepository.findById(stateId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "State not found"));
+    }
+
+    private String normalizeName(String value) {
+        if (!StringUtils.hasText(value)) {
+            return null;
+        }
+        return value.trim().replaceAll("\\s+", " ");
+    }
+
+    private String normalizeKey(String value) {
+        String normalized = normalizeName(value);
+        return normalized != null ? normalized.toLowerCase(Locale.ENGLISH) : null;
+    }
+
     private void ensureUniqueCountry(String name, String code, Long countryId) {
         if (!StringUtils.hasText(name)) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "Country name is required");
@@ -469,18 +591,6 @@ public class ShippingLocationService {
                 : cityRepository.existsByStateIdAndNameIgnoreCaseAndIdNot(stateId, name, cityId);
         if (exists) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "A city with this name already exists in the selected state");
-        }
-    }
-
-    private void ensureCountryExists(Long countryId) {
-        if (countryId == null || !countryRepository.existsById(countryId)) {
-            throw new ApiException(HttpStatus.NOT_FOUND, "Country not found");
-        }
-    }
-
-    private void ensureStateExists(Long stateId) {
-        if (stateId == null || !stateRepository.existsById(stateId)) {
-            throw new ApiException(HttpStatus.NOT_FOUND, "State not found");
         }
     }
 
