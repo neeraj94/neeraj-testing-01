@@ -14,4 +14,7 @@ public interface ShippingCityRepository extends JpaRepository<ShippingCity, Long
 
     @EntityGraph(attributePaths = {"state", "state.country"})
     List<ShippingCity> findByStateIdOrderByNameAsc(Long stateId);
+
+    @EntityGraph(attributePaths = {"state", "state.country"})
+    List<ShippingCity> findByIdIn(List<Long> ids);
 }

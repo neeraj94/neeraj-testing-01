@@ -11,6 +11,7 @@ import com.example.rbac.shipping.repository.ShippingAreaRateRepository;
 import com.example.rbac.shipping.repository.ShippingCityRepository;
 import com.example.rbac.shipping.repository.ShippingCountryRepository;
 import com.example.rbac.shipping.repository.ShippingStateRepository;
+import org.hibernate.Hibernate;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -22,10 +23,13 @@ import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -137,8 +141,10 @@ public class ShippingLocationService {
         }
     }
 
+    @Transactional(readOnly = true)
     public List<ShippingStateDto> listStates(Long countryId) {
         ShippingCountry country = getCountryOrThrow(countryId);
+        Hibernate.initialize(country);
         ensureReferenceStates(country);
         return stateRepository.findByCountryIdOrderByEnabledDescNameAsc(country.getId())
                 .stream()
@@ -146,8 +152,10 @@ public class ShippingLocationService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public List<ShippingOptionDto> stateOptions(Long countryId) {
         ShippingCountry country = getCountryOrThrow(countryId);
+        Hibernate.initialize(country);
         ensureReferenceStates(country);
         return stateRepository.findByCountryIdOrderByEnabledDescNameAsc(country.getId())
                 .stream()
@@ -240,18 +248,36 @@ public class ShippingLocationService {
         }
     }
 
+    @Transactional(readOnly = true)
     public List<ShippingCityDto> listCities(Long stateId) {
         ShippingState state = getStateOrThrow(stateId);
+        Hibernate.initialize(state);
+        if (state.getCountry() != null) {
+            Hibernate.initialize(state.getCountry());
+        }
         ensureReferenceStates(state.getCountry());
         ensureReferenceCities(state);
-        return cityRepository.findByStateIdOrderByEnabledDescNameAsc(state.getId())
-                .stream()
+        List<ShippingCity> cities = cityRepository.findByStateIdOrderByEnabledDescNameAsc(state.getId());
+        for (ShippingCity city : cities) {
+            if (city.getState() != null) {
+                Hibernate.initialize(city.getState());
+                if (city.getState().getCountry() != null) {
+                    Hibernate.initialize(city.getState().getCountry());
+                }
+            }
+        }
+        return cities.stream()
                 .map(this::toCityDto)
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public List<ShippingOptionDto> cityOptions(Long stateId) {
         ShippingState state = getStateOrThrow(stateId);
+        Hibernate.initialize(state);
+        if (state.getCountry() != null) {
+            Hibernate.initialize(state.getCountry());
+        }
         ensureReferenceStates(state.getCountry());
         ensureReferenceCities(state);
         return cityRepository.findByStateIdOrderByEnabledDescNameAsc(state.getId())
@@ -341,6 +367,211 @@ public class ShippingLocationService {
         } catch (DataIntegrityViolationException ex) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "Unable to delete city while area rates reference it");
         }
+    }
+
+    @Transactional
+    public List<ShippingCountryDto> bulkUpdateCountrySettings(ShippingCountryBulkSettingsRequest request) {
+        if (request == null) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Country settings payload is required");
+        }
+        if (request.getCostValue() != null && Boolean.TRUE.equals(request.getClearCost())) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Provide either a rate value or clear the rate, not both");
+        }
+        List<Long> ids = requireIds(request.getIds(), "country");
+        Map<Long, ShippingCountry> countryMap = countryRepository.findAllById(ids)
+                .stream()
+                .collect(Collectors.toMap(ShippingCountry::getId, Function.identity()));
+        if (countryMap.size() != ids.size()) {
+            throw new ApiException(HttpStatus.NOT_FOUND, "One or more countries were not found");
+        }
+
+        boolean updated = false;
+        for (Long id : ids) {
+            ShippingCountry country = countryMap.get(id);
+            if (country == null) {
+                throw new ApiException(HttpStatus.NOT_FOUND, "Country not found");
+            }
+            boolean changed = false;
+
+            if (request.getEnabled() != null && country.isEnabled() != request.getEnabled()) {
+                country.setEnabled(request.getEnabled());
+                changed = true;
+                if (!request.getEnabled()) {
+                    disableStatesAndCities(country);
+                }
+            }
+
+            if (Boolean.TRUE.equals(request.getClearCost())) {
+                if (country.getBaseCost() != null) {
+                    country.setBaseCost(null);
+                    changed = true;
+                }
+            } else if (request.getCostValue() != null) {
+                BigDecimal sanitized = sanitizeCost(request.getCostValue(), "Country rate");
+                BigDecimal current = normalizeCost(country.getBaseCost());
+                if (!Objects.equals(current, sanitized)) {
+                    country.setBaseCost(sanitized);
+                    changed = true;
+                }
+            }
+
+            if (changed) {
+                updated = true;
+            }
+        }
+
+        List<ShippingCountry> orderedCountries = ids.stream()
+                .map(countryMap::get)
+                .collect(Collectors.toList());
+
+        if (updated) {
+            countryRepository.saveAll(orderedCountries);
+            activityRecorder.record("Shipping", "SHIPPING_COUNTRY_BULK_SETTINGS_UPDATED",
+                    "Updated shipping country settings for " + orderedCountries.size() + " selection(s)", "SUCCESS", null);
+        }
+
+        return orderedCountries.stream()
+                .map(this::toCountryDto)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public List<ShippingStateDto> bulkUpdateStateSettings(ShippingStateBulkSettingsRequest request) {
+        if (request == null) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "State settings payload is required");
+        }
+        if (request.getOverrideCost() != null && Boolean.TRUE.equals(request.getClearOverride())) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Provide either an override value or clear the override, not both");
+        }
+        List<Long> ids = requireIds(request.getIds(), "state");
+        Map<Long, ShippingState> stateMap = stateRepository.findByIdIn(ids)
+                .stream()
+                .collect(Collectors.toMap(ShippingState::getId, Function.identity()));
+        if (stateMap.size() != ids.size()) {
+            throw new ApiException(HttpStatus.NOT_FOUND, "One or more states were not found");
+        }
+
+        boolean updated = false;
+        for (Long id : ids) {
+            ShippingState state = stateMap.get(id);
+            if (state == null) {
+                throw new ApiException(HttpStatus.NOT_FOUND, "State not found");
+            }
+            boolean changed = false;
+
+            if (request.getEnabled() != null && state.isEnabled() != request.getEnabled()) {
+                if (request.getEnabled() && (state.getCountry() == null || !state.getCountry().isEnabled())) {
+                    throw new ApiException(HttpStatus.BAD_REQUEST, "Enable the country before activating a state");
+                }
+                state.setEnabled(request.getEnabled());
+                changed = true;
+                if (!request.getEnabled()) {
+                    disableCities(state);
+                }
+            }
+
+            if (Boolean.TRUE.equals(request.getClearOverride())) {
+                if (state.getOverrideCost() != null) {
+                    state.setOverrideCost(null);
+                    changed = true;
+                }
+            } else if (request.getOverrideCost() != null) {
+                BigDecimal sanitized = sanitizeCost(request.getOverrideCost(), "State override rate");
+                BigDecimal current = normalizeCost(state.getOverrideCost());
+                if (!Objects.equals(current, sanitized)) {
+                    state.setOverrideCost(sanitized);
+                    changed = true;
+                }
+            }
+
+            if (changed) {
+                updated = true;
+            }
+        }
+
+        List<ShippingState> orderedStates = ids.stream()
+                .map(stateMap::get)
+                .collect(Collectors.toList());
+
+        if (updated) {
+            stateRepository.saveAll(orderedStates);
+            activityRecorder.record("Shipping", "SHIPPING_STATE_BULK_SETTINGS_UPDATED",
+                    "Updated shipping state settings for " + orderedStates.size() + " selection(s)", "SUCCESS", null);
+        }
+
+        return orderedStates.stream()
+                .map(this::toStateDto)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public List<ShippingCityDto> bulkUpdateCitySettings(ShippingCityBulkSettingsRequest request) {
+        if (request == null) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "City settings payload is required");
+        }
+        if (request.getOverrideCost() != null && Boolean.TRUE.equals(request.getClearOverride())) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Provide either an override value or clear the override, not both");
+        }
+        List<Long> ids = requireIds(request.getIds(), "city");
+        Map<Long, ShippingCity> cityMap = cityRepository.findByIdIn(ids)
+                .stream()
+                .collect(Collectors.toMap(ShippingCity::getId, Function.identity()));
+        if (cityMap.size() != ids.size()) {
+            throw new ApiException(HttpStatus.NOT_FOUND, "One or more cities were not found");
+        }
+
+        boolean updated = false;
+        for (Long id : ids) {
+            ShippingCity city = cityMap.get(id);
+            if (city == null) {
+                throw new ApiException(HttpStatus.NOT_FOUND, "City not found");
+            }
+            boolean changed = false;
+
+            if (request.getEnabled() != null && city.isEnabled() != request.getEnabled()) {
+                ShippingState state = city.getState();
+                if (request.getEnabled()) {
+                    if (state == null || !state.isEnabled() || state.getCountry() == null || !state.getCountry().isEnabled()) {
+                        throw new ApiException(HttpStatus.BAD_REQUEST,
+                                "Enable the parent state and country before activating a city");
+                    }
+                }
+                city.setEnabled(request.getEnabled());
+                changed = true;
+            }
+
+            if (Boolean.TRUE.equals(request.getClearOverride())) {
+                if (city.getOverrideCost() != null) {
+                    city.setOverrideCost(null);
+                    changed = true;
+                }
+            } else if (request.getOverrideCost() != null) {
+                BigDecimal sanitized = sanitizeCost(request.getOverrideCost(), "City override rate");
+                BigDecimal current = normalizeCost(city.getOverrideCost());
+                if (!Objects.equals(current, sanitized)) {
+                    city.setOverrideCost(sanitized);
+                    changed = true;
+                }
+            }
+
+            if (changed) {
+                updated = true;
+            }
+        }
+
+        List<ShippingCity> orderedCities = ids.stream()
+                .map(cityMap::get)
+                .collect(Collectors.toList());
+
+        if (updated) {
+            cityRepository.saveAll(orderedCities);
+            activityRecorder.record("Shipping", "SHIPPING_CITY_BULK_SETTINGS_UPDATED",
+                    "Updated shipping city settings for " + orderedCities.size() + " selection(s)", "SUCCESS", null);
+        }
+
+        return orderedCities.stream()
+                .map(this::toCityDto)
+                .collect(Collectors.toList());
     }
 
     private void applyCountryRequest(ShippingCountry country, ShippingCountryRequest request) {
@@ -465,7 +696,7 @@ public class ShippingLocationService {
             ShippingState state = new ShippingState();
             state.setCountry(country);
             state.setName(normalizedName);
-            state.setEnabled(country.isEnabled());
+            state.setEnabled(false);
             ShippingState saved = stateRepository.save(state);
             existingByKey.put(key, saved);
             created = true;
@@ -507,7 +738,7 @@ public class ShippingLocationService {
             ShippingCity city = new ShippingCity();
             city.setState(state);
             city.setName(normalizedName);
-            city.setEnabled(state.isEnabled());
+            city.setEnabled(false);
             cityRepository.save(city);
             created = true;
         }
@@ -528,7 +759,7 @@ public class ShippingLocationService {
         if (stateId == null) {
             throw new ApiException(HttpStatus.NOT_FOUND, "State not found");
         }
-        return stateRepository.findById(stateId)
+        return stateRepository.findWithCountryById(stateId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "State not found"));
     }
 
@@ -542,6 +773,19 @@ public class ShippingLocationService {
     private String normalizeKey(String value) {
         String normalized = normalizeName(value);
         return normalized != null ? normalized.toLowerCase(Locale.ENGLISH) : null;
+    }
+
+    private List<Long> requireIds(List<Long> ids, String label) {
+        if (ids == null || ids.isEmpty()) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Select at least one " + label + " to update.");
+        }
+        LinkedHashSet<Long> normalized = ids.stream()
+                .filter(Objects::nonNull)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+        if (normalized.isEmpty()) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Select at least one " + label + " to update.");
+        }
+        return new ArrayList<>(normalized);
     }
 
     private void ensureUniqueCountry(String name, String code, Long countryId) {
