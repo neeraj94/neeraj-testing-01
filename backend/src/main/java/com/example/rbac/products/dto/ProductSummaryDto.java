@@ -7,6 +7,7 @@ public class ProductSummaryDto {
 
     private Long id;
     private String name;
+    private String slug;
     private String unit;
     private BigDecimal unitPrice;
     private String sku;
@@ -34,6 +35,14 @@ public class ProductSummaryDto {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public String getSlug() {
+        return slug;
+    }
+
+    public void setSlug(String slug) {
+        this.slug = slug;
     }
 
     public String getUnit() {

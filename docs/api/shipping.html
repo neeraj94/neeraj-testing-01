@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Shipping & Logistics APIs</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header>
+    <h1>Shipping & Logistics APIs</h1>
+    <p>Manage shippable regions, granular rate cards, and delivery rules.</p>
+    <p><strong>Base URL:</strong> <code>/api/v1/shipping</code></p>
+  </header>
+  <main>
+    <section class="section-card">
+      <h2>Endpoint directory</h2>
+      <table>
+        <thead><tr><th>Method</th><th>Path</th><th>Description</th><th>Auth</th></tr></thead>
+        <tbody>
+          <tr><td><span class='badge get'>GET</span></td><td><code>/api/v1/shipping/countries</code></td><td>Returns countries configured for fulfilment including enablement flags.</td><td>Bearer</td></tr><tr><td><span class='badge post'>POST</span></td><td><code>/api/v1/shipping/countries</code></td><td>Adds a new shippable country with optional cash-on-delivery settings.</td><td>Bearer</td></tr><tr><td><span class='badge put'>PUT</span></td><td><code>/api/v1/shipping/countries/{id}</code></td><td>Updates country-level toggles like enablement, COD allowance, and max weight.</td><td>Bearer</td></tr><tr><td><span class='badge put'>PUT</span></td><td><code>/api/v1/shipping/countries/bulk-settings</code></td><td>Applies shared configuration to multiple countries in one call.</td><td>Bearer</td></tr><tr><td><span class='badge delete'>DELETE</span></td><td><code>/api/v1/shipping/countries/{id}</code></td><td>Deletes a country and cascades to contained states/cities if configured.</td><td>Bearer</td></tr><tr><td><span class='badge get'>GET</span></td><td><code>/api/v1/shipping/countries/{countryId}/states</code></td><td>Returns states/provinces for the specified country.</td><td>Bearer</td></tr><tr><td><span class='badge post'>POST</span></td><td><code>/api/v1/shipping/countries/{countryId}/states</code></td><td>Creates a state inside the given country.</td><td>Bearer</td></tr><tr><td><span class='badge put'>PUT</span></td><td><code>/api/v1/shipping/states/{id}</code></td><td>Updates state level toggles or surcharge overrides.</td><td>Bearer</td></tr><tr><td><span class='badge delete'>DELETE</span></td><td><code>/api/v1/shipping/states/{id}</code></td><td>Deletes a state and optionally cascades to cities.</td><td>Bearer</td></tr><tr><td><span class='badge get'>GET</span></td><td><code>/api/v1/shipping/states/{stateId}/cities</code></td><td>Returns configured cities for the given state.</td><td>Bearer</td></tr><tr><td><span class='badge post'>POST</span></td><td><code>/api/v1/shipping/states/{stateId}/cities</code></td><td>Creates a city under the given state including postal code coverage.</td><td>Bearer</td></tr><tr><td><span class='badge put'>PUT</span></td><td><code>/api/v1/shipping/cities/{id}</code></td><td>Updates city level toggles or surcharges.</td><td>Bearer</td></tr><tr><td><span class='badge delete'>DELETE</span></td><td><code>/api/v1/shipping/cities/{id}</code></td><td>Deletes a city and removes associated postal codes.</td><td>Bearer</td></tr><tr><td><span class='badge get'>GET</span></td><td><code>/api/v1/shipping/area-rates</code></td><td>Paginated rate cards scoped by shipping area.</td><td>Bearer</td></tr><tr><td><span class='badge post'>POST</span></td><td><code>/api/v1/shipping/area-rates</code></td><td>Creates a new shipping rate with thresholds and surcharge rules.</td><td>Bearer</td></tr><tr><td><span class='badge put'>PUT</span></td><td><code>/api/v1/shipping/area-rates/{id}</code></td><td>Updates base rate, thresholds, or surcharges for an area rate.</td><td>Bearer</td></tr><tr><td><span class='badge delete'>DELETE</span></td><td><code>/api/v1/shipping/area-rates/{id}</code></td><td>Deletes a rate card.</td><td>Bearer</td></tr>
+        </tbody>
+      </table>
+    </section>
+    <section class="section-card" id="get-countries">
+  <h2>List countries <span class="badge get">GET</span> <code>/api/v1/shipping/countries</code></h2>
+  <p>Returns countries configured for fulfilment including enablement flags.</p>
+  
+  
+  
+  <h3>Success response</h3>
+  <p class="status success">HTTP 200</p>
+  <pre>[
+  {
+    &quot;id&quot;: 1,
+    &quot;code&quot;: &quot;US&quot;,
+    &quot;name&quot;: &quot;United States&quot;,
+    &quot;enabled&quot;: true
+  }
+]</pre>
+  <h3>Error scenarios</h3>
+  <p>No specific error payloads documented.</p>
+</section>
+<section class="section-card" id="post-countries">
+  <h2>Create country <span class="badge post">POST</span> <code>/api/v1/shipping/countries</code></h2>
+  <p>Adds a new shippable country with optional cash-on-delivery settings.</p>
+  <h3>Headers</h3><table><thead><tr><th>Name</th><th>Value</th></tr></thead><tbody><tr><td>Content-Type</td><td>application/json</td></tr></tbody></table>
+
+  
+  <h3>Request body</h3><pre>{
+  &quot;code&quot;: &quot;CA&quot;,
+  &quot;name&quot;: &quot;Canada&quot;,
+  &quot;enabled&quot;: true
+}</pre>
+  <h3>Success response</h3>
+  <p class="status success">HTTP 201</p>
+  <pre>{
+  &quot;id&quot;: 2,
+  &quot;code&quot;: &quot;CA&quot;
+}</pre>
+  <h3>Error scenarios</h3>
+  <p>No specific error payloads documented.</p>
+</section>
+<section class="section-card" id="put-countries-{id}">
+  <h2>Update country <span class="badge put">PUT</span> <code>/api/v1/shipping/countries/{id}</code></h2>
+  <p>Updates country-level toggles like enablement, COD allowance, and max weight.</p>
+  <h3>Headers</h3><table><thead><tr><th>Name</th><th>Value</th></tr></thead><tbody><tr><td>Content-Type</td><td>application/json</td></tr></tbody></table>
+
+  
+  <h3>Request body</h3><pre>{
+  &quot;enabled&quot;: false,
+  &quot;allowCod&quot;: false
+}</pre>
+  <h3>Success response</h3>
+  <p class="status success">HTTP 200</p>
+  <pre>{
+  &quot;id&quot;: 1,
+  &quot;enabled&quot;: false
+}</pre>
+  <h3>Error scenarios</h3>
+  <p>No specific error payloads documented.</p>
+</section>
+<section class="section-card" id="put-countries-bulk-settings">
+  <h2>Bulk country settings <span class="badge put">PUT</span> <code>/api/v1/shipping/countries/bulk-settings</code></h2>
+  <p>Applies shared configuration to multiple countries in one call.</p>
+  <h3>Headers</h3><table><thead><tr><th>Name</th><th>Value</th></tr></thead><tbody><tr><td>Content-Type</td><td>application/json</td></tr></tbody></table>
+
+  
+  <h3>Request body</h3><pre>{
+  &quot;countryIds&quot;: [
+    1,
+    2
+  ],
+  &quot;defaultSlaDays&quot;: 4
+}</pre>
+  <h3>Success response</h3>
+  <p class="status success">HTTP 200</p>
+  <pre>[
+  {
+    &quot;id&quot;: 1,
+    &quot;defaultSlaDays&quot;: 4
+  },
+  {
+    &quot;id&quot;: 2,
+    &quot;defaultSlaDays&quot;: 4
+  }
+]</pre>
+  <h3>Error scenarios</h3>
+  <p>No specific error payloads documented.</p>
+</section>
+<section class="section-card" id="delete-countries-{id}">
+  <h2>Delete country <span class="badge delete">DELETE</span> <code>/api/v1/shipping/countries/{id}</code></h2>
+  <p>Deletes a country and cascades to contained states/cities if configured.</p>
+  
+  
+  
+  <h3>Success response</h3>
+  <p class="status success">HTTP 204</p>
+  <p>No body returned.</p>
+  <h3>Error scenarios</h3>
+  <p>No specific error payloads documented.</p>
+</section>
+<section class="section-card" id="get-countries-{countryId}-states">
+  <h2>List states <span class="badge get">GET</span> <code>/api/v1/shipping/countries/{countryId}/states</code></h2>
+  <p>Returns states/provinces for the specified country.</p>
+  
+  
+  
+  <h3>Success response</h3>
+  <p class="status success">HTTP 200</p>
+  <pre>[
+  {
+    &quot;id&quot;: 10,
+    &quot;code&quot;: &quot;CA-ON&quot;,
+    &quot;name&quot;: &quot;Ontario&quot;,
+    &quot;enabled&quot;: true
+  }
+]</pre>
+  <h3>Error scenarios</h3>
+  <p>No specific error payloads documented.</p>
+</section>
+<section class="section-card" id="post-countries-{countryId}-states">
+  <h2>Create state <span class="badge post">POST</span> <code>/api/v1/shipping/countries/{countryId}/states</code></h2>
+  <p>Creates a state inside the given country.</p>
+  <h3>Headers</h3><table><thead><tr><th>Name</th><th>Value</th></tr></thead><tbody><tr><td>Content-Type</td><td>application/json</td></tr></tbody></table>
+
+  
+  <h3>Request body</h3><pre>{
+  &quot;code&quot;: &quot;CA-BC&quot;,
+  &quot;name&quot;: &quot;British Columbia&quot;,
+  &quot;enabled&quot;: true
+}</pre>
+  <h3>Success response</h3>
+  <p class="status success">HTTP 201</p>
+  <pre>{
+  &quot;id&quot;: 11,
+  &quot;countryId&quot;: 2
+}</pre>
+  <h3>Error scenarios</h3>
+  <p>No specific error payloads documented.</p>
+</section>
+<section class="section-card" id="put-states-{id}">
+  <h2>Update state <span class="badge put">PUT</span> <code>/api/v1/shipping/states/{id}</code></h2>
+  <p>Updates state level toggles or surcharge overrides.</p>
+  <h3>Headers</h3><table><thead><tr><th>Name</th><th>Value</th></tr></thead><tbody><tr><td>Content-Type</td><td>application/json</td></tr></tbody></table>
+
+  
+  <h3>Request body</h3><pre>{
+  &quot;enabled&quot;: false,
+  &quot;defaultSlaDays&quot;: 3
+}</pre>
+  <h3>Success response</h3>
+  <p class="status success">HTTP 200</p>
+  <pre>{
+  &quot;id&quot;: 10,
+  &quot;enabled&quot;: false,
+  &quot;defaultSlaDays&quot;: 3
+}</pre>
+  <h3>Error scenarios</h3>
+  <p>No specific error payloads documented.</p>
+</section>
+<section class="section-card" id="delete-states-{id}">
+  <h2>Delete state <span class="badge delete">DELETE</span> <code>/api/v1/shipping/states/{id}</code></h2>
+  <p>Deletes a state and optionally cascades to cities.</p>
+  
+  
+  
+  <h3>Success response</h3>
+  <p class="status success">HTTP 204</p>
+  <p>No body returned.</p>
+  <h3>Error scenarios</h3>
+  <p>No specific error payloads documented.</p>
+</section>
+<section class="section-card" id="get-states-{stateId}-cities">
+  <h2>List cities <span class="badge get">GET</span> <code>/api/v1/shipping/states/{stateId}/cities</code></h2>
+  <p>Returns configured cities for the given state.</p>
+  
+  
+  
+  <h3>Success response</h3>
+  <p class="status success">HTTP 200</p>
+  <pre>[
+  {
+    &quot;id&quot;: 201,
+    &quot;name&quot;: &quot;Toronto&quot;,
+    &quot;postalCodes&quot;: [
+      &quot;M5H&quot;,
+      &quot;M5V&quot;
+    ],
+    &quot;enabled&quot;: true
+  }
+]</pre>
+  <h3>Error scenarios</h3>
+  <p>No specific error payloads documented.</p>
+</section>
+<section class="section-card" id="post-states-{stateId}-cities">
+  <h2>Create city <span class="badge post">POST</span> <code>/api/v1/shipping/states/{stateId}/cities</code></h2>
+  <p>Creates a city under the given state including postal code coverage.</p>
+  <h3>Headers</h3><table><thead><tr><th>Name</th><th>Value</th></tr></thead><tbody><tr><td>Content-Type</td><td>application/json</td></tr></tbody></table>
+
+  
+  <h3>Request body</h3><pre>{
+  &quot;name&quot;: &quot;Vancouver&quot;,
+  &quot;postalCodes&quot;: [
+    &quot;V5K&quot;,
+    &quot;V6B&quot;
+  ],
+  &quot;enabled&quot;: true
+}</pre>
+  <h3>Success response</h3>
+  <p class="status success">HTTP 201</p>
+  <pre>{
+  &quot;id&quot;: 202,
+  &quot;stateId&quot;: 11
+}</pre>
+  <h3>Error scenarios</h3>
+  <p>No specific error payloads documented.</p>
+</section>
+<section class="section-card" id="put-cities-{id}">
+  <h2>Update city <span class="badge put">PUT</span> <code>/api/v1/shipping/cities/{id}</code></h2>
+  <p>Updates city level toggles or surcharges.</p>
+  <h3>Headers</h3><table><thead><tr><th>Name</th><th>Value</th></tr></thead><tbody><tr><td>Content-Type</td><td>application/json</td></tr></tbody></table>
+
+  
+  <h3>Request body</h3><pre>{
+  &quot;enabled&quot;: false,
+  &quot;defaultSlaDays&quot;: 2
+}</pre>
+  <h3>Success response</h3>
+  <p class="status success">HTTP 200</p>
+  <pre>{
+  &quot;id&quot;: 201,
+  &quot;enabled&quot;: false
+}</pre>
+  <h3>Error scenarios</h3>
+  <p>No specific error payloads documented.</p>
+</section>
+<section class="section-card" id="delete-cities-{id}">
+  <h2>Delete city <span class="badge delete">DELETE</span> <code>/api/v1/shipping/cities/{id}</code></h2>
+  <p>Deletes a city and removes associated postal codes.</p>
+  
+  
+  
+  <h3>Success response</h3>
+  <p class="status success">HTTP 204</p>
+  <p>No body returned.</p>
+  <h3>Error scenarios</h3>
+  <p>No specific error payloads documented.</p>
+</section>
+<section class="section-card" id="get-area-rates">
+  <h2>List shipping area rates <span class="badge get">GET</span> <code>/api/v1/shipping/area-rates</code></h2>
+  <p>Paginated rate cards scoped by shipping area.</p>
+  
+  <h3>Parameters</h3><table><thead><tr><th>Name</th><th>Description</th></tr></thead><tbody><tr><td>page</td><td>Page index</td></tr><tr><td>size</td><td>Page size</td></tr><tr><td>search</td><td>Optional search</td></tr></tbody></table>
+
+  
+  <h3>Success response</h3>
+  <p class="status success">HTTP 200</p>
+  <pre>{
+  &quot;content&quot;: [
+    {
+      &quot;id&quot;: 70,
+      &quot;name&quot;: &quot;US Standard&quot;,
+      &quot;baseRate&quot;: 5.99
+    }
+  ],
+  &quot;page&quot;: 0,
+  &quot;size&quot;: 20,
+  &quot;totalElements&quot;: 1,
+  &quot;totalPages&quot;: 1,
+  &quot;last&quot;: true
+}</pre>
+  <h3>Error scenarios</h3>
+  <p>No specific error payloads documented.</p>
+</section>
+<section class="section-card" id="post-area-rates">
+  <h2>Create shipping area rate <span class="badge post">POST</span> <code>/api/v1/shipping/area-rates</code></h2>
+  <p>Creates a new shipping rate with thresholds and surcharge rules.</p>
+  <h3>Headers</h3><table><thead><tr><th>Name</th><th>Value</th></tr></thead><tbody><tr><td>Content-Type</td><td>application/json</td></tr></tbody></table>
+
+  
+  <h3>Request body</h3><pre>{
+  &quot;name&quot;: &quot;Canada Express&quot;,
+  &quot;baseRate&quot;: 12.5,
+  &quot;minWeight&quot;: 0,
+  &quot;maxWeight&quot;: 5
+}</pre>
+  <h3>Success response</h3>
+  <p class="status success">HTTP 201</p>
+  <pre>{
+  &quot;id&quot;: 71,
+  &quot;name&quot;: &quot;Canada Express&quot;
+}</pre>
+  <h3>Error scenarios</h3>
+  <p>No specific error payloads documented.</p>
+</section>
+<section class="section-card" id="put-area-rates-{id}">
+  <h2>Update shipping area rate <span class="badge put">PUT</span> <code>/api/v1/shipping/area-rates/{id}</code></h2>
+  <p>Updates base rate, thresholds, or surcharges for an area rate.</p>
+  <h3>Headers</h3><table><thead><tr><th>Name</th><th>Value</th></tr></thead><tbody><tr><td>Content-Type</td><td>application/json</td></tr></tbody></table>
+
+  
+  <h3>Request body</h3><pre>{
+  &quot;baseRate&quot;: 9.99,
+  &quot;maxWeight&quot;: 7
+}</pre>
+  <h3>Success response</h3>
+  <p class="status success">HTTP 200</p>
+  <pre>{
+  &quot;id&quot;: 70,
+  &quot;baseRate&quot;: 9.99
+}</pre>
+  <h3>Error scenarios</h3>
+  <p>No specific error payloads documented.</p>
+</section>
+<section class="section-card" id="delete-area-rates-{id}">
+  <h2>Delete shipping area rate <span class="badge delete">DELETE</span> <code>/api/v1/shipping/area-rates/{id}</code></h2>
+  <p>Deletes a rate card.</p>
+  
+  
+  
+  <h3>Success response</h3>
+  <p class="status success">HTTP 204</p>
+  <p>No body returned.</p>
+  <h3>Error scenarios</h3>
+  <p>No specific error payloads documented.</p>
+</section>
+
+  </main>
+  <footer>
+    <p><a href="index.html">Back to index</a></p>
+  </footer>
+</body>
+</html>
