@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
+import { createPortal } from 'react-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../services/http';
 import PageHeader from '../components/PageHeader';
@@ -109,6 +110,7 @@ const CouponsPage = () => {
   const [stateFilter, setStateFilter] = useState<CouponState | 'ALL'>('ALL');
   const [discountFilter, setDiscountFilter] = useState<DiscountType | 'ALL'>('ALL');
   const [selectedCouponId, setSelectedCouponId] = useState<number | null>(null);
+  const [isDetailModalOpen, setDetailModalOpen] = useState(false);
   const [panelMode, setPanelMode] = useState<'list' | 'create' | 'edit'>('list');
   const [form, setForm] = useState<CouponFormState>(() => defaultFormState());
   const [formError, setFormError] = useState<string | null>(null);
@@ -120,6 +122,16 @@ const CouponsPage = () => {
   const [categorySearch, setCategorySearch] = useState('');
   const [productCache, setProductCache] = useState<Record<number, CouponProductSummary>>({});
   const [categoryCache, setCategoryCache] = useState<Record<number, CouponCategorySummary>>({});
+
+  const openDetailModal = useCallback((couponId: number) => {
+    setSelectedCouponId(couponId);
+    setDetailModalOpen(true);
+  }, []);
+
+  const closeDetailModal = useCallback(() => {
+    setDetailModalOpen(false);
+    setSelectedCouponId(null);
+  }, []);
 
   useEffect(() => {
     const handle = window.setTimeout(() => {
@@ -142,6 +154,20 @@ const CouponsPage = () => {
     }, 200);
     return () => window.clearTimeout(timer);
   }, [categorySearchDraft]);
+
+  useEffect(() => {
+    if (!isDetailModalOpen) {
+      return;
+    }
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        closeDetailModal();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isDetailModalOpen, closeDetailModal]);
 
   const canManageCoupons = useMemo(
     () => hasAnyPermission(permissions as PermissionKey[], ['COUPON_MANAGE']),
@@ -365,7 +391,7 @@ const CouponsPage = () => {
       notify({ type: 'success', message: 'Coupon deleted.' });
       queryClient.invalidateQueries({ queryKey: ['coupons'] });
       if (selectedCouponId === id) {
-        setSelectedCouponId(null);
+        closeDetailModal();
       }
       if (editingId === id) {
         closeForm();
@@ -381,6 +407,7 @@ const CouponsPage = () => {
     setFormError(null);
     setEditingId(null);
     setSelectedCouponId(null);
+    setDetailModalOpen(false);
     setPanelMode('create');
     setProductSearchDraft('');
     setProductSearch('');
@@ -395,6 +422,7 @@ const CouponsPage = () => {
     setFormError(null);
     setEditingId(id);
     setSelectedCouponId(null);
+    setDetailModalOpen(false);
     setPanelMode('edit');
     setProductSearchDraft('');
     setProductSearch('');
@@ -410,6 +438,7 @@ const CouponsPage = () => {
     setForm(defaultFormState());
     setFormError(null);
     setMediaLibraryOpen(false);
+    setDetailModalOpen(false);
     setProductSearchDraft('');
     setProductSearch('');
     setCategorySearchDraft('');
@@ -665,10 +694,10 @@ const CouponsPage = () => {
           <div className="mt-auto flex flex-wrap items-center gap-2">
             <button
               type="button"
-              onClick={() => setSelectedCouponId((prev) => (prev === coupon.id ? null : coupon.id))}
+              onClick={() => openDetailModal(coupon.id)}
               className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100"
             >
-              {selectedCouponId === coupon.id ? 'Hide details' : 'View details'}
+              View details
             </button>
             {canManageCoupons && (
               <>
@@ -695,151 +724,204 @@ const CouponsPage = () => {
     );
   };
 
-  const renderDetailPanel = () => {
-    if (!selectedCouponId) {
+  const renderDetailDialog = () => {
+    if (!isDetailModalOpen || !selectedCouponId) {
       return null;
     }
+
+    const renderHeader = (title: string, subtitle?: string) => (
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-semibold text-slate-900">{title}</h2>
+          {subtitle ? <p className="text-sm text-slate-500">{subtitle}</p> : null}
+        </div>
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            closeDetailModal();
+          }}
+          className="inline-flex items-center rounded-full border border-slate-200 p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary/30"
+          aria-label="Close details"
+        >
+          <span className="text-lg leading-none">&times;</span>
+        </button>
+      </div>
+    );
+
+    let body: JSX.Element;
+
     if (detailQuery.isLoading) {
-      return (
-        <PageSection title="Coupon details">
+      body = (
+        <div className="space-y-4">
+          {renderHeader('Coupon details')}
           <p className="text-sm text-slate-500">Loading details…</p>
-        </PageSection>
+        </div>
       );
-    }
-    if (detailQuery.isError || !detailQuery.data) {
-      return (
-        <PageSection title="Coupon details">
+    } else if (detailQuery.isError || !detailQuery.data) {
+      body = (
+        <div className="space-y-4">
+          {renderHeader('Coupon details')}
           <p className="text-sm text-rose-500">Unable to load coupon details.</p>
-        </PageSection>
+        </div>
       );
-    }
-    const detail = detailQuery.data;
-    const statusDisplay = STATUS_DISPLAY[detail.state];
-    return (
-      <PageSection title={`Coupon ${detail.code}`}>
-        <div className="grid gap-6 lg:grid-cols-2">
-          <div className="space-y-4">
-            <div>
-              <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${statusDisplay.bg} ${statusDisplay.tone}`}>
-                {statusDisplay.label}
-              </span>
-            </div>
-            <dl className="grid grid-cols-1 gap-3 text-sm text-slate-600">
-              <div>
-                <dt className="font-medium text-slate-700">Name</dt>
-                <dd>{detail.name}</dd>
-              </div>
-              <div>
-                <dt className="font-medium text-slate-700">Description</dt>
-                <dd>{detail.shortDescription || detail.longDescription || '—'}</dd>
-              </div>
-              <div>
-                <dt className="font-medium text-slate-700">Discount</dt>
-                <dd>
-                  {detail.discountType === 'PERCENTAGE'
-                    ? `${detail.discountValue}%`
-                    : `Flat ${formatAmount(detail.discountValue)}`}
-                </dd>
-              </div>
-              {detail.type === 'CART_VALUE' && (
-                <div>
-                  <dt className="font-medium text-slate-700">Minimum cart value</dt>
-                  <dd>{detail.minimumCartValue != null ? formatAmount(detail.minimumCartValue) : '—'}</dd>
-                </div>
-              )}
-              <div>
-                <dt className="font-medium text-slate-700">Validity</dt>
-                <dd>
-                  {formatDate(detail.startDate)} – {formatDate(detail.endDate)}
-                </dd>
-              </div>
-              <div>
-                <dt className="font-medium text-slate-700">Created</dt>
-                <dd>{formatDate(detail.createdAt)}</dd>
-              </div>
-              <div>
-                <dt className="font-medium text-slate-700">Updated</dt>
-                <dd>{formatDate(detail.updatedAt)}</dd>
-              </div>
-            </dl>
+    } else {
+      const detail = detailQuery.data;
+      const statusDisplay = STATUS_DISPLAY[detail.state];
+      body = (
+        <div className="space-y-6">
+          {renderHeader(detail.name, `Code: ${detail.code}`)}
+          <div className="flex flex-wrap items-center gap-2">
+            <span
+              className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${statusDisplay.bg} ${statusDisplay.tone}`}
+            >
+              {statusDisplay.label}
+            </span>
+            <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+              {detail.type === 'PRODUCT'
+                ? 'Product coupon'
+                : detail.type === 'CART_VALUE'
+                  ? 'Cart value coupon'
+                  : 'New signup coupon'}
+            </span>
           </div>
-          <div className="space-y-6">
-            {detail.type === 'PRODUCT' && (
-              <div>
-                <h4 className="text-sm font-semibold text-slate-700">Eligible catalog items</h4>
-                <div className="mt-2 space-y-2 text-sm text-slate-600">
-                  {detail.products.length > 0 ? (
-                    detail.products.map((product) => (
-                      <div key={product.id} className="flex items-center gap-3 rounded-lg border border-slate-200 p-2">
-                        {product.imageUrl ? (
-                          <img src={product.imageUrl} alt={product.name} className="h-10 w-10 rounded object-cover" />
-                        ) : (
-                          <span className="flex h-10 w-10 items-center justify-center rounded bg-slate-100 text-xs font-semibold text-slate-500">
-                            {product.name.slice(0, 2).toUpperCase()}
-                          </span>
-                        )}
-                        <div>
-                          <p className="font-medium text-slate-700">{product.name}</p>
-                          <p className="text-xs text-slate-500">SKU: {product.sku || '—'}</p>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="rounded-lg border border-dashed border-slate-200 p-3 text-sm text-slate-500">
-                      No specific products selected.
-                    </p>
-                  )}
-                  {detail.categories.length > 0 && (
-                    <div className="space-y-2">
-                      <h5 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Categories</h5>
-                      {detail.categories.map((category) => (
-                        <div key={category.id} className="flex items-center gap-3 rounded-lg border border-slate-200 p-2">
-                          {category.imageUrl ? (
-                            <img src={category.imageUrl} alt={category.name} className="h-10 w-10 rounded object-cover" />
+          {detail.imageUrl ? (
+            <div className="overflow-hidden rounded-xl border border-slate-200">
+              <img src={detail.imageUrl} alt={detail.name} className="max-h-64 w-full object-cover" />
+            </div>
+          ) : null}
+          <div className="grid gap-6 lg:grid-cols-2">
+            <div className="space-y-4">
+              <dl className="grid grid-cols-1 gap-3 text-sm text-slate-600">
+                <div>
+                  <dt className="font-medium text-slate-700">Description</dt>
+                  <dd>{detail.shortDescription || detail.longDescription || '—'}</dd>
+                </div>
+                <div>
+                  <dt className="font-medium text-slate-700">Discount</dt>
+                  <dd>
+                    {detail.discountType === 'PERCENTAGE'
+                      ? `${detail.discountValue}%`
+                      : `Flat ${formatAmount(detail.discountValue)}`}
+                  </dd>
+                </div>
+                {detail.type === 'CART_VALUE' && (
+                  <div>
+                    <dt className="font-medium text-slate-700">Minimum cart value</dt>
+                    <dd>{detail.minimumCartValue != null ? formatAmount(detail.minimumCartValue) : '—'}</dd>
+                  </div>
+                )}
+                <div>
+                  <dt className="font-medium text-slate-700">Validity</dt>
+                  <dd>
+                    {formatDate(detail.startDate)} – {formatDate(detail.endDate)}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="font-medium text-slate-700">Created</dt>
+                  <dd>{formatDate(detail.createdAt)}</dd>
+                </div>
+                <div>
+                  <dt className="font-medium text-slate-700">Updated</dt>
+                  <dd>{formatDate(detail.updatedAt)}</dd>
+                </div>
+              </dl>
+            </div>
+            <div className="space-y-6">
+              {detail.type === 'PRODUCT' && (
+                <div>
+                  <h4 className="text-sm font-semibold text-slate-700">Eligible catalog items</h4>
+                  <div className="mt-2 space-y-2 text-sm text-slate-600">
+                    {detail.products.length > 0 ? (
+                      detail.products.map((product) => (
+                        <div key={product.id} className="flex items-center gap-3 rounded-lg border border-slate-200 p-2">
+                          {product.imageUrl ? (
+                            <img src={product.imageUrl} alt={product.name} className="h-10 w-10 rounded object-cover" />
                           ) : (
                             <span className="flex h-10 w-10 items-center justify-center rounded bg-slate-100 text-xs font-semibold text-slate-500">
-                              {category.name.slice(0, 2).toUpperCase()}
+                              {product.name.slice(0, 2).toUpperCase()}
                             </span>
                           )}
-                          <p className="font-medium text-slate-700">{category.name}</p>
+                          <div>
+                            <p className="font-medium text-slate-700">{product.name}</p>
+                            <p className="text-xs text-slate-500">SKU: {product.sku || '—'}</p>
+                          </div>
                         </div>
+                      ))
+                    ) : (
+                      <p className="rounded-lg border border-dashed border-slate-200 p-3 text-sm text-slate-500">
+                        No specific products selected.
+                      </p>
+                    )}
+                    {detail.categories.length > 0 && (
+                      <div className="space-y-2">
+                        <h5 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Categories</h5>
+                        {detail.categories.map((category) => (
+                          <div key={category.id} className="flex items-center gap-3 rounded-lg border border-slate-200 p-2">
+                            {category.imageUrl ? (
+                              <img src={category.imageUrl} alt={category.name} className="h-10 w-10 rounded object-cover" />
+                            ) : (
+                              <span className="flex h-10 w-10 items-center justify-center rounded bg-slate-100 text-xs font-semibold text-slate-500">
+                                {category.name.slice(0, 2).toUpperCase()}
+                              </span>
+                            )}
+                            <p className="font-medium text-slate-700">{category.name}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+              {detail.type === 'NEW_SIGNUP' && (
+                <div>
+                  <h4 className="text-sm font-semibold text-slate-700">Eligible users</h4>
+                  {detail.applyToAllNewUsers ? (
+                    <p className="mt-2 text-sm text-slate-600">Applies to all newly registered users.</p>
+                  ) : detail.users.length > 0 ? (
+                    <ul className="mt-2 space-y-2 text-sm text-slate-600">
+                      {detail.users.map((user) => (
+                        <li key={user.id} className="flex items-center gap-3 rounded-lg border border-slate-200 p-2">
+                          {user.avatarUrl ? (
+                            <img src={user.avatarUrl} alt={user.name} className="h-10 w-10 rounded-full object-cover" />
+                          ) : (
+                            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-500">
+                              {user.name.slice(0, 2).toUpperCase()}
+                            </span>
+                          )}
+                          <div>
+                            <p className="font-medium text-slate-700">{user.name}</p>
+                            <p className="text-xs text-slate-500">{user.email || '—'}</p>
+                          </div>
+                        </li>
                       ))}
-                    </div>
+                    </ul>
+                  ) : (
+                    <p className="mt-2 text-sm text-slate-500">No specific users linked.</p>
                   )}
                 </div>
-              </div>
-            )}
-            {detail.type === 'NEW_SIGNUP' && (
-              <div>
-                <h4 className="text-sm font-semibold text-slate-700">Eligible users</h4>
-                {detail.applyToAllNewUsers ? (
-                  <p className="mt-2 text-sm text-slate-600">Applies to all newly registered users.</p>
-                ) : detail.users.length > 0 ? (
-                  <ul className="mt-2 space-y-2 text-sm text-slate-600">
-                    {detail.users.map((user) => (
-                      <li key={user.id} className="flex items-center gap-3 rounded-lg border border-slate-200 p-2">
-                        {user.avatarUrl ? (
-                          <img src={user.avatarUrl} alt={user.name} className="h-10 w-10 rounded-full object-cover" />
-                        ) : (
-                          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-500">
-                            {user.name.slice(0, 2).toUpperCase()}
-                          </span>
-                        )}
-                        <div>
-                          <p className="font-medium text-slate-700">{user.name}</p>
-                          <p className="text-xs text-slate-500">{user.email || '—'}</p>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="mt-2 text-sm text-slate-500">No specific users linked.</p>
-                )}
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
-      </PageSection>
+      );
+    }
+
+    return createPortal(
+      <div
+        className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/40 px-4 py-8"
+        onClick={closeDetailModal}
+      >
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="max-h-[90vh] w-full max-w-5xl overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl"
+          onClick={(event) => event.stopPropagation()}
+        >
+          {body}
+        </div>
+      </div>,
+      document.body
     );
   };
 
@@ -1454,7 +1536,7 @@ const CouponsPage = () => {
         renderForm()
       )}
 
-      {panelMode === 'list' && renderDetailPanel()}
+      {panelMode === 'list' && renderDetailDialog()}
     </div>
   );
 };
