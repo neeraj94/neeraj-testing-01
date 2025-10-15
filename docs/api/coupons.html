@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Coupon Management APIs</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header>
+    <h1>Coupon Management APIs</h1>
+    <p>Create, update, and reference discount coupons with product/category targeting.</p>
+    <p><strong>Base URL:</strong> <code>/api/v1/coupons</code></p>
+  </header>
+  <main>
+    <section class="section-card">
+      <h2>Endpoint directory</h2>
+      <table>
+        <thead><tr><th>Method</th><th>Path</th><th>Description</th><th>Auth</th></tr></thead>
+        <tbody>
+          <tr><td><span class='badge get'>GET</span></td><td><code>/api/v1/coupons</code></td><td>Paginated coupon list with type, state, discount, and search filters.</td><td>Bearer</td></tr><tr><td><span class='badge get'>GET</span></td><td><code>/api/v1/coupons/{id}</code></td><td>Returns the full coupon definition including eligibility lists.</td><td>Bearer</td></tr><tr><td><span class='badge post'>POST</span></td><td><code>/api/v1/coupons</code></td><td>Creates a coupon with optional product, category, or user targeting.</td><td>Bearer</td></tr><tr><td><span class='badge put'>PUT</span></td><td><code>/api/v1/coupons/{id}</code></td><td>Updates coupon meta, schedule, or eligibility lists.</td><td>Bearer</td></tr><tr><td><span class='badge delete'>DELETE</span></td><td><code>/api/v1/coupons/{id}</code></td><td>Deletes a coupon immediately.</td><td>Bearer</td></tr><tr><td><span class='badge get'>GET</span></td><td><code>/api/v1/coupons/reference/products</code></td><td>Searchable product dropdown used when targeting specific SKUs.</td><td>Bearer</td></tr><tr><td><span class='badge get'>GET</span></td><td><code>/api/v1/coupons/reference/categories</code></td><td>Searchable category dropdown for coupon targeting.</td><td>Bearer</td></tr><tr><td><span class='badge get'>GET</span></td><td><code>/api/v1/coupons/reference/users</code></td><td>Searches verified users when issuing signup coupons to a subset of accounts.</td><td>Bearer</td></tr>
+        </tbody>
+      </table>
+    </section>
+    <section class="section-card" id="get-root">
+  <h2>List coupons <span class="badge get">GET</span> <code>/api/v1/coupons</code></h2>
+  <p>Paginated coupon list with type, state, discount, and search filters.</p>
+  
+  <h3>Parameters</h3><table><thead><tr><th>Name</th><th>Description</th></tr></thead><tbody><tr><td>page</td><td>Page index</td></tr><tr><td>size</td><td>Page size</td></tr><tr><td>type</td><td>PRODUCT, CART, SIGNUP</td></tr><tr><td>state</td><td>Draft/Active/Expired</td></tr><tr><td>discountType</td><td>PERCENTAGE/FLAT</td></tr><tr><td>search</td><td>Search term</td></tr></tbody></table>
+
+  
+  <h3>Success response</h3>
+  <p class="status success">HTTP 200</p>
+  <pre>{
+  &quot;content&quot;: [
+    {
+      &quot;id&quot;: 41,
+      &quot;name&quot;: &quot;New Year Glow&quot;,
+      &quot;code&quot;: &quot;NYGLOW10&quot;,
+      &quot;type&quot;: &quot;PRODUCT&quot;,
+      &quot;state&quot;: &quot;ACTIVE&quot;
+    }
+  ],
+  &quot;page&quot;: 0,
+  &quot;size&quot;: 20,
+  &quot;totalElements&quot;: 1,
+  &quot;totalPages&quot;: 1,
+  &quot;last&quot;: true
+}</pre>
+  <h3>Error scenarios</h3>
+  <p>No specific error payloads documented.</p>
+</section>
+<section class="section-card" id="get-{id}">
+  <h2>Get coupon <span class="badge get">GET</span> <code>/api/v1/coupons/{id}</code></h2>
+  <p>Returns the full coupon definition including eligibility lists.</p>
+  
+  
+  
+  <h3>Success response</h3>
+  <p class="status success">HTTP 200</p>
+  <pre>{
+  &quot;id&quot;: 41,
+  &quot;name&quot;: &quot;New Year Glow&quot;,
+  &quot;code&quot;: &quot;NYGLOW10&quot;,
+  &quot;type&quot;: &quot;PRODUCT&quot;,
+  &quot;discountType&quot;: &quot;PERCENTAGE&quot;,
+  &quot;discountValue&quot;: 10,
+  &quot;products&quot;: [
+    {
+      &quot;id&quot;: 101,
+      &quot;name&quot;: &quot;Aurora Lamp&quot;
+    }
+  ]
+}</pre>
+  <h3>Error scenarios</h3>
+  <table><thead><tr><th>Status</th><th>Description</th><th>Example</th></tr></thead><tbody><tr><td class='status client'>HTTP 404</td><td>Coupon missing</td><td><pre>{
+  &quot;error&quot;: &quot;Not Found&quot;,
+  &quot;message&quot;: &quot;COUPON_NOT_FOUND&quot;
+}</pre></td></tr></tbody></table>
+
+</section>
+<section class="section-card" id="post-root">
+  <h2>Create coupon <span class="badge post">POST</span> <code>/api/v1/coupons</code></h2>
+  <p>Creates a coupon with optional product, category, or user targeting.</p>
+  <h3>Headers</h3><table><thead><tr><th>Name</th><th>Value</th></tr></thead><tbody><tr><td>Content-Type</td><td>application/json</td></tr></tbody></table>
+
+  
+  <h3>Request body</h3><pre>{
+  &quot;name&quot;: &quot;New Year Glow&quot;,
+  &quot;code&quot;: &quot;NYGLOW10&quot;,
+  &quot;type&quot;: &quot;PRODUCT&quot;,
+  &quot;discountType&quot;: &quot;PERCENTAGE&quot;,
+  &quot;discountValue&quot;: 10,
+  &quot;productIds&quot;: [
+    101
+  ],
+  &quot;categoryIds&quot;: [
+    3
+  ],
+  &quot;startDate&quot;: &quot;2025-01-01T00:00:00Z&quot;,
+  &quot;endDate&quot;: &quot;2025-01-31T23:59:59Z&quot;
+}</pre>
+  <h3>Success response</h3>
+  <p class="status success">HTTP 201</p>
+  <pre>{
+  &quot;id&quot;: 41,
+  &quot;code&quot;: &quot;NYGLOW10&quot;
+}</pre>
+  <h3>Error scenarios</h3>
+  <table><thead><tr><th>Status</th><th>Description</th><th>Example</th></tr></thead><tbody><tr><td class='status client'>HTTP 409</td><td>Code exists</td><td><pre>{
+  &quot;error&quot;: &quot;Conflict&quot;,
+  &quot;message&quot;: &quot;COUPON_CODE_EXISTS&quot;
+}</pre></td></tr></tbody></table>
+
+</section>
+<section class="section-card" id="put-{id}">
+  <h2>Update coupon <span class="badge put">PUT</span> <code>/api/v1/coupons/{id}</code></h2>
+  <p>Updates coupon meta, schedule, or eligibility lists.</p>
+  <h3>Headers</h3><table><thead><tr><th>Name</th><th>Value</th></tr></thead><tbody><tr><td>Content-Type</td><td>application/json</td></tr></tbody></table>
+
+  
+  <h3>Request body</h3><pre>{
+  &quot;name&quot;: &quot;New Year Glow&quot;,
+  &quot;discountValue&quot;: 12,
+  &quot;status&quot;: &quot;ACTIVE&quot;
+}</pre>
+  <h3>Success response</h3>
+  <p class="status success">HTTP 200</p>
+  <pre>{
+  &quot;id&quot;: 41,
+  &quot;discountValue&quot;: 12
+}</pre>
+  <h3>Error scenarios</h3>
+  <p>No specific error payloads documented.</p>
+</section>
+<section class="section-card" id="delete-{id}">
+  <h2>Delete coupon <span class="badge delete">DELETE</span> <code>/api/v1/coupons/{id}</code></h2>
+  <p>Deletes a coupon immediately.</p>
+  
+  
+  
+  <h3>Success response</h3>
+  <p class="status success">HTTP 204</p>
+  <p>No body returned.</p>
+  <h3>Error scenarios</h3>
+  <p>No specific error payloads documented.</p>
+</section>
+<section class="section-card" id="get-reference-products">
+  <h2>Product reference options <span class="badge get">GET</span> <code>/api/v1/coupons/reference/products</code></h2>
+  <p>Searchable product dropdown used when targeting specific SKUs.</p>
+  
+  <h3>Parameters</h3><table><thead><tr><th>Name</th><th>Description</th></tr></thead><tbody><tr><td>search</td><td>Optional name/SKU</td></tr><tr><td>size</td><td>Maximum results</td></tr></tbody></table>
+
+  
+  <h3>Success response</h3>
+  <p class="status success">HTTP 200</p>
+  <pre>[
+  {
+    &quot;id&quot;: 101,
+    &quot;name&quot;: &quot;Aurora Lamp&quot;,
+    &quot;sku&quot;: &quot;AUR-LAMP-001&quot;
+  }
+]</pre>
+  <h3>Error scenarios</h3>
+  <p>No specific error payloads documented.</p>
+</section>
+<section class="section-card" id="get-reference-categories">
+  <h2>Category reference options <span class="badge get">GET</span> <code>/api/v1/coupons/reference/categories</code></h2>
+  <p>Searchable category dropdown for coupon targeting.</p>
+  
+  <h3>Parameters</h3><table><thead><tr><th>Name</th><th>Description</th></tr></thead><tbody><tr><td>search</td><td>Optional name</td></tr><tr><td>size</td><td>Maximum results</td></tr></tbody></table>
+
+  
+  <h3>Success response</h3>
+  <p class="status success">HTTP 200</p>
+  <pre>[
+  {
+    &quot;id&quot;: 3,
+    &quot;name&quot;: &quot;Lighting&quot;
+  }
+]</pre>
+  <h3>Error scenarios</h3>
+  <p>No specific error payloads documented.</p>
+</section>
+<section class="section-card" id="get-reference-users">
+  <h2>User reference options <span class="badge get">GET</span> <code>/api/v1/coupons/reference/users</code></h2>
+  <p>Searches verified users when issuing signup coupons to a subset of accounts.</p>
+  
+  <h3>Parameters</h3><table><thead><tr><th>Name</th><th>Description</th></tr></thead><tbody><tr><td>search</td><td>Name or email</td></tr><tr><td>size</td><td>Maximum results</td></tr></tbody></table>
+
+  
+  <h3>Success response</h3>
+  <p class="status success">HTTP 200</p>
+  <pre>[
+  {
+    &quot;id&quot;: 44,
+    &quot;name&quot;: &quot;Priya S.&quot;,
+    &quot;email&quot;: &quot;priya@example.com&quot;
+  }
+]</pre>
+  <h3>Error scenarios</h3>
+  <p>No specific error payloads documented.</p>
+</section>
+
+  </main>
+  <footer>
+    <p><a href="index.html">Back to index</a></p>
+  </footer>
+</body>
+</html>

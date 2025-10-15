@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Product & Asset APIs</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header>
+    <h1>Product & Asset APIs</h1>
+    <p>Administrative product CRUD, variant authoring, and media asset uploads.</p>
+    <p><strong>Base URL:</strong> <code>/api/v1</code></p>
+  </header>
+  <main>
+    <section class="section-card">
+      <h2>Endpoint directory</h2>
+      <table>
+        <thead><tr><th>Method</th><th>Path</th><th>Description</th><th>Auth</th></tr></thead>
+        <tbody>
+          <tr><td><span class='badge get'>GET</span></td><td><code>/api/v1/products</code></td><td>Returns paginated product summaries with search support.</td><td>Bearer</td></tr><tr><td><span class='badge get'>GET</span></td><td><code>/api/v1/products/{id}</code></td><td>Loads the full editable product payload including variants and media.</td><td>Bearer</td></tr><tr><td><span class='badge post'>POST</span></td><td><code>/api/v1/products</code></td><td>Creates a new catalog entry with variants, pricing, and media associations.</td><td>Bearer</td></tr><tr><td><span class='badge put'>PUT</span></td><td><code>/api/v1/products/{id}</code></td><td>Updates product details, replacing nested collections supplied in the payload.</td><td>Bearer</td></tr><tr><td><span class='badge delete'>DELETE</span></td><td><code>/api/v1/products/{id}</code></td><td>Deletes the product and archived variants.</td><td>Bearer</td></tr><tr><td><span class='badge post'>POST</span></td><td><code>/api/v1/products/assets/{type}</code></td><td>Uploads product images or documents. Supported types include primary, gallery, and manual.</td><td>Bearer</td></tr><tr><td><span class='badge get'>GET</span></td><td><code>/api/v1/products/assets/{type}/{key}</code></td><td>Streams a previously uploaded asset. Responses use the stored MIME type when available.</td><td>Public</td></tr>
+        </tbody>
+      </table>
+    </section>
+    <section class="section-card" id="get-products">
+  <h2>List products <span class="badge get">GET</span> <code>/api/v1/products</code></h2>
+  <p>Returns paginated product summaries with search support.</p>
+  
+  <h3>Parameters</h3><table><thead><tr><th>Name</th><th>Description</th></tr></thead><tbody><tr><td>page</td><td>Page index</td></tr><tr><td>size</td><td>Page size</td></tr><tr><td>search</td><td>Name/SKU filter</td></tr></tbody></table>
+
+  
+  <h3>Success response</h3>
+  <p class="status success">HTTP 200</p>
+  <pre>{
+  &quot;content&quot;: [
+    {
+      &quot;id&quot;: 101,
+      &quot;name&quot;: &quot;Aurora Lamp&quot;,
+      &quot;slug&quot;: &quot;aurora-lamp&quot;,
+      &quot;sku&quot;: &quot;AUR-LAMP-001&quot;,
+      &quot;status&quot;: &quot;ACTIVE&quot;
+    }
+  ],
+  &quot;page&quot;: 0,
+  &quot;size&quot;: 20,
+  &quot;totalElements&quot;: 1,
+  &quot;totalPages&quot;: 1,
+  &quot;last&quot;: true
+}</pre>
+  <h3>Error scenarios</h3>
+  <p>No specific error payloads documented.</p>
+</section>
+<section class="section-card" id="get-products-{id}">
+  <h2>Get product <span class="badge get">GET</span> <code>/api/v1/products/{id}</code></h2>
+  <p>Loads the full editable product payload including variants and media.</p>
+  
+  
+  
+  <h3>Success response</h3>
+  <p class="status success">HTTP 200</p>
+  <pre>{
+  &quot;id&quot;: 101,
+  &quot;name&quot;: &quot;Aurora Lamp&quot;,
+  &quot;slug&quot;: &quot;aurora-lamp&quot;,
+  &quot;sku&quot;: &quot;AUR-LAMP-001&quot;,
+  &quot;pricing&quot;: {
+    &quot;currency&quot;: &quot;USD&quot;,
+    &quot;price&quot;: 129.0
+  },
+  &quot;inventory&quot;: {
+    &quot;track&quot;: true,
+    &quot;stock&quot;: 58
+  }
+}</pre>
+  <h3>Error scenarios</h3>
+  <table><thead><tr><th>Status</th><th>Description</th><th>Example</th></tr></thead><tbody><tr><td class='status client'>HTTP 404</td><td>Unknown product</td><td><pre>{
+  &quot;error&quot;: &quot;Not Found&quot;,
+  &quot;message&quot;: &quot;PRODUCT_NOT_FOUND&quot;
+}</pre></td></tr></tbody></table>
+
+</section>
+<section class="section-card" id="post-products">
+  <h2>Create product <span class="badge post">POST</span> <code>/api/v1/products</code></h2>
+  <p>Creates a new catalog entry with variants, pricing, and media associations.</p>
+  <h3>Headers</h3><table><thead><tr><th>Name</th><th>Value</th></tr></thead><tbody><tr><td>Content-Type</td><td>application/json</td></tr></tbody></table>
+
+  
+  <h3>Request body</h3><pre>{
+  &quot;name&quot;: &quot;Aurora Lamp&quot;,
+  &quot;slug&quot;: &quot;aurora-lamp&quot;,
+  &quot;sku&quot;: &quot;AUR-LAMP-001&quot;,
+  &quot;brandId&quot;: 6,
+  &quot;categoryIds&quot;: [
+    3
+  ],
+  &quot;pricing&quot;: {
+    &quot;currency&quot;: &quot;USD&quot;,
+    &quot;price&quot;: 129.0
+  }
+}</pre>
+  <h3>Success response</h3>
+  <p class="status success">HTTP 201</p>
+  <pre>{
+  &quot;id&quot;: 101,
+  &quot;slug&quot;: &quot;aurora-lamp&quot;
+}</pre>
+  <h3>Error scenarios</h3>
+  <table><thead><tr><th>Status</th><th>Description</th><th>Example</th></tr></thead><tbody><tr><td class='status client'>HTTP 409</td><td>Slug exists</td><td><pre>{
+  &quot;error&quot;: &quot;Conflict&quot;,
+  &quot;message&quot;: &quot;PRODUCT_SLUG_EXISTS&quot;
+}</pre></td></tr></tbody></table>
+
+</section>
+<section class="section-card" id="put-products-{id}">
+  <h2>Update product <span class="badge put">PUT</span> <code>/api/v1/products/{id}</code></h2>
+  <p>Updates product details, replacing nested collections supplied in the payload.</p>
+  <h3>Headers</h3><table><thead><tr><th>Name</th><th>Value</th></tr></thead><tbody><tr><td>Content-Type</td><td>application/json</td></tr></tbody></table>
+
+  
+  <h3>Request body</h3><pre>{
+  &quot;name&quot;: &quot;Aurora Lamp&quot;,
+  &quot;slug&quot;: &quot;aurora-lamp&quot;,
+  &quot;pricing&quot;: {
+    &quot;currency&quot;: &quot;USD&quot;,
+    &quot;price&quot;: 129.0,
+    &quot;discountPrice&quot;: 109.0
+  }
+}</pre>
+  <h3>Success response</h3>
+  <p class="status success">HTTP 200</p>
+  <pre>{
+  &quot;id&quot;: 101,
+  &quot;discountPrice&quot;: 109.0
+}</pre>
+  <h3>Error scenarios</h3>
+  <p>No specific error payloads documented.</p>
+</section>
+<section class="section-card" id="delete-products-{id}">
+  <h2>Delete product <span class="badge delete">DELETE</span> <code>/api/v1/products/{id}</code></h2>
+  <p>Deletes the product and archived variants.</p>
+  
+  
+  
+  <h3>Success response</h3>
+  <p class="status success">HTTP 204</p>
+  <p>No body returned.</p>
+  <h3>Error scenarios</h3>
+  <p>No specific error payloads documented.</p>
+</section>
+<section class="section-card" id="post-products-assets-{type}">
+  <h2>Upload product assets <span class="badge post">POST</span> <code>/api/v1/products/assets/{type}</code></h2>
+  <p>Uploads product images or documents. Supported types include primary, gallery, and manual.</p>
+  <h3>Headers</h3><table><thead><tr><th>Name</th><th>Value</th></tr></thead><tbody><tr><td>Content-Type</td><td>multipart/form-data</td></tr></tbody></table>
+
+  
+  <h3>Request body</h3><p>No body required.</p>
+  <h3>Success response</h3>
+  <p class="status success">HTTP 200</p>
+  <pre>[
+  {
+    &quot;url&quot;: &quot;https://cdn.example.com/products/aurora/primary.jpg&quot;,
+    &quot;key&quot;: &quot;products/aurora/primary.jpg&quot;,
+    &quot;mimeType&quot;: &quot;image/jpeg&quot;,
+    &quot;sizeBytes&quot;: 245678
+  }
+]</pre>
+  <h3>Error scenarios</h3>
+  <table><thead><tr><th>Status</th><th>Description</th><th>Example</th></tr></thead><tbody><tr><td class='status client'>HTTP 400</td><td>No files provided</td><td><pre>{
+  &quot;error&quot;: &quot;Bad Request&quot;,
+  &quot;message&quot;: &quot;Select at least one file to upload&quot;
+}</pre></td></tr></tbody></table>
+
+</section>
+<section class="section-card" id="get-products-assets-{type}-{key}">
+  <h2>Serve product asset <span class="badge get">GET</span> <code>/api/v1/products/assets/{type}/{key}</code></h2>
+  <p>Streams a previously uploaded asset. Responses use the stored MIME type when available.</p>
+  
+  
+  
+  <h3>Success response</h3>
+  <p class="status success">HTTP 200</p>
+  <p>No body returned.</p>
+  <h3>Error scenarios</h3>
+  <table><thead><tr><th>Status</th><th>Description</th><th>Example</th></tr></thead><tbody><tr><td class='status client'>HTTP 404</td><td>Unknown key</td><td><pre>{
+  &quot;error&quot;: &quot;Not Found&quot;,
+  &quot;message&quot;: &quot;ASSET_NOT_FOUND&quot;
+}</pre></td></tr></tbody></table>
+
+</section>
+
+  </main>
+  <footer>
+    <p><a href="index.html">Back to index</a></p>
+  </footer>
+</body>
+</html>

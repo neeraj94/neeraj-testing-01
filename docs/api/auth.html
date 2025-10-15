@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Authentication APIs</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header>
+    <h1>Authentication APIs</h1>
+    <p>Token issuance, refresh, logout, and verification flows used by the dashboard and storefront.</p>
+    <p><strong>Base URL:</strong> <code>/api/v1/auth</code></p>
+  </header>
+  <main>
+    <section class="section-card">
+      <h2>Endpoint directory</h2>
+      <table>
+        <thead><tr><th>Method</th><th>Path</th><th>Description</th><th>Auth</th></tr></thead>
+        <tbody>
+          <tr><td><span class='badge post'>POST</span></td><td><code>/api/v1/auth/signup</code></td><td>Registers a new dashboard operator or storefront customer depending on the supplied role.</td><td>Public</td></tr><tr><td><span class='badge post'>POST</span></td><td><code>/api/v1/auth/login</code></td><td>Authenticates an existing user and returns a JWT access token and refresh token.</td><td>Public</td></tr><tr><td><span class='badge post'>POST</span></td><td><code>/api/v1/auth/refresh</code></td><td>Issues a new access token using a valid refresh token.</td><td>Public</td></tr><tr><td><span class='badge post'>POST</span></td><td><code>/api/v1/auth/logout</code></td><td>Revokes the supplied refresh token immediately.</td><td>Public</td></tr><tr><td><span class='badge get'>GET</span></td><td><code>/api/v1/auth/me</code></td><td>Returns the profile of the authenticated principal.</td><td>Bearer</td></tr><tr><td><span class='badge post'>POST</span></td><td><code>/api/v1/auth/verify</code></td><td>Confirms an email verification token when posted from the dashboard.</td><td>Public</td></tr><tr><td><span class='badge get'>GET</span></td><td><code>/api/v1/auth/verify</code></td><td>Browser friendly verification endpoint. Accepts a &quot;token&quot; query string parameter.</td><td>Public</td></tr>
+        </tbody>
+      </table>
+    </section>
+    <section class="section-card" id="post-signup">
+  <h2>Sign up <span class="badge post">POST</span> <code>/api/v1/auth/signup</code></h2>
+  <p>Registers a new dashboard operator or storefront customer depending on the supplied role.</p>
+  <h3>Headers</h3><table><thead><tr><th>Name</th><th>Value</th></tr></thead><tbody><tr><td>Content-Type</td><td>application/json</td></tr><tr><td>Accept</td><td>application/json</td></tr></tbody></table>
+
+  
+  <h3>Request body</h3><pre>{
+  &quot;email&quot;: &quot;alex@example.com&quot;,
+  &quot;password&quot;: &quot;P@ssw0rd!&quot;,
+  &quot;firstName&quot;: &quot;Alex&quot;,
+  &quot;lastName&quot;: &quot;Doe&quot;,
+  &quot;role&quot;: &quot;CUSTOMER&quot;
+}</pre>
+  <h3>Success response</h3>
+  <p class="status success">HTTP 201</p>
+  <pre>{
+  &quot;token&quot;: &quot;eyJhbGciOi...&quot;,
+  &quot;refreshToken&quot;: &quot;c9f7b...&quot;,
+  &quot;expiresIn&quot;: 3600,
+  &quot;user&quot;: {
+    &quot;id&quot;: 58,
+    &quot;email&quot;: &quot;alex@example.com&quot;,
+    &quot;firstName&quot;: &quot;Alex&quot;,
+    &quot;lastName&quot;: &quot;Doe&quot;,
+    &quot;roles&quot;: [
+      &quot;CUSTOMER&quot;
+    ]
+  }
+}</pre>
+  <h3>Error scenarios</h3>
+  <table><thead><tr><th>Status</th><th>Description</th><th>Example</th></tr></thead><tbody><tr><td class='status client'>HTTP 409</td><td>Email already registered</td><td><pre>{
+  &quot;error&quot;: &quot;Conflict&quot;,
+  &quot;message&quot;: &quot;EMAIL_IN_USE&quot;
+}</pre></td></tr><tr><td class='status client'>HTTP 400</td><td>Validation failed</td><td><pre>{
+  &quot;error&quot;: &quot;Bad Request&quot;,
+  &quot;message&quot;: &quot;Password must be at least 8 characters&quot;
+}</pre></td></tr></tbody></table>
+
+</section>
+<section class="section-card" id="post-login">
+  <h2>Login <span class="badge post">POST</span> <code>/api/v1/auth/login</code></h2>
+  <p>Authenticates an existing user and returns a JWT access token and refresh token.</p>
+  <h3>Headers</h3><table><thead><tr><th>Name</th><th>Value</th></tr></thead><tbody><tr><td>Content-Type</td><td>application/json</td></tr></tbody></table>
+
+  
+  <h3>Request body</h3><pre>{
+  &quot;email&quot;: &quot;alex@example.com&quot;,
+  &quot;password&quot;: &quot;P@ssw0rd!&quot;
+}</pre>
+  <h3>Success response</h3>
+  <p class="status success">HTTP 200</p>
+  <pre>{
+  &quot;token&quot;: &quot;eyJhbGciOi...&quot;,
+  &quot;refreshToken&quot;: &quot;c9f7b...&quot;,
+  &quot;expiresIn&quot;: 3600,
+  &quot;user&quot;: {
+    &quot;id&quot;: 58,
+    &quot;email&quot;: &quot;alex@example.com&quot;,
+    &quot;firstName&quot;: &quot;Alex&quot;,
+    &quot;lastName&quot;: &quot;Doe&quot;
+  }
+}</pre>
+  <h3>Error scenarios</h3>
+  <table><thead><tr><th>Status</th><th>Description</th><th>Example</th></tr></thead><tbody><tr><td class='status client'>HTTP 401</td><td>Invalid credentials</td><td><pre>{
+  &quot;error&quot;: &quot;Unauthorized&quot;,
+  &quot;message&quot;: &quot;INVALID_CREDENTIALS&quot;
+}</pre></td></tr></tbody></table>
+
+</section>
+<section class="section-card" id="post-refresh">
+  <h2>Refresh token <span class="badge post">POST</span> <code>/api/v1/auth/refresh</code></h2>
+  <p>Issues a new access token using a valid refresh token.</p>
+  <h3>Headers</h3><table><thead><tr><th>Name</th><th>Value</th></tr></thead><tbody><tr><td>Content-Type</td><td>application/json</td></tr></tbody></table>
+
+  
+  <h3>Request body</h3><pre>{
+  &quot;refreshToken&quot;: &quot;c9f7b...&quot;
+}</pre>
+  <h3>Success response</h3>
+  <p class="status success">HTTP 200</p>
+  <pre>{
+  &quot;token&quot;: &quot;eyJhbGciOi...&quot;,
+  &quot;refreshToken&quot;: &quot;a8d4...&quot;,
+  &quot;expiresIn&quot;: 3600
+}</pre>
+  <h3>Error scenarios</h3>
+  <table><thead><tr><th>Status</th><th>Description</th><th>Example</th></tr></thead><tbody><tr><td class='status client'>HTTP 401</td><td>Refresh token expired</td><td><pre>{
+  &quot;error&quot;: &quot;Unauthorized&quot;,
+  &quot;message&quot;: &quot;REFRESH_TOKEN_EXPIRED&quot;
+}</pre></td></tr></tbody></table>
+
+</section>
+<section class="section-card" id="post-logout">
+  <h2>Logout <span class="badge post">POST</span> <code>/api/v1/auth/logout</code></h2>
+  <p>Revokes the supplied refresh token immediately.</p>
+  <h3>Headers</h3><table><thead><tr><th>Name</th><th>Value</th></tr></thead><tbody><tr><td>Content-Type</td><td>application/json</td></tr></tbody></table>
+
+  
+  <h3>Request body</h3><pre>{
+  &quot;refreshToken&quot;: &quot;c9f7b...&quot;
+}</pre>
+  <h3>Success response</h3>
+  <p class="status success">HTTP 204</p>
+  <p>No body returned.</p>
+  <h3>Error scenarios</h3>
+  <table><thead><tr><th>Status</th><th>Description</th><th>Example</th></tr></thead><tbody><tr><td class='status client'>HTTP 400</td><td>Unknown refresh token</td><td><pre>{
+  &quot;error&quot;: &quot;Bad Request&quot;,
+  &quot;message&quot;: &quot;REFRESH_TOKEN_NOT_FOUND&quot;
+}</pre></td></tr></tbody></table>
+
+</section>
+<section class="section-card" id="get-me">
+  <h2>Current user <span class="badge get">GET</span> <code>/api/v1/auth/me</code></h2>
+  <p>Returns the profile of the authenticated principal.</p>
+  <h3>Headers</h3><table><thead><tr><th>Name</th><th>Value</th></tr></thead><tbody><tr><td>Authorization</td><td>Bearer &lt;token&gt;</td></tr></tbody></table>
+
+  
+  
+  <h3>Success response</h3>
+  <p class="status success">HTTP 200</p>
+  <pre>{
+  &quot;id&quot;: 12,
+  &quot;email&quot;: &quot;ops@example.com&quot;,
+  &quot;firstName&quot;: &quot;Operations&quot;,
+  &quot;lastName&quot;: &quot;Lead&quot;,
+  &quot;roles&quot;: [
+    &quot;ADMIN&quot;
+  ],
+  &quot;permissions&quot;: [
+    &quot;PRODUCT_VIEW&quot;,
+    &quot;ORDER_MANAGE&quot;
+  ],
+  &quot;status&quot;: &quot;ACTIVE&quot;
+}</pre>
+  <h3>Error scenarios</h3>
+  <table><thead><tr><th>Status</th><th>Description</th><th>Example</th></tr></thead><tbody><tr><td class='status client'>HTTP 401</td><td>Missing token</td><td><pre>{
+  &quot;error&quot;: &quot;Unauthorized&quot;,
+  &quot;message&quot;: &quot;TOKEN_REQUIRED&quot;
+}</pre></td></tr></tbody></table>
+
+</section>
+<section class="section-card" id="post-verify">
+  <h2>Verify email (body) <span class="badge post">POST</span> <code>/api/v1/auth/verify</code></h2>
+  <p>Confirms an email verification token when posted from the dashboard.</p>
+  <h3>Headers</h3><table><thead><tr><th>Name</th><th>Value</th></tr></thead><tbody><tr><td>Content-Type</td><td>application/json</td></tr></tbody></table>
+
+  
+  <h3>Request body</h3><pre>{
+  &quot;token&quot;: &quot;VeR1Fy-123&quot;
+}</pre>
+  <h3>Success response</h3>
+  <p class="status success">HTTP 200</p>
+  <pre>{
+  &quot;verified&quot;: true,
+  &quot;email&quot;: &quot;alex@example.com&quot;
+}</pre>
+  <h3>Error scenarios</h3>
+  <table><thead><tr><th>Status</th><th>Description</th><th>Example</th></tr></thead><tbody><tr><td class='status client'>HTTP 410</td><td>Expired token</td><td><pre>{
+  &quot;error&quot;: &quot;Gone&quot;,
+  &quot;message&quot;: &quot;VERIFICATION_TOKEN_EXPIRED&quot;
+}</pre></td></tr></tbody></table>
+
+</section>
+<section class="section-card" id="get-verify">
+  <h2>Verify email (link) <span class="badge get">GET</span> <code>/api/v1/auth/verify</code></h2>
+  <p>Browser friendly verification endpoint. Accepts a &quot;token&quot; query string parameter.</p>
+  
+  <h3>Parameters</h3><table><thead><tr><th>Name</th><th>Description</th></tr></thead><tbody><tr><td>token</td><td>Verification token returned in the email link</td></tr></tbody></table>
+
+  
+  <h3>Success response</h3>
+  <p class="status success">HTTP 200</p>
+  <pre>{
+  &quot;verified&quot;: true,
+  &quot;email&quot;: &quot;alex@example.com&quot;
+}</pre>
+  <h3>Error scenarios</h3>
+  <table><thead><tr><th>Status</th><th>Description</th><th>Example</th></tr></thead><tbody><tr><td class='status client'>HTTP 400</td><td>Missing token</td><td><pre>{
+  &quot;error&quot;: &quot;Bad Request&quot;,
+  &quot;message&quot;: &quot;TOKEN_REQUIRED&quot;
+}</pre></td></tr></tbody></table>
+
+</section>
+
+  </main>
+  <footer>
+    <p><a href="index.html">Back to index</a></p>
+  </footer>
+</body>
+</html>
