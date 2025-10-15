@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Media Gallery APIs</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header>
+    <h1>Media Gallery APIs</h1>
+    <p>Centralised asset library supporting upload, metadata, and folder management.</p>
+    <p><strong>Base URL:</strong> <code>/api/v1/gallery</code></p>
+  </header>
+  <main>
+    <section class="section-card">
+      <h2>Endpoint directory</h2>
+      <table>
+        <thead><tr><th>Method</th><th>Path</th><th>Description</th><th>Auth</th></tr></thead>
+        <tbody>
+          <tr><td><span class='badge get'>GET</span></td><td><code>/api/v1/gallery/files</code></td><td>Paginated media browser with folder, owner, uploader, and search filters.</td><td>Bearer</td></tr><tr><td><span class='badge get'>GET</span></td><td><code>/api/v1/gallery/settings</code></td><td>Returns upload limits and default folders permitted for the requesting user.</td><td>Bearer</td></tr><tr><td><span class='badge post'>POST</span></td><td><code>/api/v1/gallery/files</code></td><td>Uploads one or more files to the gallery, returning metadata for each stored asset.</td><td>Bearer</td></tr><tr><td><span class='badge patch'>PATCH</span></td><td><code>/api/v1/gallery/files/{id}</code></td><td>Renames a file, changes its folder, or adjusts ownership notes.</td><td>Bearer</td></tr><tr><td><span class='badge delete'>DELETE</span></td><td><code>/api/v1/gallery/files/{id}</code></td><td>Deletes a single file if the caller owns it or has global permissions.</td><td>Bearer</td></tr><tr><td><span class='badge post'>POST</span></td><td><code>/api/v1/gallery/files/bulk-delete</code></td><td>Deletes multiple files by id in a single operation.</td><td>Bearer</td></tr><tr><td><span class='badge get'>GET</span></td><td><code>/api/v1/gallery/files/{id}/content</code></td><td>Streams the binary content of the requested gallery item.</td><td>Bearer</td></tr><tr><td><span class='badge get'>GET</span></td><td><code>/api/v1/gallery/folders</code></td><td>Returns accessible folder tree for the authenticated user.</td><td>Bearer</td></tr><tr><td><span class='badge post'>POST</span></td><td><code>/api/v1/gallery/folders</code></td><td>Creates a new folder optionally nested inside an existing folder.</td><td>Bearer</td></tr><tr><td><span class='badge patch'>PATCH</span></td><td><code>/api/v1/gallery/folders/{id}</code></td><td>Renames an existing folder.</td><td>Bearer</td></tr><tr><td><span class='badge delete'>DELETE</span></td><td><code>/api/v1/gallery/folders/{id}</code></td><td>Deletes a folder when empty or when cascading delete is permitted.</td><td>Bearer</td></tr>
+        </tbody>
+      </table>
+    </section>
+    <section class="section-card" id="get-files">
+  <h2>List files <span class="badge get">GET</span> <code>/api/v1/gallery/files</code></h2>
+  <p>Paginated media browser with folder, owner, uploader, and search filters.</p>
+  
+  <h3>Parameters</h3><table><thead><tr><th>Name</th><th>Description</th></tr></thead><tbody><tr><td>page</td><td>Page index</td></tr><tr><td>size</td><td>Page size</td></tr><tr><td>folderId</td><td>Filter by folder</td></tr><tr><td>search</td><td>Filename search</td></tr></tbody></table>
+
+  
+  <h3>Success response</h3>
+  <p class="status success">HTTP 200</p>
+  <pre>{
+  &quot;content&quot;: [
+    {
+      &quot;id&quot;: 901,
+      &quot;filename&quot;: &quot;aurora-primary.jpg&quot;,
+      &quot;url&quot;: &quot;https://cdn.example.com/gallery/aurora-primary.jpg&quot;,
+      &quot;sizeBytes&quot;: 245678
+    }
+  ],
+  &quot;page&quot;: 0,
+  &quot;size&quot;: 20,
+  &quot;totalElements&quot;: 1,
+  &quot;totalPages&quot;: 1,
+  &quot;last&quot;: true
+}</pre>
+  <h3>Error scenarios</h3>
+  <p>No specific error payloads documented.</p>
+</section>
+<section class="section-card" id="get-settings">
+  <h2>Get gallery settings <span class="badge get">GET</span> <code>/api/v1/gallery/settings</code></h2>
+  <p>Returns upload limits and default folders permitted for the requesting user.</p>
+  
+  
+  
+  <h3>Success response</h3>
+  <p class="status success">HTTP 200</p>
+  <pre>{
+  &quot;maxFileSizeBytes&quot;: 5242880,
+  &quot;allowedMimeTypes&quot;: [
+    &quot;image/png&quot;,
+    &quot;image/jpeg&quot;
+  ]
+}</pre>
+  <h3>Error scenarios</h3>
+  <p>No specific error payloads documented.</p>
+</section>
+<section class="section-card" id="post-files">
+  <h2>Upload files <span class="badge post">POST</span> <code>/api/v1/gallery/files</code></h2>
+  <p>Uploads one or more files to the gallery, returning metadata for each stored asset.</p>
+  <h3>Headers</h3><table><thead><tr><th>Name</th><th>Value</th></tr></thead><tbody><tr><td>Content-Type</td><td>multipart/form-data</td></tr></tbody></table>
+
+  
+  <h3>Request body</h3><p>No body required.</p>
+  <h3>Success response</h3>
+  <p class="status success">HTTP 200</p>
+  <pre>[
+  {
+    &quot;id&quot;: 902,
+    &quot;filename&quot;: &quot;detail.jpg&quot;,
+    &quot;url&quot;: &quot;https://cdn.example.com/gallery/detail.jpg&quot;,
+    &quot;sizeBytes&quot;: 198765
+  }
+]</pre>
+  <h3>Error scenarios</h3>
+  <table><thead><tr><th>Status</th><th>Description</th><th>Example</th></tr></thead><tbody><tr><td class='status client'>HTTP 400</td><td>No files provided</td><td><pre>{
+  &quot;error&quot;: &quot;Bad Request&quot;,
+  &quot;message&quot;: &quot;FILES_REQUIRED&quot;
+}</pre></td></tr></tbody></table>
+
+</section>
+<section class="section-card" id="patch-files-{id}">
+  <h2>Update file metadata <span class="badge patch">PATCH</span> <code>/api/v1/gallery/files/{id}</code></h2>
+  <p>Renames a file, changes its folder, or adjusts ownership notes.</p>
+  <h3>Headers</h3><table><thead><tr><th>Name</th><th>Value</th></tr></thead><tbody><tr><td>Content-Type</td><td>application/json</td></tr></tbody></table>
+
+  
+  <h3>Request body</h3><pre>{
+  &quot;folderId&quot;: 18,
+  &quot;title&quot;: &quot;Aurora lamp hero&quot;
+}</pre>
+  <h3>Success response</h3>
+  <p class="status success">HTTP 200</p>
+  <pre>{
+  &quot;id&quot;: 901,
+  &quot;folderId&quot;: 18
+}</pre>
+  <h3>Error scenarios</h3>
+  <p>No specific error payloads documented.</p>
+</section>
+<section class="section-card" id="delete-files-{id}">
+  <h2>Delete file <span class="badge delete">DELETE</span> <code>/api/v1/gallery/files/{id}</code></h2>
+  <p>Deletes a single file if the caller owns it or has global permissions.</p>
+  
+  
+  
+  <h3>Success response</h3>
+  <p class="status success">HTTP 204</p>
+  <p>No body returned.</p>
+  <h3>Error scenarios</h3>
+  <p>No specific error payloads documented.</p>
+</section>
+<section class="section-card" id="post-files-bulk-delete">
+  <h2>Bulk delete <span class="badge post">POST</span> <code>/api/v1/gallery/files/bulk-delete</code></h2>
+  <p>Deletes multiple files by id in a single operation.</p>
+  <h3>Headers</h3><table><thead><tr><th>Name</th><th>Value</th></tr></thead><tbody><tr><td>Content-Type</td><td>application/json</td></tr></tbody></table>
+
+  
+  <h3>Request body</h3><pre>{
+  &quot;ids&quot;: [
+    901,
+    902,
+    903
+  ]
+}</pre>
+  <h3>Success response</h3>
+  <p class="status success">HTTP 204</p>
+  <p>No body returned.</p>
+  <h3>Error scenarios</h3>
+  <p>No specific error payloads documented.</p>
+</section>
+<section class="section-card" id="get-files-{id}-content">
+  <h2>Download file <span class="badge get">GET</span> <code>/api/v1/gallery/files/{id}/content</code></h2>
+  <p>Streams the binary content of the requested gallery item.</p>
+  
+  
+  
+  <h3>Success response</h3>
+  <p class="status success">HTTP 200</p>
+  <p>No body returned.</p>
+  <h3>Error scenarios</h3>
+  <table><thead><tr><th>Status</th><th>Description</th><th>Example</th></tr></thead><tbody><tr><td class='status client'>HTTP 404</td><td>File missing</td><td><pre>{
+  &quot;error&quot;: &quot;Not Found&quot;,
+  &quot;message&quot;: &quot;GALLERY_FILE_NOT_FOUND&quot;
+}</pre></td></tr></tbody></table>
+
+</section>
+<section class="section-card" id="get-folders">
+  <h2>List folders <span class="badge get">GET</span> <code>/api/v1/gallery/folders</code></h2>
+  <p>Returns accessible folder tree for the authenticated user.</p>
+  
+  
+  
+  <h3>Success response</h3>
+  <p class="status success">HTTP 200</p>
+  <pre>[
+  {
+    &quot;id&quot;: 12,
+    &quot;name&quot;: &quot;Products&quot;,
+    &quot;children&quot;: []
+  }
+]</pre>
+  <h3>Error scenarios</h3>
+  <p>No specific error payloads documented.</p>
+</section>
+<section class="section-card" id="post-folders">
+  <h2>Create folder <span class="badge post">POST</span> <code>/api/v1/gallery/folders</code></h2>
+  <p>Creates a new folder optionally nested inside an existing folder.</p>
+  <h3>Headers</h3><table><thead><tr><th>Name</th><th>Value</th></tr></thead><tbody><tr><td>Content-Type</td><td>application/json</td></tr></tbody></table>
+
+  
+  <h3>Request body</h3><pre>{
+  &quot;name&quot;: &quot;PDP&quot;,
+  &quot;parentId&quot;: 12
+}</pre>
+  <h3>Success response</h3>
+  <p class="status success">HTTP 201</p>
+  <pre>{
+  &quot;id&quot;: 18,
+  &quot;name&quot;: &quot;PDP&quot;
+}</pre>
+  <h3>Error scenarios</h3>
+  <p>No specific error payloads documented.</p>
+</section>
+<section class="section-card" id="patch-folders-{id}">
+  <h2>Rename folder <span class="badge patch">PATCH</span> <code>/api/v1/gallery/folders/{id}</code></h2>
+  <p>Renames an existing folder.</p>
+  <h3>Headers</h3><table><thead><tr><th>Name</th><th>Value</th></tr></thead><tbody><tr><td>Content-Type</td><td>application/json</td></tr></tbody></table>
+
+  
+  <h3>Request body</h3><pre>{
+  &quot;name&quot;: &quot;Product Detail&quot;
+}</pre>
+  <h3>Success response</h3>
+  <p class="status success">HTTP 200</p>
+  <pre>{
+  &quot;id&quot;: 18,
+  &quot;name&quot;: &quot;Product Detail&quot;
+}</pre>
+  <h3>Error scenarios</h3>
+  <p>No specific error payloads documented.</p>
+</section>
+<section class="section-card" id="delete-folders-{id}">
+  <h2>Delete folder <span class="badge delete">DELETE</span> <code>/api/v1/gallery/folders/{id}</code></h2>
+  <p>Deletes a folder when empty or when cascading delete is permitted.</p>
+  
+  
+  
+  <h3>Success response</h3>
+  <p class="status success">HTTP 204</p>
+  <p>No body returned.</p>
+  <h3>Error scenarios</h3>
+  <p>No specific error payloads documented.</p>
+</section>
+
+  </main>
+  <footer>
+    <p><a href="index.html">Back to index</a></p>
+  </footer>
+</body>
+</html>

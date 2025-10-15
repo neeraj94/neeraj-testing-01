@@ -22,5 +22,15 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     })
     Optional<Product> findDetailedById(Long id);
 
+    Optional<Product> findDetailedBySlugIgnoreCase(String slug);
+
     boolean existsBySku(String sku);
+
+    boolean existsBySkuIgnoreCase(String sku);
+
+    boolean existsBySkuIgnoreCaseAndIdNot(String sku, Long id);
+
+    boolean existsBySlugIgnoreCase(String slug);
+
+    boolean existsBySlugIgnoreCaseAndIdNot(String slug, Long id);
 }
