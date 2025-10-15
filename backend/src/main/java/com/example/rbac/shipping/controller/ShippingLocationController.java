@@ -50,6 +50,12 @@ public class ShippingLocationController {
         return shippingLocationService.updateCountrySettings(id, request);
     }
 
+    @PutMapping("/countries/bulk-settings")
+    @PreAuthorize("hasAuthority('SHIPPING_LOCATION_MANAGE')")
+    public List<ShippingCountryDto> bulkUpdateCountrySettings(@RequestBody ShippingCountryBulkSettingsRequest request) {
+        return shippingLocationService.bulkUpdateCountrySettings(request);
+    }
+
     @DeleteMapping("/countries/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PreAuthorize("hasAuthority('SHIPPING_LOCATION_MANAGE')")
@@ -90,6 +96,12 @@ public class ShippingLocationController {
         return shippingLocationService.updateStateSettings(id, request);
     }
 
+    @PutMapping("/states/bulk-settings")
+    @PreAuthorize("hasAuthority('SHIPPING_LOCATION_MANAGE')")
+    public List<ShippingStateDto> bulkUpdateStateSettings(@RequestBody ShippingStateBulkSettingsRequest request) {
+        return shippingLocationService.bulkUpdateStateSettings(request);
+    }
+
     @DeleteMapping("/states/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PreAuthorize("hasAuthority('SHIPPING_LOCATION_MANAGE')")
@@ -128,6 +140,12 @@ public class ShippingLocationController {
     public ShippingCityDto updateCitySettings(@PathVariable Long id,
                                               @RequestBody ShippingCitySettingsRequest request) {
         return shippingLocationService.updateCitySettings(id, request);
+    }
+
+    @PutMapping("/cities/bulk-settings")
+    @PreAuthorize("hasAuthority('SHIPPING_LOCATION_MANAGE')")
+    public List<ShippingCityDto> bulkUpdateCitySettings(@RequestBody ShippingCityBulkSettingsRequest request) {
+        return shippingLocationService.bulkUpdateCitySettings(request);
     }
 
     @DeleteMapping("/cities/{id}")

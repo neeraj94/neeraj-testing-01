@@ -35,6 +35,7 @@ public class ProductReviewMapper {
         dto.setMedia(mapMediaList(review.getMedia()));
         dto.setCreatedAt(review.getCreatedAt());
         dto.setUpdatedAt(review.getUpdatedAt());
+        dto.setPublished(review.isPublished());
         return dto;
     }
 

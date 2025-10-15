@@ -19,7 +19,7 @@ public class ProductReviewController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('PRODUCT_VIEW', 'PRODUCT_REVIEW_VIEW')")
+    @PreAuthorize("hasAuthority('PRODUCT_REVIEW_VIEW')")
     public PageResponse<ProductReviewDto> list(@RequestParam(name = "page", defaultValue = "0") Integer page,
                                                @RequestParam(name = "size", defaultValue = "20") Integer size,
                                                @RequestParam(name = "productId", required = false) Long productId,
@@ -30,20 +30,26 @@ public class ProductReviewController {
         return productReviewService.list(page, size, productId, categoryId, customerId, ratingMin, ratingMax);
     }
 
+    @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('PRODUCT_REVIEW_VIEW')")
+    public ProductReviewDto get(@PathVariable("id") Long id) {
+        return productReviewService.get(id);
+    }
+
     @PostMapping
-    @PreAuthorize("hasAnyAuthority('PRODUCT_CREATE', 'PRODUCT_UPDATE')")
+    @PreAuthorize("hasAuthority('PRODUCT_REVIEW_CREATE')")
     public ProductReviewDto create(@Valid @RequestBody ProductReviewRequest request) {
         return productReviewService.create(request);
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('PRODUCT_CREATE', 'PRODUCT_UPDATE')")
+    @PreAuthorize("hasAuthority('PRODUCT_REVIEW_UPDATE')")
     public ProductReviewDto update(@PathVariable("id") Long id, @Valid @RequestBody ProductReviewRequest request) {
         return productReviewService.update(id, request);
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('PRODUCT_CREATE', 'PRODUCT_UPDATE', 'PRODUCT_DELETE')")
+    @PreAuthorize("hasAuthority('PRODUCT_REVIEW_DELETE')")
     public void delete(@PathVariable("id") Long id) {
         productReviewService.delete(id);
     }
