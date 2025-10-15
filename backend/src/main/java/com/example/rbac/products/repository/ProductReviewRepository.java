@@ -11,4 +11,7 @@ public interface ProductReviewRepository extends JpaRepository<ProductReview, Lo
 
     @EntityGraph(attributePaths = {"product", "product.categories", "customer"})
     List<ProductReview> findByProductIdOrderByReviewedAtDesc(Long productId);
+
+    @EntityGraph(attributePaths = {"product", "customer"})
+    List<ProductReview> findByProductIdAndPublishedTrueOrderByReviewedAtDesc(Long productId);
 }
