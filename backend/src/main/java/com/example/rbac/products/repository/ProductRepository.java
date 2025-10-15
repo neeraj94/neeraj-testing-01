@@ -34,7 +34,6 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
             "attributeValues",
             "attributeValues.attribute",
             "frequentlyBoughtProducts",
-            "frequentlyBoughtProducts.galleryImages",
             "expandableSections",
             "infoSections"
     })
