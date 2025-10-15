@@ -34,6 +34,7 @@ public class ProductMapper {
         ProductSummaryDto dto = new ProductSummaryDto();
         dto.setId(product.getId());
         dto.setName(product.getName());
+        dto.setSlug(product.getSlug());
         dto.setUnit(product.getUnit());
         dto.setUnitPrice(product.getUnitPrice());
         dto.setSku(product.getSku());
@@ -58,6 +59,7 @@ public class ProductMapper {
         ProductDto dto = new ProductDto();
         dto.setId(product.getId());
         dto.setName(product.getName());
+        dto.setSlug(product.getSlug());
         dto.setUnit(product.getUnit());
         dto.setWeightKg(product.getWeightKg());
         dto.setMinPurchaseQuantity(product.getMinPurchaseQuantity());
