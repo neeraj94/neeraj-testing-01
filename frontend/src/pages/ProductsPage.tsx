@@ -35,6 +35,7 @@ import { formatCurrency } from '../utils/currency';
 
 interface ProductFormState {
   name: string;
+  slug: string;
   brandId: string;
   unit: string;
   weightKg: string;
@@ -131,6 +132,7 @@ const MEDIA_MODULE_FILTERS: Record<MediaDialogContext['type'], string[]> = {
 
 const defaultFormState: ProductFormState = {
   name: '',
+  slug: '',
   brandId: '',
   unit: '',
   weightKg: '',
@@ -222,21 +224,25 @@ type TabId = (typeof tabs)[number]['id'];
 
 type ValidationMessages = {
   name?: string;
+  slug?: string;
   brandId?: string;
   unit?: string;
   categories?: string;
   description?: string;
   unitPrice?: string;
+  sku?: string;
   discountWindow?: string;
 };
 
 const validationFieldTab: Record<keyof ValidationMessages, TabId> = {
   name: 'basic',
+  slug: 'basic',
   brandId: 'basic',
   unit: 'basic',
   categories: 'basic',
   description: 'basic',
   unitPrice: 'pricing',
+  sku: 'pricing',
   discountWindow: 'pricing'
 };
 
@@ -356,6 +362,108 @@ const toIsoOrNull = (value: string): string | null => {
 
 const formatVariantLabel = (combination: VariantCombinationValue[]) =>
   combination.map((part) => `${part.attributeName}: ${part.valueName}`).join(' · ');
+
+const MAX_SLUG_LENGTH = 160;
+const MAX_SKU_LENGTH = 160;
+
+const slugify = (value: string) => {
+  const normalized = value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return normalized.slice(0, MAX_SLUG_LENGTH);
+};
+
+const skuPrefixSegment = (source: string | null | undefined) => {
+  if (!source) {
+    return 'GEN';
+  }
+  const normalized = source
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^A-Za-z0-9]/g, '')
+    .toUpperCase();
+  if (!normalized) {
+    return 'GEN';
+  }
+  if (normalized.length >= 3) {
+    return normalized.slice(0, 3);
+  }
+  return (normalized + 'XXX').slice(0, 3);
+};
+
+const skuVariantSegment = (source: string | null | undefined) => {
+  if (!source) {
+    return 'VAR';
+  }
+  const normalized = source
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^A-Za-z0-9]/g, '')
+    .toUpperCase();
+  if (!normalized) {
+    return 'VAR';
+  }
+  if (normalized.length >= 4) {
+    return normalized.slice(0, 4);
+  }
+  return (normalized + 'XXXX').slice(0, 4);
+};
+
+const encodeSequence = (value: number) => {
+  const positive = value <= 0 ? Math.abs(value) + 1 : value;
+  return positive.toString(36).toUpperCase();
+};
+
+const sanitizeSku = (value: string) =>
+  value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase()
+    .replace(/[^A-Z0-9-]/g, '')
+    .slice(0, MAX_SKU_LENGTH);
+
+const generateProductSku = (slug: string, brandName?: string | null, categoryName?: string | null) => {
+  const slugSegment = skuPrefixSegment(slug);
+  const brandSegment = skuPrefixSegment(brandName);
+  const categorySegment = skuPrefixSegment(categoryName);
+  const sequence = encodeSequence(Date.now());
+  const candidate = [brandSegment, categorySegment, slugSegment, sequence].join('-');
+  const sanitized = sanitizeSku(candidate);
+  return sanitized || `SKU-${encodeSequence(Date.now() + Math.floor(Math.random() * 1000))}`;
+};
+
+const generateVariantSkuValue = (
+  baseSku: string,
+  combination: VariantCombinationValue[],
+  usedSkus: Set<string>
+) => {
+  const sanitizedBase = sanitizeSku(baseSku);
+  const base = sanitizedBase || `VAR-${encodeSequence(Date.now())}`;
+  const segments: string[] = [base];
+  combination.forEach((part) => {
+    const segment = skuVariantSegment(part.valueName);
+    if (segment) {
+      segments.push(segment);
+    }
+  });
+  if (segments.length === 1) {
+    segments.push(`OPT${encodeSequence(Date.now())}`);
+  }
+  const candidate = sanitizeSku(segments.join('-')) || `VAR-${encodeSequence(Date.now())}`;
+  let normalized = candidate;
+  let attempt = 1;
+  while (usedSkus.has(normalized)) {
+    const suffix = `-${encodeSequence(Date.now() + attempt)}`;
+    normalized = sanitizeSku(`${candidate}${suffix}`);
+    attempt += 1;
+  }
+  usedSkus.add(normalized);
+  return normalized;
+};
+
 const ProductsPage = () => {
   const queryClient = useQueryClient();
   const confirm = useConfirm();
@@ -371,6 +479,9 @@ const ProductsPage = () => {
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState<TabId>('basic');
   const [form, setForm] = useState<ProductFormState>({ ...defaultFormState, infoSections: [] });
+  const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
+  const [skuManuallyEdited, setSkuManuallyEdited] = useState(false);
+  const [variantSkusManuallyEdited, setVariantSkusManuallyEdited] = useState<Set<string>>(new Set());
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<number[]>([]);
   const [selectedTaxIds, setSelectedTaxIds] = useState<number[]>([]);
   const [gallery, setGallery] = useState<MediaSelection[]>([]);
@@ -592,24 +703,87 @@ const ProductsPage = () => {
     return combinations;
   }, [activeAttributes]);
 
+  const selectedBrand = useMemo(() => {
+    const brands = brandsQuery.data ?? [];
+    return brands.find((brand) => String(brand.id) === form.brandId) ?? null;
+  }, [brandsQuery.data, form.brandId]);
+
+  const categoriesById = useMemo(() => {
+    const map = new Map<number, Category>();
+    (categoriesQuery.data ?? []).forEach((category) => {
+      map.set(category.id, category);
+    });
+    return map;
+  }, [categoriesQuery.data]);
+
   useEffect(() => {
+    const primaryCategoryId = selectedCategoryIds[0];
+    const primaryCategoryName = primaryCategoryId ? categoriesById.get(primaryCategoryId)?.name ?? '' : '';
+    const baseSku = skuManuallyEdited
+      ? form.sku
+      : generateProductSku(form.slug || slugify(form.name), selectedBrand?.name ?? '', primaryCategoryName);
+    const updatedKeys: string[] = [];
     setVariants((previous) => {
       const next: Record<string, ProductVariantFormState> = {};
+      const usedSkus = new Set<string>();
+
       variantCombinations.forEach((combination) => {
         const key = combination.map((part) => part.valueId).join('-');
-        next[key] = previous[key]
-          ? { ...previous[key], combination }
-          : {
-              combination,
-              priceAdjustment: '',
-              sku: '',
-              quantity: '',
-              media: []
-            };
+        const existing = previous[key];
+        if (existing && variantSkusManuallyEdited.has(key) && existing.sku) {
+          usedSkus.add(sanitizeSku(existing.sku));
+        }
       });
+
+      variantCombinations.forEach((combination) => {
+        const key = combination.map((part) => part.valueId).join('-');
+        const existing = previous[key];
+        const isManual = variantSkusManuallyEdited.has(key);
+        let sku = existing?.sku ?? '';
+        if (isManual) {
+          sku = sanitizeSku(sku);
+          if (sku) {
+            usedSkus.add(sku);
+          }
+        } else {
+          sku = generateVariantSkuValue(baseSku, combination, usedSkus);
+        }
+        next[key] = existing
+          ? { ...existing, combination, sku }
+          : { combination, priceAdjustment: '', sku, quantity: '', media: [] };
+        updatedKeys.push(key);
+      });
+
       return next;
     });
-  }, [variantCombinations]);
+
+    const validKeys = new Set(updatedKeys);
+    setVariantSkusManuallyEdited((previous) => {
+      let changed = false;
+      const filtered = new Set<string>();
+      previous.forEach((value) => {
+        if (validKeys.has(value)) {
+          filtered.add(value);
+        } else {
+          changed = true;
+        }
+      });
+      if (!changed && filtered.size === previous.size) {
+        return previous;
+      }
+      return filtered;
+    });
+  }, [
+    variantCombinations,
+    form.sku,
+    form.slug,
+    form.name,
+    selectedBrand,
+    selectedCategoryIds,
+    categoriesById,
+    skuManuallyEdited,
+    variantSkusManuallyEdited
+  ]);
 
   useEffect(() => {
     const handleClickAway = (event: MouseEvent) => {
@@ -802,6 +976,7 @@ const ProductsPage = () => {
 
     setForm({
       name: product.name ?? '',
+      slug: product.slug ?? '',
       brandId: product.brand ? String(product.brand.id) : '',
       unit: product.unit ?? '',
       weightKg: product.weightKg != null ? String(product.weightKg) : '',
@@ -840,6 +1015,9 @@ const ProductsPage = () => {
       metaCanonicalUrl: product.seo.canonicalUrl ?? '',
       infoSections: sectionForms
     });
+
+    setSlugManuallyEdited(true);
+    setSkuManuallyEdited(true);
 
     setSelectedCategoryIds(product.categories.map((category) => category.id));
     setSelectedTaxIds(product.taxRates.map((tax) => tax.id));
@@ -903,6 +1081,7 @@ const ProductsPage = () => {
       };
     });
     setVariants(nextVariants);
+    setVariantSkusManuallyEdited(new Set(Object.keys(nextVariants)));
 
     if (product.unit && unitOptions.includes(product.unit as (typeof unitOptions)[number])) {
       setUnitMode('preset');
@@ -938,10 +1117,18 @@ const ProductsPage = () => {
     editInitializedRef.current = true;
   }, [panelMode, productDetailQuery.data, attributesQuery.isLoading, attributesQuery.data]);
 
-  const selectedBrand = useMemo(() => {
-    const brands = brandsQuery.data ?? [];
-    return brands.find((brand) => String(brand.id) === form.brandId) ?? null;
-  }, [brandsQuery.data, form.brandId]);
+  useEffect(() => {
+    if (slugManuallyEdited) {
+      return;
+    }
+    const nextSlug = slugify(form.name);
+    setForm((previous) => {
+      if (previous.slug === nextSlug) {
+        return previous;
+      }
+      return { ...previous, slug: nextSlug };
+    });
+  }, [form.name, slugManuallyEdited]);
 
   const filteredBrands = useMemo(() => {
     const brands = brandsQuery.data ?? [];
@@ -952,13 +1139,28 @@ const ProductsPage = () => {
     return brands.filter((brand) => brand.name.toLowerCase().includes(term));
   }, [brandsQuery.data, brandSearch]);
 
-  const categoriesById = useMemo(() => {
-    const map = new Map<number, Category>();
-    (categoriesQuery.data ?? []).forEach((category) => {
-      map.set(category.id, category);
+  useEffect(() => {
+    if (skuManuallyEdited) {
+      return;
+    }
+    const primaryCategoryId = selectedCategoryIds[0];
+    const primaryCategoryName = primaryCategoryId ? categoriesById.get(primaryCategoryId)?.name ?? '' : '';
+    const slugSource = form.slug || slugify(form.name);
+    const suggestion = generateProductSku(slugSource, selectedBrand?.name ?? '', primaryCategoryName);
+    setForm((previous) => {
+      if (previous.sku === suggestion) {
+        return previous;
+      }
+      return { ...previous, sku: suggestion };
     });
-    return map;
-  }, [categoriesQuery.data]);
+  }, [
+    form.slug,
+    form.name,
+    selectedBrand,
+    selectedCategoryIds,
+    categoriesById,
+    skuManuallyEdited
+  ]);
 
   const categoryPathMap = useMemo(() => {
     const categories = categoriesQuery.data ?? [];
@@ -1082,6 +1284,9 @@ const ProductsPage = () => {
     if (!form.name.trim()) {
       messages.name = 'Product name is required.';
     }
+    if (!form.slug.trim()) {
+      messages.slug = 'Slug is required.';
+    }
     if (!form.brandId) {
       messages.brandId = 'Select a brand.';
     }
@@ -1094,6 +1299,9 @@ const ProductsPage = () => {
     const price = Number(form.unitPrice);
     if (!form.unitPrice.trim() || Number.isNaN(price) || price < 0) {
       messages.unitPrice = 'Enter a valid unit price.';
+    }
+    if (!form.sku.trim()) {
+      messages.sku = 'SKU is required.';
     }
     if (!sanitizedDescription) {
       messages.description = 'Describe the product to help merchandisers and SEO.';
@@ -1346,11 +1554,24 @@ const ProductsPage = () => {
       if (!variant) {
         return previous;
       }
+      const nextValue = field === 'sku' ? sanitizeSku(value) : value;
       return {
         ...previous,
-        [variantKey]: { ...variant, [field]: value }
+        [variantKey]: { ...variant, [field]: nextValue }
       };
     });
+    if (field === 'sku') {
+      const sanitized = sanitizeSku(value);
+      setVariantSkusManuallyEdited((previous) => {
+        const next = new Set(previous);
+        if (sanitized) {
+          next.add(variantKey);
+        } else {
+          next.delete(variantKey);
+        }
+        return next;
+      });
+    }
   };
 
   const handleProductReviewVisibilityChange = (review: ProductReview, published: boolean) => {
@@ -1405,6 +1626,9 @@ const ProductsPage = () => {
     setExpandableSections([]);
     setSelectedAttributes([]);
     setVariants({});
+    setSlugManuallyEdited(false);
+    setSkuManuallyEdited(false);
+    setVariantSkusManuallyEdited(new Set());
     setUnitMode('preset');
     setBrandDropdownOpen(false);
     setTaxDropdownOpen(false);
@@ -1454,6 +1678,7 @@ const ProductsPage = () => {
 
     const payload: CreateProductPayload = {
       name: form.name.trim(),
+      slug: form.slug.trim(),
       brandId: form.brandId ? Number(form.brandId) : null,
       unit: form.unit.trim(),
       weightKg: parseNumber(form.weightKg),
@@ -1996,6 +2221,31 @@ const ProductsPage = () => {
                           aria-invalid={Boolean(visibleValidation.name)}
                         />
                         {visibleValidation.name && <p className="text-xs text-rose-500">{visibleValidation.name}</p>}
+                      </div>
+
+                      <div className="space-y-2">
+                        <label htmlFor="product-slug" className="text-sm font-medium text-slate-700">
+                          Slug
+                        </label>
+                        <input
+                          id="product-slug"
+                          type="text"
+                          value={form.slug}
+                          onChange={(event) => {
+                            const sanitized = slugify(event.target.value);
+                            setSlugManuallyEdited(Boolean(sanitized));
+                            setForm((previous) => ({ ...previous, slug: sanitized }));
+                          }}
+                          className={inputClassNames(Boolean(visibleValidation.slug))}
+                          placeholder="aurora-running-shoe"
+                          aria-invalid={Boolean(visibleValidation.slug)}
+                        />
+                        <p className="text-xs text-slate-500">
+                          Determines the product URL. It updates automatically from the name but can be customised.
+                        </p>
+                        {visibleValidation.slug && (
+                          <p className="text-xs text-rose-500">{visibleValidation.slug}</p>
+                        )}
                       </div>
 
                       <div ref={brandDropdownRef} className="relative space-y-2">
@@ -2942,11 +3192,21 @@ const ProductsPage = () => {
                             id="sku"
                             type="text"
                             value={form.sku}
-                            readOnly
-                            placeholder="Auto-generated after save"
-                            className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500 shadow-inner focus:outline-none"
+                            onChange={(event) => {
+                              const sanitized = sanitizeSku(event.target.value);
+                              setForm((previous) => ({ ...previous, sku: sanitized }));
+                              setSkuManuallyEdited(Boolean(sanitized));
+                            }}
+                            placeholder="AUR-CAT-GEN-XYZ"
+                            className={inputClassNames(Boolean(visibleValidation.sku))}
+                            aria-invalid={Boolean(visibleValidation.sku)}
                           />
-                          <p className="mt-1 text-xs text-slate-500">SKUs are generated automatically from brand, category, and product details.</p>
+                          <p className="mt-1 text-xs text-slate-500">
+                            Generated from brand, category, and slug. Adjust manually to align with your merchandising system.
+                          </p>
+                          {visibleValidation.sku && (
+                            <p className="text-xs text-rose-500">{visibleValidation.sku}</p>
+                          )}
                         </div>
                         <div>
                           <label htmlFor="external-link" className="text-sm font-medium text-slate-700">
