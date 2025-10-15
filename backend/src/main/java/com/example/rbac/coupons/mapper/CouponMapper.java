@@ -72,6 +72,29 @@ public class CouponMapper {
         return detail;
     }
 
+    public PublicCouponDto toPublicSummary(Coupon coupon) {
+        if (coupon == null) {
+            return null;
+        }
+        PublicCouponDto dto = new PublicCouponDto();
+        dto.setId(coupon.getId());
+        dto.setType(coupon.getType());
+        dto.setName(coupon.getName());
+        dto.setCode(coupon.getCode());
+        dto.setShortDescription(coupon.getShortDescription());
+        dto.setLongDescription(coupon.getLongDescription());
+        dto.setDiscountType(coupon.getDiscountType());
+        dto.setDiscountValue(coupon.getDiscountValue());
+        dto.setMinimumCartValue(coupon.getMinimumCartValue());
+        dto.setStartDate(coupon.getStartDate());
+        dto.setEndDate(coupon.getEndDate());
+        dto.setImageUrl(coupon.getImageUrl());
+        dto.setApplyToAllNewUsers(coupon.isApplyToAllNewUsers());
+        dto.setProducts(limitList(mapProducts(coupon.getProducts()), 6));
+        dto.setCategories(limitList(mapCategories(coupon.getCategories()), 6));
+        return dto;
+    }
+
     private List<CouponProductDto> mapProducts(Set<Product> products) {
         List<CouponProductDto> result = new ArrayList<>();
         if (products == null) {
@@ -143,6 +166,16 @@ public class CouponMapper {
             return CouponState.EXPIRED;
         }
         return CouponState.ENABLED;
+    }
+
+    private <T> List<T> limitList(List<T> source, int max) {
+        if (source == null) {
+            return new ArrayList<>();
+        }
+        if (source.size() <= max) {
+            return source;
+        }
+        return new ArrayList<>(source.subList(0, max));
     }
 
     private Integer sizeOrNull(Set<?> set) {

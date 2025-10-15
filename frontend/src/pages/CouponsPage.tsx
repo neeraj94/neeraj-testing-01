@@ -5,6 +5,7 @@ import PageHeader from '../components/PageHeader';
 import PageSection from '../components/PageSection';
 import PaginationControls from '../components/PaginationControls';
 import MediaLibraryDialog from '../components/MediaLibraryDialog';
+import ImagePreview from '../components/ImagePreview';
 import { useToast } from '../components/ToastProvider';
 import { useConfirm } from '../components/ConfirmDialogProvider';
 import { useAppSelector } from '../app/hooks';
@@ -113,6 +114,12 @@ const CouponsPage = () => {
   const [formError, setFormError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [mediaLibraryOpen, setMediaLibraryOpen] = useState(false);
+  const [productSearchDraft, setProductSearchDraft] = useState('');
+  const [productSearch, setProductSearch] = useState('');
+  const [categorySearchDraft, setCategorySearchDraft] = useState('');
+  const [categorySearch, setCategorySearch] = useState('');
+  const [productCache, setProductCache] = useState<Record<number, CouponProductSummary>>({});
+  const [categoryCache, setCategoryCache] = useState<Record<number, CouponCategorySummary>>({});
 
   useEffect(() => {
     const handle = window.setTimeout(() => {
@@ -121,6 +128,20 @@ const CouponsPage = () => {
     }, 250);
     return () => window.clearTimeout(handle);
   }, [searchDraft]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setProductSearch(productSearchDraft.trim());
+    }, 200);
+    return () => window.clearTimeout(timer);
+  }, [productSearchDraft]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setCategorySearch(categorySearchDraft.trim());
+    }, 200);
+    return () => window.clearTimeout(timer);
+  }, [categorySearchDraft]);
 
   const canManageCoupons = useMemo(
     () => hasAnyPermission(permissions as PermissionKey[], ['COUPON_MANAGE']),
@@ -172,10 +193,14 @@ const CouponsPage = () => {
   });
 
   const productOptionsQuery = useQuery<CouponProductSummary[]>({
-    queryKey: ['coupon-product-options', panelMode, form.type],
+    queryKey: ['coupon-product-options', panelMode, form.type, productSearch],
     queryFn: async () => {
+      const params: Record<string, unknown> = { size: 50 };
+      if (productSearch) {
+        params.search = productSearch;
+      }
       const { data } = await api.get<CouponProductSummary[]>('/coupons/reference/products', {
-        params: { size: 50 }
+        params
       });
       return data;
     },
@@ -183,10 +208,14 @@ const CouponsPage = () => {
   });
 
   const categoryOptionsQuery = useQuery<CouponCategorySummary[]>({
-    queryKey: ['coupon-category-options', panelMode, form.type],
+    queryKey: ['coupon-category-options', panelMode, form.type, categorySearch],
     queryFn: async () => {
+      const params: Record<string, unknown> = { size: 50 };
+      if (categorySearch) {
+        params.search = categorySearch;
+      }
       const { data } = await api.get<CouponCategorySummary[]>('/coupons/reference/categories', {
-        params: { size: 50 }
+        params
       });
       return data;
     },
@@ -203,6 +232,49 @@ const CouponsPage = () => {
     },
     enabled: panelMode !== 'list' && form.type === 'NEW_SIGNUP'
   });
+
+  const productOptions = productOptionsQuery.data ?? [];
+  const categoryOptions = categoryOptionsQuery.data ?? [];
+  const userOptions = userOptionsQuery.data ?? [];
+
+  const selectedProducts = useMemo(
+    () => form.productIds.map((id) => productCache[id]).filter((item): item is CouponProductSummary => Boolean(item)),
+    [form.productIds, productCache]
+  );
+
+  const selectedCategories = useMemo(
+    () =>
+      form.categoryIds
+        .map((id) => categoryCache[id])
+        .filter((item): item is CouponCategorySummary => Boolean(item)),
+    [form.categoryIds, categoryCache]
+  );
+
+  useEffect(() => {
+    if (!productOptionsQuery.data) {
+      return;
+    }
+    setProductCache((previous) => {
+      const next = { ...previous };
+      productOptionsQuery.data?.forEach((product) => {
+        next[product.id] = product;
+      });
+      return next;
+    });
+  }, [productOptionsQuery.data]);
+
+  useEffect(() => {
+    if (!categoryOptionsQuery.data) {
+      return;
+    }
+    setCategoryCache((previous) => {
+      const next = { ...previous };
+      categoryOptionsQuery.data?.forEach((category) => {
+        next[category.id] = category;
+      });
+      return next;
+    });
+  }, [categoryOptionsQuery.data]);
 
   useEffect(() => {
     if (panelMode !== 'edit') {
@@ -232,6 +304,24 @@ const CouponsPage = () => {
       imageUrl: detail.imageUrl ?? ''
     });
     setFormError(null);
+    setProductCache((previous) => {
+      const next = { ...previous };
+      detail.products.forEach((product) => {
+        next[product.id] = product;
+      });
+      return next;
+    });
+    setCategoryCache((previous) => {
+      const next = { ...previous };
+      detail.categories.forEach((category) => {
+        next[category.id] = category;
+      });
+      return next;
+    });
+    setProductSearchDraft('');
+    setProductSearch('');
+    setCategorySearchDraft('');
+    setCategorySearch('');
   }, [panelMode, editDetailQuery.data, editDetailQuery.isLoading, editDetailQuery.isError]);
 
   const createMutation = useMutation({
@@ -292,6 +382,12 @@ const CouponsPage = () => {
     setEditingId(null);
     setSelectedCouponId(null);
     setPanelMode('create');
+    setProductSearchDraft('');
+    setProductSearch('');
+    setCategorySearchDraft('');
+    setCategorySearch('');
+    setProductCache({});
+    setCategoryCache({});
   };
 
   const openEditForm = (id: number) => {
@@ -300,6 +396,12 @@ const CouponsPage = () => {
     setEditingId(id);
     setSelectedCouponId(null);
     setPanelMode('edit');
+    setProductSearchDraft('');
+    setProductSearch('');
+    setCategorySearchDraft('');
+    setCategorySearch('');
+    setProductCache({});
+    setCategoryCache({});
   };
 
   const closeForm = () => {
@@ -308,6 +410,12 @@ const CouponsPage = () => {
     setForm(defaultFormState());
     setFormError(null);
     setMediaLibraryOpen(false);
+    setProductSearchDraft('');
+    setProductSearch('');
+    setCategorySearchDraft('');
+    setCategorySearch('');
+    setProductCache({});
+    setCategoryCache({});
   };
 
   const handleDelete = async (coupon: CouponSummary) => {
@@ -736,10 +844,6 @@ const CouponsPage = () => {
   };
 
   const renderForm = () => {
-    const productOptions = productOptionsQuery.data ?? [];
-    const categoryOptions = categoryOptionsQuery.data ?? [];
-    const userOptions = userOptionsQuery.data ?? [];
-
     return (
       <form onSubmit={handleFormSubmit} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow">
         <header className="flex flex-col gap-2 border-b border-slate-200 px-6 py-5">
@@ -751,8 +855,8 @@ const CouponsPage = () => {
           </p>
         </header>
         <div className="grid gap-6 px-6 py-6 lg:grid-cols-2">
-          <div className="space-y-5">
-            <div>
+          <div className="grid gap-5 md:grid-cols-2">
+            <div className="md:col-span-2">
               <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="coupon-name">
                 Coupon name
               </label>
@@ -776,80 +880,76 @@ const CouponsPage = () => {
                 placeholder="SAVE20"
               />
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="coupon-type">
-                  Coupon type
-                </label>
-                <select
-                  id="coupon-type"
-                  value={form.type}
-                  onChange={(event) => {
-                    const nextType = event.target.value as CouponType;
-                    setForm((prev) => ({
-                      ...prev,
-                      type: nextType,
-                      productIds: nextType === 'PRODUCT' ? prev.productIds : [],
-                      categoryIds: nextType === 'PRODUCT' ? prev.categoryIds : [],
-                      userIds: nextType === 'NEW_SIGNUP' ? prev.userIds : [],
-                      applyToAllNewUsers: nextType === 'NEW_SIGNUP' ? prev.applyToAllNewUsers : true,
-                      minimumCartValue: nextType === 'CART_VALUE' ? prev.minimumCartValue : ''
-                    }));
-                  }}
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                >
-                  <option value="PRODUCT">Product based</option>
-                  <option value="CART_VALUE">Cart value</option>
-                  <option value="NEW_SIGNUP">New signup</option>
-                </select>
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="coupon-status">
-                  Status
-                </label>
-                <select
-                  id="coupon-status"
-                  value={form.status}
-                  onChange={(event) => setForm((prev) => ({ ...prev, status: event.target.value as typeof prev.status }))}
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                >
-                  <option value="ENABLED">Enabled</option>
-                  <option value="DISABLED">Disabled</option>
-                </select>
-              </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="coupon-type">
+                Coupon type
+              </label>
+              <select
+                id="coupon-type"
+                value={form.type}
+                onChange={(event) => {
+                  const nextType = event.target.value as CouponType;
+                  setForm((prev) => ({
+                    ...prev,
+                    type: nextType,
+                    productIds: nextType === 'PRODUCT' ? prev.productIds : [],
+                    categoryIds: nextType === 'PRODUCT' ? prev.categoryIds : [],
+                    userIds: nextType === 'NEW_SIGNUP' ? prev.userIds : [],
+                    applyToAllNewUsers: nextType === 'NEW_SIGNUP' ? prev.applyToAllNewUsers : true,
+                    minimumCartValue: nextType === 'CART_VALUE' ? prev.minimumCartValue : ''
+                  }));
+                }}
+                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+              >
+                <option value="PRODUCT">Product based</option>
+                <option value="CART_VALUE">Cart value</option>
+                <option value="NEW_SIGNUP">New signup</option>
+              </select>
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="coupon-discount-type">
-                  Discount type
-                </label>
-                <select
-                  id="coupon-discount-type"
-                  value={form.discountType}
-                  onChange={(event) => setForm((prev) => ({ ...prev, discountType: event.target.value as DiscountType }))}
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                >
-                  <option value="PERCENTAGE">Percentage</option>
-                  <option value="FLAT">Flat value</option>
-                </select>
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="coupon-discount-value">
-                  Discount value
-                </label>
-                <input
-                  id="coupon-discount-value"
-                  type="number"
-                  min={0}
-                  step={form.discountType === 'PERCENTAGE' ? 1 : 0.01}
-                  value={form.discountValue}
-                  onChange={(event) => setForm((prev) => ({ ...prev, discountValue: event.target.value }))}
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                />
-              </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="coupon-status">
+                Status
+              </label>
+              <select
+                id="coupon-status"
+                value={form.status}
+                onChange={(event) => setForm((prev) => ({ ...prev, status: event.target.value as typeof prev.status }))}
+                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+              >
+                <option value="ENABLED">Enabled</option>
+                <option value="DISABLED">Disabled</option>
+              </select>
             </div>
-            {form.type === 'CART_VALUE' && (
-              <div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="coupon-discount-type">
+                Discount type
+              </label>
+              <select
+                id="coupon-discount-type"
+                value={form.discountType}
+                onChange={(event) => setForm((prev) => ({ ...prev, discountType: event.target.value as DiscountType }))}
+                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+              >
+                <option value="PERCENTAGE">Percentage</option>
+                <option value="FLAT">Flat value</option>
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="coupon-discount-value">
+                Discount value
+              </label>
+              <input
+                id="coupon-discount-value"
+                type="number"
+                min={0}
+                step={form.discountType === 'PERCENTAGE' ? 1 : 0.01}
+                value={form.discountValue}
+                onChange={(event) => setForm((prev) => ({ ...prev, discountValue: event.target.value }))}
+                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+              />
+            </div>
+            {form.type === 'CART_VALUE' ? (
+              <div className="md:col-span-2">
                 <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="coupon-min-cart">
                   Minimum cart value
                 </label>
@@ -864,34 +964,34 @@ const CouponsPage = () => {
                   placeholder="500"
                 />
               </div>
+            ) : (
+              <div className="hidden md:block" aria-hidden="true" />
             )}
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="coupon-start">
-                  Start date
-                </label>
-                <input
-                  id="coupon-start"
-                  type="datetime-local"
-                  value={form.startDate}
-                  onChange={(event) => setForm((prev) => ({ ...prev, startDate: event.target.value }))}
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="coupon-end">
-                  End date
-                </label>
-                <input
-                  id="coupon-end"
-                  type="datetime-local"
-                  value={form.endDate}
-                  onChange={(event) => setForm((prev) => ({ ...prev, endDate: event.target.value }))}
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                />
-              </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="coupon-start">
+                Start date
+              </label>
+              <input
+                id="coupon-start"
+                type="datetime-local"
+                value={form.startDate}
+                onChange={(event) => setForm((prev) => ({ ...prev, startDate: event.target.value }))}
+                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+              />
             </div>
             <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="coupon-end">
+                End date
+              </label>
+              <input
+                id="coupon-end"
+                type="datetime-local"
+                value={form.endDate}
+                onChange={(event) => setForm((prev) => ({ ...prev, endDate: event.target.value }))}
+                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+              />
+            </div>
+            <div className="md:col-span-2">
               <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="coupon-short-description">
                 Short description
               </label>
@@ -903,7 +1003,7 @@ const CouponsPage = () => {
                 placeholder="Shown in coupon lists"
               />
             </div>
-            <div>
+            <div className="md:col-span-2">
               <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="coupon-long-description">
                 Long description
               </label>
@@ -952,70 +1052,253 @@ const CouponsPage = () => {
               <div className="rounded-xl border border-slate-200 p-4">
                 <h3 className="text-sm font-semibold text-slate-700">Catalog targeting</h3>
                 <p className="mt-1 text-xs text-slate-500">Select specific products or categories.</p>
-                <div className="mt-3 space-y-3">
+                <div className="mt-3 space-y-6">
                   <div>
-                    <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Products</h4>
-                    <div className="mt-2 flex max-h-40 flex-col gap-2 overflow-y-auto rounded-lg border border-slate-200 p-2">
-                      {productOptionsQuery.isLoading ? (
-                        <p className="text-sm text-slate-500">Loading products…</p>
-                      ) : productOptions.length === 0 ? (
-                        <p className="text-sm text-slate-500">No products available.</p>
-                      ) : (
-                        productOptions.map((product) => {
-                          const checked = form.productIds.includes(product.id);
-                          return (
-                            <label key={product.id} className="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-1 text-sm hover:bg-slate-50">
-                              <input
-                                type="checkbox"
-                                className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary/40"
-                                checked={checked}
-                                onChange={(event) => {
-                                  setForm((prev) => ({
-                                    ...prev,
-                                    productIds: event.target.checked
-                                      ? [...prev.productIds, product.id]
-                                      : prev.productIds.filter((id) => id !== product.id)
-                                  }));
-                                }}
-                              />
-                              <span className="text-slate-600">{product.name}</span>
-                            </label>
-                          );
-                        })
+                    <div className="flex items-center justify-between gap-3">
+                      <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Products</h4>
+                      {selectedProducts.length > 0 && (
+                        <span className="text-[11px] font-semibold uppercase tracking-wide text-primary">
+                          {selectedProducts.length} selected
+                        </span>
                       )}
                     </div>
+                    <div className="mt-2 space-y-2">
+                      <div className="relative">
+                        <input
+                          type="search"
+                          value={productSearchDraft}
+                          onChange={(event) => setProductSearchDraft(event.target.value)}
+                          placeholder="Search products by name or SKU"
+                          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                        />
+                        {productSearchDraft && (
+                          <button
+                            type="button"
+                            onClick={() => setProductSearchDraft('')}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full border border-slate-200 px-2 py-0.5 text-[11px] font-medium uppercase text-slate-500 transition hover:border-slate-300 hover:text-slate-700"
+                          >
+                            Clear
+                          </button>
+                        )}
+                      </div>
+                      <div className="max-h-64 overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-inner">
+                        {productOptionsQuery.isLoading ? (
+                          <div className="px-4 py-3 text-sm text-slate-500">Loading products…</div>
+                        ) : productOptionsQuery.isError ? (
+                          <div className="px-4 py-3 text-sm text-rose-500">Unable to load products right now.</div>
+                        ) : productOptions.length === 0 ? (
+                          <div className="px-4 py-3 text-sm text-slate-500">
+                            {productSearch.trim() ? 'No products match your search.' : 'No products available.'}
+                          </div>
+                        ) : (
+                          productOptions.map((product) => {
+                            const checked = form.productIds.includes(product.id);
+                            const label = product.name || `Product #${product.id}`;
+                            return (
+                              <label
+                                key={product.id}
+                                className={`flex cursor-pointer items-center gap-3 border-b border-slate-100 px-4 py-3 text-sm transition last:border-b-0 ${
+                                  checked ? 'bg-primary/5' : 'hover:bg-slate-50'
+                                }`}
+                              >
+                                <input
+                                  type="checkbox"
+                                  className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary/40"
+                                  checked={checked}
+                                  onChange={(event) => {
+                                    setForm((prev) => ({
+                                      ...prev,
+                                      productIds: event.target.checked
+                                        ? [...prev.productIds, product.id]
+                                        : prev.productIds.filter((id) => id !== product.id)
+                                    }));
+                                  }}
+                                />
+                                <ImagePreview
+                                  src={product.imageUrl ?? undefined}
+                                  alt={label}
+                                  className="h-12 w-12 overflow-hidden rounded-lg border border-slate-200 bg-slate-100"
+                                  aspectClassName=""
+                                  mode="cover"
+                                  fallback={
+                                    <div className="flex h-full w-full items-center justify-center text-xs font-semibold text-slate-500">
+                                      {label.charAt(0).toUpperCase()}
+                                    </div>
+                                  }
+                                />
+                                <div className="min-w-0 flex-1">
+                                  <p className="truncate text-sm font-medium text-slate-900">{label}</p>
+                                  {product.sku && (
+                                    <p className="mt-0.5 text-xs text-slate-500">SKU · {product.sku}</p>
+                                  )}
+                                </div>
+                                {checked && (
+                                  <span className="text-[11px] font-semibold uppercase text-primary">Selected</span>
+                                )}
+                              </label>
+                            );
+                          })
+                        )}
+                      </div>
+                    </div>
+                    {selectedProducts.length > 0 && (
+                      <div className="mt-4 space-y-2">
+                        <h5 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Selected products</h5>
+                        <ul className="space-y-2">
+                          {selectedProducts.map((product) => {
+                            const label = product.name || `Product #${product.id}`;
+                            return (
+                              <li
+                                key={product.id}
+                                className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm"
+                              >
+                                <div className="flex items-center gap-3">
+                                  <ImagePreview
+                                    src={product.imageUrl ?? undefined}
+                                    alt={label}
+                                    className="h-10 w-10 overflow-hidden rounded-lg border border-slate-200 bg-slate-100"
+                                    aspectClassName=""
+                                    fallback={
+                                      <div className="flex h-full w-full items-center justify-center text-xs font-semibold text-slate-500">
+                                        {label.charAt(0).toUpperCase()}
+                                      </div>
+                                    }
+                                  />
+                                  <div>
+                                    <p className="text-sm font-medium text-slate-900">{label}</p>
+                                    {product.sku && <p className="text-xs text-slate-500">SKU · {product.sku}</p>}
+                                  </div>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setForm((prev) => ({
+                                      ...prev,
+                                      productIds: prev.productIds.filter((id) => id !== product.id)
+                                    }))
+                                  }
+                                  className="rounded-full border border-slate-200 p-1.5 text-slate-500 transition hover:border-slate-300 hover:text-slate-800"
+                                  aria-label={`Remove ${label}`}
+                                >
+                                  ×
+                                </button>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </div>
+                    )}
                   </div>
                   <div>
-                    <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Categories</h4>
-                    <div className="mt-2 flex max-h-32 flex-col gap-2 overflow-y-auto rounded-lg border border-slate-200 p-2">
-                      {categoryOptionsQuery.isLoading ? (
-                        <p className="text-sm text-slate-500">Loading categories…</p>
-                      ) : categoryOptions.length === 0 ? (
-                        <p className="text-sm text-slate-500">No categories available.</p>
-                      ) : (
-                        categoryOptions.map((category) => {
-                          const checked = form.categoryIds.includes(category.id);
-                          return (
-                            <label key={category.id} className="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-1 text-sm hover:bg-slate-50">
-                              <input
-                                type="checkbox"
-                                className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary/40"
-                                checked={checked}
-                                onChange={(event) => {
-                                  setForm((prev) => ({
-                                    ...prev,
-                                    categoryIds: event.target.checked
-                                      ? [...prev.categoryIds, category.id]
-                                      : prev.categoryIds.filter((id) => id !== category.id)
-                                  }));
-                                }}
-                              />
-                              <span className="text-slate-600">{category.name}</span>
-                            </label>
-                          );
-                        })
+                    <div className="flex items-center justify-between gap-3">
+                      <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Categories</h4>
+                      {selectedCategories.length > 0 && (
+                        <span className="text-[11px] font-semibold uppercase tracking-wide text-primary">
+                          {selectedCategories.length} selected
+                        </span>
                       )}
                     </div>
+                    <div className="mt-2 space-y-2">
+                      <div className="relative">
+                        <input
+                          type="search"
+                          value={categorySearchDraft}
+                          onChange={(event) => setCategorySearchDraft(event.target.value)}
+                          placeholder="Search categories"
+                          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                        />
+                        {categorySearchDraft && (
+                          <button
+                            type="button"
+                            onClick={() => setCategorySearchDraft('')}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full border border-slate-200 px-2 py-0.5 text-[11px] font-medium uppercase text-slate-500 transition hover:border-slate-300 hover:text-slate-700"
+                          >
+                            Clear
+                          </button>
+                        )}
+                      </div>
+                      <div className="max-h-48 overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-inner">
+                        {categoryOptionsQuery.isLoading ? (
+                          <div className="px-4 py-3 text-sm text-slate-500">Loading categories…</div>
+                        ) : categoryOptionsQuery.isError ? (
+                          <div className="px-4 py-3 text-sm text-rose-500">Unable to load categories right now.</div>
+                        ) : categoryOptions.length === 0 ? (
+                          <div className="px-4 py-3 text-sm text-slate-500">
+                            {categorySearch.trim() ? 'No categories match your search.' : 'No categories available.'}
+                          </div>
+                        ) : (
+                          categoryOptions.map((category) => {
+                            const checked = form.categoryIds.includes(category.id);
+                            const label = category.name || `Category #${category.id}`;
+                            return (
+                              <label
+                                key={category.id}
+                                className={`flex cursor-pointer items-center gap-3 border-b border-slate-100 px-4 py-2 text-sm transition last:border-b-0 ${
+                                  checked ? 'bg-primary/5' : 'hover:bg-slate-50'
+                                }`}
+                              >
+                                <input
+                                  type="checkbox"
+                                  className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary/40"
+                                  checked={checked}
+                                  onChange={(event) => {
+                                    setForm((prev) => ({
+                                      ...prev,
+                                      categoryIds: event.target.checked
+                                        ? [...prev.categoryIds, category.id]
+                                        : prev.categoryIds.filter((id) => id !== category.id)
+                                    }));
+                                  }}
+                                />
+                                <ImagePreview
+                                  src={category.imageUrl ?? undefined}
+                                  alt={label}
+                                  className="h-10 w-10 overflow-hidden rounded-lg border border-slate-200 bg-slate-100"
+                                  aspectClassName=""
+                                  fallback={
+                                    <div className="flex h-full w-full items-center justify-center text-xs font-semibold text-slate-500">
+                                      {label.charAt(0).toUpperCase()}
+                                    </div>
+                                  }
+                                />
+                                <span className="text-slate-700">{label}</span>
+                                {checked && (
+                                  <span className="ml-auto text-[11px] font-semibold uppercase text-primary">Selected</span>
+                                )}
+                              </label>
+                            );
+                          })
+                        )}
+                      </div>
+                    </div>
+                    {selectedCategories.length > 0 && (
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {selectedCategories.map((category) => {
+                          const label = category.name || `Category #${category.id}`;
+                          return (
+                            <span
+                              key={category.id}
+                              className="inline-flex items-center gap-1.5 rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-xs font-medium text-primary"
+                            >
+                              {label}
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setForm((prev) => ({
+                                    ...prev,
+                                    categoryIds: prev.categoryIds.filter((id) => id !== category.id)
+                                  }))
+                                }
+                                className="text-primary/70 transition hover:text-primary"
+                                aria-label={`Remove ${label}`}
+                              >
+                                ×
+                              </button>
+                            </span>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

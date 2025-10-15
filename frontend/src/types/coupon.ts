@@ -97,3 +97,23 @@ export interface CouponFormState {
   image: MediaSelection | null;
   imageUrl: string;
 }
+
+export interface PublicCoupon {
+  id: number;
+  type: CouponType;
+  name: string;
+  code: string;
+  shortDescription?: string | null;
+  longDescription?: string | null;
+  discountType: DiscountType;
+  discountValue: number;
+  minimumCartValue?: number | null;
+  startDate: string;
+  endDate: string;
+  imageUrl?: string | null;
+  applyToAllNewUsers: boolean;
+  products: CouponProductSummary[];
+  categories: CouponCategorySummary[];
+}
+
+export type PublicCouponPage = Pagination<PublicCoupon>;

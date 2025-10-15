@@ -83,6 +83,29 @@ public class CouponService {
     }
 
     @Transactional(readOnly = true)
+    public PageResponse<PublicCouponDto> listPublic(int page, int size, CouponType type, String search) {
+        Pageable pageable = PageRequest.of(Math.max(page, 0), Math.max(size, 1), Sort.by(Sort.Direction.DESC, "createdAt"));
+        Instant now = Instant.now();
+        Specification<Coupon> specification = Specification.where((root, query, cb) -> cb.and(
+                cb.equal(root.get("status"), CouponStatus.ENABLED),
+                cb.lessThanOrEqualTo(root.get("startDate"), now),
+                cb.greaterThanOrEqualTo(root.get("endDate"), now)
+        ));
+        if (type != null) {
+            specification = specification.and((root, query, cb) -> cb.equal(root.get("type"), type));
+        }
+        if (StringUtils.hasText(search)) {
+            String term = "%" + search.trim().toLowerCase(Locale.ROOT) + "%";
+            specification = specification.and((root, query, cb) -> cb.or(
+                    cb.like(cb.lower(root.get("name")), term),
+                    cb.like(cb.lower(root.get("code")), term)
+            ));
+        }
+        Page<Coupon> result = couponRepository.findAll(specification, pageable);
+        return PageResponse.from(result.map(couponMapper::toPublicSummary));
+    }
+
+    @Transactional(readOnly = true)
     public CouponDetailDto get(Long id) {
         Coupon coupon = couponRepository.findById(id)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Coupon not found"));
