@@ -68,6 +68,14 @@ public class ProductReviewService {
     }
 
     @Transactional(readOnly = true)
+    public ProductReviewDto get(Long id) {
+        ProductReview review = productReviewRepository.findById(id)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Review not found"));
+        initializeAssociations(List.of(review));
+        return productReviewMapper.toDto(review);
+    }
+
+    @Transactional(readOnly = true)
     public List<ProductReview> listForProduct(Long productId) {
         List<ProductReview> reviews = productReviewRepository.findByProductIdOrderByReviewedAtDesc(productId);
         initializeAssociations(reviews);
@@ -131,6 +139,7 @@ public class ProductReviewService {
         review.setRating(request.getRating());
         review.setComment(trimToNull(request.getComment()));
         review.setReviewedAt(request.getReviewedAt() != null ? request.getReviewedAt() : Instant.now());
+        review.setPublished(request.getPublished() == null || request.getPublished());
 
         List<MediaAsset> mediaAssets = new ArrayList<>();
         if (!CollectionUtils.isEmpty(request.getMedia())) {

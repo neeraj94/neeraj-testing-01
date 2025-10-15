@@ -47,6 +47,9 @@ public class ProductReview {
     @Column(name = "reviewed_at", nullable = false)
     private Instant reviewedAt;
 
+    @Column(name = "is_published", nullable = false)
+    private boolean published = true;
+
     @ElementCollection
     @CollectionTable(name = "product_review_media", joinColumns = @JoinColumn(name = "review_id"))
     @OrderColumn(name = "display_order")
@@ -140,6 +143,14 @@ public class ProductReview {
 
     public void setReviewedAt(Instant reviewedAt) {
         this.reviewedAt = reviewedAt;
+    }
+
+    public boolean isPublished() {
+        return published;
+    }
+
+    public void setPublished(boolean published) {
+        this.published = published;
     }
 
     public List<MediaAsset> getMedia() {
