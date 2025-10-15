@@ -3,7 +3,7 @@ package com.example.rbac.products.service;
 import com.example.rbac.common.exception.ApiException;
 import com.example.rbac.coupons.model.Coupon;
 import com.example.rbac.coupons.repository.CouponRepository;
-import com.example.rbac.products.dto.publicview.PublicProductDetailDto;
+import com.example.rbac.products.dto.storefront.PublicProductDetailDto;
 import com.example.rbac.products.mapper.PublicProductMapper;
 import com.example.rbac.products.model.Product;
 import com.example.rbac.products.model.ProductReview;

@@ -1,6 +1,6 @@
 package com.example.rbac.products.controller;
 
-import com.example.rbac.products.dto.publicview.PublicProductDetailDto;
+import com.example.rbac.products.dto.storefront.PublicProductDetailDto;
 import com.example.rbac.products.service.PublicProductService;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;

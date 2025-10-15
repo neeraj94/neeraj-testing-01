@@ -3,7 +3,7 @@ package com.example.rbac.products.mapper;
 import com.example.rbac.categories.model.Category;
 import com.example.rbac.coupons.model.Coupon;
 import com.example.rbac.products.dto.MediaAssetDto;
-import com.example.rbac.products.dto.publicview.*;
+import com.example.rbac.products.dto.storefront.*;
 import com.example.rbac.products.model.DiscountType;
 import com.example.rbac.products.model.MediaAsset;
 import com.example.rbac.products.model.Product;
