@@ -456,7 +456,7 @@ const PublicProductPage = () => {
                 <div className="mt-6 overflow-x-auto pb-2">
                   <div className="flex gap-6">
                     {product.recentlyViewed.map((item) => (
-                      <RecommendationCard key={item.id} item={item} />
+                      <RecommendationTile key={item.id} item={item} />
                     ))}
                   </div>
                 </div>
@@ -789,7 +789,7 @@ const ReviewCard = ({ review }: { review: PublicProductReview }) => (
   </article>
 );
 
-const RecommendationCard = ({ item }: { item: PublicProductRecommendation }) => (
+const RecommendationTile = ({ item }: { item: PublicProductRecommendation }) => (
   <Link
     to={`/product/${item.slug}`}
     className="group flex w-64 min-w-[16rem] flex-col overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-xl"
