@@ -8,6 +8,7 @@ public class ProductDto {
 
     private Long id;
     private String name;
+    private String slug;
     private ProductBrandDto brand;
     private String unit;
     private BigDecimal weightKg;
@@ -49,6 +50,14 @@ public class ProductDto {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public String getSlug() {
+        return slug;
+    }
+
+    public void setSlug(String slug) {
+        this.slug = slug;
     }
 
     public ProductBrandDto getBrand() {
