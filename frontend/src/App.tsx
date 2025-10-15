@@ -17,6 +17,7 @@ import ReviewsPage from './pages/ReviewsPage';
 import TaxRatesPage from './pages/TaxRatesPage';
 import AttributesPage from './pages/AttributesPage';
 import CategoriesPage from './pages/CategoriesPage';
+import CouponsPage from './pages/CouponsPage';
 import BadgesPage from './pages/BadgesPage';
 import BadgeCategoriesPage from './pages/BadgeCategoriesPage';
 import ShippingPage from './pages/ShippingPage';
@@ -217,6 +218,9 @@ const App = () => {
             }
           >
             <Route path="products" element={<ProductsPage />} />
+          </Route>
+          <Route element={<PermissionRoute required={['COUPON_MANAGE']} />}>
+            <Route path="catalog/coupons" element={<CouponsPage />} />
           </Route>
           <Route
             element={
