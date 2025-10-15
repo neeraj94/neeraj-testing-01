@@ -144,6 +144,9 @@
                 <version>3.11.0</version>
                 <configuration>
                     <release>${java.version}</release>
+                    <excludes>
+                        <exclude>**/products/dto/public/**</exclude>
+                    </excludes>
                     <compilerArgs>
                         <arg>-parameters</arg>
                     </compilerArgs>

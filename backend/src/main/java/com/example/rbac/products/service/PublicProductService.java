@@ -12,12 +12,17 @@ import com.example.rbac.products.repository.ProductReviewRepository;
 import com.example.rbac.wedges.model.Wedge;
 import com.example.rbac.wedges.repository.WedgeRepository;
 import org.hibernate.Hibernate;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.sql.SQLException;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -27,6 +32,8 @@ import java.util.stream.Stream;
 
 @Service
 public class PublicProductService {
+
+    private static final Logger log = LoggerFactory.getLogger(PublicProductService.class);
 
     private final ProductRepository productRepository;
     private final ProductReviewRepository productReviewRepository;
@@ -64,8 +71,36 @@ public class PublicProductService {
                 ? List.of()
                 : couponRepository.findActiveCategoryCoupons(categoryIds, now);
         List<Coupon> coupons = mergeCoupons(productCoupons, categoryCoupons);
-        List<Wedge> wedges = wedgeRepository.findByCategory_NameIgnoreCaseOrderByNameAsc("Product Description Wedges");
+        List<Wedge> wedges = fetchWedgesSafely();
         return publicProductMapper.toDetail(product, reviews, coupons, wedges, List.of());
+    }
+
+    private List<Wedge> fetchWedgesSafely() {
+        try {
+            return wedgeRepository.findByCategory_NameIgnoreCaseOrderByNameAsc("Product Description Wedges");
+        } catch (DataAccessException ex) {
+            if (isMissingWedgeTable(ex)) {
+                log.warn("Wedge lookup skipped because the wedges table is missing. Returning an empty list until migrations run.");
+                return Collections.emptyList();
+            }
+            throw ex;
+        }
+    }
+
+    private boolean isMissingWedgeTable(Throwable ex) {
+        Throwable cursor = ex;
+        while (cursor != null) {
+            if (cursor instanceof SQLException sqlException) {
+                String message = sqlException.getMessage();
+                String state = sqlException.getSQLState();
+                if ((state != null && state.equalsIgnoreCase("42S02"))
+                        || (message != null && message.toLowerCase().contains("doesn't exist"))) {
+                    return true;
+                }
+            }
+            cursor = cursor.getCause();
+        }
+        return false;
     }
 
     private void initializeAssociations(Product product) {
