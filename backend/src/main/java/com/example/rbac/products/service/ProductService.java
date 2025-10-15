@@ -25,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
+import java.text.Normalizer;
 import java.time.Instant;
 import java.util.*;
 import java.util.function.Function;
@@ -182,6 +183,9 @@ public class ProductService {
 
     private void applyRequest(Product product, CreateProductRequest request, boolean creating) {
         product.setName(request.getName().trim());
+        String normalizedSlug = normalizeSlug(request.getSlug(), request.getName());
+        ensureUniqueSlug(normalizedSlug, creating ? null : product.getId());
+        product.setSlug(normalizedSlug);
         product.setUnit(request.getUnit().trim());
         product.setWeightKg(request.getWeightKg());
         product.setMinPurchaseQuantity(request.getMinPurchaseQuantity());
@@ -225,12 +229,11 @@ public class ProductService {
             throw new ApiException(HttpStatus.BAD_REQUEST, "Pricing details are required");
         }
 
-        if (creating) {
-            if (StringUtils.hasText(pricing.getSku())) {
-                throw new ApiException(HttpStatus.BAD_REQUEST, "SKU is managed automatically and cannot be specified");
-            }
-        } else if (StringUtils.hasText(pricing.getSku()) && !pricing.getSku().equals(product.getSku())) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "SKU cannot be modified after creation");
+        String requestedSku = trimToNull(pricing.getSku());
+        if (requestedSku != null) {
+            String normalizedSku = normalizeSku(requestedSku);
+            ensureUniqueSku(normalizedSku, creating ? null : product.getId());
+            product.setSku(normalizedSku);
         }
 
         validateDiscountWindow(pricing);
@@ -293,7 +296,7 @@ public class ProductService {
         long seed = skuGenerator.initialSequence(product);
         for (int attempt = 0; attempt < 20; attempt++) {
             String candidate = skuGenerator.generate(product, seed + attempt);
-            if (!productRepository.existsBySku(candidate)) {
+            if (!productRepository.existsBySkuIgnoreCase(candidate)) {
                 product.setSku(candidate);
                 productRepository.saveAndFlush(product);
                 return;
@@ -523,15 +526,37 @@ public class ProductService {
         if (CollectionUtils.isEmpty(variants)) {
             return;
         }
+
+        List<String> normalizedManualSkus = new ArrayList<>();
+        Set<String> usedVariantSkus = new HashSet<>();
+        for (ProductVariantRequest variantRequest : variants) {
+            String manualSku = trimToNull(variantRequest.getSku());
+            if (manualSku != null) {
+                String normalizedSku = normalizeSku(manualSku);
+                if (!usedVariantSkus.add(normalizedSku)) {
+                    throw new ApiException(HttpStatus.BAD_REQUEST, "Duplicate variant SKU: " + normalizedSku);
+                }
+                normalizedManualSkus.add(normalizedSku);
+            } else {
+                normalizedManualSkus.add(null);
+            }
+        }
+
         int variantIndex = 0;
         for (ProductVariantRequest variantRequest : variants) {
             ProductVariant variant = new ProductVariant();
             variant.setProduct(product);
             variant.setVariantKey(variantRequest.getKey().trim());
             variant.setPriceAdjustment(variantRequest.getPriceAdjustment());
-            variant.setSku(trimToNull(variantRequest.getSku()));
+            String manualSku = normalizedManualSkus.get(variantIndex);
+            if (manualSku != null) {
+                variant.setSku(manualSku);
+            } else {
+                String generatedSku = generateVariantSku(product, variantRequest, attributeValueMap, usedVariantSkus, variantIndex);
+                variant.setSku(generatedSku);
+            }
             variant.setQuantity(variantRequest.getQuantity());
-            variant.setDisplayOrder(variantIndex++);
+            variant.setDisplayOrder(variantIndex);
 
             List<ProductVariantValue> values = new ArrayList<>();
             if (!CollectionUtils.isEmpty(variantRequest.getAttributeValueIds())) {
@@ -568,6 +593,7 @@ public class ProductService {
             variant.setMedia(mediaItems);
 
             product.getVariants().add(variant);
+            variantIndex++;
         }
     }
 
@@ -598,6 +624,119 @@ public class ProductService {
             section.setBulletPoints(bulletPoints);
             product.getInfoSections().add(section);
         }
+    }
+
+    private String generateVariantSku(Product product,
+                                      ProductVariantRequest variantRequest,
+                                      Map<Long, AttributeValue> attributeValueMap,
+                                      Set<String> usedSkus,
+                                      int variantIndex) {
+        String baseSku = normalizeSku(product.getSku());
+        if (!StringUtils.hasText(baseSku) || skuGenerator.isPlaceholder(product.getSku())) {
+            baseSku = normalizeSku(product.getSlug());
+        }
+        if (!StringUtils.hasText(baseSku)) {
+            baseSku = "VAR";
+        }
+
+        List<String> segments = new ArrayList<>();
+        segments.add(baseSku);
+        if (!CollectionUtils.isEmpty(variantRequest.getAttributeValueIds())) {
+            for (Long valueId : variantRequest.getAttributeValueIds()) {
+                AttributeValue value = attributeValueMap.get(valueId);
+                if (value != null && StringUtils.hasText(value.getValue())) {
+                    segments.add(toSkuSegment(value.getValue()));
+                }
+            }
+        }
+        if (segments.size() == 1) {
+            segments.add(toSkuSegment(Integer.toString(variantIndex + 1)));
+        }
+
+        String candidate = String.join("-", segments).replaceAll("-{2,}", "-");
+        if (candidate.length() > 160) {
+            candidate = candidate.substring(0, 160);
+        }
+        String normalized = candidate;
+        int attempt = 1;
+        while (usedSkus.contains(normalized)) {
+            String suffix = "-" + Integer.toString(attempt++, 36).toUpperCase(Locale.ROOT);
+            if (candidate.length() + suffix.length() > 160) {
+                normalized = candidate.substring(0, Math.max(1, 160 - suffix.length())) + suffix;
+            } else {
+                normalized = candidate + suffix;
+            }
+        }
+        usedSkus.add(normalized);
+        return normalized;
+    }
+
+    private String toSkuSegment(String source) {
+        if (!StringUtils.hasText(source)) {
+            return "VAR";
+        }
+        String normalized = Normalizer.normalize(source, Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "")
+                .replaceAll("[^A-Za-z0-9]", "")
+                .toUpperCase(Locale.ROOT);
+        if (normalized.length() >= 4) {
+            return normalized.substring(0, 4);
+        }
+        return (normalized + "XXXX").substring(0, 4);
+    }
+
+    private void ensureUniqueSku(String sku, Long productId) {
+        if (!StringUtils.hasText(sku)) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "SKU is required");
+        }
+        boolean exists = productId == null
+                ? productRepository.existsBySkuIgnoreCase(sku)
+                : productRepository.existsBySkuIgnoreCaseAndIdNot(sku, productId);
+        if (exists) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "SKU already exists");
+        }
+    }
+
+    private void ensureUniqueSlug(String slug, Long productId) {
+        if (!StringUtils.hasText(slug)) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Slug is required");
+        }
+        boolean exists = productId == null
+                ? productRepository.existsBySlugIgnoreCase(slug)
+                : productRepository.existsBySlugIgnoreCaseAndIdNot(slug, productId);
+        if (exists) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Slug already exists");
+        }
+    }
+
+    private String normalizeSlug(String slug, String fallback) {
+        String candidate = Optional.ofNullable(slug)
+                .filter(StringUtils::hasText)
+                .map(String::trim)
+                .orElseGet(() -> Optional.ofNullable(fallback).map(String::trim).orElse(null));
+        if (!StringUtils.hasText(candidate)) {
+            candidate = "product-" + Long.toHexString(System.nanoTime());
+        }
+        String sanitized = Normalizer.normalize(candidate, Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "")
+                .toLowerCase(Locale.ROOT)
+                .replaceAll("[^a-z0-9]+", "-")
+                .replaceAll("^-+|-+$", "");
+        if (!StringUtils.hasText(sanitized)) {
+            sanitized = "product-" + Long.toHexString(System.nanoTime());
+        }
+        return sanitized.length() > 160 ? sanitized.substring(0, 160) : sanitized;
+    }
+
+    private String normalizeSku(String sku) {
+        if (!StringUtils.hasText(sku)) {
+            return "";
+        }
+        String normalized = Normalizer.normalize(sku, Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "")
+                .toUpperCase(Locale.ROOT)
+                .replaceAll("[^A-Z0-9-]", "");
+        return normalized.length() > 160 ? normalized.substring(0, 160) : normalized;
     }
 
     private MediaAsset toMediaAsset(MediaSelectionRequest request) {

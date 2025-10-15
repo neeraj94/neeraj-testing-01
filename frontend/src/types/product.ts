@@ -21,6 +21,7 @@ export interface CreateProductVariantPayload {
 
 export interface CreateProductPayload {
   name: string;
+  slug: string;
   brandId: number | null;
   unit: string;
   weightKg: number | null;
@@ -85,6 +86,7 @@ export interface ProductMediaAsset {
 export interface ProductSummary {
   id: number;
   name: string;
+  slug: string;
   unit: string;
   unitPrice?: number | null;
   sku: string;
@@ -203,6 +205,7 @@ export interface ProductDetailExpandableSection {
 export interface ProductDetail {
   id: number;
   name: string;
+  slug: string;
   brand: { id: number; name: string; logoUrl?: string | null } | null;
   unit: string;
   weightKg: number | null;
