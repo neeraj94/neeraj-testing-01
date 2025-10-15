@@ -17,6 +17,7 @@ import ReviewsPage from './pages/ReviewsPage';
 import TaxRatesPage from './pages/TaxRatesPage';
 import AttributesPage from './pages/AttributesPage';
 import CategoriesPage from './pages/CategoriesPage';
+import CouponsPage from './pages/CouponsPage';
 import BadgesPage from './pages/BadgesPage';
 import BadgeCategoriesPage from './pages/BadgeCategoriesPage';
 import ShippingPage from './pages/ShippingPage';
@@ -42,6 +43,7 @@ import UploadedFilesPage from './pages/UploadedFilesPage';
 import PublicCategoriesPage from './pages/PublicCategoriesPage';
 import PublicProductPage from './pages/PublicProductPage';
 import PublicBrandsPage from './pages/PublicBrandsPage';
+import PublicCouponsPage from './pages/PublicCouponsPage';
 
 const App = () => {
   const dispatch = useAppDispatch();
@@ -116,7 +118,7 @@ const App = () => {
     };
   }, [accessToken, refreshToken, dispatch]);
 
-  const publicExact = ['/', '/login', '/signup', '/categories', '/brands', '/products/showcase'];
+  const publicExact = ['/', '/login', '/signup', '/categories', '/brands', '/products/showcase', '/coupons'];
   const publicPrefixes = ['/blog', '/products'];
   const isPublicRoute =
     publicExact.includes(location.pathname) ||
@@ -141,6 +143,7 @@ const App = () => {
       <Route path="/blog/:slug" element={<PublicBlogPostPage />} />
       <Route path="/categories" element={<PublicCategoriesPage />} />
       <Route path="/brands" element={<PublicBrandsPage />} />
+      <Route path="/coupons" element={<PublicCouponsPage />} />
       <Route path="/products/showcase" element={<PublicProductPage />} />
       <Route element={<ProtectedRoute />}>
         <Route path="/admin" element={<Layout />}>
@@ -217,6 +220,9 @@ const App = () => {
             }
           >
             <Route path="products" element={<ProductsPage />} />
+          </Route>
+          <Route element={<PermissionRoute required={['COUPON_MANAGE']} />}>
+            <Route path="catalog/coupons" element={<CouponsPage />} />
           </Route>
           <Route
             element={
