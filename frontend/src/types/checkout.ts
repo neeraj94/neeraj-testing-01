@@ -2,7 +2,8 @@ export type AddressType = 'SHIPPING' | 'BILLING';
 
 export interface CheckoutRegionOption {
   id: number;
-  name: string;
+  label: string;
+  name?: string;
 }
 
 export interface CheckoutAddress {
@@ -74,6 +75,15 @@ export interface CheckoutOrderLine {
   quantity: number;
   unitPrice: number;
   taxRate?: number;
+}
+
+export interface OrderLine {
+  productId?: number | null;
+  name?: string | null;
+  quantity: number;
+  unitPrice?: number | null;
+  lineTotal?: number | null;
+  taxRate?: number | null;
 }
 
 export interface CheckoutOrderPayload {

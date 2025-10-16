@@ -99,6 +99,8 @@ public class CheckoutService {
             billingAddress = addressService.getAddress(userId, request.getBillingAddressId());
         }
 
+        List<CheckoutOrderLineRequest> orderLines = resolveOrderLines(userId, request);
+        request.setLines(orderLines);
         PaymentMethodDto paymentMethod = paymentMethodService.getMethodOrThrow(request.getPaymentMethodKey());
         OrderSummaryDto orderSummary = calculateOrderTotals(userId, request);
 
@@ -107,7 +109,7 @@ public class CheckoutService {
         if (orderSummary.getProductTotal() == null || orderSummary.getProductTotal().compareTo(BigDecimal.ZERO) <= 0) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "Add items to your cart before placing an order");
         }
-        CheckoutOrderResponse response = orderService.createOrder(userId, user.getFullName(), shippingAddress, billingAddress, paymentMethod, orderSummary);
+        CheckoutOrderResponse response = orderService.createOrder(userId, user.getFullName(), shippingAddress, billingAddress, paymentMethod, orderSummary, orderLines);
         clearCart(userId);
         return response;
     }

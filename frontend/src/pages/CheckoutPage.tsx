@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../services/http';
 import type {
@@ -25,6 +26,21 @@ import { fetchCart, selectCart } from '../features/cart/cartSlice';
 type StepKey = 'shipping' | 'billing' | 'payment';
 
 const steps: StepKey[] = ['shipping', 'billing', 'payment'];
+
+const stepDetails: Record<StepKey, { title: string; description: string }> = {
+  shipping: {
+    title: 'Shipping',
+    description: 'Choose where we should deliver your order.'
+  },
+  billing: {
+    title: 'Billing',
+    description: 'Confirm who is paying for the purchase.'
+  },
+  payment: {
+    title: 'Payment',
+    description: 'Select a payment option and place the order.'
+  }
+};
 
 const CheckoutPage = () => {
   const { notify } = useToast();
@@ -290,8 +306,10 @@ const CheckoutPage = () => {
       key={address.id}
       type="button"
       onClick={() => onSelect(address.id)}
-      className={`w-full text-left rounded border p-4 transition hover:border-slate-500 ${
-        selectedId === address.id ? 'border-blue-600 ring-2 ring-blue-100' : 'border-slate-200'
+      className={`w-full text-left rounded-2xl border p-4 transition-all hover:-translate-y-0.5 hover:border-slate-400 ${
+        selectedId === address.id
+          ? 'border-blue-600 bg-blue-50/70 shadow-lg shadow-blue-100'
+          : 'border-slate-200 bg-white shadow-sm'
       }`}
     >
       <div className="flex items-center justify-between">
@@ -310,6 +328,8 @@ const CheckoutPage = () => {
       <p className="text-xs text-slate-500">{address.mobileNumber}</p>
     </button>
   );
+
+  const optionLabel = (option: CheckoutRegionOption) => option.name ?? option.label;
 
   const renderAddressForm = (formType: AddressType) => {
     if (!showAddressForm || addressForm.type !== formType) {
@@ -332,7 +352,10 @@ const CheckoutPage = () => {
       formType === 'SHIPPING' ? 'defaultShippingAddress' : 'defaultBillingAddress';
 
     return (
-      <form onSubmit={handleSubmitAddress} className="space-y-3 rounded border border-slate-200 p-4">
+      <form
+        onSubmit={handleSubmitAddress}
+        className="space-y-4 rounded-2xl border border-slate-200 bg-slate-50/70 p-5 shadow-inner"
+      >
         <h3 className="text-sm font-semibold text-slate-700">
           {formType === 'SHIPPING' ? 'Add shipping address' : 'Add billing address'}
         </h3>
@@ -350,13 +373,13 @@ const CheckoutPage = () => {
                   cityId: ''
                 }))
               }
-              className="mt-1 w-full rounded border border-slate-300 px-3 py-2 text-sm"
+              className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none"
               disabled={countriesQuery.isLoading}
             >
               <option value="">Select country</option>
               {countryOptions.map((option) => (
                 <option key={option.id} value={String(option.id)}>
-                  {option.name}
+                  {optionLabel(option)}
                 </option>
               ))}
             </select>
@@ -373,13 +396,13 @@ const CheckoutPage = () => {
                   cityId: ''
                 }))
               }
-              className="mt-1 w-full rounded border border-slate-300 px-3 py-2 text-sm"
+              className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none"
               disabled={!addressForm.countryId || statesQuery.isLoading}
             >
               <option value="">Select state</option>
               {stateOptions.map((option) => (
                 <option key={option.id} value={String(option.id)}>
-                  {option.name}
+                  {optionLabel(option)}
                 </option>
               ))}
             </select>
@@ -395,13 +418,13 @@ const CheckoutPage = () => {
                   cityId: event.target.value
                 }))
               }
-              className="mt-1 w-full rounded border border-slate-300 px-3 py-2 text-sm"
+              className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none"
               disabled={!addressForm.stateId || citiesQuery.isLoading}
             >
               <option value="">Select city</option>
               {cityOptions.map((option) => (
                 <option key={option.id} value={String(option.id)}>
-                  {option.name}
+                  {optionLabel(option)}
                 </option>
               ))}
             </select>
@@ -428,7 +451,7 @@ const CheckoutPage = () => {
               onChange={(event) =>
                 setAddressForm((prev) => ({ ...prev, fullName: event.target.value }))
               }
-              className="mt-1 w-full rounded border border-slate-300 px-3 py-2 text-sm"
+              className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none"
             />
           </label>
           <label className="text-xs font-medium uppercase text-slate-500">
@@ -439,7 +462,7 @@ const CheckoutPage = () => {
               onChange={(event) =>
                 setAddressForm((prev) => ({ ...prev, mobileNumber: event.target.value }))
               }
-              className="mt-1 w-full rounded border border-slate-300 px-3 py-2 text-sm"
+              className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none"
             />
           </label>
         </div>
@@ -449,7 +472,7 @@ const CheckoutPage = () => {
             required
             value={addressForm.pinCode}
             onChange={(event) => setAddressForm((prev) => ({ ...prev, pinCode: event.target.value }))}
-            className="mt-1 w-full rounded border border-slate-300 px-3 py-2 text-sm"
+            className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none"
             placeholder="Postal code"
             inputMode="numeric"
           />
@@ -462,7 +485,7 @@ const CheckoutPage = () => {
             onChange={(event) =>
               setAddressForm((prev) => ({ ...prev, addressLine1: event.target.value }))
             }
-            className="mt-1 w-full rounded border border-slate-300 px-3 py-2 text-sm"
+            className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none"
             placeholder="Flat, House No., Building, Company, Apartment"
           />
         </label>
@@ -473,7 +496,7 @@ const CheckoutPage = () => {
             onChange={(event) =>
               setAddressForm((prev) => ({ ...prev, addressLine2: event.target.value }))
             }
-            className="mt-1 w-full rounded border border-slate-300 px-3 py-2 text-sm"
+            className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none"
             placeholder="Area, Street, Sector, Place"
           />
         </label>
@@ -482,7 +505,7 @@ const CheckoutPage = () => {
           <input
             value={addressForm.landmark}
             onChange={(event) => setAddressForm((prev) => ({ ...prev, landmark: event.target.value }))}
-            className="mt-1 w-full rounded border border-slate-300 px-3 py-2 text-sm"
+            className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none"
             placeholder="Nearby landmark"
           />
         </label>
@@ -506,272 +529,350 @@ const CheckoutPage = () => {
     );
   };
 
-  if (summaryQuery.isLoading) {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <Spinner />
-      </div>
-    );
-  }
+  const isInitialLoading = summaryQuery.isLoading && !summaryQuery.data;
+  const summaryError = summaryQuery.isError && !summaryQuery.data
+    ? extractErrorMessage(summaryQuery.error, 'Unable to load checkout summary.')
+    : null;
 
   return (
-    <div className="space-y-8">
-      <header className="flex flex-col gap-2">
-        <h1 className="text-2xl font-semibold text-slate-900">Checkout</h1>
-        <p className="text-sm text-slate-500">Confirm shipping, billing, and payment details to place your order.</p>
-        {!hasCartItems && (
-          <p className="text-sm font-medium text-amber-600">
-            Add items to your cart before completing checkout.
-          </p>
-        )}
+    <div className="min-h-screen bg-slate-50 pb-16">
+      <header className="border-b border-slate-200 bg-white">
+        <div className="mx-auto flex max-w-6xl flex-col gap-4 px-6 py-10 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-blue-600">Secure checkout</p>
+            <h1 className="mt-1 text-3xl font-semibold text-slate-900">Finish your purchase</h1>
+            <p className="mt-2 max-w-2xl text-sm text-slate-500">
+              Review your shipping, billing, and payment details to confirm your order. You are only a few clicks away
+              from getting your items delivered.
+            </p>
+          </div>
+          <Link
+            to="/cart"
+            className="inline-flex items-center justify-center gap-2 rounded-full border border-slate-200 px-5 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-100"
+          >
+            ← Return to cart
+          </Link>
+        </div>
       </header>
 
-      <div className="grid gap-6 lg:grid-cols-[2fr,1fr]">
-        <div className="space-y-6">
-          <nav className="flex items-center gap-3">
-            {steps.map((step) => (
-              <button
-                key={step}
-                type="button"
-                onClick={() => setActiveStep(step)}
-                className={`rounded-full border px-4 py-1 text-sm font-medium transition ${
-                  activeStep === step ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-slate-200 text-slate-600'
-                }`}
-              >
-                {step === 'shipping' && '1. Shipping'}
-                {step === 'billing' && '2. Billing'}
-                {step === 'payment' && '3. Payment'}
-              </button>
-            ))}
-          </nav>
+      <main className="mx-auto mt-10 max-w-6xl px-6">
+        {!hasCartItems && !isInitialLoading && !summaryError && (
+          <div className="mb-8 rounded-3xl border border-amber-200 bg-amber-50/80 p-6 text-sm text-amber-700 shadow-sm">
+            Your cart is currently empty. Browse the catalog and add items before completing checkout.
+          </div>
+        )}
 
-          {activeStep === 'shipping' && (
-            <section className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-slate-900">Shipping address</h2>
-                <Button
-                  variant="ghost"
-                  onClick={() => {
-                    if (showAddressForm && addressForm.type === 'SHIPPING') {
-                      setShowAddressForm(false);
-                      return;
-                    }
-                    setAddressForm({ ...defaultAddressForm, type: 'SHIPPING' });
-                    setShowAddressForm(true);
-                  }}
-                >
-                  {showAddressForm && addressForm.type === 'SHIPPING' ? 'Cancel' : 'Add new address'}
-                </Button>
-              </div>
-              <div className="grid gap-3 md:grid-cols-2">
-                {shippingAddresses.map((address) =>
-                  renderAddressCard(address, shippingAddressId, setShippingAddressId)
-                )}
-              </div>
-              {!shippingAddresses.length && (
-                <p className="text-sm text-slate-500">No shipping addresses saved yet. Add one to continue.</p>
-              )}
-              {renderAddressForm('SHIPPING')}
-              <div className="flex justify-end gap-3">
-                <Button onClick={nextStep} disabled={!shippingAddressId || !hasCartItems}>
-                  Continue to billing
-                </Button>
-              </div>
-            </section>
-          )}
+        {summaryError ? (
+          <div className="rounded-3xl border border-rose-200 bg-white p-10 text-center shadow-sm">
+            <h2 className="text-xl font-semibold text-rose-700">We couldn’t load your checkout summary</h2>
+            <p className="mt-2 text-sm text-rose-600">{summaryError}</p>
+            <Button className="mt-4" onClick={() => summaryQuery.refetch()}>
+              Try again
+            </Button>
+          </div>
+        ) : (
+          <div className="grid gap-8 lg:grid-cols-[2fr,1fr]">
+            <div className="space-y-6">
+              <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Checkout steps</h2>
+                <ol className="mt-4 grid gap-3 md:grid-cols-3">
+                  {steps.map((step, index) => {
+                    const isActive = activeStep === step;
+                    const details = stepDetails[step];
+                    return (
+                      <li key={step}>
+                        <button
+                          type="button"
+                          onClick={() => setActiveStep(step)}
+                          className={`flex h-full w-full flex-col gap-2 rounded-2xl border px-4 py-3 text-left transition ${
+                            isActive
+                              ? 'border-blue-600 bg-blue-50 text-blue-700 shadow-sm'
+                              : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50'
+                          }`}
+                        >
+                          <span
+                            className={`inline-flex h-8 w-8 items-center justify-center rounded-full border text-sm font-semibold ${
+                              isActive ? 'border-blue-500 bg-white text-blue-600' : 'border-slate-300 text-slate-500'
+                            }`}
+                          >
+                            {index + 1}
+                          </span>
+                          <div>
+                            <p className="text-sm font-semibold">{details.title}</p>
+                            <p className="text-xs text-slate-500">{details.description}</p>
+                          </div>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ol>
+              </section>
 
-          {activeStep === 'billing' && (
-            <section className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-slate-900">Billing address</h2>
-                <Button
-                  variant="ghost"
-                  onClick={() => {
-                    if (showAddressForm && addressForm.type === 'BILLING') {
-                      setShowAddressForm(false);
-                      return;
-                    }
-                    setAddressForm({ ...defaultAddressForm, type: 'BILLING' });
-                    setShowAddressForm(true);
-                  }}
-                >
-                  {showAddressForm && addressForm.type === 'BILLING'
-                    ? 'Cancel'
-                    : 'Add new billing address'}
-                </Button>
-              </div>
-              <label className="flex items-center gap-2 text-sm text-slate-600">
-                <input
-                  type="checkbox"
-                  checked={sameAsShipping}
-                  onChange={(event) => setSameAsShipping(event.target.checked)}
-                />
-                Same as shipping address
-              </label>
-              {!sameAsShipping && (
-                <div className="grid gap-3 md:grid-cols-2">
-                  {billingAddresses.map((address) =>
-                    renderAddressCard(address, billingAddressId, setBillingAddressId)
+              {isInitialLoading ? (
+                <div className="flex min-h-[18rem] items-center justify-center rounded-3xl border border-slate-200 bg-white shadow-sm">
+                  <Spinner />
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {activeStep === 'shipping' && (
+                    <section className="space-y-5 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <h2 className="text-lg font-semibold text-slate-900">Shipping address</h2>
+                          <p className="text-sm text-slate-500">Choose the destination for your delivery.</p>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          onClick={() => {
+                            if (showAddressForm && addressForm.type === 'SHIPPING') {
+                              setShowAddressForm(false);
+                              return;
+                            }
+                            setAddressForm({ ...defaultAddressForm, type: 'SHIPPING' });
+                            setShowAddressForm(true);
+                          }}
+                        >
+                          {showAddressForm && addressForm.type === 'SHIPPING' ? 'Cancel' : 'Add new address'}
+                        </Button>
+                      </div>
+                      <div className="grid gap-4 md:grid-cols-2">
+                        {shippingAddresses.map((address) =>
+                          renderAddressCard(address, shippingAddressId, setShippingAddressId)
+                        )}
+                      </div>
+                      {!shippingAddresses.length && (
+                        <p className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-500">
+                          No shipping addresses saved yet. Add one to continue.
+                        </p>
+                      )}
+                      {renderAddressForm('SHIPPING')}
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <p className="text-xs text-slate-500">
+                          Need to ship to a new location? Add as many addresses as you like and pick the best one.
+                        </p>
+                        <Button onClick={nextStep} disabled={!shippingAddressId || !hasCartItems}>
+                          Continue to billing
+                        </Button>
+                      </div>
+                    </section>
+                  )}
+
+                  {activeStep === 'billing' && (
+                    <section className="space-y-5 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <h2 className="text-lg font-semibold text-slate-900">Billing address</h2>
+                          <p className="text-sm text-slate-500">Tell us who will be charged for this order.</p>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          onClick={() => {
+                            if (showAddressForm && addressForm.type === 'BILLING') {
+                              setShowAddressForm(false);
+                              return;
+                            }
+                            setAddressForm({ ...defaultAddressForm, type: 'BILLING' });
+                            setShowAddressForm(true);
+                          }}
+                        >
+                          {showAddressForm && addressForm.type === 'BILLING'
+                            ? 'Cancel'
+                            : 'Add new billing address'}
+                        </Button>
+                      </div>
+                      <label className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                        <input
+                          type="checkbox"
+                          checked={sameAsShipping}
+                          onChange={(event) => setSameAsShipping(event.target.checked)}
+                        />
+                        Use shipping address for billing
+                      </label>
+                      {!sameAsShipping && (
+                        <div className="grid gap-4 md:grid-cols-2">
+                          {billingAddresses.map((address) =>
+                            renderAddressCard(address, billingAddressId, setBillingAddressId)
+                          )}
+                        </div>
+                      )}
+                      {!sameAsShipping && !billingAddresses.length && (
+                        <p className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-500">
+                          No billing addresses saved yet. Add one or use your shipping address.
+                        </p>
+                      )}
+                      {renderAddressForm('BILLING')}
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <Button variant="ghost" onClick={prevStep}>
+                          Back to shipping
+                        </Button>
+                        <Button
+                          onClick={nextStep}
+                          disabled={!hasCartItems || (!sameAsShipping && !billingAddressId)}
+                        >
+                          Continue to payment
+                        </Button>
+                      </div>
+                    </section>
+                  )}
+
+                  {activeStep === 'payment' && (
+                    <section className="space-y-5 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <h2 className="text-lg font-semibold text-slate-900">Payment method</h2>
+                          <p className="text-sm text-slate-500">Select how you’d like to pay and review our store policies.</p>
+                        </div>
+                      </div>
+                      <div className="space-y-3">
+                        {paymentMethods.length ? (
+                          paymentMethods.map((method: PaymentMethod) => {
+                            const isSelected = selectedPaymentKey === method.key;
+                            return (
+                              <label
+                                key={method.key}
+                                className={`flex cursor-pointer items-start gap-3 rounded-2xl border p-4 transition-all hover:-translate-y-0.5 hover:border-slate-400 ${
+                                  isSelected ? 'border-blue-600 bg-blue-50/70 shadow-sm shadow-blue-100' : 'border-slate-200 bg-white shadow-sm'
+                                }`}
+                              >
+                                <input
+                                  type="radio"
+                                  name="paymentMethod"
+                                  value={method.key}
+                                  checked={isSelected}
+                                  onChange={() => setSelectedPaymentKey(method.key)}
+                                  className="mt-1"
+                                />
+                                <div>
+                                  <p className="text-sm font-semibold text-slate-800">{method.displayName}</p>
+                                  {method.notes && <p className="text-xs text-slate-500">{method.notes}</p>}
+                                </div>
+                              </label>
+                            );
+                          })
+                        ) : (
+                          <p className="rounded-xl border border-dashed border-amber-200 bg-amber-50 p-4 text-sm text-amber-700">
+                            No payment methods are currently available. Please contact support for assistance.
+                          </p>
+                        )}
+                      </div>
+                      <label className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                        <input
+                          type="checkbox"
+                          checked={acceptPolicies}
+                          onChange={(event) => setAcceptPolicies(event.target.checked)}
+                          className="mt-1"
+                        />
+                        <span>
+                          I agree to the <span className="font-semibold text-slate-700">Terms & Conditions</span>, Return Policy, and
+                          Privacy Policy.
+                        </span>
+                      </label>
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <Button variant="ghost" onClick={prevStep}>
+                          Back to billing
+                        </Button>
+                        <Button
+                          onClick={() => placeOrderMutation.mutate()}
+                          disabled={
+                            !acceptPolicies ||
+                            !selectedPaymentKey ||
+                            placeOrderMutation.isPending ||
+                            !paymentMethods.length ||
+                            !hasCartItems
+                          }
+                          loading={placeOrderMutation.isPending}
+                        >
+                          Complete order
+                        </Button>
+                      </div>
+                    </section>
                   )}
                 </div>
               )}
-              {!sameAsShipping && !billingAddresses.length && (
-                <p className="text-sm text-slate-500">
-                  No billing addresses saved yet. Add one or use your shipping address.
-                </p>
-              )}
-              {renderAddressForm('BILLING')}
-              <div className="flex justify-between">
-                <Button variant="ghost" onClick={prevStep}>
-                  Back to shipping
-                </Button>
-                <Button
-                  onClick={nextStep}
-                  disabled={!hasCartItems || (!sameAsShipping && !billingAddressId)}
-                >
-                  Continue to payment
-                </Button>
-              </div>
-            </section>
-          )}
+            </div>
 
-          {activeStep === 'payment' && (
-            <section className="space-y-4">
-              <h2 className="text-lg font-semibold text-slate-900">Payment method</h2>
-              <div className="space-y-3">
-                {paymentMethods.length ? (
-                  paymentMethods.map((method: PaymentMethod) => (
-                    <label
-                      key={method.key}
-                      className={`flex cursor-pointer items-start gap-3 rounded border p-4 transition ${
-                        selectedPaymentKey === method.key
-                          ? 'border-blue-600 ring-2 ring-blue-100'
-                          : 'border-slate-200'
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="paymentMethod"
-                        value={method.key}
-                        checked={selectedPaymentKey === method.key}
-                        onChange={() => setSelectedPaymentKey(method.key)}
-                        className="mt-1"
-                      />
-                      <div>
-                        <p className="text-sm font-medium text-slate-800">{method.displayName}</p>
-                        {method.notes && <p className="text-xs text-slate-500">{method.notes}</p>}
-                      </div>
-                    </label>
-                  ))
-                ) : (
-                  <p className="text-sm text-amber-600">
-                    No payment methods are currently available. Please contact support for assistance.
-                  </p>
-                )}
-              </div>
-              <label className="flex items-center gap-2 text-sm text-slate-600">
-                <input
-                  type="checkbox"
-                  checked={acceptPolicies}
-                  onChange={(event) => setAcceptPolicies(event.target.checked)}
-                />
-                I agree to the Terms & Conditions, Return Policy, and Privacy Policy.
-              </label>
-              <div className="flex justify-between">
-                <Button variant="ghost" onClick={prevStep}>
-                  Back to billing
-                </Button>
-                <Button
-                  onClick={() => placeOrderMutation.mutate()}
-                  disabled={
-                    !acceptPolicies ||
-                    !selectedPaymentKey ||
-                    placeOrderMutation.isPending ||
-                    !paymentMethods.length ||
-                    !hasCartItems
-                  }
-                  loading={placeOrderMutation.isPending}
-                >
-                  Complete order
-                </Button>
-              </div>
-            </section>
-          )}
-        </div>
-
-        <aside className="space-y-4 rounded border border-slate-200 p-4">
-          <h2 className="text-lg font-semibold text-slate-900">Order summary</h2>
-          {orderSummary ? (
-            <div className="space-y-2 text-sm text-slate-700">
-              <div className="flex justify-between">
-                <span>Products</span>
-                <span>{formatCurrency(orderSummary.productTotal ?? 0, baseCurrency)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Tax</span>
-                <span>{formatCurrency(orderSummary.taxTotal ?? 0, baseCurrency)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Shipping</span>
-                <span>{formatCurrency(orderSummary.shippingTotal ?? 0, baseCurrency)}</span>
-              </div>
-              {orderSummary.shippingBreakdown &&
-                (() => {
-                  const breakdown = orderSummary.shippingBreakdown;
-                  const levels = [
-                    breakdown.countryName
-                      ? { label: breakdown.countryName, amount: breakdown.countryCost }
-                      : null,
-                    breakdown.stateName
-                      ? { label: breakdown.stateName, amount: breakdown.stateCost }
-                      : null,
-                    breakdown.cityName
-                      ? { label: breakdown.cityName, amount: breakdown.cityCost }
-                      : null
-                  ].filter((entry): entry is { label: string; amount: number | null } => Boolean(entry));
-                  return (
-                    <details className="rounded border border-slate-200 p-2 text-xs">
-                      <summary className="cursor-pointer font-semibold text-slate-700">
-                        Shipping breakdown
-                      </summary>
+            <aside className="space-y-4 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm lg:sticky lg:top-32">
+              <h2 className="text-lg font-semibold text-slate-900">Order summary</h2>
+              {orderSummary ? (
+                <div className="space-y-3 text-sm text-slate-700">
+                  <div className="flex justify-between">
+                    <span>Products</span>
+                    <span>{formatCurrency(orderSummary.productTotal ?? 0, baseCurrency)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Tax</span>
+                    <span>{formatCurrency(orderSummary.taxTotal ?? 0, baseCurrency)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Shipping</span>
+                    <span>{formatCurrency(orderSummary.shippingTotal ?? 0, baseCurrency)}</span>
+                  </div>
+                  {orderSummary.shippingBreakdown &&
+                    (() => {
+                      const breakdown = orderSummary.shippingBreakdown;
+                      const levels = [
+                        breakdown.countryName
+                          ? { label: breakdown.countryName, amount: breakdown.countryCost }
+                          : null,
+                        breakdown.stateName
+                          ? { label: breakdown.stateName, amount: breakdown.stateCost }
+                          : null,
+                        breakdown.cityName
+                          ? { label: breakdown.cityName, amount: breakdown.cityCost }
+                          : null
+                      ].filter((entry): entry is { label: string; amount: number | null } => Boolean(entry));
+                      return (
+                        <details className="rounded-2xl border border-slate-200 p-3 text-xs">
+                          <summary className="cursor-pointer font-semibold text-slate-700">
+                            Shipping breakdown
+                          </summary>
+                          <ul className="mt-2 space-y-1">
+                            {levels.map((entry) => (
+                              <li key={entry.label} className="flex justify-between">
+                                <span>{entry.label}</span>
+                                <span>{formatMaybeCurrency(entry.amount)}</span>
+                              </li>
+                            ))}
+                            <li className="flex justify-between font-medium text-slate-800">
+                              <span>Effective rate</span>
+                              <span>{formatMaybeCurrency(breakdown.effectiveCost)}</span>
+                            </li>
+                          </ul>
+                        </details>
+                      );
+                    })()}
+                  <div className="flex justify-between rounded-xl bg-slate-100 px-3 py-2 text-base font-semibold text-slate-900">
+                    <span>Total due</span>
+                    <span>{formatCurrency(orderSummary.grandTotal ?? 0, baseCurrency)}</span>
+                  </div>
+                  {!!orderSummary.taxLines?.length && (
+                    <details className="rounded-2xl border border-slate-200 p-3 text-xs">
+                      <summary className="cursor-pointer font-semibold text-slate-700">Tax breakdown</summary>
                       <ul className="mt-2 space-y-1">
-                        {levels.map((entry) => (
-                          <li key={entry.label} className="flex justify-between">
-                            <span>{entry.label}</span>
-                            <span>{formatMaybeCurrency(entry.amount)}</span>
+                        {orderSummary.taxLines.map((line: OrderTaxLine) => (
+                          <li key={`${line.productId}-${line.taxRate}`} className="flex justify-between">
+                            <span>{line.productName ?? 'Item'}</span>
+                            <span>{formatCurrency(line.taxAmount, baseCurrency)}</span>
                           </li>
                         ))}
-                        <li className="flex justify-between font-medium text-slate-800">
-                          <span>Effective rate</span>
-                          <span>{formatMaybeCurrency(breakdown.effectiveCost)}</span>
-                        </li>
                       </ul>
                     </details>
-                  );
-                })()}
-              <div className="flex justify-between font-semibold text-slate-900">
-                <span>Total</span>
-                <span>{formatCurrency(orderSummary.grandTotal ?? 0, baseCurrency)}</span>
-              </div>
-              {!!orderSummary.taxLines?.length && (
-                <details className="rounded border border-slate-200 p-2 text-xs">
-                  <summary className="cursor-pointer font-semibold text-slate-700">Tax breakdown</summary>
-                  <ul className="mt-2 space-y-1">
-                    {orderSummary.taxLines.map((line: OrderTaxLine) => (
-                      <li key={`${line.productId}-${line.taxRate}`} className="flex justify-between">
-                        <span>{line.productName ?? 'Item'}</span>
-                        <span>{formatCurrency(line.taxAmount, baseCurrency)}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </details>
+                  )}
+                  <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4 text-xs text-slate-500">
+                    Shipping and taxes are estimated based on your selected address.
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-slate-500">Add items to your cart to see a detailed summary.</p>
               )}
-            </div>
-          ) : (
-            <p className="text-sm text-slate-500">No items to display yet.</p>
-          )}
-        </aside>
-      </div>
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-xs text-slate-500">
+                <p className="font-semibold text-slate-700">Need assistance?</p>
+                <p>Contact our support team if you have questions about payments, shipping, or delivery timelines.</p>
+              </div>
+            </aside>
+          </div>
+        )}
+      </main>
     </div>
   );
 };
