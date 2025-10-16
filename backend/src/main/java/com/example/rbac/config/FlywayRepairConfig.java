@@ -27,13 +27,16 @@ import org.slf4j.LoggerFactory;
 @Configuration
 public class FlywayRepairConfig {
 
-    private static final String DEPRECATED_MIGRATION_PATTERN = "classpath*:db/migration/V14__gallery_max_file_size.sql";
+    private static final String[] DEPRECATED_MIGRATION_PATTERNS = {
+        "classpath*:db/migration/V14__gallery_max_file_size.sql",
+        "classpath*:db/migration/V48__checkout_permissions.sql"
+    };
     private static final Logger LOGGER = LoggerFactory.getLogger(FlywayRepairConfig.class);
 
     @Bean
     public FlywayMigrationStrategy repairAndMigrateStrategy(ResourcePatternResolver resourcePatternResolver) {
         return flyway -> {
-            removeDeprecatedMigration(resourcePatternResolver);
+            removeDeprecatedMigrations(resourcePatternResolver, DEPRECATED_MIGRATION_PATTERNS);
             try {
                 flyway.repair();
                 LOGGER.info("Flyway schema history repaired before migration");
@@ -44,23 +47,27 @@ public class FlywayRepairConfig {
         };
     }
 
-    private void removeDeprecatedMigration(ResourcePatternResolver resolver) {
-        try {
-            Resource[] resources = resolver.getResources(DEPRECATED_MIGRATION_PATTERN);
-            Arrays.stream(resources)
-                    .filter(Resource::exists)
-                    .forEach(resource -> {
-                        try {
-                            Path path = resource.getFile().toPath();
-                            if (Files.deleteIfExists(path)) {
-                                LOGGER.info("Removed deprecated Flyway migration {}", path);
-                            }
-                        } catch (IOException ex) {
-                            LOGGER.warn("Unable to remove deprecated migration resource {}", resource, ex);
-                        }
-                    });
-        } catch (IOException ex) {
-            LOGGER.warn("Failed to resolve deprecated migration resources", ex);
-        }
+    private void removeDeprecatedMigrations(ResourcePatternResolver resolver, String... patterns) {
+        Arrays.stream(patterns)
+                .forEach(pattern -> {
+                    try {
+                        Resource[] resources = resolver.getResources(pattern);
+                        Arrays.stream(resources)
+                                .filter(Resource::exists)
+                                .forEach(resource -> {
+                                    try {
+                                        Path path = resource.getFile().toPath();
+                                        if (Files.deleteIfExists(path)) {
+                                            LOGGER.info("Removed deprecated Flyway migration {}", path);
+                                        }
+                                    } catch (IOException ex) {
+                                        LOGGER.warn(
+                                                "Unable to remove deprecated migration resource {}", resource, ex);
+                                    }
+                                });
+                    } catch (IOException ex) {
+                        LOGGER.warn("Failed to resolve deprecated migration resources for pattern {}", pattern, ex);
+                    }
+                });
     }
 }

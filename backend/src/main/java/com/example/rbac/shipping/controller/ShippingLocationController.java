@@ -115,6 +115,14 @@ public class ShippingLocationController {
         return shippingLocationService.listCities(stateId);
     }
 
+    @GetMapping("/rates/quote")
+    @PreAuthorize("hasAnyAuthority('SHIPPING_AREA_VIEW', 'CHECKOUT_MANAGE', 'ORDER_MANAGE')")
+    public ShippingRateQuoteDto quoteShippingRate(@RequestParam(name = "countryId", required = false) Long countryId,
+                                                  @RequestParam(name = "stateId", required = false) Long stateId,
+                                                  @RequestParam(name = "cityId", required = false) Long cityId) {
+        return shippingLocationService.resolveShippingRate(countryId, stateId, cityId);
+    }
+
     @GetMapping("/states/{stateId}/cities/options")
     @PreAuthorize("hasAnyAuthority('SHIPPING_AREA_VIEW', 'SHIPPING_LOCATION_MANAGE')")
     public List<ShippingOptionDto> cityOptions(@PathVariable Long stateId) {
