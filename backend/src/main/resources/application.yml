@@ -22,8 +22,6 @@ spring:
     enabled: true
     locations: classpath:db/migration
     baseline-on-migrate: true
-    ignore-migration-patterns:
-      - MIGRATION:MISSING_SUCCESS:48:checkout_permissions
   jackson:
     serialization:
       write-dates-as-timestamps: false
