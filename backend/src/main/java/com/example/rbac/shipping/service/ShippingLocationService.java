@@ -11,6 +11,7 @@ import com.example.rbac.shipping.repository.ShippingAreaRateRepository;
 import com.example.rbac.shipping.repository.ShippingCityRepository;
 import com.example.rbac.shipping.repository.ShippingCountryRepository;
 import com.example.rbac.shipping.repository.ShippingStateRepository;
+import com.example.rbac.shipping.dto.ShippingRateQuoteDto;
 import org.hibernate.Hibernate;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
@@ -270,6 +271,61 @@ public class ShippingLocationService {
         return cities.stream()
                 .map(this::toCityDto)
                 .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public ShippingRateQuoteDto resolveShippingRate(Long countryId, Long stateId, Long cityId) {
+        ShippingCountry country = null;
+        if (countryId != null) {
+            country = countryRepository.findById(countryId)
+                    .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Country not found"));
+        }
+        ShippingState state = null;
+        if (stateId != null) {
+            state = stateRepository.findById(stateId)
+                    .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "State not found"));
+            if (country != null && state.getCountry() != null && !Objects.equals(state.getCountry().getId(), country.getId())) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, "Selected state does not belong to the provided country");
+            }
+            if (country == null) {
+                country = state.getCountry();
+            }
+        }
+        ShippingCity city = null;
+        if (cityId != null) {
+            city = cityRepository.findById(cityId)
+                    .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "City not found"));
+            if (state != null && city.getState() != null && !Objects.equals(city.getState().getId(), state.getId())) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, "Selected city does not belong to the provided state");
+            }
+            if (state == null) {
+                state = city.getState();
+            }
+            if (country == null && state != null) {
+                country = state.getCountry();
+            }
+        }
+
+        BigDecimal countryCost = country != null ? normalizeCost(country.getBaseCost()) : null;
+        BigDecimal stateCost = state != null ? normalizeCost(state.getOverrideCost()) : null;
+        BigDecimal cityCost = city != null ? normalizeCost(city.getOverrideCost()) : null;
+
+        BigDecimal effective = cityCost != null
+                ? cityCost
+                : stateCost != null ? stateCost : countryCost;
+
+        ShippingRateQuoteDto dto = new ShippingRateQuoteDto();
+        dto.setCountryId(country != null ? country.getId() : null);
+        dto.setCountryName(country != null ? country.getName() : null);
+        dto.setCountryCost(countryCost);
+        dto.setStateId(state != null ? state.getId() : null);
+        dto.setStateName(state != null ? state.getName() : null);
+        dto.setStateCost(stateCost);
+        dto.setCityId(city != null ? city.getId() : null);
+        dto.setCityName(city != null ? city.getName() : null);
+        dto.setCityCost(cityCost);
+        dto.setEffectiveCost(effective);
+        return dto;
     }
 
     @Transactional(readOnly = true)
