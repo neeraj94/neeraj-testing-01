@@ -359,6 +359,13 @@ public class SetupService {
                             List.of("PRODUCT_VIEW", "PRODUCT_CREATE", "PRODUCT_UPDATE")
                     ),
                     MenuDefinition.item(
+                            "coupons",
+                            "Coupons",
+                            "🎟️",
+                            "/admin/catalog/coupons",
+                            List.of("COUPON_MANAGE")
+                    ),
+                    MenuDefinition.item(
                             "reviews",
                             "Reviews",
                             "⭐",

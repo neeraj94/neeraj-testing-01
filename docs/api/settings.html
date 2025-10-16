@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Platform Settings APIs</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header>
+    <h1>Platform Settings APIs</h1>
+    <p>Storefront configuration, email settings, and template management.</p>
+    <p><strong>Base URL:</strong> <code>/api/v1/settings</code></p>
+  </header>
+  <main>
+    <section class="section-card">
+      <h2>Endpoint directory</h2>
+      <table>
+        <thead><tr><th>Method</th><th>Path</th><th>Description</th><th>Auth</th></tr></thead>
+        <tbody>
+          <tr><td><span class='badge get'>GET</span></td><td><code>/api/v1/settings</code></td><td>Returns global store configuration including currency and contact details.</td><td>Bearer</td></tr><tr><td><span class='badge patch'>PATCH</span></td><td><code>/api/v1/settings</code></td><td>Updates general settings fields supplied in the request body.</td><td>Bearer</td></tr><tr><td><span class='badge get'>GET</span></td><td><code>/api/v1/settings/theme</code></td><td>Returns the storefront theme tokens for anonymous rendering.</td><td>Public</td></tr><tr><td><span class='badge get'>GET</span></td><td><code>/api/v1/settings/email</code></td><td>Returns SMTP or transactional email configuration.</td><td>Bearer</td></tr><tr><td><span class='badge post'>POST</span></td><td><code>/api/v1/settings/email/test</code></td><td>Sends a test email using the current settings to validate connectivity.</td><td>Bearer</td></tr><tr><td><span class='badge get'>GET</span></td><td><code>/api/v1/settings/email/templates</code></td><td>Returns available system email templates grouped by category.</td><td>Bearer</td></tr><tr><td><span class='badge get'>GET</span></td><td><code>/api/v1/settings/email/templates/{id}</code></td><td>Loads template subject and body for editing.</td><td>Bearer</td></tr><tr><td><span class='badge put'>PUT</span></td><td><code>/api/v1/settings/email/templates/{id}</code></td><td>Updates template subject, HTML, and plain text body.</td><td>Bearer</td></tr>
+        </tbody>
+      </table>
+    </section>
+    <section class="section-card" id="get-root">
+  <h2>Get settings <span class="badge get">GET</span> <code>/api/v1/settings</code></h2>
+  <p>Returns global store configuration including currency and contact details.</p>
+  
+  
+  
+  <h3>Success response</h3>
+  <p class="status success">HTTP 200</p>
+  <pre>{
+  &quot;storeName&quot;: &quot;Glow Commerce&quot;,
+  &quot;currency&quot;: &quot;USD&quot;,
+  &quot;supportEmail&quot;: &quot;support@example.com&quot;,
+  &quot;maintenanceMode&quot;: false
+}</pre>
+  <h3>Error scenarios</h3>
+  <p>No specific error payloads documented.</p>
+</section>
+<section class="section-card" id="patch-root">
+  <h2>Update settings <span class="badge patch">PATCH</span> <code>/api/v1/settings</code></h2>
+  <p>Updates general settings fields supplied in the request body.</p>
+  <h3>Headers</h3><table><thead><tr><th>Name</th><th>Value</th></tr></thead><tbody><tr><td>Content-Type</td><td>application/json</td></tr></tbody></table>
+
+  
+  <h3>Request body</h3><pre>{
+  &quot;storeName&quot;: &quot;Glow Commerce&quot;,
+  &quot;maintenanceMode&quot;: false
+}</pre>
+  <h3>Success response</h3>
+  <p class="status success">HTTP 200</p>
+  <pre>{
+  &quot;storeName&quot;: &quot;Glow Commerce&quot;,
+  &quot;maintenanceMode&quot;: false
+}</pre>
+  <h3>Error scenarios</h3>
+  <p>No specific error payloads documented.</p>
+</section>
+<section class="section-card" id="get-theme">
+  <h2>Get public theme <span class="badge get">GET</span> <code>/api/v1/settings/theme</code></h2>
+  <p>Returns the storefront theme tokens for anonymous rendering.</p>
+  
+  
+  
+  <h3>Success response</h3>
+  <p class="status success">HTTP 200</p>
+  <pre>{
+  &quot;primary&quot;: &quot;#38bdf8&quot;,
+  &quot;secondary&quot;: &quot;#0f172a&quot;,
+  &quot;logoUrl&quot;: &quot;https://cdn.example.com/theme/logo.svg&quot;
+}</pre>
+  <h3>Error scenarios</h3>
+  <p>No specific error payloads documented.</p>
+</section>
+<section class="section-card" id="get-email">
+  <h2>Get email settings <span class="badge get">GET</span> <code>/api/v1/settings/email</code></h2>
+  <p>Returns SMTP or transactional email configuration.</p>
+  
+  
+  
+  <h3>Success response</h3>
+  <p class="status success">HTTP 200</p>
+  <pre>{
+  &quot;provider&quot;: &quot;SMTP&quot;,
+  &quot;host&quot;: &quot;smtp.example.com&quot;,
+  &quot;port&quot;: 587,
+  &quot;fromAddress&quot;: &quot;no-reply@example.com&quot;
+}</pre>
+  <h3>Error scenarios</h3>
+  <p>No specific error payloads documented.</p>
+</section>
+<section class="section-card" id="post-email-test">
+  <h2>Send test email <span class="badge post">POST</span> <code>/api/v1/settings/email/test</code></h2>
+  <p>Sends a test email using the current settings to validate connectivity.</p>
+  <h3>Headers</h3><table><thead><tr><th>Name</th><th>Value</th></tr></thead><tbody><tr><td>Content-Type</td><td>application/json</td></tr></tbody></table>
+
+  
+  <h3>Request body</h3><pre>{
+  &quot;to&quot;: &quot;qa@example.com&quot;
+}</pre>
+  <h3>Success response</h3>
+  <p class="status success">HTTP 200</p>
+  <pre>{
+  &quot;delivered&quot;: true,
+  &quot;messageId&quot;: &quot;20250115-abc&quot;
+}</pre>
+  <h3>Error scenarios</h3>
+  <table><thead><tr><th>Status</th><th>Description</th><th>Example</th></tr></thead><tbody><tr><td class='status client'>HTTP 400</td><td>SMTP failure</td><td><pre>{
+  &quot;error&quot;: &quot;Bad Request&quot;,
+  &quot;message&quot;: &quot;SMTP_AUTH_FAILED&quot;
+}</pre></td></tr></tbody></table>
+
+</section>
+<section class="section-card" id="get-email-templates">
+  <h2>List email templates <span class="badge get">GET</span> <code>/api/v1/settings/email/templates</code></h2>
+  <p>Returns available system email templates grouped by category.</p>
+  
+  
+  
+  <h3>Success response</h3>
+  <p class="status success">HTTP 200</p>
+  <pre>{
+  &quot;templates&quot;: [
+    {
+      &quot;id&quot;: 1,
+      &quot;name&quot;: &quot;Order Confirmation&quot;,
+      &quot;code&quot;: &quot;ORDER_CONFIRMATION&quot;
+    }
+  ]
+}</pre>
+  <h3>Error scenarios</h3>
+  <p>No specific error payloads documented.</p>
+</section>
+<section class="section-card" id="get-email-templates-{id}">
+  <h2>Get email template <span class="badge get">GET</span> <code>/api/v1/settings/email/templates/{id}</code></h2>
+  <p>Loads template subject and body for editing.</p>
+  
+  
+  
+  <h3>Success response</h3>
+  <p class="status success">HTTP 200</p>
+  <pre>{
+  &quot;id&quot;: 1,
+  &quot;name&quot;: &quot;Order Confirmation&quot;,
+  &quot;subject&quot;: &quot;Your order is confirmed&quot;
+}</pre>
+  <h3>Error scenarios</h3>
+  <p>No specific error payloads documented.</p>
+</section>
+<section class="section-card" id="put-email-templates-{id}">
+  <h2>Update email template <span class="badge put">PUT</span> <code>/api/v1/settings/email/templates/{id}</code></h2>
+  <p>Updates template subject, HTML, and plain text body.</p>
+  <h3>Headers</h3><table><thead><tr><th>Name</th><th>Value</th></tr></thead><tbody><tr><td>Content-Type</td><td>application/json</td></tr></tbody></table>
+
+  
+  <h3>Request body</h3><pre>{
+  &quot;subject&quot;: &quot;Thanks for your purchase&quot;,
+  &quot;htmlBody&quot;: &quot;&lt;p&gt;Hello {{customerName}}&lt;/p&gt;&quot;
+}</pre>
+  <h3>Success response</h3>
+  <p class="status success">HTTP 200</p>
+  <pre>{
+  &quot;id&quot;: 1,
+  &quot;updated&quot;: true
+}</pre>
+  <h3>Error scenarios</h3>
+  <p>No specific error payloads documented.</p>
+</section>
+
+  </main>
+  <footer>
+    <p><a href="index.html">Back to index</a></p>
+  </footer>
+</body>
+</html>

@@ -15,6 +15,9 @@ public class CreateProductRequest {
     @Size(max = 200, message = "Product name must be at most 200 characters")
     private String name;
 
+    @Size(max = 160, message = "Slug must be at most 160 characters")
+    private String slug;
+
     private Long brandId;
 
     @NotBlank(message = "Unit is required")
@@ -119,6 +122,14 @@ public class CreateProductRequest {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public String getSlug() {
+        return slug;
+    }
+
+    public void setSlug(String slug) {
+        this.slug = slug;
     }
 
     public Long getBrandId() {
