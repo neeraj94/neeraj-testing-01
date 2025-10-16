@@ -46,6 +46,9 @@ import PublicProductPage from './pages/PublicProductPage';
 import PublicBrandsPage from './pages/PublicBrandsPage';
 import PublicCouponsPage from './pages/PublicCouponsPage';
 import CartPage from './pages/CartPage';
+import CheckoutPage from './pages/CheckoutPage';
+import AdminPaymentPage from './pages/AdminPaymentPage';
+import AdminOrdersPage from './pages/AdminOrdersPage';
 
 const App = () => {
   const dispatch = useAppDispatch();
@@ -234,6 +237,12 @@ const App = () => {
           <Route element={<PermissionRoute required={['COUPON_MANAGE']} />}>
             <Route path="catalog/coupons" element={<CouponsPage />} />
           </Route>
+          <Route element={<PermissionRoute required={['PAYMENT_MANAGE']} />}>
+            <Route path="payments" element={<AdminPaymentPage />} />
+          </Route>
+          <Route element={<PermissionRoute required={['ORDER_MANAGE']} />}>
+            <Route path="orders" element={<AdminOrdersPage />} />
+          </Route>
           <Route
             element={
               <PermissionRoute
@@ -272,6 +281,7 @@ const App = () => {
           <Route path="403" element={<ForbiddenPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Route>
+        <Route path="/checkout" element={<CheckoutPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>

@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import api from '../services/http';
 import { useAppSelector, useAppDispatch } from '../app/hooks';
 import { loadCurrentUser } from '../features/auth/authSlice';
@@ -8,6 +8,7 @@ import { extractErrorMessage } from '../utils/errors';
 import MediaLibraryDialog from '../components/MediaLibraryDialog';
 import ImagePreview from '../components/ImagePreview';
 import type { MediaSelection } from '../types/uploaded-file';
+import type { CheckoutAddress } from '../types/checkout';
 
 interface UploadedFileUploadResponse {
   url: string;
@@ -40,6 +41,14 @@ const ProfilePage = () => {
   );
   const [mediaDialogOpen, setMediaDialogOpen] = useState(false);
   const { notify } = useToast();
+  const addressesQuery = useQuery<CheckoutAddress[]>({
+    queryKey: ['profile', 'addresses'],
+    enabled: Boolean(user?.id),
+    queryFn: async () => {
+      const { data } = await api.get<CheckoutAddress[]>('/checkout/addresses');
+      return data;
+    }
+  });
 
   useEffect(() => {
     setForm((prev) => ({
@@ -467,6 +476,41 @@ const ProfilePage = () => {
         </div>
         {error && <p className="text-sm text-red-600">{error}</p>}
       </form>
+      <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="mb-4">
+          <h2 className="text-lg font-semibold text-slate-800">Addresses</h2>
+          <p className="mt-1 text-sm text-slate-500">Saved shipping and billing locations used during checkout.</p>
+        </div>
+        {addressesQuery.isLoading ? (
+          <p className="text-sm text-slate-500">Loading addresses…</p>
+        ) : (addressesQuery.data ?? []).length ? (
+          <div className="grid gap-4 md:grid-cols-2">
+            {(addressesQuery.data ?? []).map((address) => (
+              <div key={address.id} className="rounded border border-slate-200 p-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-slate-800">{address.fullName}</h3>
+                  <span className="rounded bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+                    {address.type === 'SHIPPING' ? 'Shipping' : 'Billing'}
+                  </span>
+                </div>
+                <p className="mt-1 text-sm text-slate-600">
+                  {address.addressLine1}
+                  {address.addressLine2 ? `, ${address.addressLine2}` : ''}
+                </p>
+                <p className="text-sm text-slate-600">
+                  {[address.cityName, address.stateName, address.countryName].filter(Boolean).join(', ')}
+                </p>
+                <p className="text-xs text-slate-500">{address.mobileNumber}</p>
+                {address.defaultAddress && (
+                  <p className="mt-2 text-xs font-medium uppercase text-blue-600">Default</p>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-slate-500">No addresses saved yet.</p>
+        )}
+      </section>
       <MediaLibraryDialog
         open={mediaDialogOpen}
         onClose={closeMediaDialog}
