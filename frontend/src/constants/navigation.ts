@@ -253,6 +253,34 @@ export const DEFAULT_NAVIGATION_MENU: NavigationNode[] = [
     ]
   },
   {
+    key: 'commerce',
+    label: 'Commerce',
+    icon: '💳',
+    path: undefined,
+    group: true,
+    permissions: [],
+    children: [
+      {
+        key: 'orders',
+        label: 'Orders',
+        icon: '📦',
+        path: '/admin/orders',
+        group: false,
+        permissions: ['ORDER_MANAGE'],
+        children: []
+      },
+      {
+        key: 'payments',
+        label: 'Payments',
+        icon: '💰',
+        path: '/admin/payments',
+        group: false,
+        permissions: ['PAYMENT_MANAGE'],
+        children: []
+      }
+    ]
+  },
+  {
     key: 'activity',
     label: 'Activity',
     icon: '📝',
