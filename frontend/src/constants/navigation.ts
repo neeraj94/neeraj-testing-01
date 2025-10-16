@@ -209,6 +209,15 @@ export const DEFAULT_NAVIGATION_MENU: NavigationNode[] = [
         children: []
       },
       {
+        key: 'coupons',
+        label: 'Coupons',
+        icon: '🎟️',
+        path: '/admin/catalog/coupons',
+        group: false,
+        permissions: ['COUPON_MANAGE'],
+        children: []
+      },
+      {
         key: 'reviews',
         label: 'Reviews',
         icon: '⭐',

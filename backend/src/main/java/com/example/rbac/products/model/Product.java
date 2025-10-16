@@ -20,7 +20,8 @@ import java.util.Set;
 
 @Entity
 @Table(name = "products", uniqueConstraints = {
-        @UniqueConstraint(name = "uk_products_sku", columnNames = "sku")
+        @UniqueConstraint(name = "uk_products_sku", columnNames = "sku"),
+        @UniqueConstraint(name = "uk_products_slug", columnNames = "slug")
 })
 public class Product {
 
@@ -34,6 +35,9 @@ public class Product {
 
     @Column(nullable = false, length = 200)
     private String name;
+
+    @Column(nullable = false, length = 160)
+    private String slug;
 
     @Column(length = 100)
     private String unit;
@@ -230,6 +234,14 @@ public class Product {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public String getSlug() {
+        return slug;
+    }
+
+    public void setSlug(String slug) {
+        this.slug = slug;
     }
 
     public String getUnit() {

@@ -8,6 +8,8 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
+
 public interface WedgeRepository extends JpaRepository<Wedge, Long> {
 
     Page<Wedge> findByNameContainingIgnoreCase(String name, Pageable pageable);
@@ -19,4 +21,6 @@ public interface WedgeRepository extends JpaRepository<Wedge, Long> {
     @Modifying(clearAutomatically = true)
     @Query("update Wedge w set w.defaultWedge = false where w.defaultWedge = true and (:id is null or w.id <> :id)")
     void clearDefaultExcept(@Param("id") Long id);
+
+    List<Wedge> findByCategory_NameIgnoreCaseOrderByNameAsc(String categoryName);
 }

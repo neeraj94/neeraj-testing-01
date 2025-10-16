@@ -17,6 +17,7 @@ import ReviewsPage from './pages/ReviewsPage';
 import TaxRatesPage from './pages/TaxRatesPage';
 import AttributesPage from './pages/AttributesPage';
 import CategoriesPage from './pages/CategoriesPage';
+import CouponsPage from './pages/CouponsPage';
 import BadgesPage from './pages/BadgesPage';
 import BadgeCategoriesPage from './pages/BadgeCategoriesPage';
 import ShippingPage from './pages/ShippingPage';
@@ -25,6 +26,7 @@ import ProtectedRoute from './routes/ProtectedRoute';
 import PermissionRoute from './routes/PermissionRoute';
 import { useAppDispatch, useAppSelector } from './app/hooks';
 import { loadCurrentUser, logout as logoutAction, tokensRefreshed } from './features/auth/authSlice';
+import { syncGuestCart } from './features/cart/cartSlice';
 import api from './services/http';
 import SettingsPage from './pages/SettingsPage';
 import { fetchTheme } from './features/settings/settingsSlice';
@@ -42,11 +44,13 @@ import UploadedFilesPage from './pages/UploadedFilesPage';
 import PublicCategoriesPage from './pages/PublicCategoriesPage';
 import PublicProductPage from './pages/PublicProductPage';
 import PublicBrandsPage from './pages/PublicBrandsPage';
+import PublicCouponsPage from './pages/PublicCouponsPage';
+import CartPage from './pages/CartPage';
 
 const App = () => {
   const dispatch = useAppDispatch();
   const location = useLocation();
-  const { accessToken, refreshToken } = useAppSelector((state) => state.auth);
+  const { accessToken, refreshToken, user } = useAppSelector((state) => state.auth);
   const primaryColor = useAppSelector(selectPrimaryColor);
   const applicationName = useAppSelector(selectApplicationName);
   const [initializing, setInitializing] = useState<'idle' | 'checking'>(() =>
@@ -64,6 +68,12 @@ const App = () => {
   useEffect(() => {
     document.title = applicationName || 'RBAC Portal';
   }, [applicationName]);
+
+  useEffect(() => {
+    if (user?.id) {
+      dispatch(syncGuestCart());
+    }
+  }, [user?.id, dispatch]);
 
   useEffect(() => {
     let active = true;
@@ -116,8 +126,8 @@ const App = () => {
     };
   }, [accessToken, refreshToken, dispatch]);
 
-  const publicExact = ['/', '/login', '/signup', '/categories', '/brands', '/products/showcase'];
-  const publicPrefixes = ['/blog', '/products'];
+  const publicExact = ['/', '/login', '/signup', '/categories', '/brands', '/products/showcase', '/coupons'];
+  const publicPrefixes = ['/blog', '/product', '/products'];
   const isPublicRoute =
     publicExact.includes(location.pathname) ||
     publicPrefixes.some((prefix) =>
@@ -141,7 +151,10 @@ const App = () => {
       <Route path="/blog/:slug" element={<PublicBlogPostPage />} />
       <Route path="/categories" element={<PublicCategoriesPage />} />
       <Route path="/brands" element={<PublicBrandsPage />} />
-      <Route path="/products/showcase" element={<PublicProductPage />} />
+      <Route path="/coupons" element={<PublicCouponsPage />} />
+      <Route path="/cart" element={<CartPage />} />
+      <Route path="/products/showcase" element={<Navigate to="/product/demo-product" replace />} />
+      <Route path="/product/:slug" element={<PublicProductPage />} />
       <Route element={<ProtectedRoute />}>
         <Route path="/admin" element={<Layout />}>
           <Route index element={<Navigate to="dashboard" replace />} />
@@ -217,6 +230,9 @@ const App = () => {
             }
           >
             <Route path="products" element={<ProductsPage />} />
+          </Route>
+          <Route element={<PermissionRoute required={['COUPON_MANAGE']} />}>
+            <Route path="catalog/coupons" element={<CouponsPage />} />
           </Route>
           <Route
             element={

@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Role APIs</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header>
+    <h1>Role APIs</h1>
+    <p>Manage reusable role definitions and bind permissions for RBAC.</p>
+    <p><strong>Base URL:</strong> <code>/api/v1/roles</code></p>
+  </header>
+  <main>
+    <section class="section-card">
+      <h2>Endpoint directory</h2>
+      <table>
+        <thead><tr><th>Method</th><th>Path</th><th>Description</th><th>Auth</th></tr></thead>
+        <tbody>
+          <tr><td><span class='badge get'>GET</span></td><td><code>/api/v1/roles</code></td><td>Returns paginated roles with permission counts.</td><td>Bearer</td></tr><tr><td><span class='badge post'>POST</span></td><td><code>/api/v1/roles</code></td><td>Creates a role skeleton optionally seeded with permissions.</td><td>Bearer</td></tr><tr><td><span class='badge get'>GET</span></td><td><code>/api/v1/roles/{id}</code></td><td>Fetches full role metadata with permission IDs.</td><td>Bearer</td></tr><tr><td><span class='badge put'>PUT</span></td><td><code>/api/v1/roles/{id}</code></td><td>Updates role name/description or slug.</td><td>Bearer</td></tr><tr><td><span class='badge delete'>DELETE</span></td><td><code>/api/v1/roles/{id}</code></td><td>Removes a role when no users depend on it.</td><td>Bearer</td></tr><tr><td><span class='badge post'>POST</span></td><td><code>/api/v1/roles/{id}/permissions</code></td><td>Adds permission IDs to the role.</td><td>Bearer</td></tr><tr><td><span class='badge delete'>DELETE</span></td><td><code>/api/v1/roles/{id}/permissions/{permissionId}</code></td><td>Removes a permission from a role.</td><td>Bearer</td></tr>
+        </tbody>
+      </table>
+    </section>
+    <section class="section-card" id="get-root">
+  <h2>List roles <span class="badge get">GET</span> <code>/api/v1/roles</code></h2>
+  <p>Returns paginated roles with permission counts.</p>
+  
+  <h3>Parameters</h3><table><thead><tr><th>Name</th><th>Description</th></tr></thead><tbody><tr><td>page</td><td>Page index</td></tr><tr><td>size</td><td>Page size</td></tr><tr><td>sort</td><td>Sort field</td></tr><tr><td>direction</td><td>asc/desc</td></tr></tbody></table>
+
+  
+  <h3>Success response</h3>
+  <p class="status success">HTTP 200</p>
+  <pre>{
+  &quot;content&quot;: [
+    {
+      &quot;id&quot;: 3,
+      &quot;name&quot;: &quot;Catalog Manager&quot;,
+      &quot;code&quot;: &quot;CATALOG_MANAGER&quot;,
+      &quot;permissions&quot;: 12
+    }
+  ],
+  &quot;page&quot;: 0,
+  &quot;size&quot;: 20,
+  &quot;totalElements&quot;: 1,
+  &quot;totalPages&quot;: 1,
+  &quot;last&quot;: true
+}</pre>
+  <h3>Error scenarios</h3>
+  <p>No specific error payloads documented.</p>
+</section>
+<section class="section-card" id="post-root">
+  <h2>Create role <span class="badge post">POST</span> <code>/api/v1/roles</code></h2>
+  <p>Creates a role skeleton optionally seeded with permissions.</p>
+  <h3>Headers</h3><table><thead><tr><th>Name</th><th>Value</th></tr></thead><tbody><tr><td>Content-Type</td><td>application/json</td></tr></tbody></table>
+
+  
+  <h3>Request body</h3><pre>{
+  &quot;name&quot;: &quot;Support&quot;,
+  &quot;code&quot;: &quot;SUPPORT&quot;,
+  &quot;description&quot;: &quot;Support desk role&quot;
+}</pre>
+  <h3>Success response</h3>
+  <p class="status success">HTTP 201</p>
+  <pre>{
+  &quot;id&quot;: 9,
+  &quot;name&quot;: &quot;Support&quot;,
+  &quot;code&quot;: &quot;SUPPORT&quot;
+}</pre>
+  <h3>Error scenarios</h3>
+  <table><thead><tr><th>Status</th><th>Description</th><th>Example</th></tr></thead><tbody><tr><td class='status client'>HTTP 409</td><td>Duplicate role code</td><td><pre>{
+  &quot;error&quot;: &quot;Conflict&quot;,
+  &quot;message&quot;: &quot;ROLE_CODE_EXISTS&quot;
+}</pre></td></tr></tbody></table>
+
+</section>
+<section class="section-card" id="get-{id}">
+  <h2>Get role <span class="badge get">GET</span> <code>/api/v1/roles/{id}</code></h2>
+  <p>Fetches full role metadata with permission IDs.</p>
+  
+  
+  
+  <h3>Success response</h3>
+  <p class="status success">HTTP 200</p>
+  <pre>{
+  &quot;id&quot;: 3,
+  &quot;name&quot;: &quot;Catalog Manager&quot;,
+  &quot;permissions&quot;: [
+    14,
+    19
+  ]
+}</pre>
+  <h3>Error scenarios</h3>
+  <table><thead><tr><th>Status</th><th>Description</th><th>Example</th></tr></thead><tbody><tr><td class='status client'>HTTP 404</td><td>Missing role</td><td><pre>{
+  &quot;error&quot;: &quot;Not Found&quot;,
+  &quot;message&quot;: &quot;ROLE_NOT_FOUND&quot;
+}</pre></td></tr></tbody></table>
+
+</section>
+<section class="section-card" id="put-{id}">
+  <h2>Update role <span class="badge put">PUT</span> <code>/api/v1/roles/{id}</code></h2>
+  <p>Updates role name/description or slug.</p>
+  <h3>Headers</h3><table><thead><tr><th>Name</th><th>Value</th></tr></thead><tbody><tr><td>Content-Type</td><td>application/json</td></tr></tbody></table>
+
+  
+  <h3>Request body</h3><pre>{
+  &quot;name&quot;: &quot;Catalog Supervisor&quot;,
+  &quot;description&quot;: &quot;Elevated catalog rights&quot;
+}</pre>
+  <h3>Success response</h3>
+  <p class="status success">HTTP 200</p>
+  <pre>{
+  &quot;id&quot;: 3,
+  &quot;name&quot;: &quot;Catalog Supervisor&quot;
+}</pre>
+  <h3>Error scenarios</h3>
+  <p>No specific error payloads documented.</p>
+</section>
+<section class="section-card" id="delete-{id}">
+  <h2>Delete role <span class="badge delete">DELETE</span> <code>/api/v1/roles/{id}</code></h2>
+  <p>Removes a role when no users depend on it.</p>
+  
+  
+  
+  <h3>Success response</h3>
+  <p class="status success">HTTP 204</p>
+  <p>No body returned.</p>
+  <h3>Error scenarios</h3>
+  <table><thead><tr><th>Status</th><th>Description</th><th>Example</th></tr></thead><tbody><tr><td class='status client'>HTTP 409</td><td>Role in use</td><td><pre>{
+  &quot;error&quot;: &quot;Conflict&quot;,
+  &quot;message&quot;: &quot;ROLE_ASSIGNED_TO_USERS&quot;
+}</pre></td></tr></tbody></table>
+
+</section>
+<section class="section-card" id="post-{id}-permissions">
+  <h2>Assign permissions <span class="badge post">POST</span> <code>/api/v1/roles/{id}/permissions</code></h2>
+  <p>Adds permission IDs to the role.</p>
+  <h3>Headers</h3><table><thead><tr><th>Name</th><th>Value</th></tr></thead><tbody><tr><td>Content-Type</td><td>application/json</td></tr></tbody></table>
+
+  
+  <h3>Request body</h3><pre>{
+  &quot;permissionIds&quot;: [
+    4,
+    7,
+    9
+  ]
+}</pre>
+  <h3>Success response</h3>
+  <p class="status success">HTTP 200</p>
+  <pre>{
+  &quot;id&quot;: 3,
+  &quot;permissions&quot;: [
+    4,
+    7,
+    9
+  ]
+}</pre>
+  <h3>Error scenarios</h3>
+  <p>No specific error payloads documented.</p>
+</section>
+<section class="section-card" id="delete-{id}-permissions-{permissionId}">
+  <h2>Remove permission <span class="badge delete">DELETE</span> <code>/api/v1/roles/{id}/permissions/{permissionId}</code></h2>
+  <p>Removes a permission from a role.</p>
+  
+  
+  
+  <h3>Success response</h3>
+  <p class="status success">HTTP 200</p>
+  <pre>{
+  &quot;id&quot;: 3,
+  &quot;permissions&quot;: [
+    7,
+    9
+  ]
+}</pre>
+  <h3>Error scenarios</h3>
+  <p>No specific error payloads documented.</p>
+</section>
+
+  </main>
+  <footer>
+    <p><a href="index.html">Back to index</a></p>
+  </footer>
+</body>
+</html>
