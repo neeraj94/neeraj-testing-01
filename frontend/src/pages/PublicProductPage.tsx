@@ -1,559 +1,976 @@
-import { MouseEvent, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
-
-type InfoSection = {
-  id: string;
-  title: string;
-  body: string;
-  bullets?: string[];
-};
-
-type MerchCard = {
-  id: string;
-  name: string;
-  image: string;
-  price: number;
-  badge?: string;
-};
+import { Fragment, forwardRef, useEffect, useMemo, useRef, useState } from 'react';
+import type { MouseEvent } from 'react';
+import { Link, useParams } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import type { AxiosError } from 'axios';
+import api from '../services/http';
+import { useAppDispatch, useAppSelector } from '../app/hooks';
+import { addCartItem, addGuestItem } from '../features/cart/cartSlice';
+import { useToast } from '../components/ToastProvider';
+import type {
+  PublicProductDetail,
+  PublicProductOffer,
+  PublicProductRecommendation,
+  PublicProductReview,
+  PublicProductReviewSummary,
+  PublicProductSection,
+  PublicProductVariant,
+  PublicProductVariantAttribute,
+  PublicProductVariantAttributeValue
+} from '../types/public-product';
 
 const navLinks = [
   { href: '/', label: 'Home' },
   { href: '/categories', label: 'Categories' },
   { href: '/brands', label: 'Brands' },
-  { href: '/blog', label: 'Blog' },
-  { href: '/products/showcase', label: 'Product' }
+  { href: '/blog', label: 'Blog' }
 ];
 
-const product = {
-  name: 'Nimbus Softshell Jacket',
-  brand: 'Nimbus Atelier',
-  subtitle: 'Technical outerwear engineered for city adventures',
-  description:
-    'Crafted with a waterproof, breathable membrane and recycled fleece lining, the Nimbus Softshell Jacket keeps you warm and dry without sacrificing mobility. Adjustable cuffs, a stowable hood, and reflective detailing ensure round-the-clock versatility.',
-  pricing: {
+const formatCurrency = (value?: number | null) => {
+  if (value == null) {
+    return null;
+  }
+  return value.toLocaleString(undefined, {
+    style: 'currency',
     currency: 'USD',
-    mrp: 318,
-    price: 248,
-    installments: 'or 4 interest-free payments with AuroraPay',
-    discountLabel: 'Save 22% today'
-  },
-  rating: 4.8,
-  reviews: 126,
-  sku: 'NIMBUS-JKT-01',
-  guarantee: '30-day fit guarantee & lifetime repair program',
-  coupon: 'Extra 10% off (up to $25) with Aurora Rewards & partner bank cards',
-  offers: [
-    { label: 'Free delivery', description: 'Carbon-neutral delivery in 2-4 business days' },
-    { label: 'Non-returnable', description: 'Hassle-free fit exchanges within 60 days' },
-    { label: 'Top brand', description: 'Aurora trusted • premium partner since 2015' },
-    { label: 'Secure transaction', description: 'Protected payments & order tracking' }
-  ],
-  images: [
-    'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=1200&q=80',
-    'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=1200&q=80',
-    'https://images.unsplash.com/photo-1514996937319-344454492b37?auto=format&fit=crop&w=1200&q=80',
-    'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=1200&q=80'
-  ],
-  colors: [
-    { id: 'midnight', name: 'Midnight Blue', swatch: '#1e293b' },
-    { id: 'stone', name: 'Stone Grey', swatch: '#475569' },
-    { id: 'ember', name: 'Ember Rust', swatch: '#c2410c' }
-  ],
-  sizes: ['XS', 'S', 'M', 'L', 'XL', 'XXL'],
-  highlights: [
-    'EcoShield™ 3-layer waterproof membrane rated 20k/20k',
-    'Recycled thermal fleece interior for lightweight warmth',
-    '12 pockets including hidden media and travel sleeves',
-    'Magnetic storm flap and two-way YKK® zipper',
-    'Machine washable with durable water-repellent finish'
-  ],
-  about: [
-    'Engineered for unpredictable forecasts with breathable storm-ready panels.',
-    'Thoughtful storage: passport-safe interior pockets, magnetic cuff adjusters, and detachable hood.',
-    'Sustainably produced with bluesign® approved textiles and 72% recycled fibers.',
-    'Lifetime repairs included through Nimbus Atelier Care.'
-  ],
-  infoSections: [
-    {
-      id: 'item-details',
-      title: 'Item details',
-      body: 'Lightweight yet insulated layering with articulated sleeves and abrasion-resistant shoulders.',
-      bullets: ['Standard fit sits just above the hip', 'Hidden storm cuffs lock out wind', 'Two-way zip with magnetic placket']
-    },
-    {
-      id: 'measurements',
-      title: 'Measurements',
-      body: 'Model is 6’1” wearing size Medium. Garment length: 28.5in · Chest width: 43in · Sleeve: 35in.',
-      bullets: ['True-to-size fit—size up for layering', 'Detailed size chart available at checkout']
-    },
-    {
-      id: 'material-care',
-      title: 'Material & care',
-      body: 'Body: 68% recycled polyester, 22% elastane, 10% nylon · Lining: 100% recycled fleece.',
-      bullets: ['Machine wash cold, gentle cycle', 'Tumble dry low to reactivate water repellency', 'Do not bleach or dry clean']
-    },
-    {
-      id: 'style-notes',
-      title: 'Style notes',
-      body: 'Designed for multi-climate commuting—layer over merino sweaters or under insulated parkas.',
-      bullets: ['Signature reflective back yoke', 'Detachable hood packs into interior pocket', 'Pairs with Nimbus Transit Backpack']
-    }
-  ] as InfoSection[],
-  frequentlyBought: [
-    {
-      id: 'thermal-mug',
-      name: 'Aurora Thermal Travel Mug',
-      image: 'https://images.unsplash.com/photo-1542992015-4a0b729b1385?auto=format&fit=crop&w=800&q=80',
-      price: 32,
-      badge: 'Hot pick'
-    },
-    {
-      id: 'trail-gloves',
-      name: 'Trailway Merino Gloves',
-      image: 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?auto=format&fit=crop&w=800&q=80',
-      price: 48
-    },
-    {
-      id: 'daypack',
-      name: 'Nimbus Transit Daypack',
-      image: 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=800&q=80',
-      price: 138
-    }
-  ] as MerchCard[],
-  recentlyViewed: [
-    {
-      id: 'chelsea-boot',
-      name: 'Atlas Weatherproof Chelsea Boot',
-      image: 'https://images.unsplash.com/photo-1511556820780-d912e42b4980?auto=format&fit=crop&w=800&q=80',
-      price: 210,
-      badge: 'Back in stock'
-    },
-    {
-      id: 'merino-scarf',
-      name: 'Meridian Merino Scarf',
-      image: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=900&q=80',
-      price: 68
-    },
-    {
-      id: 'down-parka',
-      name: 'Horizon Down Parka',
-      image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=900&q=80',
-      price: 348
-    }
-  ] as MerchCard[]
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  });
 };
 
+const formatDate = (value: string) => {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+  return parsed.toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric'
+  });
+};
+
+const classNames = (...classes: Array<string | false | null | undefined>) => classes.filter(Boolean).join(' ');
+
+const buildStatusTone = (inStock: boolean) =>
+  inStock
+    ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+    : 'border-rose-200 bg-rose-50 text-rose-600';
+
 const PublicProductPage = () => {
+  const { slug } = useParams<{ slug: string }>();
+  const reviewsRef = useRef<HTMLDivElement | null>(null);
+  const [selectedValues, setSelectedValues] = useState<Record<number, number>>({});
+  const [quantity, setQuantity] = useState(1);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
-  const [selectedColor, setSelectedColor] = useState(product.colors[0]?.id ?? '');
-  const [selectedSize, setSelectedSize] = useState(product.sizes[2]);
-  const [zoomOrigin, setZoomOrigin] = useState({ x: '50%', y: '50%' });
-  const [openSections, setOpenSections] = useState<Record<string, boolean>>(() =>
-    product.infoSections.reduce((acc, section, index) => {
-      acc[section.id] = index === 0 || index === 2;
-      return acc;
-    }, {} as Record<string, boolean>)
-  );
+  const [reviewLimit, setReviewLimit] = useState(3);
+  const dispatch = useAppDispatch();
+  const { notify } = useToast();
+  const authUser = useAppSelector((state) => state.auth.user);
 
-  const activeImage = useMemo(() => product.images[activeImageIndex] ?? product.images[0], [activeImageIndex]);
-  const currencyFormatter = useMemo(
-    () => new Intl.NumberFormat('en-US', { style: 'currency', currency: product.pricing.currency }),
-    [product.pricing.currency]
-  );
-  const formattedPrice = currencyFormatter.format(product.pricing.price);
-  const formattedMrp = currencyFormatter.format(product.pricing.mrp);
-  const savingsValue = Math.max(product.pricing.mrp - product.pricing.price, 0);
-  const formattedSavings = currencyFormatter.format(savingsValue);
+  const productQuery = useQuery<PublicProductDetail>({
+    queryKey: ['public-product', slug],
+    queryFn: async () => {
+      const { data } = await api.get<PublicProductDetail>(`/public/products/${slug}`);
+      return data;
+    },
+    enabled: Boolean(slug)
+  });
 
-  const handleImageMouseMove = (event: MouseEvent<HTMLDivElement>) => {
-    const bounds = event.currentTarget.getBoundingClientRect();
-    const relativeX = ((event.clientX - bounds.left) / bounds.width) * 100;
-    const relativeY = ((event.clientY - bounds.top) / bounds.height) * 100;
-    setZoomOrigin({ x: `${relativeX}%`, y: `${relativeY}%` });
+  const product = productQuery.data;
+
+  useEffect(() => {
+    if (!product) {
+      return;
+    }
+    const defaults: Record<number, number> = {};
+    const preferredVariant = product.variants.find((variant) => variant.inStock) ?? product.variants[0];
+    if (preferredVariant) {
+      preferredVariant.selections.forEach((selection) => {
+        defaults[selection.attributeId] = selection.valueId;
+      });
+    } else {
+      product.variantAttributes.forEach((attribute) => {
+        const firstValue = attribute.values[0];
+        if (firstValue) {
+          defaults[attribute.attributeId] = firstValue.id;
+        }
+      });
+    }
+    setSelectedValues(defaults);
+    setQuantity(Math.max(product.minPurchaseQuantity ?? 1, 1));
+    setActiveImageIndex(0);
+    setReviewLimit(3);
+  }, [product?.id]);
+
+  const activeVariant: PublicProductVariant | undefined = useMemo(() => {
+    if (!product || product.variantAttributes.length === 0) {
+      return undefined;
+    }
+    return product.variants.find((variant) =>
+      variant.selections.every((selection) => selectedValues[selection.attributeId] === selection.valueId)
+    );
+  }, [product, selectedValues]);
+
+  const gallery = useMemo(() => {
+    if (!product) {
+      return [] as PublicProductDetail['gallery'];
+    }
+    if (activeVariant?.media?.length) {
+      return activeVariant.media;
+    }
+    return product.gallery.length ? product.gallery : product.primaryImage ? [product.primaryImage] : [];
+  }, [product, activeVariant]);
+
+  useEffect(() => {
+    if (!gallery.length) {
+      setActiveImageIndex(0);
+      return;
+    }
+    if (activeImageIndex >= gallery.length) {
+      setActiveImageIndex(0);
+    }
+  }, [gallery, activeImageIndex]);
+
+  const basePrice = product?.pricing.finalPrice ?? product?.pricing.unitPrice ?? null;
+  const displayPrice = activeVariant?.finalPrice ?? basePrice;
+  const originalPrice = product?.pricing.unitPrice ?? displayPrice;
+  const savings = originalPrice != null && displayPrice != null ? Math.max(originalPrice - displayPrice, 0) : 0;
+  const discountLabel =
+    product?.pricing.discountType === 'PERCENTAGE' && product.pricing.discountPercentage != null
+      ? `${product.pricing.discountPercentage}% off`
+      : savings > 0
+        ? `${formatCurrency(savings)} off`
+        : null;
+
+  const inStock = activeVariant ? activeVariant.inStock : product?.stock.inStock ?? false;
+  const availableQuantity = activeVariant?.quantity ?? product?.stock.availableQuantity ?? null;
+  const maxPurchaseLimit = product?.maxPurchaseQuantity ?? availableQuantity ?? null;
+  const minPurchase = product?.minPurchaseQuantity ?? 1;
+  const variantLabel = useMemo(() => {
+    if (!activeVariant) {
+      return null;
+    }
+    if (!activeVariant.selections.length) {
+      return activeVariant.key ?? null;
+    }
+    const labels = activeVariant.selections
+      .map((selection) => selection.value)
+      .filter((value): value is string => Boolean(value));
+    if (labels.length === 0) {
+      return activeVariant.key ?? null;
+    }
+    return labels.join(' • ');
+  }, [activeVariant]);
+  const currentUnitPrice = Number(displayPrice ?? 0);
+  const productThumbnail =
+    activeVariant?.media?.[0]?.url ?? product?.primaryImage?.url ?? product?.gallery[0]?.url ?? null;
+
+  const incrementQuantity = () => {
+    setQuantity((current) => {
+      const next = current + 1;
+      if (maxPurchaseLimit != null && next > maxPurchaseLimit) {
+        return current;
+      }
+      return next;
+    });
   };
 
-  const toggleSection = (id: string) => {
-    setOpenSections((prev) => ({ ...prev, [id]: !prev[id] }));
+  const decrementQuantity = () => {
+    setQuantity((current) => Math.max(minPurchase, current - 1));
   };
 
-  const infoColumns = [
-    product.infoSections.slice(0, 2),
-    product.infoSections.slice(2)
-  ];
+  const handleSelectAttribute = (attributeId: number, valueId: number) => {
+    setSelectedValues((prev) => ({ ...prev, [attributeId]: valueId }));
+  };
+
+  const requiresVariantSelection = Boolean(product?.variantAttributes.length);
+  const hasValidSelection = !requiresVariantSelection || Boolean(activeVariant);
+
+  const scrollToReviews = () => {
+    reviewsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  const handleAddToCart = () => {
+    if (!product || !hasValidSelection || !inStock) {
+      notify({
+        type: 'error',
+        title: 'Unable to add to cart',
+        message: 'Please select available options before adding this product to your cart.'
+      });
+      return;
+    }
+    const payload = {
+      productId: product.id,
+      variantId: activeVariant?.id ?? null,
+      quantity
+    };
+    if (authUser) {
+      dispatch(addCartItem(payload))
+        .unwrap()
+        .then(() => {
+          notify({
+            type: 'success',
+            title: 'Added to cart',
+            message: `${quantity} × ${product.name} added to your cart.`
+          });
+        })
+        .catch((error: unknown) => {
+          notify({
+            type: 'error',
+            title: 'Unable to add to cart',
+            message: error instanceof Error ? error.message : 'Please try again later.'
+          });
+        });
+      return;
+    }
+    const cappedQuantity = availableQuantity != null ? Math.min(quantity, availableQuantity) : quantity;
+    dispatch(
+      addGuestItem({
+        productId: product.id,
+        productName: product.name,
+        productSlug: product.slug,
+        sku: activeVariant?.sku ?? product.sku,
+        variantId: activeVariant?.id ?? null,
+        variantLabel: variantLabel ?? undefined,
+        quantity: cappedQuantity,
+        availableQuantity: availableQuantity ?? undefined,
+        unitPrice: currentUnitPrice,
+        thumbnailUrl: productThumbnail ?? undefined
+      })
+    );
+    notify({
+      type: 'success',
+      title: 'Saved to cart',
+      message: `${cappedQuantity} × ${product.name} saved in your cart.`
+    });
+  };
+
+  const loadError = productQuery.isError ? (productQuery.error as AxiosError | undefined) : undefined;
+
+  const visibleReviews = product ? product.reviews.slice(0, reviewLimit) : [];
+  const canLoadMoreReviews = Boolean(product && reviewLimit < product.reviews.length);
 
   return (
-    <div className="min-h-screen bg-white text-slate-900">
+    <div className="min-h-screen bg-[#EEF2F7] text-slate-900">
       <header className="border-b border-slate-200 bg-white/95 backdrop-blur">
         <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-6 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
           <Link to="/" className="text-2xl font-semibold tracking-tight text-slate-900">
-            Aurora Market
+            ShopHub
           </Link>
           <nav className="flex flex-wrap items-center gap-3 text-sm text-slate-600">
             {navLinks.map((link) => (
               <Link
                 key={link.href}
                 to={link.href}
-                className={`rounded-full px-4 py-2 transition ${
-                  link.href === '/products/showcase'
-                    ? 'bg-slate-900 text-white shadow-sm shadow-slate-900/20'
-                    : 'hover:bg-slate-100 hover:text-slate-900'
-                }`}
+                className="rounded-full px-4 py-2 transition hover:bg-slate-100 hover:text-slate-900"
               >
                 {link.label}
               </Link>
             ))}
           </nav>
-          <div className="flex items-center gap-3 text-xs uppercase tracking-[0.3em] text-slate-500">
-            <span className="hidden sm:inline">Need help?</span>
-            <a href="mailto:support@auroramarket.com" className="font-semibold text-slate-900">
-              support@auroramarket.com
-            </a>
-          </div>
         </div>
       </header>
 
-      <main>
-        <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
-          <div className="grid gap-12 lg:grid-cols-[minmax(340px,420px)_minmax(0,1fr)]">
-            <div className="space-y-6 lg:sticky lg:top-28">
-              <div
-                className="group relative overflow-hidden rounded-3xl border border-slate-200 bg-slate-50 shadow-sm transition-shadow hover:shadow-xl"
-                onMouseMove={handleImageMouseMove}
-                onMouseLeave={() => setZoomOrigin({ x: '50%', y: '50%' })}
-              >
-                <div className="aspect-[4/5] bg-slate-100">
-                  <img
-                    src={activeImage}
-                    alt={product.name}
-                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.18]"
-                    style={{ transformOrigin: `${zoomOrigin.x} ${zoomOrigin.y}` }}
-                  />
-                </div>
-                <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-900/75 to-transparent p-4 text-xs text-white">
-                  Hover to explore details · Scroll to keep the gallery in view
-                </div>
-              </div>
-              <div className="grid grid-cols-4 gap-3 sm:grid-cols-6">
-                {product.images.map((image, index) => (
-                  <button
-                    key={image}
-                    type="button"
-                    onClick={() => setActiveImageIndex(index)}
-                    className={`group/thumbnail overflow-hidden rounded-2xl border transition ${
-                      activeImageIndex === index
-                        ? 'border-primary shadow-sm shadow-primary/40'
-                        : 'border-slate-200 hover:border-slate-300'
-                    }`}
-                    aria-label={`View product image ${index + 1}`}
-                  >
-                    <img
-                      src={image}
-                      alt="Product detail"
-                      className="h-20 w-full object-cover transition-transform duration-300 group-hover/thumbnail:scale-110"
-                    />
-                  </button>
-                ))}
-              </div>
-              <div className="hidden rounded-3xl border border-slate-200 bg-white p-6 shadow-sm lg:flex lg:flex-col">
-                <h3 className="text-sm font-semibold uppercase tracking-[0.3em] text-primary">Why you&apos;ll love it</h3>
-                <ul className="mt-4 space-y-3 text-sm text-slate-600">
-                  {product.highlights.map((highlight) => (
-                    <li key={highlight} className="flex items-start gap-3">
-                      <span className="mt-1 h-1.5 w-1.5 rounded-full bg-primary" aria-hidden />
-                      {highlight}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
+      <main className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
+        {productQuery.isLoading && (
+          <div className="rounded-2xl border border-slate-200 bg-white p-16 text-center text-sm text-slate-500 shadow-sm">
+            Loading product details…
+          </div>
+        )}
 
-            <div className="space-y-10">
-              <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
-                <div className="flex flex-wrap items-center justify-between gap-2 text-xs uppercase tracking-[0.35em] text-primary">
-                  <span>{product.brand}</span>
-                  <span>SKU {product.sku}</span>
-                </div>
-                <h1 className="mt-4 text-3xl font-semibold text-slate-900 sm:text-4xl">{product.name}</h1>
-                <p className="mt-2 text-sm text-slate-600">{product.subtitle}</p>
-                <div className="mt-4 flex flex-wrap items-center gap-4 text-sm text-slate-600">
-                  <div className="flex items-center gap-1 text-amber-500">
-                    {Array.from({ length: 5 }).map((_, index) => (
-                      <span key={index} aria-hidden>
-                        {index < Math.round(product.rating) ? '★' : '☆'}
-                      </span>
-                    ))}
-                  </div>
-                  <span className="font-semibold text-slate-900">{product.rating.toFixed(1)}</span>
-                  <span className="text-slate-500">{product.reviews} reviews</span>
-                  <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-slate-600">
-                    Aurora choice
-                  </span>
-                </div>
+        {!productQuery.isLoading && !product && (
+          <div className="rounded-2xl border border-slate-200 bg-white p-16 text-center text-sm text-slate-500 shadow-sm">
+            {loadError?.response?.status === 404
+              ? 'This product could not be found.'
+              : 'We were unable to load this product. Please try again later.'}
+          </div>
+        )}
 
-                <div className="mt-6 space-y-4">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-                    <div className="flex flex-wrap items-baseline gap-3">
-                      <span className="text-3xl font-semibold text-slate-900">{formattedPrice}</span>
-                      <span className="text-sm text-slate-500 line-through">{formattedMrp}</span>
-                      <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-emerald-600">
-                        {product.pricing.discountLabel}
-                      </span>
-                    </div>
-                    <div className="text-sm font-semibold text-emerald-600">You save {formattedSavings}</div>
-                  </div>
-                  <p className="text-xs uppercase tracking-[0.3em] text-slate-500">{product.pricing.installments}</p>
-                </div>
-
-                <div className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700">
-                  <div className="font-semibold uppercase tracking-[0.3em] text-emerald-600">Available offers</div>
-                  <p className="mt-2 leading-relaxed">{product.coupon}</p>
-                </div>
-
-                <div className="mt-6 grid gap-3 sm:grid-cols-2">
-                  {product.offers.map((offer) => (
-                    <div
-                      key={offer.label}
-                      className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700"
-                    >
-                      <div className="text-xs font-semibold uppercase tracking-[0.3em] text-primary">{offer.label}</div>
-                      <p className="mt-1 text-sm text-slate-600">{offer.description}</p>
-                    </div>
-                  ))}
-                </div>
-
-                <p className="mt-6 text-sm leading-relaxed text-slate-600">{product.description}</p>
-
-                <div className="mt-8 space-y-6">
-                  <div>
-                    <div className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">Color</div>
-                    <div className="mt-3 flex flex-wrap gap-3">
-                      {product.colors.map((color) => (
-                        <button
-                          key={color.id}
-                          type="button"
-                          onClick={() => setSelectedColor(color.id)}
-                          className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm transition ${
-                            selectedColor === color.id
-                              ? 'border-slate-900 bg-slate-900 text-white shadow-sm'
-                              : 'border-slate-200 hover:border-slate-400'
-                          }`}
-                        >
-                          <span
-                            className="h-3 w-3 rounded-full"
-                            style={{ backgroundColor: color.swatch }}
-                            aria-hidden
+        {product && (
+          <div className="flex flex-col gap-10">
+            <section className="rounded-[32px] border border-slate-100 bg-white p-6 shadow-lg shadow-slate-200/40 sm:p-8">
+              <div className="grid gap-10 lg:grid-cols-[1.1fr_1fr]">
+                <div className="flex flex-col gap-5">
+                  <div className="relative overflow-hidden rounded-[28px] border border-slate-100 bg-slate-50">
+                    {gallery.length === 0 && (
+                      <div className="flex h-[28rem] items-center justify-center text-sm text-slate-400">
+                        No imagery available
+                      </div>
+                    )}
+                    {gallery.length > 0 && (
+                      <img
+                        src={gallery[activeImageIndex]?.url}
+                        alt={product.name}
+                        className="h-[28rem] w-full object-cover"
+                      />
+                    )}
+                    {gallery.length > 1 && (
+                      <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 gap-2 rounded-full bg-white/90 px-3 py-1 text-xs text-slate-600 shadow">
+                        {gallery.map((_, index) => (
+                          <button
+                            key={index}
+                            type="button"
+                            onClick={() => setActiveImageIndex(index)}
+                            className={classNames(
+                              'h-2.5 w-2.5 rounded-full transition',
+                              index === activeImageIndex ? 'bg-emerald-500' : 'bg-slate-300'
+                            )}
+                            aria-label={`Show image ${index + 1}`}
                           />
-                          {color.name}
-                        </button>
-                      ))}
-                    </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                  <div>
-                    <div className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">Size</div>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {product.sizes.map((size) => (
+
+                  {gallery.length > 1 && (
+                    <div className="grid grid-cols-4 gap-3">
+                      {gallery.map((image, index) => (
                         <button
-                          key={size}
+                          key={image.url + index}
                           type="button"
-                          onClick={() => setSelectedSize(size)}
-                          className={`rounded-full border px-4 py-2 text-sm transition ${
-                            selectedSize === size
-                              ? 'border-slate-900 bg-slate-900 text-white shadow-sm'
-                              : 'border-slate-200 hover:border-slate-400'
-                          }`}
+                          onClick={() => setActiveImageIndex(index)}
+                          className={classNames(
+                            'overflow-hidden rounded-2xl border-2 transition',
+                            index === activeImageIndex
+                              ? 'border-emerald-500 shadow-lg shadow-emerald-200/40'
+                              : 'border-transparent hover:border-emerald-200'
+                          )}
                         >
-                          {size}
+                          <img
+                            src={image.url}
+                            alt={`${product.name} thumbnail ${index + 1}`}
+                            className="h-24 w-full object-cover"
+                          />
                         </button>
                       ))}
                     </div>
-                  </div>
+                  )}
                 </div>
 
-                <div className="mt-8 grid gap-3 sm:grid-cols-[minmax(0,1fr),minmax(0,1fr)]">
-                  <button
-                    type="button"
-                    className="rounded-full bg-slate-900 px-8 py-4 text-sm font-semibold uppercase tracking-[0.3em] text-white transition hover:bg-slate-800"
-                  >
-                    Add to bag
-                  </button>
-                  <button
-                    type="button"
-                    className="rounded-full border border-slate-900 px-8 py-4 text-sm font-semibold uppercase tracking-[0.3em] text-slate-900 transition hover:bg-slate-900 hover:text-white"
-                  >
-                    Buy now
-                  </button>
-                </div>
-
-                <div className="mt-6 grid gap-3 sm:grid-cols-2">
-                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
-                    <div className="text-xs font-semibold uppercase tracking-[0.3em] text-primary">Guarantee</div>
-                    <p className="mt-1">{product.guarantee}</p>
-                  </div>
-                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
-                    <div className="text-xs font-semibold uppercase tracking-[0.3em] text-primary">Support</div>
-                    <p className="mt-1">Talk to a Nimbus outfitter 24/7 at +1 (800) 555-0199</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
-                <h2 className="text-lg font-semibold text-slate-900">About this item</h2>
-                <ul className="mt-4 space-y-3 text-sm text-slate-600">
-                  {product.about.map((item) => (
-                    <li key={item} className="flex gap-3">
-                      <span className="mt-1 h-1.5 w-1.5 rounded-full bg-primary" aria-hidden />
-                      <span>{item}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="mx-auto max-w-6xl px-4 pb-12 sm:px-6 lg:px-8 lg:pb-16">
-          <div className="grid gap-8 lg:grid-cols-2">
-            <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
-              <h2 className="text-lg font-semibold text-slate-900">Frequently bought together</h2>
-              <p className="mt-2 text-sm text-slate-600">
-                Complete the look with community favourites that pair seamlessly with the Nimbus Softshell Jacket.
-              </p>
-              <div className="mt-6 space-y-4">
-                {product.frequentlyBought.map((item) => (
-                  <div
-                    key={item.id}
-                    className="flex items-center gap-4 rounded-2xl border border-slate-200 p-4 transition hover:border-primary/40 hover:shadow-lg"
-                  >
-                    <img src={item.image} alt={item.name} className="h-20 w-20 rounded-2xl object-cover" />
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <h3 className="text-sm font-semibold text-slate-900">{item.name}</h3>
-                        {item.badge ? (
-                          <span className="rounded-full bg-primary/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.3em] text-primary">
-                            {item.badge}
-                          </span>
-                        ) : null}
-                      </div>
-                      <div className="mt-1 text-sm text-slate-500">{currencyFormatter.format(item.price)}</div>
+                <div className="flex flex-col gap-6">
+                  <div className="space-y-4">
+                    <div className="flex flex-wrap items-center gap-2 text-xs font-medium uppercase tracking-wide text-emerald-600">
+                      {product.categoryNames.map((category) => (
+                        <span key={category} className="rounded-full bg-emerald-50 px-3 py-1 text-emerald-600">
+                          {category}
+                        </span>
+                      ))}
                     </div>
-                    <button
-                      type="button"
-                      className="rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-slate-600 transition hover:border-slate-400 hover:text-slate-900"
-                    >
-                      Add
-                    </button>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
-                <span className="font-semibold">Bundle &amp; save {currencyFormatter.format(24)} on the trio</span>
-                <button
-                  type="button"
-                  className="rounded-full bg-slate-900 px-6 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white transition hover:bg-slate-800"
-                >
-                  Add all
-                </button>
-              </div>
-            </div>
-
-            <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
-              <h2 className="text-lg font-semibold text-slate-900">Recently viewed</h2>
-              <p className="mt-2 text-sm text-slate-600">Pick up where you left off—curated from your last browsing session.</p>
-              <div className="mt-6 space-y-4">
-                {product.recentlyViewed.map((item) => (
-                  <div
-                    key={item.id}
-                    className="flex items-center gap-4 rounded-2xl border border-slate-200 p-4 transition hover:border-primary/40 hover:shadow-lg"
-                  >
-                    <img src={item.image} alt={item.name} className="h-20 w-20 rounded-2xl object-cover" />
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <h3 className="text-sm font-semibold text-slate-900">{item.name}</h3>
-                        {item.badge ? (
-                          <span className="rounded-full bg-slate-900/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.3em] text-slate-900">
-                            {item.badge}
+                    <div className="flex flex-col gap-3">
+                      <h1 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">{product.name}</h1>
+                      {product.brandName && <p className="text-sm text-slate-500">By {product.brandName}</p>}
+                      <div className="flex flex-wrap items-center gap-4 text-sm text-slate-500">
+                        <button
+                          type="button"
+                          onClick={scrollToReviews}
+                          className="flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1 text-amber-600 transition hover:bg-amber-100"
+                        >
+                          <StarRating rating={product.reviewSummary.averageRating} />
+                          <span>
+                            {product.reviewSummary.averageRating.toFixed(1)} ({product.reviewSummary.totalReviews} reviews)
                           </span>
-                        ) : null}
+                        </button>
+                        <span
+                          className={classNames(
+                            'inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-semibold',
+                            buildStatusTone(inStock)
+                          )}
+                        >
+                          {inStock ? '✅ In Stock' : '❌ Out of Stock'}
+                        </span>
+                        {product.sku && <span className="text-xs text-slate-400">SKU: {product.sku}</span>}
                       </div>
-                      <div className="mt-1 text-sm text-slate-500">{currencyFormatter.format(item.price)}</div>
                     </div>
-                    <button
-                      type="button"
-                      className="rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-slate-600 transition hover:border-slate-400 hover:text-slate-900"
-                    >
-                      View
-                    </button>
                   </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </section>
 
-        <section className="mx-auto max-w-6xl px-4 pb-16 sm:px-6 lg:px-8">
-          <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
-            <h2 className="text-lg font-semibold text-slate-900">Product information</h2>
-            <p className="mt-2 text-sm text-slate-600">
-              Dive deeper into the construction and styling details to make sure the Nimbus Softshell fits your lifestyle.
-            </p>
-            <div className="mt-6 grid gap-4 lg:grid-cols-2">
-              {infoColumns.map((column, columnIndex) => (
-                <div key={columnIndex} className="space-y-4">
-                  {column.map((section) => (
-                    <div key={section.id} className="overflow-hidden rounded-2xl border border-slate-200">
+                  <div className="space-y-6 rounded-[24px] border border-slate-100 bg-[#F8FAFF] p-6">
+                    <div className="flex flex-col gap-2">
+                      <div className="flex flex-wrap items-baseline gap-4">
+                        <span className="text-4xl font-semibold text-slate-900">
+                          {formatCurrency(displayPrice) ?? '—'}
+                        </span>
+                        {originalPrice != null && originalPrice > (displayPrice ?? 0) && (
+                          <span className="text-base text-slate-400 line-through">{formatCurrency(originalPrice)}</span>
+                        )}
+                        {discountLabel && (
+                          <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-700">
+                            {discountLabel}
+                          </span>
+                        )}
+                      </div>
+                      {savings > 0 && (
+                        <p className="text-sm text-emerald-600">You save {formatCurrency(savings)}</p>
+                      )}
+                      {product.shortDescription && (
+                        <p className="text-sm text-slate-600">{product.shortDescription}</p>
+                      )}
+                    </div>
+
+                    {product.offers.length > 0 && (
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Available offers</h2>
+                          <span className="text-xs text-slate-400">Apply at checkout</span>
+                        </div>
+                        <div className="space-y-3">
+                          {product.offers.map((offer) => (
+                            <OfferCard key={offer.id} offer={offer} />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {product.variantAttributes.length > 0 && (
+                    <div className="space-y-6">
+                      {product.variantAttributes.map((attribute) => (
+                        <VariantSelector
+                          key={attribute.attributeId}
+                          attribute={attribute}
+                          selectedValueId={selectedValues[attribute.attributeId]}
+                          onSelect={(valueId) => handleSelectAttribute(attribute.attributeId, valueId)}
+                          disabled={!inStock}
+                        />
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="flex flex-col gap-5">
+                    <div className="flex flex-wrap items-center gap-4">
+                      <div className="flex items-center rounded-full border border-slate-200 bg-white shadow-sm">
+                        <button
+                          type="button"
+                          onClick={decrementQuantity}
+                          className="px-4 py-2 text-lg font-semibold text-slate-600 transition hover:text-slate-900 disabled:opacity-40"
+                          disabled={quantity <= minPurchase}
+                        >
+                          –
+                        </button>
+                        <span className="min-w-[3rem] text-center text-lg font-semibold text-slate-900">{quantity}</span>
+                        <button
+                          type="button"
+                          onClick={incrementQuantity}
+                          className="px-4 py-2 text-lg font-semibold text-slate-600 transition hover:text-slate-900 disabled:opacity-40"
+                          disabled={maxPurchaseLimit != null && quantity >= maxPurchaseLimit}
+                        >
+                          +
+                        </button>
+                      </div>
+                      <div className="flex flex-col text-xs text-slate-500">
+                        <span>Minimum order: {minPurchase}</span>
+                        {maxPurchaseLimit != null && (
+                          <span>You can purchase up to {maxPurchaseLimit} units of this product.</span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-4">
                       <button
                         type="button"
-                        onClick={() => toggleSection(section.id)}
-                        className="flex w-full items-center justify-between gap-4 bg-slate-50 px-5 py-4 text-left text-sm font-semibold text-slate-900"
+                        onClick={handleAddToCart}
+                        className="flex-1 rounded-full bg-emerald-500 px-6 py-3 text-center text-sm font-semibold text-white shadow-lg shadow-emerald-200/60 transition hover:-translate-y-0.5 hover:bg-emerald-600 disabled:cursor-not-allowed disabled:bg-slate-300"
+                        disabled={!inStock || !hasValidSelection}
                       >
-                        <span>{section.title}</span>
-                        <span aria-hidden className="text-slate-400">
-                          {openSections[section.id] ? '−' : '+'}
-                        </span>
+                        <span className="mr-2">🛒</span>Add to Cart
                       </button>
-                      {openSections[section.id] ? (
-                        <div className="space-y-3 px-5 pb-5 pt-1 text-sm text-slate-600">
-                          <p>{section.body}</p>
-                          {section.bullets ? (
-                            <ul className="space-y-2">
-                              {section.bullets.map((bullet) => (
-                                <li key={bullet} className="flex gap-3">
-                                  <span className="mt-1 h-1 w-1 rounded-full bg-primary" aria-hidden />
-                                  <span>{bullet}</span>
-                                </li>
-                              ))}
-                            </ul>
-                          ) : null}
-                        </div>
-                      ) : null}
+                      <button
+                        type="button"
+                        className="flex-1 rounded-full border border-emerald-500 px-6 py-3 text-center text-sm font-semibold text-emerald-600 transition hover:-translate-y-0.5 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-300"
+                        disabled={!inStock || !hasValidSelection}
+                      >
+                        <span className="mr-2">⚡</span>Buy Now
+                      </button>
                     </div>
-                  ))}
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-      </main>
+                  </div>
 
-      <footer className="border-t border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-10 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
-          <div>© {new Date().getFullYear()} Aurora Market. Crafted with purpose.</div>
-          <div className="flex flex-wrap items-center gap-4">
-            <a href="#" className="hover:text-slate-900">
-              Privacy Policy
-            </a>
-            <a href="#" className="hover:text-slate-900">
-              Terms
-            </a>
-            <a href="#" className="hover:text-slate-900">
-              Instagram
-            </a>
-            <a href="#" className="hover:text-slate-900">
-              Pinterest
-            </a>
+                  {product.wedges.length > 0 && (
+                    <div className="rounded-[24px] border border-slate-100 bg-white p-6 shadow-sm">
+                      <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Product highlights</h2>
+                      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                        {product.wedges.map((wedge) => (
+                          <div
+                            key={wedge.id}
+                            className="flex items-start gap-3 rounded-2xl border border-slate-100 bg-slate-50/60 p-4"
+                          >
+                            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-xl text-emerald-600">
+                              {wedge.iconUrl ? '✨' : '⭐'}
+                            </div>
+                            <div>
+                              <p className="text-sm font-semibold text-slate-800">{wedge.name}</p>
+                              {wedge.shortDescription && <p className="mt-1 text-sm text-slate-600">{wedge.shortDescription}</p>}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </section>
+
+            {product.frequentlyBought.length > 0 && (
+              <FrequentlyBoughtTogether product={product} items={product.frequentlyBought} />
+            )}
+
+            {(product.expandableSections.length > 0 || product.infoSections.length > 0) && (
+              <HighlightsPanel expandable={product.expandableSections} info={product.infoSections} />
+            )}
+
+            <ReviewSection
+              ref={reviewsRef}
+              reviews={visibleReviews}
+              summary={product.reviewSummary}
+              totalReviews={product.reviews.length}
+              canLoadMore={canLoadMoreReviews}
+              onLoadMore={() => setReviewLimit((limit) => Math.min(limit + 3, product.reviews.length))}
+            />
+
+            {product.recentlyViewed.length > 0 && (
+              <div className="rounded-[32px] border border-slate-100 bg-white p-6 shadow-lg shadow-slate-200/50">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xl font-semibold text-slate-900">Recently viewed</h2>
+                  <Link to="/" className="text-sm font-medium text-emerald-600 hover:text-emerald-700">
+                    Explore more
+                  </Link>
+                </div>
+                <div className="mt-6 overflow-x-auto pb-2">
+                  <div className="flex gap-6">
+                    {product.recentlyViewed.map((item) => (
+                      <RecommendationTile key={item.id} item={item} />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
+        )}
+      </main>
+    </div>
+  );
+};
+
+const OfferCard = ({ offer }: { offer: PublicProductOffer }) => {
+  const discountLabel =
+    offer.discountType === 'PERCENTAGE'
+      ? `${offer.discountValue}% off`
+      : offer.discountValue
+        ? `${formatCurrency(offer.discountValue)} off`
+        : 'Special savings';
+
+  return (
+    <div className="flex flex-col gap-2 rounded-2xl border border-emerald-100 bg-emerald-50/60 p-4 shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-semibold text-slate-900">{offer.name}</p>
+          <p className="text-xs text-emerald-600">{discountLabel}</p>
         </div>
-      </footer>
+        <span className="rounded-full bg-white px-3 py-1 text-xs font-mono text-slate-700 shadow">{offer.code}</span>
+      </div>
+      {offer.shortDescription && <p className="text-xs text-slate-600">{offer.shortDescription}</p>}
+      <p className="text-[11px] uppercase tracking-wide text-slate-400">
+        Valid {formatDate(offer.startDate)} – {formatDate(offer.endDate)}
+      </p>
+    </div>
+  );
+};
+
+const VariantSelector = ({
+  attribute,
+  selectedValueId,
+  onSelect,
+  disabled
+}: {
+  attribute: PublicProductVariantAttribute;
+  selectedValueId?: number;
+  onSelect: (valueId: number) => void;
+  disabled: boolean;
+}) => {
+  const isSwatch = attribute.displayType === 'swatch';
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <span className="text-sm font-semibold text-slate-700">{attribute.attributeName}</span>
+        {selectedValueId != null && (
+          <span className="text-xs text-slate-400">
+            {attribute.values.find((value) => value.id === selectedValueId)?.label ?? ''}
+          </span>
+        )}
+      </div>
+      <div className="flex flex-wrap gap-3">
+        {attribute.values.map((value) => {
+          const isSelected = value.id === selectedValueId;
+          if (isSwatch) {
+            return (
+              <button
+                key={value.id}
+                type="button"
+                disabled={disabled}
+                onClick={() => onSelect(value.id)}
+                className={classNames(
+                  'flex h-12 w-12 items-center justify-center rounded-full border-2 transition',
+                  isSelected ? 'border-emerald-500 shadow-lg shadow-emerald-200/50' : 'border-transparent',
+                  disabled ? 'opacity-40' : 'hover:border-emerald-300'
+                )}
+                title={value.label}
+              >
+                <span
+                  className="h-8 w-8 rounded-full border border-white"
+                  style={{ backgroundColor: value.swatchColor ?? '#CBD5F5' }}
+                />
+              </button>
+            );
+          }
+          return (
+            <button
+              key={value.id}
+              type="button"
+              disabled={disabled}
+              onClick={() => onSelect(value.id)}
+              className={classNames(
+                'rounded-full border px-4 py-2 text-sm font-medium transition',
+                isSelected ? 'border-emerald-500 bg-emerald-50 text-emerald-700 shadow-sm' : 'border-slate-200 bg-white text-slate-700',
+                disabled ? 'opacity-40' : 'hover:border-emerald-300 hover:text-emerald-700'
+              )}
+            >
+              {value.label}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+const FrequentlyBoughtTogether = ({
+  product,
+  items
+}: {
+  product: PublicProductDetail;
+  items: PublicProductRecommendation[];
+}) => {
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(() => new Set(items.map((item) => item.id)));
+
+  useEffect(() => {
+    setSelectedIds(new Set(items.map((item) => item.id)));
+  }, [items]);
+
+  const toggle = (id: number) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const bundlePrice = useMemo(() => {
+    const extras = items.filter((item) => selectedIds.has(item.id));
+    const extrasTotal = extras.reduce((acc, item) => acc + (item.finalPrice ?? item.originalPrice ?? 0), 0);
+    const primaryPrice = product.pricing.finalPrice ?? product.pricing.unitPrice ?? 0;
+    return primaryPrice + extrasTotal;
+  }, [items, selectedIds, product.pricing.finalPrice, product.pricing.unitPrice]);
+
+  return (
+    <section className="rounded-[32px] border border-slate-100 bg-white p-6 shadow-lg shadow-slate-200/40">
+      <h2 className="text-xl font-semibold text-slate-900">Frequently bought together</h2>
+      <div className="mt-6 grid gap-6 lg:grid-cols-[2.3fr_1fr] lg:items-start">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {[{ id: product.id, name: product.name, slug: product.slug, imageUrl: product.primaryImage?.url ?? '', finalPrice: product.pricing.finalPrice ?? product.pricing.unitPrice } as PublicProductRecommendation]
+            .concat(items)
+            .map((item) => {
+              const isPrimary = item.id === product.id;
+              const price = item.finalPrice ?? item.originalPrice;
+              return (
+                <div
+                  key={item.id}
+                  className="flex flex-col gap-3 rounded-3xl border border-slate-100 bg-slate-50/60 p-4"
+                >
+                  <div className="flex items-start gap-3">
+                    {!isPrimary && (
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(item.id)}
+                        onChange={() => toggle(item.id)}
+                        className="mt-1 h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                      />
+                    )}
+                    <img
+                      src={item.imageUrl || product.primaryImage?.url || ''}
+                      alt={item.name}
+                      className="h-16 w-16 rounded-2xl border border-slate-100 object-cover"
+                    />
+                    <div className="flex flex-col gap-1">
+                      <Link to={`/product/${item.slug}`} className="text-sm font-semibold text-slate-800 hover:text-emerald-600">
+                        {item.name}
+                      </Link>
+                      <span className="text-sm text-slate-500">{formatCurrency(price)}</span>
+                    </div>
+                  </div>
+                  {isPrimary && <span className="text-xs font-medium uppercase tracking-wide text-emerald-600">Main product</span>}
+                </div>
+              );
+            })}
+        </div>
+        <div className="rounded-[28px] border border-emerald-100 bg-emerald-500 p-6 text-white shadow-xl shadow-emerald-200/70">
+          <p className="text-sm uppercase tracking-wide text-white/80">Bundle total</p>
+          <p className="mt-3 text-3xl font-bold">{formatCurrency(bundlePrice)}</p>
+          <p className="mt-2 text-xs text-white/80">
+            Includes base product and {selectedIds.size} add-on{selectedIds.size === 1 ? '' : 's'}.
+          </p>
+          <button className="mt-6 w-full rounded-full bg-white px-4 py-2 text-sm font-semibold text-emerald-600 shadow-lg shadow-emerald-200/70">
+            Add bundle to cart
+          </button>
+        </div>
+      </div>
+    </section>
+  );
+};
+
+const HighlightsPanel = ({
+  expandable,
+  info
+}: {
+  expandable: PublicProductSection[];
+  info: PublicProductSection[];
+}) => {
+  return (
+    <section className="rounded-[32px] border border-slate-100 bg-white p-6 shadow-lg shadow-slate-200/40">
+      <div className="grid gap-6 md:grid-cols-2">
+        <SectionContent title="Key Features" sections={expandable} />
+        <SectionContent title="Technical Specifications" sections={info} />
+      </div>
+    </section>
+  );
+};
+
+const SectionContent = ({ title, sections }: { title: string; sections: PublicProductSection[] }) => {
+  if (sections.length === 0) {
+    return (
+      <div className="rounded-2xl border border-slate-100 bg-slate-50/80 p-6">
+        <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
+        <p className="mt-2 text-sm text-slate-500">Details coming soon.</p>
+      </div>
+    );
+  }
+  return (
+    <div className="rounded-2xl border border-slate-100 bg-slate-50/60 p-6">
+      <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
+      <div className="mt-4 space-y-4">
+        {sections.map((section, index) => (
+          <Fragment key={`${section.title ?? 'section'}-${index}`}>
+            <div className="space-y-2">
+              {section.title && <h3 className="text-sm font-semibold text-slate-800">{section.title}</h3>}
+              {section.content && <p className="text-sm text-slate-600">{section.content}</p>}
+              {section.bulletPoints.length > 0 && (
+                <ul className="list-disc space-y-1 pl-5 text-sm text-slate-600">
+                  {section.bulletPoints.map((point, idx) => (
+                    <li key={idx}>{point}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+            {index !== sections.length - 1 && <div className="h-px w-full bg-slate-200" />}
+          </Fragment>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const ReviewSection = forwardRef<
+  HTMLDivElement,
+  {
+    reviews: PublicProductReview[];
+    summary: PublicProductReviewSummary;
+    totalReviews: number;
+    canLoadMore: boolean;
+    onLoadMore: () => void;
+  }
+>(({ reviews, summary, totalReviews, canLoadMore, onLoadMore }, ref) => {
+  return (
+    <section
+      ref={ref}
+      className="rounded-[32px] border border-slate-100 bg-white p-6 shadow-lg shadow-slate-200/40"
+    >
+      <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <h2 className="text-2xl font-semibold text-slate-900">Customer Reviews</h2>
+          <p className="mt-2 text-sm text-slate-500">
+            Rated {summary.averageRating.toFixed(1)} out of 5 based on {totalReviews} review
+            {totalReviews === 1 ? '' : 's'}.
+          </p>
+        </div>
+        <div className="rounded-2xl bg-emerald-500 px-6 py-4 text-white shadow-lg shadow-emerald-200/60">
+          <p className="text-sm uppercase tracking-wide text-white/80">Average rating</p>
+          <div className="mt-2 flex items-baseline gap-2">
+            <span className="text-4xl font-bold">{summary.averageRating.toFixed(1)}</span>
+            <span className="text-sm">/ 5</span>
+          </div>
+          <StarRating rating={summary.averageRating} className="mt-2" size="text-lg" />
+        </div>
+      </div>
+
+      <div className="mt-8 space-y-6">
+        {reviews.length === 0 && (
+          <div className="rounded-2xl border border-dashed border-slate-200 p-10 text-center text-sm text-slate-500">
+            There are no published reviews yet. Be the first to share your experience!
+          </div>
+        )}
+
+        {reviews.map((review) => (
+          <ReviewCard key={review.id} review={review} />
+        ))}
+      </div>
+
+      {canLoadMore && (
+        <div className="mt-6 flex justify-center">
+          <button
+            type="button"
+            onClick={onLoadMore}
+            className="rounded-full border border-emerald-500 px-6 py-2 text-sm font-semibold text-emerald-600 transition hover:bg-emerald-50"
+          >
+            Load more reviews
+          </button>
+        </div>
+      )}
+    </section>
+  );
+});
+
+ReviewSection.displayName = 'ReviewSection';
+
+const ReviewCard = ({ review }: { review: PublicProductReview }) => (
+  <article className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
+    <div className="flex flex-wrap items-center justify-between gap-4">
+      <div>
+        <p className="text-base font-semibold text-slate-900">{review.reviewerName}</p>
+        {review.customerAddress && <p className="text-xs text-slate-500">{review.customerAddress}</p>}
+      </div>
+      <StarRating rating={review.rating} size="text-base" />
+    </div>
+    {review.comment && <p className="mt-4 text-sm text-slate-700">{review.comment}</p>}
+    <p className="mt-3 text-xs text-slate-400">Reviewed on {formatDate(review.reviewedAt)}</p>
+    {review.media.length > 0 && (
+      <div className="mt-4 flex flex-wrap gap-3">
+        {review.media.map((media) => (
+          <img
+            key={media.url}
+            src={media.url}
+            alt={`${review.reviewerName} upload`}
+            className="h-24 w-24 rounded-xl border border-slate-200 object-cover"
+          />
+        ))}
+      </div>
+    )}
+  </article>
+);
+
+const RecommendationTile = ({ item }: { item: PublicProductRecommendation }) => {
+  const dispatch = useAppDispatch();
+  const { notify } = useToast();
+  const authUser = useAppSelector((state) => state.auth.user);
+  const unitPrice = Number(item.finalPrice ?? item.originalPrice ?? 0);
+
+  const handleQuickAdd = (event: MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (authUser) {
+      dispatch(addCartItem({ productId: item.id, variantId: null, quantity: 1 }))
+        .unwrap()
+        .then(() => {
+          notify({ type: 'success', title: 'Added to cart', message: `${item.name} added to your cart.` });
+        })
+        .catch((error: unknown) => {
+          notify({
+            type: 'error',
+            title: 'Unable to add',
+            message: error instanceof Error ? error.message : 'Please try again later.'
+          });
+        });
+      return;
+    }
+    dispatch(
+      addGuestItem({
+        productId: item.id,
+        productName: item.name,
+        productSlug: item.slug,
+        quantity: 1,
+        unitPrice,
+        variantId: null,
+        variantLabel: undefined,
+        thumbnailUrl: item.imageUrl ?? undefined
+      })
+    );
+    notify({ type: 'success', title: 'Saved to cart', message: `${item.name} saved in your cart.` });
+  };
+
+  return (
+    <div className="flex w-64 min-w-[16rem] flex-col overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-xl">
+      <Link to={`/product/${item.slug}`} className="flex flex-1 flex-col">
+        <div className="h-48 w-full overflow-hidden bg-slate-100">
+          {item.imageUrl ? (
+            <img
+              src={item.imageUrl}
+              alt={item.name}
+              className="h-full w-full object-cover transition group-hover:scale-105"
+            />
+          ) : (
+            <div className="flex h-full items-center justify-center text-sm text-slate-400">No image</div>
+          )}
+        </div>
+        <div className="flex flex-1 flex-col gap-2 px-4 py-4">
+          <p className="text-sm font-semibold text-slate-800">{item.name}</p>
+          <p className="text-sm text-slate-500">{formatCurrency(item.finalPrice ?? item.originalPrice)}</p>
+          <span className="mt-auto text-xs font-medium text-emerald-600">View details →</span>
+        </div>
+      </Link>
+      <button
+        type="button"
+        onClick={handleQuickAdd}
+        className="m-4 rounded-full bg-emerald-500 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-emerald-600"
+      >
+        Quick add
+      </button>
+    </div>
+  );
+};
+
+const StarRating = ({
+  rating,
+  className,
+  size
+}: {
+  rating: number;
+  className?: string;
+  size?: string;
+}) => {
+  const fullStars = Math.floor(rating);
+  const hasHalf = rating - fullStars >= 0.5;
+
+  return (
+    <div className={classNames('flex items-center gap-1 text-amber-500', className, size)}>
+      {Array.from({ length: 5 }).map((_, index) => {
+        const fill = index < fullStars ? '#F59E0B' : index === fullStars && hasHalf ? 'url(#half)' : '#E5E7EB';
+        return (
+          <svg key={index} width="18" height="18" viewBox="0 0 20 20" fill={fill} xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="half" x1="0" y1="0" x2="20" y2="0" gradientUnits="userSpaceOnUse">
+                <stop offset="50%" stopColor="#F59E0B" />
+                <stop offset="50%" stopColor="#E5E7EB" />
+              </linearGradient>
+            </defs>
+            <path
+              d="M10 1.5l2.472 5.004 5.528.804-4 3.898.944 5.5L10 14.75 5.056 16.7l.944-5.5-4-3.898 5.528-.804L10 1.5z"
+              stroke="none"
+            />
+          </svg>
+        );
+      })}
     </div>
   );
 };

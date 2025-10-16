@@ -8,14 +8,21 @@ import App from './App';
 import './styles/tailwind.css';
 import { injectStore, registerAuthListeners } from './services/http';
 import { tokensRefreshed, logout } from './features/auth/authSlice';
+import { initializeCart, resetCart } from './features/cart/cartSlice';
 import { ToastProvider } from './components/ToastProvider';
 import { ConfirmDialogProvider } from './components/ConfirmDialogProvider';
 
 injectStore(store);
 registerAuthListeners(
   (payload) => store.dispatch(tokensRefreshed(payload)),
-  () => store.dispatch(logout())
+  () => {
+    store.dispatch(logout());
+    store.dispatch(resetCart());
+    store.dispatch(initializeCart());
+  }
 );
+
+store.dispatch(initializeCart());
 
 const queryClient = new QueryClient();
 

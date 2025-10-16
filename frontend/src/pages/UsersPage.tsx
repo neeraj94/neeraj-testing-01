@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../services/http';
 import type { Pagination, Permission, Role, User, UserSummaryMetrics } from '../types/models';
+import type { Cart } from '../types/cart';
 import { useToast } from '../components/ToastProvider';
 import { useConfirm } from '../components/ConfirmDialogProvider';
 import SortableColumnHeader from '../components/SortableColumnHeader';
@@ -15,6 +16,7 @@ import { hasAnyPermission } from '../utils/permissions';
 import PageHeader from '../components/PageHeader';
 import PageSection from '../components/PageSection';
 import PaginationControls from '../components/PaginationControls';
+import { formatCurrency } from '../utils/currency';
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100];
 const DEFAULT_PAGE_SIZE = 25;
@@ -24,6 +26,9 @@ const SLOT_LABELS = CAPABILITY_COLUMNS.reduce<Record<string, string>>((map, colu
   map[column.slot] = column.label;
   return map;
 }, {});
+
+const formatDateTime = (value: string) =>
+  new Date(value).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
 
 const PencilIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
@@ -52,7 +57,7 @@ const TrashIcon = () => (
 );
 
 type PanelMode = 'empty' | 'create' | 'detail';
-type DetailTab = 'profile' | 'access';
+type DetailTab = 'profile' | 'access' | 'cart';
 type UserSortField = 'name' | 'email' | 'status' | 'audience' | 'groups';
 
 type UserFormState = {
@@ -343,6 +348,15 @@ const UsersPage = () => {
       setFormError(message);
       notify({ type: 'error', message });
     }
+  });
+
+  const cartQuery = useQuery<Cart>({
+    queryKey: ['users', selectedUserId, 'cart'],
+    queryFn: async () => {
+      const { data } = await api.get<Cart>(`/users/${selectedUserId}/cart`);
+      return data;
+    },
+    enabled: panelMode === 'detail' && activeTab === 'cart' && selectedUserId != null
   });
 
   const updateUser = useMutation({
@@ -1529,6 +1543,160 @@ const UsersPage = () => {
     </div>
   );
 
+  const renderCartTab = () => {
+    if (panelMode !== 'detail' || !selectedUserId) {
+      return (
+        <section className="rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-600 shadow-sm">
+          Select a user from the list to review their cart activity.
+        </section>
+      );
+    }
+
+    if (cartQuery.isLoading || cartQuery.isFetching) {
+      return (
+        <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          <p className="text-sm text-slate-500">Loading cart details…</p>
+        </section>
+      );
+    }
+
+    if (cartQuery.isError) {
+      const errorMessage = extractErrorMessage(cartQuery.error, 'Unable to load cart details.');
+      return (
+        <section className="space-y-4 rounded-xl border border-rose-200 bg-rose-50/80 p-6 shadow-sm">
+          <div className="text-sm font-semibold text-rose-700">{errorMessage}</div>
+          <button
+            type="button"
+            onClick={() => cartQuery.refetch()}
+            className="inline-flex items-center justify-center rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-700"
+          >
+            Try again
+          </button>
+        </section>
+      );
+    }
+
+    if (!cartQuery.data || cartQuery.data.items.length === 0) {
+      return (
+        <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h3 className="text-sm font-semibold text-slate-800">No cart items</h3>
+          <p className="mt-2 text-sm text-slate-500">
+            This customer has not added any products to their cart yet. Items will appear here as soon as they engage with the storefront.
+          </p>
+        </section>
+      );
+    }
+
+    const cart = cartQuery.data;
+    const formatMoney = (value: number) => formatCurrency(value, undefined);
+
+    return (
+      <div className="space-y-6">
+        <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h3 className="text-sm font-semibold text-slate-800">Cart snapshot</h3>
+              <p className="mt-1 text-xs text-slate-500">
+                Last updated {cart.updatedAt ? formatDateTime(cart.updatedAt) : 'recently'}
+              </p>
+            </div>
+            <div className="grid gap-3 text-sm text-slate-700 sm:grid-flow-col sm:items-center sm:justify-end">
+              <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-center shadow-sm">
+                <div className="text-xs uppercase tracking-wide text-slate-500">Items</div>
+                <div className="text-lg font-semibold text-slate-800">{cart.totalQuantity}</div>
+              </div>
+              <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-center shadow-sm">
+                <div className="text-xs uppercase tracking-wide text-slate-500">Subtotal</div>
+                <div className="text-lg font-semibold text-slate-800">{formatMoney(cart.subtotal)}</div>
+              </div>
+            </div>
+          </div>
+        </section>
+        <section className="rounded-xl border border-slate-200 bg-white shadow-sm">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-slate-200">
+              <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                <tr>
+                  <th scope="col" className="px-4 py-3">
+                    Product
+                  </th>
+                  <th scope="col" className="px-4 py-3">
+                    Quantity
+                  </th>
+                  <th scope="col" className="px-4 py-3">
+                    Unit price
+                  </th>
+                  <th scope="col" className="px-4 py-3">
+                    Subtotal
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200 bg-white text-sm">
+                {cart.items.map((item) => {
+                  const limitedAvailability =
+                    typeof item.availableQuantity === 'number' && item.availableQuantity >= 0 &&
+                    item.quantity > item.availableQuantity;
+                  return (
+                    <tr key={`${item.productId}-${item.variantId ?? 'base'}`} className="align-top">
+                      <td className="px-4 py-4">
+                        <div className="flex items-start gap-3">
+                          <div className="h-14 w-14 overflow-hidden rounded-lg border border-slate-200 bg-slate-100">
+                            {item.thumbnailUrl ? (
+                              <img
+                                src={item.thumbnailUrl}
+                                alt={item.productName}
+                                className="h-full w-full object-cover"
+                              />
+                            ) : (
+                              <div className="flex h-full w-full items-center justify-center text-xs font-semibold uppercase text-slate-400">
+                                {item.productName.charAt(0)}
+                              </div>
+                            )}
+                          </div>
+                          <div className="space-y-1">
+                            <p className="font-semibold text-slate-800">{item.productName}</p>
+                            {item.variantLabel && (
+                              <p className="text-xs text-slate-500">Variant: {item.variantLabel}</p>
+                            )}
+                            {item.sku && (
+                              <p className="text-xs uppercase tracking-wide text-slate-400">SKU: {item.sku}</p>
+                            )}
+                            {!item.inStock && (
+                              <span className="inline-flex items-center rounded-full bg-rose-50 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-rose-600">
+                                Out of stock
+                              </span>
+                            )}
+                            {limitedAvailability && (
+                              <span className="block text-xs font-medium text-amber-600">
+                                Only {item.availableQuantity} available
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-4 text-sm text-slate-600">
+                        <div className="font-semibold text-slate-800">{item.quantity}</div>
+                        {typeof item.availableQuantity === 'number' && (
+                          <div className="text-xs text-slate-400">In stock: {item.availableQuantity}</div>
+                        )}
+                      </td>
+                      <td className="px-4 py-4 text-sm font-medium text-slate-700">
+                        {formatMoney(item.unitPrice)}
+                      </td>
+                      <td className="px-4 py-4 text-sm font-semibold text-slate-900">
+                        {formatMoney(item.lineTotal)}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    );
+  };
+
   const renderPanel = () => {
     const isCreate = panelMode === 'create';
     const isEditable = isCreate ? canCreateUser : canManageUsers;
@@ -1558,6 +1726,8 @@ const UsersPage = () => {
             createUser.mutate();
           } else if (activeTab === 'access') {
             updatePermissions.mutate();
+          } else if (activeTab === 'cart') {
+            return;
           } else {
             updateUser.mutate();
           }
@@ -1647,7 +1817,8 @@ const UsersPage = () => {
             {(
               [
                 { key: 'profile', label: 'Profile details' },
-                { key: 'access', label: 'Roles & permissions' }
+                { key: 'access', label: 'Roles & permissions' },
+                { key: 'cart', label: 'Cart' }
               ] as Array<{ key: DetailTab; label: string }>
             ).map((tab) => (
               <button
@@ -1669,8 +1840,10 @@ const UsersPage = () => {
               <p className="text-sm text-slate-500">Loading user details…</p>
             ) : activeTab === 'profile' ? (
               renderProfileTab(isEditable, isCreate)
-            ) : (
+            ) : activeTab === 'access' ? (
               renderAccessTab(isEditable)
+            ) : (
+              renderCartTab()
             )}
           </div>
         </div>

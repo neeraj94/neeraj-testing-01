@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>API Reference Portal</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header>
+    <h1>RBAC Commerce API Reference</h1>
+    <p>Centralised documentation for the headless commerce platform. Use the quick search and module shortcuts below to jump directly to the endpoint you need.</p>
+    <div class="search-box">
+      <input type="search" id="search" placeholder="Filter modules…" oninput="filterCards(event)" />
+    </div>
+  </header>
+  <main>
+    <section class="section-card">
+      <h2>Getting Started</h2>
+      <p>The API is served under the base URL <code>/api/v1</code>. All private endpoints require a valid JWT bearer token obtained via the authentication module. Unless otherwise noted, requests must include <code>Content-Type: application/json</code> and <code>Authorization: Bearer &lt;token&gt;</code>.</p>
+      <div class="anchor-nav">
+        <a href="auth.html">Authentication</a>
+        <a href="users.html">Users</a>
+        <a href="roles.html">Roles</a>
+        <a href="permissions.html">Permissions</a>
+        <a href="products.html">Products</a>
+        <a href="categories.html">Categories</a>
+        <a href="coupons.html">Coupons</a>
+        <a href="reviews.html">Reviews</a>
+        <a href="gallery.html">Media Gallery</a>
+        <a href="settings.html">Settings</a>
+        <a href="shipping.html">Shipping</a>
+        <a href="wedges.html">Wedges</a>
+        <a href="public.html">Public Storefront</a>
+      </div>
+    </section>
+
+    <section class="section-card">
+      <h2>Module Directory</h2>
+      <div class="nav-grid" id="moduleGrid">
+        <a class="nav-card" href="auth.html">
+          <h3>Authentication</h3>
+          <p>Signup, login, refresh tokens, logout, and email verification workflows.</p>
+        </a>
+        <a class="nav-card" href="users.html">
+          <h3>Users</h3>
+          <p>User CRUD, profile management, invitations, status toggles, and assignments.</p>
+        </a>
+        <a class="nav-card" href="roles.html">
+          <h3>Roles</h3>
+          <p>Role catalog, creation, updates, and permission binding endpoints.</p>
+        </a>
+        <a class="nav-card" href="permissions.html">
+          <h3>Permissions</h3>
+          <p>Permission directory, bulk assignment helpers, and audit logs.</p>
+        </a>
+        <a class="nav-card" href="products.html">
+          <h3>Products &amp; Catalog</h3>
+          <p>Product authoring, media, variants, pricing, inventory, and dashboard listings.</p>
+        </a>
+        <a class="nav-card" href="categories.html">
+          <h3>Categories &amp; Brands</h3>
+          <p>Category tree management, brand registry, and storefront taxonomy endpoints.</p>
+        </a>
+        <a class="nav-card" href="coupons.html">
+          <h3>Coupons &amp; Offers</h3>
+          <p>Admin coupon management plus public promotion lookups.</p>
+        </a>
+        <a class="nav-card" href="reviews.html">
+          <h3>Reviews</h3>
+          <p>Moderation, visibility, reply, and public rating feed endpoints.</p>
+        </a>
+        <a class="nav-card" href="gallery.html">
+          <h3>Media &amp; Gallery</h3>
+          <p>Asset folders, uploads, image metadata, and signed URL retrieval.</p>
+        </a>
+        <a class="nav-card" href="settings.html">
+          <h3>Platform Settings</h3>
+          <p>Storefront configuration, email templates, tax, and finance settings.</p>
+        </a>
+        <a class="nav-card" href="shipping.html">
+          <h3>Shipping &amp; Logistics</h3>
+          <p>Shipping methods, zones, service level agreements, and rate cards.</p>
+        </a>
+        <a class="nav-card" href="wedges.html">
+          <h3>Wedges &amp; Highlights</h3>
+          <p>Product benefit wedges, icon uploads, and assignment helpers.</p>
+        </a>
+        <a class="nav-card" href="public.html">
+          <h3>Public Storefront APIs</h3>
+          <p>Anonymous catalog endpoints for coupons, products, brands, and categories.</p>
+        </a>
+      </div>
+    </section>
+
+    <section class="section-card">
+      <h2>Common Error Codes</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Status</th>
+            <th>Message Template</th>
+            <th>Typical Causes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="status success">200 / 204</td>
+            <td>Success / No Content</td>
+            <td>Request processed without validation errors.</td>
+          </tr>
+          <tr>
+            <td class="status client">400</td>
+            <td>Validation failure, missing fields</td>
+            <td>Constraint violations, malformed JSON, unsupported filters.</td>
+          </tr>
+          <tr>
+            <td class="status client">401</td>
+            <td>Unauthorized</td>
+            <td>Missing or expired bearer token.</td>
+          </tr>
+          <tr>
+            <td class="status client">403</td>
+            <td>Forbidden</td>
+            <td>User lacks the permission guarding the endpoint.</td>
+          </tr>
+          <tr>
+            <td class="status client">404</td>
+            <td>Resource not found</td>
+            <td>Invalid ID/slug or entity removed.</td>
+          </tr>
+          <tr>
+            <td class="status client">409</td>
+            <td>Conflict</td>
+            <td>Uniqueness collisions (codes, slugs, SKUs), invalid transitions.</td>
+          </tr>
+          <tr>
+            <td class="status server">500</td>
+            <td>Internal Server Error</td>
+            <td>Unexpected server conditions, database connectivity, or dependency failures.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+  </main>
+  <footer>
+    <p>Last updated: <span id="lastUpdated"></span></p>
+  </footer>
+  <script>
+    const lastUpdated = new Date().toISOString().split('T')[0];
+    document.getElementById('lastUpdated').textContent = lastUpdated;
+    const searchInput = document.getElementById('search');
+    const cards = Array.from(document.querySelectorAll('#moduleGrid .nav-card'));
+    function filterCards(event) {
+      const term = event.target.value.toLowerCase();
+      cards.forEach(card => {
+        const text = card.textContent.toLowerCase();
+        card.style.display = text.includes(term) ? '' : 'none';
+      });
+    }
+    window.filterCards = filterCards;
+  </script>
+</body>
+</html>

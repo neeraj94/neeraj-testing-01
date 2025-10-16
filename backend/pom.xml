@@ -117,6 +117,22 @@
     <build>
         <plugins>
             <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-clean-plugin</artifactId>
+                <version>3.3.2</version>
+                <configuration>
+                    <filesets>
+                        <fileset>
+                            <directory>${project.basedir}/src/main/java/com/example/rbac/products/dto/public</directory>
+                            <includes>
+                                <include>**/*</include>
+                            </includes>
+                            <followSymlinks>false</followSymlinks>
+                        </fileset>
+                    </filesets>
+                </configuration>
+            </plugin>
+            <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <version>${spring.boot.version}</version>
@@ -127,6 +143,9 @@
                 <version>3.11.0</version>
                 <configuration>
                     <release>${java.version}</release>
+                    <excludes>
+                        <exclude>**/products/dto/public/**</exclude>
+                    </excludes>
                     <compilerArgs>
                         <arg>-parameters</arg>
                     </compilerArgs>
