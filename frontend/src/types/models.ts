@@ -30,6 +30,17 @@ export interface User extends Record<string, unknown> {
   revokedPermissions: PermissionKey[];
 }
 
+export interface UserRecentProduct {
+  productId: number;
+  productName: string;
+  productSlug: string;
+  thumbnailUrl?: string | null;
+  sku?: string | null;
+  lastViewedAt: string;
+  unitPrice?: number | null;
+  finalPrice?: number | null;
+}
+
 export interface UserSummaryMetrics {
   totalUsers: number;
   activeUsers: number;

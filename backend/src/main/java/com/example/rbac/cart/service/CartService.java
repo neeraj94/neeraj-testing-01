@@ -167,6 +167,69 @@ public class CartService {
         return cart.map(cartMapper::toDto).orElseGet(this::emptyCartDto);
     }
 
+    @Transactional
+    @PreAuthorize("hasAnyAuthority('USER_UPDATE','USER_UPDATE_GLOBAL')")
+    public CartDto addItemForUser(Long userId, AddCartItemRequest request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "User not found"));
+        Cart cart = getOrCreateCart(user);
+        Product product = productRepository.findById(request.getProductId())
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Product not found"));
+        ProductVariant variant = resolveVariant(product, request.getVariantId());
+        int quantity = Optional.ofNullable(request.getQuantity()).orElse(1);
+        CartItem item = findExistingItem(cart, product, variant);
+        int newQuantity = quantity;
+        if (item != null && item.getQuantity() != null) {
+            newQuantity = item.getQuantity() + quantity;
+        }
+        enforceQuantityBounds(product, variant, newQuantity);
+        if (item == null) {
+            item = new CartItem();
+            item.setCart(cart);
+            item.setProduct(product);
+            item.setVariant(variant);
+            cart.getItems().add(item);
+        }
+        item.setQuantity(newQuantity);
+        item.setUnitPrice(calculateUnitPrice(product, variant));
+        item.setVariantLabel(variant != null ? variant.getVariantKey() : null);
+        cartRepository.save(cart);
+        cartRepository.flush();
+        return cartMapper.toDto(cart);
+    }
+
+    @Transactional
+    @PreAuthorize("hasAnyAuthority('USER_UPDATE','USER_UPDATE_GLOBAL')")
+    public CartDto updateItemForUser(Long userId, Long itemId, UpdateCartItemRequest request) {
+        Cart cart = getExistingCart(userId);
+        CartItem item = cart.getItems().stream()
+                .filter(existing -> Objects.equals(existing.getId(), itemId))
+                .findFirst()
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Cart item not found"));
+        int quantity = Optional.ofNullable(request.getQuantity()).orElse(1);
+        Product product = item.getProduct();
+        ProductVariant variant = item.getVariant();
+        enforceQuantityBounds(product, variant, quantity);
+        item.setQuantity(quantity);
+        item.setUnitPrice(calculateUnitPrice(product, variant));
+        cartRepository.save(cart);
+        cartRepository.flush();
+        return cartMapper.toDto(cart);
+    }
+
+    @Transactional
+    @PreAuthorize("hasAnyAuthority('USER_UPDATE','USER_UPDATE_GLOBAL')")
+    public CartDto removeItemForUser(Long userId, Long itemId) {
+        Cart cart = getExistingCart(userId);
+        boolean removed = cart.getItems().removeIf(existing -> Objects.equals(existing.getId(), itemId));
+        if (!removed) {
+            throw new ApiException(HttpStatus.NOT_FOUND, "Cart item not found");
+        }
+        cartRepository.save(cart);
+        cartRepository.flush();
+        return cartMapper.toDto(cart);
+    }
+
     private Cart getExistingCart(Long userId) {
         return cartRepository.findByUserId(userId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Cart is empty"));
@@ -229,7 +292,7 @@ public class CartService {
             if (product.getDiscountType() == DiscountType.PERCENTAGE) {
                 BigDecimal percentage = discountValue.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP);
                 price = price.subtract(price.multiply(percentage));
-            } else if (product.getDiscountType() == DiscountType.FLAT) {
+            } else if (product.getDiscountType() == DiscountType.FLAT_VALUE) {
                 price = price.subtract(discountValue);
             }
         }

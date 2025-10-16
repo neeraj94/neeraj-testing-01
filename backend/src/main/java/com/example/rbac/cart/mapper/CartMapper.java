@@ -6,12 +6,15 @@ import com.example.rbac.cart.model.Cart;
 import com.example.rbac.cart.model.CartItem;
 import com.example.rbac.products.model.MediaAsset;
 import com.example.rbac.products.model.Product;
+import com.example.rbac.products.model.ProductGalleryImage;
 import com.example.rbac.products.model.ProductVariant;
+import com.example.rbac.products.model.ProductVariantMedia;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 @Component
@@ -24,7 +27,11 @@ public class CartMapper {
         List<CartItemDto> items = new ArrayList<>();
         int totalQuantity = 0;
         BigDecimal subtotal = BigDecimal.ZERO;
-        for (CartItem item : cart.getItems()) {
+        List<CartItem> sortedItems = new ArrayList<>(cart.getItems());
+        sortedItems.sort(Comparator
+                .comparing(CartItem::getCreatedAt, Comparator.nullsLast(Comparator.naturalOrder()))
+                .thenComparing(CartItem::getId, Comparator.nullsLast(Comparator.naturalOrder())));
+        for (CartItem item : sortedItems) {
             CartItemDto itemDto = toItemDto(item);
             items.add(itemDto);
             if (itemDto.getQuantity() != null) {
@@ -59,8 +66,7 @@ public class CartMapper {
             dto.setSku(resolveSku(item));
             dto.setAvailableQuantity(resolveAvailableQuantity(item));
             dto.setInStock(resolveInStock(item));
-            MediaAsset thumbnail = product.getThumbnail();
-            dto.setThumbnailUrl(thumbnail != null ? thumbnail.getUrl() : null);
+            dto.setThumbnailUrl(resolveThumbnailUrl(product, item.getVariant()));
         }
         return dto;
     }
@@ -89,5 +95,29 @@ public class CartMapper {
             return true;
         }
         return available > 0;
+    }
+
+    private String resolveThumbnailUrl(Product product, ProductVariant variant) {
+        if (variant != null && variant.getMedia() != null) {
+            for (ProductVariantMedia media : variant.getMedia()) {
+                if (media != null && media.getMedia() != null && media.getMedia().getUrl() != null
+                        && !media.getMedia().getUrl().isBlank()) {
+                    return media.getMedia().getUrl();
+                }
+            }
+        }
+        MediaAsset thumbnail = product.getThumbnail();
+        if (thumbnail != null && thumbnail.getUrl() != null && !thumbnail.getUrl().isBlank()) {
+            return thumbnail.getUrl();
+        }
+        if (product.getGalleryImages() != null) {
+            for (ProductGalleryImage image : product.getGalleryImages()) {
+                if (image != null && image.getMedia() != null && image.getMedia().getUrl() != null
+                        && !image.getMedia().getUrl().isBlank()) {
+                    return image.getMedia().getUrl();
+                }
+            }
+        }
+        return null;
     }
 }

@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../services/http';
-import type { Pagination, Permission, Role, User, UserSummaryMetrics } from '../types/models';
+import type { Pagination, Permission, Role, User, UserSummaryMetrics, UserRecentProduct } from '../types/models';
 import type { Cart } from '../types/cart';
 import { useToast } from '../components/ToastProvider';
 import { useConfirm } from '../components/ConfirmDialogProvider';
@@ -17,6 +18,7 @@ import PageHeader from '../components/PageHeader';
 import PageSection from '../components/PageSection';
 import PaginationControls from '../components/PaginationControls';
 import { formatCurrency } from '../utils/currency';
+import type { ProductDetail, ProductSummary } from '../types/product';
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100];
 const DEFAULT_PAGE_SIZE = 25;
@@ -57,7 +59,7 @@ const TrashIcon = () => (
 );
 
 type PanelMode = 'empty' | 'create' | 'detail';
-type DetailTab = 'profile' | 'access' | 'cart';
+type DetailTab = 'profile' | 'access' | 'cart' | 'recent';
 type UserSortField = 'name' | 'email' | 'status' | 'audience' | 'groups';
 
 type UserFormState = {
@@ -103,6 +105,7 @@ const isCustomerAccount = (user: User) =>
 
 const UsersPage = () => {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const { notify } = useToast();
   const confirm = useConfirm();
   const { permissions: grantedPermissions, user: currentUser, roles: currentRoles } = useAppSelector((state) => state.auth);
@@ -121,6 +124,116 @@ const UsersPage = () => {
   const [statusUpdateId, setStatusUpdateId] = useState<number | null>(null);
   const [sort, setSort] = useState<{ field: UserSortField; direction: 'asc' | 'desc' }>({ field: 'name', direction: 'asc' });
   const [isExporting, setIsExporting] = useState(false);
+  const [cartItemDrafts, setCartItemDrafts] = useState<Record<number, number>>({});
+  const [isCartAddOpen, setIsCartAddOpen] = useState(false);
+  const [cartProductSearchTerm, setCartProductSearchTerm] = useState('');
+  const [cartSelectedProductId, setCartSelectedProductId] = useState<number | null>(null);
+  const [cartSelectedVariantId, setCartSelectedVariantId] = useState<number | null>(null);
+  const [cartAddQuantity, setCartAddQuantity] = useState(1);
+  const [updatingItemId, setUpdatingItemId] = useState<number | null>(null);
+  const [removingItemId, setRemovingItemId] = useState<number | null>(null);
+
+  const clampQuantity = (value: number) => {
+    if (!Number.isFinite(value)) {
+      return 1;
+    }
+    return Math.max(1, Math.floor(value));
+  };
+
+  const renderRecentTab = () => {
+    if (panelMode !== 'detail' || !selectedUserId) {
+      return (
+        <section className="rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-600 shadow-sm">
+          Select a user from the list to review their recently viewed products.
+        </section>
+      );
+    }
+
+    if (recentViewsQuery.isLoading || recentViewsQuery.isFetching) {
+      return (
+        <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          <p className="text-sm text-slate-500">Loading recently viewed products…</p>
+        </section>
+      );
+    }
+
+    if (recentViewsQuery.isError) {
+      const errorMessage = extractErrorMessage(recentViewsQuery.error, 'Unable to load recently viewed products.');
+      return (
+        <section className="space-y-4 rounded-xl border border-rose-200 bg-rose-50/80 p-6 shadow-sm">
+          <div className="text-sm font-semibold text-rose-700">{errorMessage}</div>
+          <button
+            type="button"
+            onClick={() => recentViewsQuery.refetch()}
+            className="inline-flex items-center justify-center rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-700"
+          >
+            Try again
+          </button>
+        </section>
+      );
+    }
+
+    if (!recentViews.length) {
+      return (
+        <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h3 className="text-sm font-semibold text-slate-800">No recent activity</h3>
+          <p className="mt-2 text-sm text-slate-500">
+            We haven’t recorded any recently viewed products for this customer yet. As soon as they browse the catalogue, their history will appear here.
+          </p>
+        </section>
+      );
+    }
+
+    return (
+      <section className="space-y-4">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h3 className="text-sm font-semibold text-slate-800">Recently viewed products</h3>
+            <p className="text-xs text-slate-500">Most recent activity appears first.</p>
+          </div>
+          <span className="text-xs uppercase tracking-wide text-slate-400">{recentViews.length} items</span>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {recentViews.map((item) => {
+            const finalPrice = item.finalPrice ?? item.unitPrice ?? 0;
+            const listPrice = item.unitPrice ?? null;
+            const hasDiscount = listPrice != null && finalPrice < listPrice;
+            return (
+              <button
+                key={`${item.productId}-${item.lastViewedAt}`}
+                type="button"
+                onClick={() => handleNavigateToProduct(item.productId)}
+                className="flex w-full items-start gap-3 rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
+              >
+                <div className="h-16 w-16 overflow-hidden rounded-xl border border-slate-200 bg-slate-100">
+                  {item.thumbnailUrl ? (
+                    <img src={item.thumbnailUrl} alt={item.productName} className="h-full w-full object-cover" />
+                  ) : (
+                    <span className="flex h-full w-full items-center justify-center text-sm font-semibold uppercase text-slate-400">
+                      {item.productName.charAt(0)}
+                    </span>
+                  )}
+                </div>
+                <div className="flex-1 space-y-1">
+                  <p className="text-sm font-semibold text-slate-800">{item.productName}</p>
+                  {item.sku && (
+                    <p className="text-xs uppercase tracking-wide text-slate-400">SKU: {item.sku}</p>
+                  )}
+                  <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+                    <span>{formatCurrency(finalPrice, undefined)}</span>
+                    {hasDiscount && (
+                      <span className="text-xs font-normal text-slate-400 line-through">{formatCurrency(listPrice ?? 0, undefined)}</span>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-500">Last viewed {formatDateTime(item.lastViewedAt)}</p>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+    );
+  };
 
   const openUserDetail = useCallback(
     (userId: number) => {
@@ -195,6 +308,23 @@ const UsersPage = () => {
     () => buildPermissionGroups(permissionsCatalog),
     [permissionsCatalog]
   );
+
+  const handleNavigateToProduct = useCallback(
+    (productId: number) => {
+      navigate('/products', { state: { openProductId: productId } });
+    },
+    [navigate]
+  );
+
+  const describeVariant = useCallback((variant: ProductDetail['variants'][number]) => {
+    if (!variant) {
+      return 'Variant';
+    }
+    if (variant.values && variant.values.length > 0) {
+      return variant.values.map((value) => value.value).join(' • ');
+    }
+    return variant.key ?? 'Variant';
+  }, []);
 
   const permissionLookup = useMemo(() => {
     const map = new Map<string, Permission>();
@@ -358,6 +488,113 @@ const UsersPage = () => {
     },
     enabled: panelMode === 'detail' && activeTab === 'cart' && selectedUserId != null
   });
+
+  const cartProductSearchQuery = useQuery<Pagination<ProductSummary>>({
+    queryKey: ['users', selectedUserId, 'cart-product-search', cartProductSearchTerm],
+    queryFn: async () => {
+      const trimmed = cartProductSearchTerm.trim();
+      const { data } = await api.get<Pagination<ProductSummary>>('/products', {
+        params: {
+          page: 0,
+          size: 10,
+          search: trimmed || undefined
+        }
+      });
+      return data;
+    },
+    enabled: panelMode === 'detail' && activeTab === 'cart' && isCartAddOpen && cartProductSearchTerm.trim().length >= 2
+  });
+
+  const cartSelectedProductQuery = useQuery<ProductDetail>({
+    queryKey: ['users', selectedUserId, 'cart-product-detail', cartSelectedProductId],
+    queryFn: async () => {
+      const { data } = await api.get<ProductDetail>(`/products/${cartSelectedProductId}`);
+      return data;
+    },
+    enabled: panelMode === 'detail' && activeTab === 'cart' && isCartAddOpen && cartSelectedProductId != null
+  });
+
+  const recentViewsQuery = useQuery<UserRecentProduct[]>({
+    queryKey: ['users', selectedUserId, 'recent-views'],
+    queryFn: async () => {
+      const { data } = await api.get<UserRecentProduct[]>(`/users/${selectedUserId}/recent-views`);
+      return data;
+    },
+    enabled: panelMode === 'detail' && activeTab === 'recent' && selectedUserId != null
+  });
+
+  const cartProductOptions = cartProductSearchQuery.data?.content ?? [];
+  const isSearchingCartProducts = cartProductSearchQuery.isFetching;
+  const selectedProductDetail = cartSelectedProductQuery.data;
+  const recentViews = recentViewsQuery.data ?? [];
+
+  useEffect(() => {
+    if (cartQuery.data && selectedUserId != null) {
+      const drafts: Record<number, number> = {};
+      cartQuery.data.items.forEach((item) => {
+        if (item.id != null) {
+          drafts[item.id] = item.quantity;
+        }
+      });
+      setCartItemDrafts(drafts);
+    } else {
+      setCartItemDrafts({});
+    }
+  }, [cartQuery.data, selectedUserId]);
+
+  useEffect(() => {
+    if (activeTab !== 'cart') {
+      setIsCartAddOpen(false);
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (!isCartAddOpen) {
+      setCartProductSearchTerm('');
+      setCartSelectedProductId(null);
+      setCartSelectedVariantId(null);
+      setCartAddQuantity(1);
+    }
+  }, [isCartAddOpen]);
+
+  useEffect(() => {
+    if (!isCartAddOpen) {
+      return;
+    }
+    const detail = selectedProductDetail;
+    if (!detail) {
+      setCartSelectedVariantId(null);
+      return;
+    }
+    if (!detail.variants || detail.variants.length === 0) {
+      setCartSelectedVariantId(null);
+      return;
+    }
+    if (!cartSelectedVariantId || !detail.variants.some((variant) => variant.id === cartSelectedVariantId)) {
+      const firstVariant = detail.variants.find((variant) => variant.id != null);
+      setCartSelectedVariantId(firstVariant?.id ?? null);
+    }
+  }, [isCartAddOpen, selectedProductDetail, cartSelectedVariantId]);
+
+  useEffect(() => {
+    if (!isCartAddOpen || !selectedProductDetail) {
+      return;
+    }
+    const minPurchase = clampQuantity(selectedProductDetail.minPurchaseQuantity ?? 1);
+    setCartAddQuantity((current) => Math.max(minPurchase, clampQuantity(current)));
+  }, [isCartAddOpen, selectedProductDetail?.id]);
+
+  useEffect(() => {
+    if (!isCartAddOpen || !selectedProductDetail) {
+      return;
+    }
+    const variant = selectedProductDetail.variants.find((entry) => entry.id === cartSelectedVariantId);
+    const available = variant?.quantity ?? selectedProductDetail?.pricing?.stockQuantity ?? null;
+    if (available != null) {
+      const clampedAvailable = clampQuantity(available);
+      setCartAddQuantity((current) => Math.min(clampedAvailable, clampQuantity(current)));
+    }
+  }, [isCartAddOpen, cartSelectedVariantId, selectedProductDetail]);
 
   const updateUser = useMutation({
     mutationFn: async () => {
@@ -567,6 +804,105 @@ const UsersPage = () => {
     },
     onError: (error) => {
       notify({ type: 'error', message: extractErrorMessage(error, 'Unable to unlock user account.') });
+    }
+  });
+
+  const addCartItemMutation = useMutation({
+    mutationFn: async ({
+      productId,
+      variantId,
+      quantity
+    }: {
+      productId: number;
+      variantId?: number | null;
+      quantity: number;
+    }) => {
+      if (!selectedUserId) {
+        throw new Error('No user selected');
+      }
+      const { data } = await api.post<Cart>(`/users/${selectedUserId}/cart/items`, {
+        productId,
+        variantId: variantId ?? undefined,
+        quantity
+      });
+      return data;
+    },
+    onSuccess: (data) => {
+      if (selectedUserId) {
+        queryClient.setQueryData(['users', selectedUserId, 'cart'], data);
+        queryClient.invalidateQueries({ queryKey: ['users', selectedUserId, 'cart'] });
+      }
+      notify({ type: 'success', message: 'Cart updated successfully.' });
+      setIsCartAddOpen(false);
+       setCartProductSearchTerm('');
+       setCartSelectedProductId(null);
+       setCartSelectedVariantId(null);
+       setCartAddQuantity(1);
+    },
+    onError: (error) => {
+      notify({ type: 'error', message: extractErrorMessage(error, 'Unable to add item to cart.') });
+    }
+  });
+
+  const updateCartItemMutation = useMutation({
+    mutationFn: async ({ itemId, quantity }: { itemId: number; quantity: number }) => {
+      if (!selectedUserId) {
+        throw new Error('No user selected');
+      }
+      const { data } = await api.patch<Cart>(`/users/${selectedUserId}/cart/items/${itemId}`, { quantity });
+      return data;
+    },
+    onMutate: ({ itemId }) => {
+      setUpdatingItemId(itemId);
+    },
+    onSuccess: (data, variables) => {
+      if (selectedUserId) {
+        queryClient.setQueryData(['users', selectedUserId, 'cart'], data);
+        queryClient.invalidateQueries({ queryKey: ['users', selectedUserId, 'cart'] });
+      }
+      notify({ type: 'success', message: 'Cart item updated.' });
+      if (variables.itemId != null) {
+        setCartItemDrafts((previous) => ({ ...previous, [variables.itemId]: variables.quantity }));
+      }
+    },
+    onError: (error) => {
+      notify({ type: 'error', message: extractErrorMessage(error, 'Unable to update cart item.') });
+    },
+    onSettled: () => {
+      setUpdatingItemId(null);
+    }
+  });
+
+  const removeCartItemMutation = useMutation({
+    mutationFn: async (itemId: number) => {
+      if (!selectedUserId) {
+        throw new Error('No user selected');
+      }
+      const { data } = await api.delete<Cart>(`/users/${selectedUserId}/cart/items/${itemId}`);
+      return data;
+    },
+    onMutate: (itemId) => {
+      setRemovingItemId(itemId);
+    },
+    onSuccess: (data, itemId) => {
+      if (selectedUserId) {
+        queryClient.setQueryData(['users', selectedUserId, 'cart'], data);
+        queryClient.invalidateQueries({ queryKey: ['users', selectedUserId, 'cart'] });
+      }
+      if (itemId != null) {
+        setCartItemDrafts((previous) => {
+          const next = { ...previous };
+          delete next[itemId];
+          return next;
+        });
+      }
+      notify({ type: 'success', message: 'Item removed from cart.' });
+    },
+    onError: (error) => {
+      notify({ type: 'error', message: extractErrorMessage(error, 'Unable to remove cart item.') });
+    },
+    onSettled: () => {
+      setRemovingItemId(null);
     }
   });
 
@@ -1576,123 +1912,430 @@ const UsersPage = () => {
       );
     }
 
-    if (!cartQuery.data || cartQuery.data.items.length === 0) {
-      return (
-        <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h3 className="text-sm font-semibold text-slate-800">No cart items</h3>
-          <p className="mt-2 text-sm text-slate-500">
-            This customer has not added any products to their cart yet. Items will appear here as soon as they engage with the storefront.
-          </p>
-        </section>
-      );
-    }
+    const cart = cartQuery.data ?? { items: [], totalQuantity: 0, subtotal: 0 };
+    const items = [...(cart.items ?? [])].sort((a, b) => {
+      const firstId = a.id ?? 0;
+      const secondId = b.id ?? 0;
+      return firstId - secondId;
+    });
 
-    const cart = cartQuery.data;
-    const formatMoney = (value: number) => formatCurrency(value, undefined);
+    const parseAmount = (value: number | string | null | undefined) => {
+      if (typeof value === 'number') {
+        return Number.isFinite(value) ? value : 0;
+      }
+      if (typeof value === 'string') {
+        const parsed = Number(value);
+        return Number.isFinite(parsed) ? parsed : 0;
+      }
+      return 0;
+    };
+
+    const formatMoney = (value: number | string | null | undefined) => formatCurrency(parseAmount(value), undefined);
+
+    const handleQuantityInputChange = (itemId: number, rawValue: string) => {
+      const numeric = Number(rawValue);
+      setCartItemDrafts((previous) => ({ ...previous, [itemId]: clampQuantity(numeric) }));
+    };
+
+    const handleSubmitQuantity = (item: Cart['items'][number]) => {
+      if (!item.id) {
+        notify({ type: 'error', message: 'Unable to update this cart line. Refresh and try again.' });
+        return;
+      }
+      const draftValue = cartItemDrafts[item.id] ?? item.quantity;
+      const nextQuantity = clampQuantity(draftValue);
+      if (nextQuantity === item.quantity) {
+        return;
+      }
+      if (item.availableQuantity != null && nextQuantity > item.availableQuantity) {
+        notify({ type: 'error', message: `Only ${Math.max(0, item.availableQuantity)} units are available in stock.` });
+        return;
+      }
+      updateCartItemMutation.mutate({ itemId: item.id, quantity: nextQuantity });
+    };
+
+    const handleRemoveItem = async (item: Cart['items'][number]) => {
+      if (!item.id) {
+        notify({ type: 'error', message: 'Unable to remove this cart line. Refresh and try again.' });
+        return;
+      }
+      const confirmed = await confirm({
+        title: 'Remove product?',
+        description: `Remove ${item.productName} from this cart?`,
+        confirmLabel: 'Remove',
+        tone: 'danger'
+      });
+      if (!confirmed) {
+        return;
+      }
+      removeCartItemMutation.mutate(item.id);
+    };
+
+    const selectedVariant = selectedProductDetail?.variants.find((entry) => entry.id === cartSelectedVariantId);
+    const selectedVariantAvailability = selectedVariant?.quantity ?? selectedProductDetail?.pricing?.stockQuantity ?? null;
+    const selectedProductImage =
+      selectedVariant?.media?.[0]?.url ??
+      selectedProductDetail?.thumbnail?.url ??
+      selectedProductDetail?.gallery?.[0]?.url ??
+      null;
+
+    const handleAddCartItemForUser = () => {
+      if (!selectedProductDetail || !cartSelectedProductId) {
+        notify({ type: 'error', message: 'Select a product before adding it to the cart.' });
+        return;
+      }
+      const requiresVariant = selectedProductDetail.variants.length > 0;
+      if (requiresVariant && !cartSelectedVariantId) {
+        notify({ type: 'error', message: 'Select a variant before adding this product.' });
+        return;
+      }
+      const quantity = clampQuantity(cartAddQuantity);
+      const variant = requiresVariant
+        ? selectedProductDetail.variants.find((entry) => entry.id === cartSelectedVariantId)
+        : undefined;
+      const available = variant?.quantity ?? selectedProductDetail?.pricing?.stockQuantity ?? null;
+      if (available != null && quantity > available) {
+        notify({ type: 'error', message: `Only ${Math.max(0, available)} units are available in stock.` });
+        return;
+      }
+      const minimum = clampQuantity(selectedProductDetail.minPurchaseQuantity ?? 1);
+      if (quantity < minimum) {
+        notify({ type: 'error', message: `Minimum purchase quantity is ${minimum}.` });
+        return;
+      }
+      addCartItemMutation.mutate({
+        productId: cartSelectedProductId,
+        variantId: requiresVariant ? cartSelectedVariantId : null,
+        quantity
+      });
+    };
+
+    const disableAddButton =
+      addCartItemMutation.isPending ||
+      !selectedProductDetail ||
+      (selectedProductDetail?.variants.length ? !cartSelectedVariantId : false) ||
+      (selectedVariantAvailability != null && selectedVariantAvailability <= 0);
 
     return (
       <div className="space-y-6">
         <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <h3 className="text-sm font-semibold text-slate-800">Cart snapshot</h3>
               <p className="mt-1 text-xs text-slate-500">
                 Last updated {cart.updatedAt ? formatDateTime(cart.updatedAt) : 'recently'}
               </p>
             </div>
-            <div className="grid gap-3 text-sm text-slate-700 sm:grid-flow-col sm:items-center sm:justify-end">
-              <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-center shadow-sm">
-                <div className="text-xs uppercase tracking-wide text-slate-500">Items</div>
-                <div className="text-lg font-semibold text-slate-800">{cart.totalQuantity}</div>
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="grid grid-cols-2 gap-3 text-sm text-slate-700 sm:flex sm:items-center">
+                <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-center shadow-sm">
+                  <div className="text-xs uppercase tracking-wide text-slate-500">Items</div>
+                  <div className="text-lg font-semibold text-slate-800">{cart.totalQuantity ?? 0}</div>
+                </div>
+                <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-center shadow-sm">
+                  <div className="text-xs uppercase tracking-wide text-slate-500">Subtotal</div>
+                  <div className="text-lg font-semibold text-slate-800">{formatMoney(cart.subtotal)}</div>
+                </div>
               </div>
-              <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-center shadow-sm">
-                <div className="text-xs uppercase tracking-wide text-slate-500">Subtotal</div>
-                <div className="text-lg font-semibold text-slate-800">{formatMoney(cart.subtotal)}</div>
-              </div>
+              <button
+                type="button"
+                onClick={() => setIsCartAddOpen((open) => !open)}
+                className="inline-flex items-center justify-center rounded-lg border border-primary/30 bg-primary/10 px-4 py-2 text-sm font-semibold text-primary shadow-sm transition hover:bg-primary/20"
+              >
+                {isCartAddOpen ? 'Close add panel' : 'Add product'}
+              </button>
             </div>
           </div>
         </section>
-        <section className="rounded-xl border border-slate-200 bg-white shadow-sm">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-200">
-              <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
-                <tr>
-                  <th scope="col" className="px-4 py-3">
-                    Product
-                  </th>
-                  <th scope="col" className="px-4 py-3">
-                    Quantity
-                  </th>
-                  <th scope="col" className="px-4 py-3">
-                    Unit price
-                  </th>
-                  <th scope="col" className="px-4 py-3">
-                    Subtotal
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200 bg-white text-sm">
-                {cart.items.map((item) => {
-                  const limitedAvailability =
-                    typeof item.availableQuantity === 'number' && item.availableQuantity >= 0 &&
-                    item.quantity > item.availableQuantity;
-                  return (
-                    <tr key={`${item.productId}-${item.variantId ?? 'base'}`} className="align-top">
-                      <td className="px-4 py-4">
-                        <div className="flex items-start gap-3">
-                          <div className="h-14 w-14 overflow-hidden rounded-lg border border-slate-200 bg-slate-100">
-                            {item.thumbnailUrl ? (
-                              <img
-                                src={item.thumbnailUrl}
-                                alt={item.productName}
-                                className="h-full w-full object-cover"
-                              />
-                            ) : (
-                              <div className="flex h-full w-full items-center justify-center text-xs font-semibold uppercase text-slate-400">
-                                {item.productName.charAt(0)}
-                              </div>
-                            )}
-                          </div>
-                          <div className="space-y-1">
-                            <p className="font-semibold text-slate-800">{item.productName}</p>
-                            {item.variantLabel && (
-                              <p className="text-xs text-slate-500">Variant: {item.variantLabel}</p>
-                            )}
-                            {item.sku && (
-                              <p className="text-xs uppercase tracking-wide text-slate-400">SKU: {item.sku}</p>
-                            )}
-                            {!item.inStock && (
-                              <span className="inline-flex items-center rounded-full bg-rose-50 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-rose-600">
-                                Out of stock
-                              </span>
-                            )}
-                            {limitedAvailability && (
-                              <span className="block text-xs font-medium text-amber-600">
-                                Only {item.availableQuantity} available
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-4 text-sm text-slate-600">
-                        <div className="font-semibold text-slate-800">{item.quantity}</div>
-                        {typeof item.availableQuantity === 'number' && (
-                          <div className="text-xs text-slate-400">In stock: {item.availableQuantity}</div>
+
+        {isCartAddOpen && (
+          <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex flex-col gap-6 lg:flex-row">
+              <div className="lg:w-1/2">
+                <label htmlFor="cart-product-search" className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Search catalogue
+                </label>
+                <div className="relative mt-2">
+                  <input
+                    id="cart-product-search"
+                    type="search"
+                    value={cartProductSearchTerm}
+                    onChange={(event) => setCartProductSearchTerm(event.target.value)}
+                    placeholder="Search by product name or SKU"
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                  />
+                  {isSearchingCartProducts && (
+                    <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400">
+                      Searching…
+                    </span>
+                  )}
+                </div>
+                <div className="mt-3 max-h-64 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50">
+                  {cartProductSearchTerm.trim().length < 2 ? (
+                    <p className="p-4 text-sm text-slate-500">Type at least two characters to search products.</p>
+                  ) : cartProductSearchQuery.isError ? (
+                    <p className="p-4 text-sm text-rose-600">
+                      {extractErrorMessage(cartProductSearchQuery.error, 'Unable to search products right now.')}
+                    </p>
+                  ) : cartProductOptions.length === 0 ? (
+                    <p className="p-4 text-sm text-slate-500">No products found for this search.</p>
+                  ) : (
+                    <ul className="divide-y divide-slate-200 bg-white">
+                      {cartProductOptions.map((option) => (
+                        <li key={option.id}>
+                          <button
+                            type="button"
+                            onClick={() => setCartSelectedProductId(option.id)}
+                            className={`flex w-full items-center gap-3 px-4 py-3 text-left transition ${
+                              cartSelectedProductId === option.id ? 'bg-primary/10 text-primary' : 'hover:bg-slate-50'
+                            }`}
+                          >
+                            <div className="h-12 w-12 overflow-hidden rounded-lg border border-slate-200 bg-slate-100">
+                              {option.thumbnailUrl ? (
+                                <img src={option.thumbnailUrl} alt={option.name} className="h-full w-full object-cover" />
+                              ) : (
+                                <span className="flex h-full w-full items-center justify-center text-xs font-semibold uppercase text-slate-400">
+                                  {option.name.charAt(0)}
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-sm font-semibold">{option.name}</p>
+                              <p className="text-xs uppercase tracking-wide text-slate-400">SKU: {option.sku || '—'}</p>
+                            </div>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+              <div className="flex-1 space-y-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                {selectedProductDetail ? (
+                  <>
+                    <div className="flex items-start gap-3">
+                      <div className="h-16 w-16 overflow-hidden rounded-lg border border-slate-200 bg-white">
+                        {selectedProductImage ? (
+                          <img src={selectedProductImage} alt={selectedProductDetail.name} className="h-full w-full object-cover" />
+                        ) : (
+                          <span className="flex h-full w-full items-center justify-center text-sm font-semibold uppercase text-slate-400">
+                            {selectedProductDetail.name.charAt(0)}
+                          </span>
                         )}
-                      </td>
-                      <td className="px-4 py-4 text-sm font-medium text-slate-700">
-                        {formatMoney(item.unitPrice)}
-                      </td>
-                      <td className="px-4 py-4 text-sm font-semibold text-slate-900">
-                        {formatMoney(item.lineTotal)}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </section>
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-slate-800">{selectedProductDetail.name}</p>
+                        <p className="text-xs uppercase tracking-wide text-slate-400">
+                          SKU: {selectedProductDetail.pricing?.sku ?? '—'}
+                        </p>
+                        {selectedProductDetail.minPurchaseQuantity && (
+                          <p className="text-xs text-slate-500">Minimum purchase: {selectedProductDetail.minPurchaseQuantity}</p>
+                        )}
+                      </div>
+                    </div>
+                    {selectedProductDetail.variants.length > 0 && (
+                      <div className="space-y-3">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Select variant</p>
+                        <div className="max-h-40 space-y-2 overflow-y-auto pr-1">
+                          {selectedProductDetail.variants.map((variant) => {
+                            const variantLabel = describeVariant(variant);
+                            const variantAvailable = variant.quantity ?? null;
+                            const checked = cartSelectedVariantId === variant.id;
+                            return (
+                              <label
+                                key={variant.id ?? variant.key}
+                                className={`flex cursor-pointer items-center justify-between rounded-lg border px-3 py-2 text-sm transition ${
+                                  checked ? 'border-primary bg-primary/10 text-primary' : 'border-slate-200 bg-white text-slate-600 hover:border-primary/40'
+                                }`}
+                              >
+                                <span className="flex flex-col">
+                                  <span className="font-semibold text-slate-800">{variantLabel ?? 'Variant'}</span>
+                                  {variant.sku && (
+                                    <span className="text-xs uppercase tracking-wide text-slate-400">SKU: {variant.sku}</span>
+                                  )}
+                                </span>
+                                <span className="flex items-center gap-3">
+                                  {variantAvailable != null && (
+                                    <span className="text-xs text-slate-400">In stock: {Math.max(0, variantAvailable)}</span>
+                                  )}
+                                  <input
+                                    type="radio"
+                                    className="h-4 w-4"
+                                    checked={checked}
+                                    onChange={() => setCartSelectedVariantId(variant.id ?? null)}
+                                  />
+                                </span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                    <div className="grid gap-3 md:grid-cols-[160px,1fr]">
+                      <div>
+                        <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Quantity</label>
+                        <input
+                          type="number"
+                          min={1}
+                          value={cartAddQuantity}
+                          onChange={(event) => setCartAddQuantity(clampQuantity(Number(event.target.value)))}
+                          className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                        />
+                        {selectedVariantAvailability != null && (
+                          <p className="mt-1 text-xs text-slate-500">Available: {Math.max(0, selectedVariantAvailability)}</p>
+                        )}
+                      </div>
+                      <div className="flex items-end">
+                        <button
+                          type="button"
+                          onClick={handleAddCartItemForUser}
+                          disabled={disableAddButton}
+                          className="w-full rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {addCartItemMutation.isPending ? 'Adding…' : 'Add to cart'}
+                        </button>
+                      </div>
+                    </div>
+                    {selectedVariantAvailability != null && selectedVariantAvailability <= 0 && (
+                      <p className="text-xs font-semibold text-rose-600">This selection is currently out of stock.</p>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-sm text-slate-500">
+                    Search for a product on the left to preview inventory and add it to this customer's cart.
+                  </p>
+                )}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {items.length === 0 ? (
+          <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h3 className="text-sm font-semibold text-slate-800">No cart items yet</h3>
+            <p className="mt-2 text-sm text-slate-500">
+              This customer has not added any products to their cart. Use the “Add product” button above to seed their cart or
+              guide them through the checkout journey.
+            </p>
+          </section>
+        ) : (
+          <section className="rounded-xl border border-slate-200 bg-white shadow-sm">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-slate-200">
+                <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  <tr>
+                    <th scope="col" className="px-4 py-3">
+                      Product
+                    </th>
+                    <th scope="col" className="px-4 py-3">
+                      Quantity
+                    </th>
+                    <th scope="col" className="px-4 py-3">
+                      Unit price
+                    </th>
+                    <th scope="col" className="px-4 py-3">
+                      Subtotal
+                    </th>
+                    <th scope="col" className="px-4 py-3 text-right">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200 bg-white text-sm">
+                  {items.map((item) => {
+                    const itemId = item.id;
+                    const draftQuantity = itemId != null ? clampQuantity(cartItemDrafts[itemId] ?? item.quantity) : item.quantity;
+                    const quantityChanged = itemId != null ? draftQuantity !== item.quantity : false;
+                    const limitedAvailability =
+                      typeof item.availableQuantity === 'number' && item.availableQuantity >= 0 && draftQuantity > item.availableQuantity;
+                    return (
+                      <tr key={`${item.productId}-${item.variantId ?? 'base'}`} className="align-top">
+                        <td className="px-4 py-4">
+                          <button
+                            type="button"
+                            onClick={() => handleNavigateToProduct(item.productId)}
+                            className="flex w-full items-start gap-3 text-left transition hover:text-primary"
+                          >
+                            <div className="h-14 w-14 overflow-hidden rounded-lg border border-slate-200 bg-slate-100">
+                              {item.thumbnailUrl ? (
+                                <img src={item.thumbnailUrl} alt={item.productName} className="h-full w-full object-cover" />
+                              ) : (
+                                <span className="flex h-full w-full items-center justify-center text-xs font-semibold uppercase text-slate-400">
+                                  {item.productName.charAt(0)}
+                                </span>
+                              )}
+                            </div>
+                            <div className="space-y-1">
+                              <p className="font-semibold text-slate-800">{item.productName}</p>
+                              {item.variantLabel && <p className="text-xs text-slate-500">Variant: {item.variantLabel}</p>}
+                              {item.sku && (
+                                <p className="text-xs uppercase tracking-wide text-slate-400">SKU: {item.sku}</p>
+                              )}
+                              {!item.inStock && (
+                                <span className="inline-flex items-center rounded-full bg-rose-50 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-rose-600">
+                                  Out of stock
+                                </span>
+                              )}
+                              {limitedAvailability && (
+                                <span className="block text-xs font-medium text-amber-600">
+                                  Only {item.availableQuantity} available
+                                </span>
+                              )}
+                            </div>
+                          </button>
+                        </td>
+                        <td className="px-4 py-4">
+                          {itemId != null ? (
+                            <div className="space-y-2">
+                              <input
+                                type="number"
+                                min={1}
+                                value={draftQuantity}
+                                onChange={(event) => handleQuantityInputChange(itemId, event.target.value)}
+                                className="w-24 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                              />
+                              {typeof item.availableQuantity === 'number' && (
+                                <p className="text-xs text-slate-400">In stock: {item.availableQuantity}</p>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="font-semibold text-slate-800">{item.quantity}</div>
+                          )}
+                        </td>
+                        <td className="px-4 py-4 text-sm font-medium text-slate-700">{formatMoney(item.unitPrice)}</td>
+                        <td className="px-4 py-4 text-sm font-semibold text-slate-900">{formatMoney(item.lineTotal)}</td>
+                        <td className="px-4 py-4">
+                          {itemId != null ? (
+                            <div className="flex flex-wrap justify-end gap-2">
+                              <button
+                                type="button"
+                                onClick={() => handleSubmitQuantity(item)}
+                                disabled={!quantityChanged || updatingItemId === itemId}
+                                className="inline-flex items-center justify-center rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-primary/40 hover:text-primary disabled:cursor-not-allowed disabled:opacity-60"
+                              >
+                                {updatingItemId === itemId ? 'Saving…' : 'Update'}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => void handleRemoveItem(item)}
+                                disabled={removingItemId === itemId}
+                                className="inline-flex items-center justify-center rounded-lg border border-rose-200 px-3 py-1.5 text-xs font-semibold text-rose-600 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
+                              >
+                                {removingItemId === itemId ? 'Removing…' : 'Remove'}
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-slate-400">Pending sync…</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        )}
       </div>
     );
   };
@@ -1704,7 +2347,9 @@ const UsersPage = () => {
       ? createUser.isPending
       : activeTab === 'access'
       ? updatePermissions.isPending
-      : updateUser.isPending;
+      : activeTab === 'profile'
+      ? updateUser.isPending
+      : false;
     const isLoadingDetail = panelMode === 'detail' && selectedUserQuery.isLoading;
     const headerTitle = isCreate
       ? 'Create user or customer'
@@ -1712,6 +2357,13 @@ const UsersPage = () => {
     const headerSubtitle = isCreate
       ? 'Provision access for an internal teammate or customer contact.'
       : detailUser?.email ?? '';
+    const tabs: Array<{ key: DetailTab; label: string }> = [
+      { key: 'profile', label: 'Profile details' },
+      { key: 'access', label: 'Roles & permissions' }
+    ];
+    if (!isCreate) {
+      tabs.push({ key: 'cart', label: 'Cart' }, { key: 'recent', label: 'Recently viewed' });
+    }
 
     return (
       <form
@@ -1724,12 +2376,10 @@ const UsersPage = () => {
           setFormError(null);
           if (isCreate) {
             createUser.mutate();
+          } else if (activeTab === 'profile') {
+            updateUser.mutate();
           } else if (activeTab === 'access') {
             updatePermissions.mutate();
-          } else if (activeTab === 'cart') {
-            return;
-          } else {
-            updateUser.mutate();
           }
         }}
       >
@@ -1814,21 +2464,13 @@ const UsersPage = () => {
         </header>
         <div className="grid gap-0 border-b border-slate-200 lg:grid-cols-[240px,1fr]">
           <nav className="flex shrink-0 flex-row gap-2 border-b border-slate-200 bg-white px-6 py-3 text-sm font-semibold text-slate-600 lg:flex-col lg:border-b-0 lg:border-r">
-            {(
-              [
-                { key: 'profile', label: 'Profile details' },
-                { key: 'access', label: 'Roles & permissions' },
-                { key: 'cart', label: 'Cart' }
-              ] as Array<{ key: DetailTab; label: string }>
-            ).map((tab) => (
+            {tabs.map((tab) => (
               <button
                 key={tab.key}
                 type="button"
                 onClick={() => setActiveTab(tab.key)}
                 className={`rounded-lg px-3 py-2 text-left transition ${
-                  activeTab === tab.key
-                    ? 'bg-primary/10 text-primary'
-                    : 'text-slate-600 hover:bg-slate-100'
+                  activeTab === tab.key ? 'bg-primary/10 text-primary' : 'text-slate-600 hover:bg-slate-100'
                 }`}
               >
                 {tab.label}
@@ -1842,8 +2484,10 @@ const UsersPage = () => {
               renderProfileTab(isEditable, isCreate)
             ) : activeTab === 'access' ? (
               renderAccessTab(isEditable)
-            ) : (
+            ) : activeTab === 'cart' ? (
               renderCartTab()
+            ) : (
+              renderRecentTab()
             )}
           </div>
         </div>
@@ -1852,7 +2496,11 @@ const UsersPage = () => {
             <p className="text-sm text-rose-600">{formError}</p>
           ) : (
             <span className="text-xs text-slate-500">
-              Changes apply immediately after saving and will not modify the underlying role definitions.
+              {activeTab === 'cart'
+                ? 'Cart adjustments are saved automatically.'
+                : activeTab === 'recent'
+                ? 'Recent views update automatically whenever the customer browses products.'
+                : 'Changes apply immediately after saving and will not modify the underlying role definitions.'}
             </span>
           )}
           <div className="flex flex-wrap items-center gap-3">
@@ -1866,7 +2514,7 @@ const UsersPage = () => {
                 {deleteUser.isPending ? 'Removing…' : 'Remove user'}
               </button>
             )}
-            {panelMode === 'detail' && selectedUserQuery.data && isEditable && (
+            {panelMode === 'detail' && selectedUserQuery.data && isEditable && activeTab === 'profile' && (
               <button
                 type="button"
                 onClick={() => {
@@ -1896,14 +2544,26 @@ const UsersPage = () => {
                 Reset changes
               </button>
             )}
-            <button
-              type="submit"
-              disabled={!isEditable || isSaving}
-              title={!isEditable ? 'You do not have permission to update this user.' : undefined}
-              className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {isCreate ? (isSaving ? 'Creating…' : 'Create user') : isSaving ? 'Saving…' : 'Save changes'}
-            </button>
+            {((isCreate && isEditable) || (!isCreate && isEditable && (activeTab === 'profile' || activeTab === 'access'))) && (
+              <button
+                type="submit"
+                disabled={!isEditable || isSaving}
+                title={!isEditable ? 'You do not have permission to update this user.' : undefined}
+                className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isCreate
+                  ? isSaving
+                    ? 'Creating…'
+                    : 'Create user'
+                  : activeTab === 'access'
+                  ? isSaving
+                    ? 'Saving…'
+                    : 'Save permissions'
+                  : isSaving
+                  ? 'Saving…'
+                  : 'Save changes'}
+              </button>
+            )}
           </div>
         </footer>
       </form>

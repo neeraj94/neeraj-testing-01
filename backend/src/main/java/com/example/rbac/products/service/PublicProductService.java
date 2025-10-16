@@ -11,6 +11,9 @@ import com.example.rbac.products.repository.ProductRepository;
 import com.example.rbac.products.repository.ProductReviewRepository;
 import com.example.rbac.wedges.model.Wedge;
 import com.example.rbac.wedges.repository.WedgeRepository;
+import com.example.rbac.users.model.User;
+import com.example.rbac.users.model.UserPrincipal;
+import com.example.rbac.users.service.UserRecentViewService;
 import org.hibernate.Hibernate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,21 +43,24 @@ public class PublicProductService {
     private final CouponRepository couponRepository;
     private final WedgeRepository wedgeRepository;
     private final PublicProductMapper publicProductMapper;
+    private final UserRecentViewService userRecentViewService;
 
     public PublicProductService(ProductRepository productRepository,
                                 ProductReviewRepository productReviewRepository,
                                 CouponRepository couponRepository,
                                 WedgeRepository wedgeRepository,
-                                PublicProductMapper publicProductMapper) {
+                                PublicProductMapper publicProductMapper,
+                                UserRecentViewService userRecentViewService) {
         this.productRepository = productRepository;
         this.productReviewRepository = productReviewRepository;
         this.couponRepository = couponRepository;
         this.wedgeRepository = wedgeRepository;
         this.publicProductMapper = publicProductMapper;
+        this.userRecentViewService = userRecentViewService;
     }
 
     @Transactional(readOnly = true)
-    public PublicProductDetailDto getBySlug(String slug) {
+    public PublicProductDetailDto getBySlug(String slug, UserPrincipal principal, List<Long> guestRecentProductIds) {
         Product product = productRepository.findDetailedBySlugIgnoreCase(slug)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Product not found"));
         initializeAssociations(product);
@@ -72,7 +78,8 @@ public class PublicProductService {
                 : couponRepository.findActiveCategoryCoupons(categoryIds, now);
         List<Coupon> coupons = mergeCoupons(productCoupons, categoryCoupons);
         List<Wedge> wedges = fetchWedgesSafely();
-        return publicProductMapper.toDetail(product, reviews, coupons, wedges, List.of());
+        List<Product> recentProducts = resolveRecentlyViewedProducts(principal, guestRecentProductIds, product);
+        return publicProductMapper.toDetail(product, reviews, coupons, wedges, recentProducts);
     }
 
     private List<Wedge> fetchWedgesSafely() {
@@ -134,6 +141,30 @@ public class PublicProductService {
         Hibernate.initialize(product.getExpandableSections());
         Hibernate.initialize(product.getInfoSections());
         Hibernate.initialize(product.getFrequentlyBoughtProducts());
+    }
+
+    private List<Product> resolveRecentlyViewedProducts(UserPrincipal principal,
+                                                        List<Long> guestRecentProductIds,
+                                                        Product currentProduct) {
+        User viewer = principal != null ? principal.getUser() : null;
+        List<Product> recentProducts;
+        if (viewer != null && viewer.getId() != null) {
+            userRecentViewService.recordView(viewer, currentProduct);
+            recentProducts = userRecentViewService.findRecentProductsForUser(viewer.getId(), currentProduct.getId());
+        } else {
+            List<Long> guestIds = guestRecentProductIds == null ? List.of() : guestRecentProductIds;
+            recentProducts = userRecentViewService.findRecentProductsForGuest(guestIds, currentProduct.getId());
+        }
+        recentProducts.forEach(this::initializeRecommendationAssociations);
+        return recentProducts;
+    }
+
+    private void initializeRecommendationAssociations(Product product) {
+        Hibernate.initialize(product.getGalleryImages());
+        Hibernate.initialize(product.getVariants());
+        if (product.getVariants() != null) {
+            product.getVariants().forEach(variant -> Hibernate.initialize(variant.getMedia()));
+        }
     }
 
     private List<Coupon> mergeCoupons(List<Coupon> productCoupons, List<Coupon> categoryCoupons) {

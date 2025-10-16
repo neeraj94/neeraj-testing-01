@@ -6,20 +6,26 @@ import com.example.rbac.users.dto.CreateUserRequest;
 import com.example.rbac.users.dto.UpdateUserRequest;
 import com.example.rbac.users.dto.UpdateUserPermissionsRequest;
 import com.example.rbac.users.dto.UserDto;
+import com.example.rbac.users.dto.UserRecentViewDto;
 import com.example.rbac.users.dto.UserSummaryResponse;
 import com.example.rbac.users.dto.UpdateUserStatusRequest;
 import com.example.rbac.users.service.UserService;
+import com.example.rbac.users.service.UserRecentViewService;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/users")
 public class UserController {
 
     private final UserService userService;
+    private final UserRecentViewService userRecentViewService;
 
-    public UserController(UserService userService) {
+    public UserController(UserService userService, UserRecentViewService userRecentViewService) {
         this.userService = userService;
+        this.userRecentViewService = userRecentViewService;
     }
 
     @GetMapping
@@ -86,5 +92,10 @@ public class UserController {
     @PostMapping("/{id}/unlock")
     public UserDto unlock(@PathVariable("id") Long id) {
         return userService.unlockUser(id);
+    }
+
+    @GetMapping("/{id}/recent-views")
+    public List<UserRecentViewDto> recentViews(@PathVariable("id") Long id) {
+        return userRecentViewService.getRecentViewsForUser(id);
     }
 }

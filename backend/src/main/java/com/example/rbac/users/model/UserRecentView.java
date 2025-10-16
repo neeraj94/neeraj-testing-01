@@ -1,29 +1,31 @@
-package com.example.rbac.cart.model;
+package com.example.rbac.users.model;
 
-import com.example.rbac.users.model.User;
+import com.example.rbac.products.model.Product;
 import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
 
 @Entity
-@Table(name = "carts")
-public class Cart {
+@Table(name = "user_recent_views",
+        uniqueConstraints = @UniqueConstraint(name = "uq_user_recent_view", columnNames = {"user_id", "product_id"}))
+public class UserRecentView {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", unique = true)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @OneToMany(mappedBy = "cart", cascade = CascadeType.ALL, orphanRemoval = true)
-    @OrderBy("createdAt ASC, id ASC")
-    private List<CartItem> items = new ArrayList<>();
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "product_id", nullable = false)
+    private Product product;
+
+    @Column(name = "viewed_at", nullable = false)
+    private Instant viewedAt;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -49,12 +51,20 @@ public class Cart {
         this.user = user;
     }
 
-    public List<CartItem> getItems() {
-        return items;
+    public Product getProduct() {
+        return product;
     }
 
-    public void setItems(List<CartItem> items) {
-        this.items = items;
+    public void setProduct(Product product) {
+        this.product = product;
+    }
+
+    public Instant getViewedAt() {
+        return viewedAt;
+    }
+
+    public void setViewedAt(Instant viewedAt) {
+        this.viewedAt = viewedAt;
     }
 
     public Instant getCreatedAt() {

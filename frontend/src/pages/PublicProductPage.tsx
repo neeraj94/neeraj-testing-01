@@ -57,6 +57,37 @@ const buildStatusTone = (inStock: boolean) =>
     ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
     : 'border-rose-200 bg-rose-50 text-rose-600';
 
+const RECENT_STORAGE_KEY = 'storefront:recent-products';
+
+const readRecentProductIds = (): number[] => {
+  if (typeof window === 'undefined') {
+    return [];
+  }
+  const raw = window.localStorage.getItem(RECENT_STORAGE_KEY);
+  if (!raw) {
+    return [];
+  }
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      return parsed
+        .map((value) => Number(value))
+        .filter((value) => Number.isFinite(value) && value > 0)
+        .slice(0, 20);
+    }
+  } catch (_error) {
+    return [];
+  }
+  return [];
+};
+
+const writeRecentProductIds = (ids: number[]) => {
+  if (typeof window === 'undefined') {
+    return;
+  }
+  window.localStorage.setItem(RECENT_STORAGE_KEY, JSON.stringify(ids.slice(0, 20)));
+};
+
 const PublicProductPage = () => {
   const { slug } = useParams<{ slug: string }>();
   const reviewsRef = useRef<HTMLDivElement | null>(null);
@@ -71,13 +102,25 @@ const PublicProductPage = () => {
   const productQuery = useQuery<PublicProductDetail>({
     queryKey: ['public-product', slug],
     queryFn: async () => {
-      const { data } = await api.get<PublicProductDetail>(`/public/products/${slug}`);
+      const recentIds = readRecentProductIds();
+      const params = recentIds.length ? { recent: recentIds.join(',') } : undefined;
+      const { data } = await api.get<PublicProductDetail>(`/public/products/${slug}`, { params });
       return data;
     },
     enabled: Boolean(slug)
   });
 
   const product = productQuery.data;
+
+  useEffect(() => {
+    if (!product?.id) {
+      return;
+    }
+    const existing = readRecentProductIds();
+    const deduped = existing.filter((value) => value !== product.id);
+    const next = [product.id, ...deduped];
+    writeRecentProductIds(next);
+  }, [product?.id]);
 
   useEffect(() => {
     if (!product) {
