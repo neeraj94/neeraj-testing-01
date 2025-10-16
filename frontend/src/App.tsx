@@ -26,6 +26,7 @@ import ProtectedRoute from './routes/ProtectedRoute';
 import PermissionRoute from './routes/PermissionRoute';
 import { useAppDispatch, useAppSelector } from './app/hooks';
 import { loadCurrentUser, logout as logoutAction, tokensRefreshed } from './features/auth/authSlice';
+import { syncGuestCart } from './features/cart/cartSlice';
 import api from './services/http';
 import SettingsPage from './pages/SettingsPage';
 import { fetchTheme } from './features/settings/settingsSlice';
@@ -44,11 +45,12 @@ import PublicCategoriesPage from './pages/PublicCategoriesPage';
 import PublicProductPage from './pages/PublicProductPage';
 import PublicBrandsPage from './pages/PublicBrandsPage';
 import PublicCouponsPage from './pages/PublicCouponsPage';
+import CartPage from './pages/CartPage';
 
 const App = () => {
   const dispatch = useAppDispatch();
   const location = useLocation();
-  const { accessToken, refreshToken } = useAppSelector((state) => state.auth);
+  const { accessToken, refreshToken, user } = useAppSelector((state) => state.auth);
   const primaryColor = useAppSelector(selectPrimaryColor);
   const applicationName = useAppSelector(selectApplicationName);
   const [initializing, setInitializing] = useState<'idle' | 'checking'>(() =>
@@ -66,6 +68,12 @@ const App = () => {
   useEffect(() => {
     document.title = applicationName || 'RBAC Portal';
   }, [applicationName]);
+
+  useEffect(() => {
+    if (user?.id) {
+      dispatch(syncGuestCart());
+    }
+  }, [user?.id, dispatch]);
 
   useEffect(() => {
     let active = true;
@@ -144,6 +152,7 @@ const App = () => {
       <Route path="/categories" element={<PublicCategoriesPage />} />
       <Route path="/brands" element={<PublicBrandsPage />} />
       <Route path="/coupons" element={<PublicCouponsPage />} />
+      <Route path="/cart" element={<CartPage />} />
       <Route path="/products/showcase" element={<Navigate to="/product/demo-product" replace />} />
       <Route path="/product/:slug" element={<PublicProductPage />} />
       <Route element={<ProtectedRoute />}>

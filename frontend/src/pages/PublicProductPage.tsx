@@ -1,8 +1,12 @@
 import { Fragment, forwardRef, useEffect, useMemo, useRef, useState } from 'react';
+import type { MouseEvent } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import type { AxiosError } from 'axios';
 import api from '../services/http';
+import { useAppDispatch, useAppSelector } from '../app/hooks';
+import { addCartItem, addGuestItem } from '../features/cart/cartSlice';
+import { useToast } from '../components/ToastProvider';
 import type {
   PublicProductDetail,
   PublicProductOffer,
@@ -60,6 +64,9 @@ const PublicProductPage = () => {
   const [quantity, setQuantity] = useState(1);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [reviewLimit, setReviewLimit] = useState(3);
+  const dispatch = useAppDispatch();
+  const { notify } = useToast();
+  const authUser = useAppSelector((state) => state.auth.user);
 
   const productQuery = useQuery<PublicProductDetail>({
     queryKey: ['public-product', slug],
@@ -140,6 +147,24 @@ const PublicProductPage = () => {
   const availableQuantity = activeVariant?.quantity ?? product?.stock.availableQuantity ?? null;
   const maxPurchaseLimit = product?.maxPurchaseQuantity ?? availableQuantity ?? null;
   const minPurchase = product?.minPurchaseQuantity ?? 1;
+  const variantLabel = useMemo(() => {
+    if (!activeVariant) {
+      return null;
+    }
+    if (!activeVariant.selections.length) {
+      return activeVariant.key ?? null;
+    }
+    const labels = activeVariant.selections
+      .map((selection) => selection.value)
+      .filter((value): value is string => Boolean(value));
+    if (labels.length === 0) {
+      return activeVariant.key ?? null;
+    }
+    return labels.join(' • ');
+  }, [activeVariant]);
+  const currentUnitPrice = Number(displayPrice ?? 0);
+  const productThumbnail =
+    activeVariant?.media?.[0]?.url ?? product?.primaryImage?.url ?? product?.gallery[0]?.url ?? null;
 
   const incrementQuantity = () => {
     setQuantity((current) => {
@@ -164,6 +189,61 @@ const PublicProductPage = () => {
 
   const scrollToReviews = () => {
     reviewsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  const handleAddToCart = () => {
+    if (!product || !hasValidSelection || !inStock) {
+      notify({
+        type: 'error',
+        title: 'Unable to add to cart',
+        message: 'Please select available options before adding this product to your cart.'
+      });
+      return;
+    }
+    const payload = {
+      productId: product.id,
+      variantId: activeVariant?.id ?? null,
+      quantity
+    };
+    if (authUser) {
+      dispatch(addCartItem(payload))
+        .unwrap()
+        .then(() => {
+          notify({
+            type: 'success',
+            title: 'Added to cart',
+            message: `${quantity} × ${product.name} added to your cart.`
+          });
+        })
+        .catch((error: unknown) => {
+          notify({
+            type: 'error',
+            title: 'Unable to add to cart',
+            message: error instanceof Error ? error.message : 'Please try again later.'
+          });
+        });
+      return;
+    }
+    const cappedQuantity = availableQuantity != null ? Math.min(quantity, availableQuantity) : quantity;
+    dispatch(
+      addGuestItem({
+        productId: product.id,
+        productName: product.name,
+        productSlug: product.slug,
+        sku: activeVariant?.sku ?? product.sku,
+        variantId: activeVariant?.id ?? null,
+        variantLabel: variantLabel ?? undefined,
+        quantity: cappedQuantity,
+        availableQuantity: availableQuantity ?? undefined,
+        unitPrice: currentUnitPrice,
+        thumbnailUrl: productThumbnail ?? undefined
+      })
+    );
+    notify({
+      type: 'success',
+      title: 'Saved to cart',
+      message: `${cappedQuantity} × ${product.name} saved in your cart.`
+    });
   };
 
   const loadError = productQuery.isError ? (productQuery.error as AxiosError | undefined) : undefined;
@@ -388,6 +468,7 @@ const PublicProductPage = () => {
                     <div className="flex flex-wrap gap-4">
                       <button
                         type="button"
+                        onClick={handleAddToCart}
                         className="flex-1 rounded-full bg-emerald-500 px-6 py-3 text-center text-sm font-semibold text-white shadow-lg shadow-emerald-200/60 transition hover:-translate-y-0.5 hover:bg-emerald-600 disabled:cursor-not-allowed disabled:bg-slate-300"
                         disabled={!inStock || !hasValidSelection}
                       >
@@ -789,25 +870,75 @@ const ReviewCard = ({ review }: { review: PublicProductReview }) => (
   </article>
 );
 
-const RecommendationTile = ({ item }: { item: PublicProductRecommendation }) => (
-  <Link
-    to={`/product/${item.slug}`}
-    className="group flex w-64 min-w-[16rem] flex-col overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-xl"
-  >
-    <div className="h-48 w-full overflow-hidden bg-slate-100">
-      {item.imageUrl ? (
-        <img src={item.imageUrl} alt={item.name} className="h-full w-full object-cover transition group-hover:scale-105" />
-      ) : (
-        <div className="flex h-full items-center justify-center text-sm text-slate-400">No image</div>
-      )}
+const RecommendationTile = ({ item }: { item: PublicProductRecommendation }) => {
+  const dispatch = useAppDispatch();
+  const { notify } = useToast();
+  const authUser = useAppSelector((state) => state.auth.user);
+  const unitPrice = Number(item.finalPrice ?? item.originalPrice ?? 0);
+
+  const handleQuickAdd = (event: MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (authUser) {
+      dispatch(addCartItem({ productId: item.id, variantId: null, quantity: 1 }))
+        .unwrap()
+        .then(() => {
+          notify({ type: 'success', title: 'Added to cart', message: `${item.name} added to your cart.` });
+        })
+        .catch((error: unknown) => {
+          notify({
+            type: 'error',
+            title: 'Unable to add',
+            message: error instanceof Error ? error.message : 'Please try again later.'
+          });
+        });
+      return;
+    }
+    dispatch(
+      addGuestItem({
+        productId: item.id,
+        productName: item.name,
+        productSlug: item.slug,
+        quantity: 1,
+        unitPrice,
+        variantId: null,
+        variantLabel: undefined,
+        thumbnailUrl: item.imageUrl ?? undefined
+      })
+    );
+    notify({ type: 'success', title: 'Saved to cart', message: `${item.name} saved in your cart.` });
+  };
+
+  return (
+    <div className="flex w-64 min-w-[16rem] flex-col overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-xl">
+      <Link to={`/product/${item.slug}`} className="flex flex-1 flex-col">
+        <div className="h-48 w-full overflow-hidden bg-slate-100">
+          {item.imageUrl ? (
+            <img
+              src={item.imageUrl}
+              alt={item.name}
+              className="h-full w-full object-cover transition group-hover:scale-105"
+            />
+          ) : (
+            <div className="flex h-full items-center justify-center text-sm text-slate-400">No image</div>
+          )}
+        </div>
+        <div className="flex flex-1 flex-col gap-2 px-4 py-4">
+          <p className="text-sm font-semibold text-slate-800">{item.name}</p>
+          <p className="text-sm text-slate-500">{formatCurrency(item.finalPrice ?? item.originalPrice)}</p>
+          <span className="mt-auto text-xs font-medium text-emerald-600">View details →</span>
+        </div>
+      </Link>
+      <button
+        type="button"
+        onClick={handleQuickAdd}
+        className="m-4 rounded-full bg-emerald-500 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-emerald-600"
+      >
+        Quick add
+      </button>
     </div>
-    <div className="flex flex-1 flex-col gap-2 px-4 py-4">
-      <p className="text-sm font-semibold text-slate-800">{item.name}</p>
-      <p className="text-sm text-slate-500">{formatCurrency(item.finalPrice ?? item.originalPrice)}</p>
-      <span className="mt-auto text-xs font-medium text-emerald-600">View details →</span>
-    </div>
-  </Link>
-);
+  );
+};
 
 const StarRating = ({
   rating,

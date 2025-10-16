@@ -6,7 +6,8 @@ const navLinks = [
   { href: '/brands', label: 'Brands' },
   { href: '/blog', label: 'Blog' },
   { href: '/product/demo-product', label: 'Product' },
-  { href: '/coupons', label: 'Coupons' }
+  { href: '/coupons', label: 'Coupons' },
+  { href: '/cart', label: 'Cart' }
 ];
 
 const features = [
