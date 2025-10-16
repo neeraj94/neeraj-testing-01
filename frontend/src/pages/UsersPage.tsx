@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../services/http';
 import type { Pagination, Permission, Role, User, UserSummaryMetrics, UserRecentProduct } from '../types/models';
 import type { Cart } from '../types/cart';
+import type { CheckoutAddress } from '../types/checkout';
 import { useToast } from '../components/ToastProvider';
 import { useConfirm } from '../components/ConfirmDialogProvider';
 import SortableColumnHeader from '../components/SortableColumnHeader';
@@ -59,7 +60,7 @@ const TrashIcon = () => (
 );
 
 type PanelMode = 'empty' | 'create' | 'detail';
-type DetailTab = 'profile' | 'access' | 'cart' | 'recent';
+type DetailTab = 'profile' | 'access' | 'addresses' | 'cart' | 'recent';
 type UserSortField = 'name' | 'email' | 'status' | 'audience' | 'groups';
 
 type UserFormState = {
@@ -521,6 +522,17 @@ const UsersPage = () => {
       return data;
     },
     enabled: panelMode === 'detail' && activeTab === 'recent' && selectedUserId != null
+  });
+
+  const addressesQuery = useQuery<CheckoutAddress[]>({
+    queryKey: ['users', selectedUserId, 'addresses'],
+    queryFn: async () => {
+      const { data } = await api.get<CheckoutAddress[]>(
+        `/admin/users/${selectedUserId}/addresses`
+      );
+      return data;
+    },
+    enabled: panelMode === 'detail' && activeTab === 'addresses' && selectedUserId != null
   });
 
   const cartProductOptions = cartProductSearchQuery.data?.content ?? [];
@@ -1879,6 +1891,79 @@ const UsersPage = () => {
     </div>
   );
 
+  const renderAddressesTab = () => {
+    if (panelMode !== 'detail' || !selectedUserId) {
+      return (
+        <section className="rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-600 shadow-sm">
+          Select a user from the list to review their saved addresses.
+        </section>
+      );
+    }
+
+    if (addressesQuery.isLoading || addressesQuery.isFetching) {
+      return (
+        <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          <p className="text-sm text-slate-500">Loading saved addresses…</p>
+        </section>
+      );
+    }
+
+    if (addressesQuery.isError) {
+      const errorMessage = extractErrorMessage(addressesQuery.error, 'Unable to load addresses.');
+      return (
+        <section className="space-y-4 rounded-xl border border-rose-200 bg-rose-50/80 p-6 shadow-sm">
+          <div className="text-sm font-semibold text-rose-700">{errorMessage}</div>
+          <button
+            type="button"
+            onClick={() => addressesQuery.refetch()}
+            className="inline-flex items-center justify-center rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-700"
+          >
+            Try again
+          </button>
+        </section>
+      );
+    }
+
+    const addressList = addressesQuery.data ?? [];
+
+    if (!addressList.length) {
+      return (
+        <section className="rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-600 shadow-sm">
+          This user has not saved any shipping or billing addresses yet.
+        </section>
+      );
+    }
+
+    return (
+      <section className="space-y-4">
+        <div className="grid gap-4 md:grid-cols-2">
+          {addressList.map((address) => (
+            <div key={address.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-slate-800">{address.fullName}</h3>
+                <span className="rounded bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+                  {address.type === 'SHIPPING' ? 'Shipping' : 'Billing'}
+                </span>
+              </div>
+              <p className="mt-1 text-sm text-slate-600">
+                {address.addressLine1}
+                {address.addressLine2 ? `, ${address.addressLine2}` : ''}
+              </p>
+              <p className="text-sm text-slate-600">
+                {[address.cityName, address.stateName, address.countryName].filter(Boolean).join(', ')}
+              </p>
+              {address.pinCode && <p className="text-xs text-slate-500">PIN: {address.pinCode}</p>}
+              <p className="text-xs text-slate-500">Phone: {address.mobileNumber}</p>
+              {address.defaultAddress && (
+                <p className="mt-2 text-xs font-medium uppercase text-blue-600">Default</p>
+              )}
+            </div>
+          ))}
+        </div>
+      </section>
+    );
+  };
+
   const renderCartTab = () => {
     if (panelMode !== 'detail' || !selectedUserId) {
       return (
@@ -2362,7 +2447,11 @@ const UsersPage = () => {
       { key: 'access', label: 'Roles & permissions' }
     ];
     if (!isCreate) {
-      tabs.push({ key: 'cart', label: 'Cart' }, { key: 'recent', label: 'Recently viewed' });
+      tabs.push(
+        { key: 'addresses', label: 'Addresses' },
+        { key: 'cart', label: 'Cart' },
+        { key: 'recent', label: 'Recently viewed' }
+      );
     }
 
     return (
@@ -2484,6 +2573,8 @@ const UsersPage = () => {
               renderProfileTab(isEditable, isCreate)
             ) : activeTab === 'access' ? (
               renderAccessTab(isEditable)
+            ) : activeTab === 'addresses' ? (
+              renderAddressesTab()
             ) : activeTab === 'cart' ? (
               renderCartTab()
             ) : (
@@ -2500,6 +2591,8 @@ const UsersPage = () => {
                 ? 'Cart adjustments are saved automatically.'
                 : activeTab === 'recent'
                 ? 'Recent views update automatically whenever the customer browses products.'
+                : activeTab === 'addresses'
+                ? 'Addresses sync automatically whenever shoppers update them during checkout.'
                 : 'Changes apply immediately after saving and will not modify the underlying role definitions.'}
             </span>
           )}

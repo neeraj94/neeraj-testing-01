@@ -17,6 +17,9 @@ public interface ShippingStateRepository extends JpaRepository<ShippingState, Lo
     List<ShippingState> findByCountryIdOrderByNameAsc(Long countryId);
 
     @EntityGraph(attributePaths = "country")
+    List<ShippingState> findByCountryIdAndEnabledTrueOrderByNameAsc(Long countryId);
+
+    @EntityGraph(attributePaths = "country")
     Optional<ShippingState> findWithCountryById(Long id);
 
     @EntityGraph(attributePaths = "country")
