@@ -1,6 +1,8 @@
 package com.example.rbac.checkout.dto;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 
 public class OrderListItemDto {
 
@@ -10,6 +12,7 @@ public class OrderListItemDto {
     private String customerName;
     private OrderSummaryDto summary;
     private Instant createdAt;
+    private List<OrderLineDto> lines = new ArrayList<>();
 
     public Long getId() {
         return id;
@@ -57,5 +60,13 @@ public class OrderListItemDto {
 
     public void setCreatedAt(Instant createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public List<OrderLineDto> getLines() {
+        return lines;
+    }
+
+    public void setLines(List<OrderLineDto> lines) {
+        this.lines = lines;
     }
 }

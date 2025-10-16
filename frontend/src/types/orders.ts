@@ -1,4 +1,4 @@
-import type { OrderSummary } from './checkout';
+import type { OrderLine, OrderSummary } from './checkout';
 
 export interface OrderListItem {
   id: number;
@@ -7,4 +7,5 @@ export interface OrderListItem {
   customerName: string | null;
   summary: OrderSummary | null;
   createdAt: string;
+  lines: OrderLine[];
 }
