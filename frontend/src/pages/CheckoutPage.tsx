@@ -6,15 +6,17 @@ import type {
   CheckoutAddress,
   CheckoutOrderPayload,
   CheckoutSummary,
+  OrderSummary,
+  OrderTaxLine,
   PaymentMethod
 } from '../types/checkout';
 import { useToast } from '../components/ToastProvider';
 import { extractErrorMessage } from '../utils/errors';
 import Button from '../components/Button';
 import Spinner from '../components/Spinner';
-import { formatCurrency } from '../utils/formatting';
+import { formatCurrency } from '../utils/currency';
 import { useAppSelector } from '../app/hooks';
-import { selectBaseCurrency } from '../features/settings/settingsSelectors';
+import { selectBaseCurrency } from '../features/settings/selectors';
 
 type StepKey = 'shipping' | 'billing' | 'payment';
 
@@ -456,7 +458,7 @@ const CheckoutPage = () => {
                 <details className="rounded border border-slate-200 p-2 text-xs">
                   <summary className="cursor-pointer font-semibold text-slate-700">Tax breakdown</summary>
                   <ul className="mt-2 space-y-1">
-                    {orderSummary.taxLines.map((line) => (
+                    {orderSummary.taxLines.map((line: OrderTaxLine) => (
                       <li key={`${line.productId}-${line.taxRate}`} className="flex justify-between">
                         <span>{line.productName ?? 'Item'}</span>
                         <span>{formatCurrency(line.taxAmount, baseCurrency)}</span>

@@ -2,9 +2,9 @@ import { useQuery } from '@tanstack/react-query';
 import api from '../services/http';
 import type { OrderListItem } from '../types/orders';
 import Spinner from '../components/Spinner';
-import { formatCurrency } from '../utils/formatting';
+import { formatCurrency } from '../utils/currency';
 import { useAppSelector } from '../app/hooks';
-import { selectBaseCurrency } from '../features/settings/settingsSelectors';
+import { selectBaseCurrency } from '../features/settings/selectors';
 
 const AdminOrdersPage = () => {
   const baseCurrency = useAppSelector(selectBaseCurrency);
