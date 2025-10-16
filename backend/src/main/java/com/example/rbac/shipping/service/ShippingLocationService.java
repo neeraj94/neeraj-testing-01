@@ -16,6 +16,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
@@ -671,6 +672,9 @@ public class ShippingLocationService {
         if (country == null || country.getId() == null) {
             return;
         }
+        if (isCurrentTransactionReadOnly()) {
+            return;
+        }
         List<String> referenceStates = shippingReferenceData.getStateNames(country.getCode(), country.getName());
         if (referenceStates.isEmpty()) {
             return;
@@ -710,6 +714,9 @@ public class ShippingLocationService {
         if (state == null || state.getId() == null || state.getCountry() == null) {
             return;
         }
+        if (isCurrentTransactionReadOnly()) {
+            return;
+        }
         List<String> referenceCities = shippingReferenceData.getCityNames(
                 state.getCountry().getCode(),
                 state.getCountry().getName(),
@@ -745,6 +752,10 @@ public class ShippingLocationService {
         if (created) {
             cityRepository.flush();
         }
+    }
+
+    private boolean isCurrentTransactionReadOnly() {
+        return TransactionSynchronizationManager.isCurrentTransactionReadOnly();
     }
 
     private ShippingCountry getCountryOrThrow(Long countryId) {
