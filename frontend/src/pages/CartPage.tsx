@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../app/hooks';
 import {
   removeCartItem,
@@ -14,6 +14,7 @@ import { useToast } from '../components/ToastProvider';
 
 const CartPage = () => {
   const dispatch = useAppDispatch();
+  const navigate = useNavigate();
   const { notify } = useToast();
   const cart = useAppSelector(selectCart);
   const source = useAppSelector(selectCartSource);
@@ -230,6 +231,7 @@ const CartPage = () => {
                   type="button"
                   className="mt-6 w-full rounded-full bg-primary px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-primary/30 transition hover:-translate-y-0.5 hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-60"
                   disabled={cart.items.length === 0}
+                  onClick={() => navigate('/checkout')}
                 >
                   Proceed to checkout
                 </button>
