@@ -1018,4 +1018,53 @@ const StarRating = ({
   );
 };
 
+const SectionAccordion = ({ title, sections }: { title: string; sections: PublicProductSection[] }) => {
+  if (sections.length === 0) {
+    return null;
+  }
+  return (
+    <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+      <h2 className="text-xl font-semibold text-slate-900">{title}</h2>
+      <div className="mt-4 space-y-4">
+        {sections.map((section, index) => (
+          <Fragment key={`${section.title ?? 'section'}-${index}`}>
+            <div className="space-y-2">
+              {section.title && <h3 className="text-sm font-semibold text-slate-800">{section.title}</h3>}
+              {section.content && <p className="text-sm text-slate-600">{section.content}</p>}
+              {section.bulletPoints.length > 0 && (
+                <ul className="list-inside list-disc text-sm text-slate-600">
+                  {section.bulletPoints.map((point, idx) => (
+                    <li key={idx}>{point}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+            {index !== sections.length - 1 && <div className="h-px w-full bg-slate-200" />}
+          </Fragment>
+        ))}
+      </div>
+    </section>
+  );
+};
+
+const RecommendationCard = ({ item }: { item: PublicProductRecommendation }) => (
+  <Link
+    to={`/product/${item.slug}`}
+    className="group flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
+  >
+    <div className="h-48 w-full overflow-hidden bg-slate-100">
+      {item.imageUrl ? (
+        <img src={item.imageUrl} alt={item.name} className="h-full w-full object-cover transition group-hover:scale-105" />
+      ) : (
+        <div className="flex h-full items-center justify-center text-sm text-slate-400">No image</div>
+      )}
+    </div>
+    <div className="flex flex-1 flex-col gap-2 px-4 py-4">
+      <p className="text-sm font-semibold text-slate-800">{item.name}</p>
+      <p className="text-sm text-slate-500">{formatCurrency(item.finalPrice ?? item.originalPrice)}</p>
+      <span className="mt-auto text-xs font-medium text-slate-900">View details →</span>
+    </div>
+  </Link>
+);
+
 export default PublicProductPage;
