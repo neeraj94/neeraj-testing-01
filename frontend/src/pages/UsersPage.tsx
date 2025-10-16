@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../services/http';
 import type { Pagination, Permission, Role, User, UserSummaryMetrics, UserRecentProduct } from '../types/models';
 import type { Cart } from '../types/cart';
-import type { CheckoutAddress } from '../types/checkout';
+import type { AddressType, CheckoutAddress, CheckoutRegionOption } from '../types/checkout';
 import { useToast } from '../components/ToastProvider';
 import { useConfirm } from '../components/ConfirmDialogProvider';
 import SortableColumnHeader from '../components/SortableColumnHeader';
@@ -20,6 +20,7 @@ import PageSection from '../components/PageSection';
 import PaginationControls from '../components/PaginationControls';
 import { formatCurrency } from '../utils/currency';
 import type { ProductDetail, ProductSummary } from '../types/product';
+import Button from '../components/Button';
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100];
 const DEFAULT_PAGE_SIZE = 25;
@@ -133,6 +134,21 @@ const UsersPage = () => {
   const [cartAddQuantity, setCartAddQuantity] = useState(1);
   const [updatingItemId, setUpdatingItemId] = useState<number | null>(null);
   const [removingItemId, setRemovingItemId] = useState<number | null>(null);
+  const createEmptyAddressForm = (type: AddressType = 'SHIPPING') => ({
+    type,
+    countryId: '',
+    stateId: '',
+    cityId: '',
+    fullName: '',
+    mobileNumber: '',
+    pinCode: '',
+    addressLine1: '',
+    addressLine2: '',
+    landmark: '',
+    makeDefault: false
+  });
+  const [addressFormOpen, setAddressFormOpen] = useState(false);
+  const [addressForm, setAddressForm] = useState(createEmptyAddressForm());
 
   const clampQuantity = (value: number) => {
     if (!Number.isFinite(value)) {
@@ -535,6 +551,80 @@ const UsersPage = () => {
     enabled: panelMode === 'detail' && activeTab === 'addresses' && selectedUserId != null
   });
 
+  const addressCountriesQuery = useQuery<CheckoutRegionOption[]>({
+    queryKey: ['admin', 'users', 'addresses', 'countries'],
+    queryFn: async () => {
+      const { data } = await api.get<CheckoutRegionOption[]>('/checkout/regions/countries');
+      return data;
+    },
+    enabled: panelMode === 'detail' && activeTab === 'addresses' && addressFormOpen
+  });
+
+  const addressStatesQuery = useQuery<CheckoutRegionOption[]>({
+    queryKey: ['admin', 'users', 'addresses', 'states', addressForm.countryId],
+    queryFn: async () => {
+      const { data } = await api.get<CheckoutRegionOption[]>(
+        `/checkout/regions/countries/${addressForm.countryId}/states`
+      );
+      return data;
+    },
+    enabled:
+      panelMode === 'detail' &&
+      activeTab === 'addresses' &&
+      addressFormOpen &&
+      Boolean(addressForm.countryId)
+  });
+
+  const addressCitiesQuery = useQuery<CheckoutRegionOption[]>({
+    queryKey: ['admin', 'users', 'addresses', 'cities', addressForm.stateId],
+    queryFn: async () => {
+      const { data } = await api.get<CheckoutRegionOption[]>(
+        `/checkout/regions/states/${addressForm.stateId}/cities`
+      );
+      return data;
+    },
+    enabled:
+      panelMode === 'detail' &&
+      activeTab === 'addresses' &&
+      addressFormOpen &&
+      Boolean(addressForm.stateId)
+  });
+
+  const createAddressMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedUserId) {
+        throw new Error('Select a user before adding an address.');
+      }
+      const payload = {
+        type: addressForm.type,
+        countryId: addressForm.countryId ? Number(addressForm.countryId) : undefined,
+        stateId: addressForm.stateId ? Number(addressForm.stateId) : undefined,
+        cityId: addressForm.cityId ? Number(addressForm.cityId) : undefined,
+        fullName: addressForm.fullName,
+        mobileNumber: addressForm.mobileNumber,
+        pinCode: addressForm.pinCode || undefined,
+        addressLine1: addressForm.addressLine1,
+        addressLine2: addressForm.addressLine2 || undefined,
+        landmark: addressForm.landmark || undefined,
+        makeDefault: Boolean(addressForm.makeDefault)
+      };
+      const { data } = await api.post<CheckoutAddress>(
+        `/admin/users/${selectedUserId}/addresses`,
+        payload
+      );
+      return data;
+    },
+    onSuccess: () => {
+      notify({ type: 'success', message: 'Address added successfully.' });
+      setAddressForm(createEmptyAddressForm());
+      setAddressFormOpen(false);
+      void addressesQuery.refetch();
+    },
+    onError: (error) => {
+      notify({ type: 'error', message: extractErrorMessage(error, 'Unable to add address.') });
+    }
+  });
+
   const cartProductOptions = cartProductSearchQuery.data?.content ?? [];
   const isSearchingCartProducts = cartProductSearchQuery.isFetching;
   const selectedProductDetail = cartSelectedProductQuery.data;
@@ -568,6 +658,13 @@ const UsersPage = () => {
       setCartAddQuantity(1);
     }
   }, [isCartAddOpen]);
+
+  useEffect(() => {
+    if (activeTab !== 'addresses') {
+      setAddressFormOpen(false);
+      setAddressForm(createEmptyAddressForm());
+    }
+  }, [activeTab]);
 
   useEffect(() => {
     if (!isCartAddOpen) {
@@ -1925,41 +2022,277 @@ const UsersPage = () => {
     }
 
     const addressList = addressesQuery.data ?? [];
+    const countryOptions = addressCountriesQuery.data ?? [];
+    const stateOptions = addressStatesQuery.data ?? [];
+    const cityOptions = addressCitiesQuery.data ?? [];
+    const countryError = addressCountriesQuery.isError
+      ? extractErrorMessage(addressCountriesQuery.error, 'Unable to load countries.')
+      : null;
+    const stateError = addressStatesQuery.isError
+      ? extractErrorMessage(addressStatesQuery.error, 'Unable to load states.')
+      : null;
+    const cityError = addressCitiesQuery.isError
+      ? extractErrorMessage(addressCitiesQuery.error, 'Unable to load cities.')
+      : null;
 
-    if (!addressList.length) {
-      return (
-        <section className="rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-600 shadow-sm">
-          This user has not saved any shipping or billing addresses yet.
-        </section>
-      );
-    }
+    const handleSubmitAddress = (event: FormEvent) => {
+      event.preventDefault();
+      if (!createAddressMutation.isPending) {
+        createAddressMutation.mutate();
+      }
+    };
+
+    const handleToggleForm = () => {
+      if (addressFormOpen) {
+        setAddressFormOpen(false);
+        setAddressForm(createEmptyAddressForm());
+      } else {
+        setAddressForm(createEmptyAddressForm('SHIPPING'));
+        setAddressFormOpen(true);
+      }
+    };
 
     return (
       <section className="space-y-4">
-        <div className="grid gap-4 md:grid-cols-2">
-          {addressList.map((address) => (
-            <div key={address.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-slate-800">{address.fullName}</h3>
-                <span className="rounded bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
-                  {address.type === 'SHIPPING' ? 'Shipping' : 'Billing'}
-                </span>
-              </div>
-              <p className="mt-1 text-sm text-slate-600">
-                {address.addressLine1}
-                {address.addressLine2 ? `, ${address.addressLine2}` : ''}
-              </p>
-              <p className="text-sm text-slate-600">
-                {[address.cityName, address.stateName, address.countryName].filter(Boolean).join(', ')}
-              </p>
-              {address.pinCode && <p className="text-xs text-slate-500">PIN: {address.pinCode}</p>}
-              <p className="text-xs text-slate-500">Phone: {address.mobileNumber}</p>
-              {address.defaultAddress && (
-                <p className="mt-2 text-xs font-medium uppercase text-blue-600">Default</p>
-              )}
-            </div>
-          ))}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h3 className="text-sm font-semibold text-slate-800">Saved addresses</h3>
+            <p className="text-xs text-slate-500">Manage shipping and billing locations for this customer.</p>
+          </div>
+          <Button variant="ghost" className="px-3 py-1 text-xs" onClick={handleToggleForm}>
+            {addressFormOpen ? 'Cancel' : 'Add address'}
+          </Button>
         </div>
+        {addressFormOpen && (
+          <form
+            onSubmit={handleSubmitAddress}
+            className="space-y-4 rounded-xl border border-slate-200 bg-slate-50/80 p-5 shadow-inner"
+          >
+            <div className="grid gap-3 md:grid-cols-3">
+              <label className="text-xs font-medium uppercase text-slate-500">
+                Address type
+                <select
+                  value={addressForm.type}
+                  onChange={(event) =>
+                    setAddressForm((prev) => ({
+                      ...prev,
+                      type: event.target.value as AddressType
+                    }))
+                  }
+                  className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none"
+                >
+                  <option value="SHIPPING">Shipping</option>
+                  <option value="BILLING">Billing</option>
+                </select>
+              </label>
+              <label className="text-xs font-medium uppercase text-slate-500">
+                Country
+                <select
+                  required
+                  value={addressForm.countryId}
+                  onChange={(event) =>
+                    setAddressForm((prev) => ({
+                      ...prev,
+                      countryId: event.target.value,
+                      stateId: '',
+                      cityId: ''
+                    }))
+                  }
+                  className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none"
+                >
+                  <option value="">Select country</option>
+                  {countryOptions.map((option) => (
+                    <option key={option.id} value={String(option.id)}>
+                      {option.name ?? option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="text-xs font-medium uppercase text-slate-500">
+                State
+                <select
+                  required
+                  value={addressForm.stateId}
+                  onChange={(event) =>
+                    setAddressForm((prev) => ({
+                      ...prev,
+                      stateId: event.target.value,
+                      cityId: ''
+                    }))
+                  }
+                  disabled={!addressForm.countryId || addressStatesQuery.isLoading}
+                  className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none"
+                >
+                  <option value="">Select state</option>
+                  {stateOptions.map((option) => (
+                    <option key={option.id} value={String(option.id)}>
+                      {option.name ?? option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="text-xs font-medium uppercase text-slate-500">
+                City
+                <select
+                  required
+                  value={addressForm.cityId}
+                  onChange={(event) =>
+                    setAddressForm((prev) => ({
+                      ...prev,
+                      cityId: event.target.value
+                    }))
+                  }
+                  disabled={!addressForm.stateId || addressCitiesQuery.isLoading}
+                  className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none"
+                >
+                  <option value="">Select city</option>
+                  {cityOptions.map((option) => (
+                    <option key={option.id} value={String(option.id)}>
+                      {option.name ?? option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="text-xs font-medium uppercase text-slate-500">
+                Full name
+                <input
+                  required
+                  value={addressForm.fullName}
+                  onChange={(event) =>
+                    setAddressForm((prev) => ({ ...prev, fullName: event.target.value }))
+                  }
+                  className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none"
+                />
+              </label>
+              <label className="text-xs font-medium uppercase text-slate-500">
+                Mobile number
+                <input
+                  required
+                  value={addressForm.mobileNumber}
+                  onChange={(event) =>
+                    setAddressForm((prev) => ({ ...prev, mobileNumber: event.target.value }))
+                  }
+                  className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none"
+                />
+              </label>
+              <label className="text-xs font-medium uppercase text-slate-500">
+                PIN code
+                <input
+                  value={addressForm.pinCode}
+                  onChange={(event) =>
+                    setAddressForm((prev) => ({ ...prev, pinCode: event.target.value }))
+                  }
+                  className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none"
+                  placeholder="Postal code"
+                />
+              </label>
+            </div>
+            <div className="grid gap-3 md:grid-cols-2">
+              <label className="text-xs font-medium uppercase text-slate-500">
+                Address line 1
+                <input
+                  required
+                  value={addressForm.addressLine1}
+                  onChange={(event) =>
+                    setAddressForm((prev) => ({ ...prev, addressLine1: event.target.value }))
+                  }
+                  className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none"
+                  placeholder="House number, street"
+                />
+              </label>
+              <label className="text-xs font-medium uppercase text-slate-500">
+                Address line 2
+                <input
+                  value={addressForm.addressLine2}
+                  onChange={(event) =>
+                    setAddressForm((prev) => ({ ...prev, addressLine2: event.target.value }))
+                  }
+                  className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none"
+                  placeholder="Area, sector, landmark"
+                />
+              </label>
+              <label className="text-xs font-medium uppercase text-slate-500">
+                Landmark
+                <input
+                  value={addressForm.landmark}
+                  onChange={(event) =>
+                    setAddressForm((prev) => ({ ...prev, landmark: event.target.value }))
+                  }
+                  className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none"
+                  placeholder="Nearby landmark"
+                />
+              </label>
+            </div>
+            {addressCountriesQuery.isLoading && (
+              <p className="text-xs text-slate-500">Loading available countries…</p>
+            )}
+            {countryError && <p className="text-xs text-rose-600">{countryError}</p>}
+            {stateError && <p className="text-xs text-rose-600">{stateError}</p>}
+            {cityError && <p className="text-xs text-rose-600">{cityError}</p>}
+            {addressForm.countryId && !addressStatesQuery.isLoading && !stateOptions.length && (
+              <p className="text-xs text-amber-600">No states are enabled for the selected country yet.</p>
+            )}
+            {addressForm.stateId && !addressCitiesQuery.isLoading && !cityOptions.length && (
+              <p className="text-xs text-amber-600">No cities are enabled for the selected state yet.</p>
+            )}
+            <label className="flex items-center gap-2 text-xs text-slate-600">
+              <input
+                type="checkbox"
+                checked={addressForm.makeDefault}
+                onChange={(event) =>
+                  setAddressForm((prev) => ({ ...prev, makeDefault: event.target.checked }))
+                }
+              />
+              Make this the default {addressForm.type === 'SHIPPING' ? 'shipping' : 'billing'} address
+            </label>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <Button
+                type="button"
+                variant="ghost"
+                className="px-3 py-1 text-xs"
+                onClick={() => {
+                  setAddressFormOpen(false);
+                  setAddressForm(createEmptyAddressForm());
+                }}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" loading={createAddressMutation.isPending}>
+                Save address
+              </Button>
+            </div>
+          </form>
+        )}
+        {addressList.length ? (
+          <div className="grid gap-4 md:grid-cols-2">
+            {addressList.map((address) => (
+              <div key={address.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-slate-800">{address.fullName}</h3>
+                  <span className="rounded bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+                    {address.type === 'SHIPPING' ? 'Shipping' : 'Billing'}
+                  </span>
+                </div>
+                <p className="mt-1 text-sm text-slate-600">
+                  {address.addressLine1}
+                  {address.addressLine2 ? `, ${address.addressLine2}` : ''}
+                </p>
+                <p className="text-sm text-slate-600">
+                  {[address.cityName, address.stateName, address.countryName].filter(Boolean).join(', ')}
+                </p>
+                {address.pinCode && <p className="text-xs text-slate-500">PIN: {address.pinCode}</p>}
+                <p className="text-xs text-slate-500">Phone: {address.mobileNumber}</p>
+                {address.defaultAddress && (
+                  <p className="mt-2 text-xs font-medium uppercase text-blue-600">Default</p>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-600 shadow-sm">
+            This user has not saved any shipping or billing addresses yet.
+          </div>
+        )}
       </section>
     );
   };

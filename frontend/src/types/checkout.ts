@@ -59,14 +59,17 @@ export interface OrderSummary {
   taxTotal: number;
   shippingTotal: number;
   grandTotal: number;
+  discountTotal: number;
   shippingBreakdown: ShippingQuote | null;
   taxLines: OrderTaxLine[];
+  appliedCoupon: AppliedCoupon | null;
 }
 
 export interface CheckoutSummary {
   addresses: CheckoutAddress[];
   paymentMethods: PaymentMethod[];
   orderSummary: OrderSummary;
+  coupons: CheckoutCoupon[];
 }
 
 export interface CheckoutOrderLine {
@@ -92,6 +95,7 @@ export interface CheckoutOrderPayload {
   sameAsShipping: boolean;
   paymentMethodKey: string;
   lines: CheckoutOrderLine[];
+  couponCode?: string | null;
 }
 
 export interface CheckoutOrderResponse {
@@ -99,4 +103,25 @@ export interface CheckoutOrderResponse {
   orderNumber: string;
   summary: OrderSummary;
   createdAt: string;
+}
+
+export interface CheckoutCoupon {
+  id: number;
+  name: string;
+  code: string;
+  shortDescription?: string | null;
+  discountType: 'FLAT' | 'PERCENTAGE';
+  discountValue: number | null;
+  minimumCartValue: number | null;
+  startDate: string;
+  endDate: string;
+}
+
+export interface AppliedCoupon {
+  id: number;
+  name: string;
+  code: string;
+  discountType: 'FLAT' | 'PERCENTAGE';
+  discountValue: number | null;
+  discountAmount: number | null;
 }

@@ -5,6 +5,7 @@ import api from '../services/http';
 import type {
   AddressType,
   CheckoutAddress,
+  CheckoutCoupon,
   CheckoutOrderLine,
   CheckoutOrderPayload,
   CheckoutOrderResponse,
@@ -55,6 +56,11 @@ const CheckoutPage = () => {
   const [sameAsShipping, setSameAsShipping] = useState(true);
   const [selectedPaymentKey, setSelectedPaymentKey] = useState<string | null>(null);
   const [acceptPolicies, setAcceptPolicies] = useState(false);
+  const [selectedCouponCode, setSelectedCouponCode] = useState<string | null>(null);
+  const [couponError, setCouponError] = useState<string | null>(null);
+  const [isCouponModalOpen, setIsCouponModalOpen] = useState(false);
+  const [availableCoupons, setAvailableCoupons] = useState<CheckoutCoupon[]>([]);
+  const [lastOrderNumber, setLastOrderNumber] = useState<string | null>(null);
   const [showAddressForm, setShowAddressForm] = useState(false);
   const defaultAddressForm = {
     type: 'SHIPPING' as AddressType,
@@ -117,6 +123,29 @@ const CheckoutPage = () => {
     () => summaryQuery.data?.paymentMethods ?? [],
     [summaryQuery.data?.paymentMethods]
   );
+  const sortedAddresses = useMemo(() => {
+    const list = [...addresses];
+    list.sort((first, second) => {
+      if (first.type !== second.type) {
+        return first.type === 'SHIPPING' ? -1 : 1;
+      }
+      if (first.defaultAddress !== second.defaultAddress) {
+        return first.defaultAddress ? -1 : 1;
+      }
+      const firstId = first.id ?? 0;
+      const secondId = second.id ?? 0;
+      return firstId - secondId;
+    });
+    return list;
+  }, [addresses]);
+  const shippingTypeAddresses = useMemo(
+    () => addresses.filter((address) => address.type === 'SHIPPING'),
+    [addresses]
+  );
+  const billingTypeAddresses = useMemo(
+    () => addresses.filter((address) => address.type === 'BILLING'),
+    [addresses]
+  );
   const [orderSummary, setOrderSummary] = useState<OrderSummary | null>(summaryQuery.data?.orderSummary ?? null);
   const checkoutLines: CheckoutOrderLine[] = useMemo(
     () =>
@@ -129,28 +158,63 @@ const CheckoutPage = () => {
     [cart.items]
   );
   const hasCartItems = checkoutLines.length > 0;
-  const shippingAddresses = useMemo(
-    () => addresses.filter((address) => address.type === 'SHIPPING'),
-    [addresses]
-  );
-  const billingAddresses = useMemo(
-    () => addresses.filter((address) => address.type === 'BILLING'),
-    [addresses]
-  );
+  const shippingStepComplete = Boolean(shippingAddressId);
+  const billingStepComplete = sameAsShipping || Boolean(billingAddressId);
+  const paymentStepReady = shippingStepComplete && billingStepComplete;
+  const isStepAccessible = (step: StepKey) => {
+    if (step === 'shipping') {
+      return true;
+    }
+    if (step === 'billing') {
+      return hasCartItems && shippingStepComplete;
+    }
+    if (step === 'payment') {
+      return hasCartItems && paymentStepReady;
+    }
+    return false;
+  };
+  const featuredCoupons = useMemo(() => availableCoupons.slice(0, 2), [availableCoupons]);
 
   const formatMaybeCurrency = (value?: number | null) =>
     value == null ? '—' : formatCurrency(value, baseCurrency);
 
-  useEffect(() => {
-    if (!shippingAddressId && shippingAddresses.length) {
-      const preferredShipping =
-        shippingAddresses.find((address) => address.defaultAddress) ?? shippingAddresses[0];
-      setShippingAddressId(preferredShipping.id);
+  const describeCoupon = (coupon: { discountType: 'FLAT' | 'PERCENTAGE'; discountValue: number | null }) => {
+    if (coupon.discountType === 'PERCENTAGE') {
+      return `${coupon.discountValue ?? 0}% off`;
     }
-    if (!billingAddressId && billingAddresses.length) {
-      const preferredBilling =
-        billingAddresses.find((address) => address.defaultAddress) ?? billingAddresses[0];
-      setBillingAddressId(preferredBilling.id);
+    return formatCurrency(coupon.discountValue ?? 0, baseCurrency);
+  };
+
+  const formatDateLabel = (value?: string | null) =>
+    value ? new Date(value).toLocaleDateString() : '—';
+
+  useEffect(() => {
+    const pickPreferredAddress = (preferred: CheckoutAddress[], fallback: CheckoutAddress[]) => {
+      const withDefault = preferred.find((address) => address.defaultAddress);
+      if (withDefault) {
+        return withDefault;
+      }
+      if (preferred.length) {
+        return preferred[0];
+      }
+      const fallbackDefault = fallback.find((address) => address.defaultAddress);
+      if (fallbackDefault) {
+        return fallbackDefault;
+      }
+      return fallback[0];
+    };
+
+    if (!shippingAddressId && sortedAddresses.length) {
+      const preferredShipping = pickPreferredAddress(shippingTypeAddresses, sortedAddresses);
+      if (preferredShipping) {
+        setShippingAddressId(preferredShipping.id);
+      }
+    }
+    if (!billingAddressId && sortedAddresses.length) {
+      const preferredBilling = pickPreferredAddress(billingTypeAddresses, sortedAddresses);
+      if (preferredBilling) {
+        setBillingAddressId(preferredBilling.id);
+      }
     }
     if (!selectedPaymentKey && paymentMethods.length) {
       const enabled = paymentMethods.find((method) => method.enabled);
@@ -163,22 +227,31 @@ const CheckoutPage = () => {
     }
   }, [
     billingAddressId,
-    billingAddresses,
+    billingTypeAddresses,
     paymentMethods,
     selectedPaymentKey,
     shippingAddressId,
-    shippingAddresses
+    shippingTypeAddresses,
+    sortedAddresses
   ]);
 
   useEffect(() => {
     if (summaryQuery.data?.orderSummary) {
       setOrderSummary(summaryQuery.data.orderSummary);
+      setSelectedCouponCode(summaryQuery.data.orderSummary.appliedCoupon?.code ?? null);
+      setCouponError(null);
     }
   }, [summaryQuery.data?.orderSummary]);
 
   useEffect(() => {
+    setAvailableCoupons(summaryQuery.data?.coupons ?? []);
+  }, [summaryQuery.data?.coupons]);
+
+  useEffect(() => {
     if (!hasCartItems) {
       setOrderSummary(summaryQuery.data?.orderSummary ?? null);
+      setSelectedCouponCode(summaryQuery.data?.orderSummary?.appliedCoupon?.code ?? null);
+      setCouponError(null);
       return;
     }
     const fetchPreview = async () => {
@@ -188,12 +261,19 @@ const CheckoutPage = () => {
           billingAddressId: sameAsShipping ? null : billingAddressId ?? undefined,
           sameAsShipping,
           paymentMethodKey: selectedPaymentKey ?? 'COD',
-          lines: checkoutLines
+          lines: checkoutLines,
+          couponCode: selectedCouponCode ?? undefined
         };
         const { data } = await api.post<OrderSummary>('/checkout/summary', payload);
         setOrderSummary(data);
+        setSelectedCouponCode(data.appliedCoupon?.code ?? null);
+        setCouponError(null);
       } catch (error) {
         console.error('Failed to update order summary', error);
+        const message = extractErrorMessage(error, 'Failed to update order summary.');
+        notify({ type: 'error', message });
+        setCouponError(message);
+        setSelectedCouponCode(orderSummary?.appliedCoupon?.code ?? null);
       }
     };
     if (shippingAddressId) {
@@ -203,11 +283,19 @@ const CheckoutPage = () => {
     billingAddressId,
     checkoutLines,
     hasCartItems,
+    notify,
     sameAsShipping,
     selectedPaymentKey,
     shippingAddressId,
-    summaryQuery.data?.orderSummary
+    summaryQuery.data?.orderSummary,
+    selectedCouponCode
   ]);
+
+  useEffect(() => {
+    if (hasCartItems) {
+      setLastOrderNumber(null);
+    }
+  }, [hasCartItems]);
 
   const createAddressMutation = useMutation({
     mutationFn: async () => {
@@ -251,7 +339,8 @@ const CheckoutPage = () => {
         billingAddressId: sameAsShipping ? null : billingAddressId ?? undefined,
         sameAsShipping,
         paymentMethodKey: selectedPaymentKey,
-        lines: checkoutLines
+        lines: checkoutLines,
+        couponCode: selectedCouponCode ?? undefined
       };
       const { data } = await api.post<CheckoutOrderResponse>('/checkout/orders', payload);
       return data;
@@ -262,6 +351,9 @@ const CheckoutPage = () => {
         message: data.orderNumber ? `Order ${data.orderNumber} placed successfully.` : 'Order placed successfully.'
       });
       setOrderSummary(data.summary);
+      setSelectedCouponCode(data.summary.appliedCoupon?.code ?? null);
+      setCouponError(null);
+      setLastOrderNumber(data.orderNumber ?? null);
       setActiveStep('shipping');
       setAcceptPolicies(false);
       setSameAsShipping(true);
@@ -290,7 +382,10 @@ const CheckoutPage = () => {
   const nextStep = () => {
     const index = steps.indexOf(activeStep);
     if (index < steps.length - 1) {
-      setActiveStep(steps[index + 1]);
+      const next = steps[index + 1];
+      if (isStepAccessible(next)) {
+        setActiveStep(next);
+      }
     }
   };
 
@@ -314,9 +409,14 @@ const CheckoutPage = () => {
     >
       <div className="flex items-center justify-between">
         <h4 className="text-sm font-semibold text-slate-800">{address.fullName}</h4>
-        {address.defaultAddress && (
-          <span className="rounded bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">Default</span>
-        )}
+        <div className="flex items-center gap-2">
+          <span className="rounded bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+            {address.type === 'SHIPPING' ? 'Shipping' : 'Billing'}
+          </span>
+          {address.defaultAddress && (
+            <span className="rounded bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">Default</span>
+          )}
+        </div>
       </div>
       <p className="mt-1 text-sm text-slate-600">
         {address.addressLine1}
@@ -529,10 +629,23 @@ const CheckoutPage = () => {
     );
   };
 
+  const handleApplyCoupon = (coupon: CheckoutCoupon) => {
+    setSelectedCouponCode(coupon.code);
+    setIsCouponModalOpen(false);
+    setCouponError(null);
+  };
+
+  const handleRemoveCoupon = () => {
+    setSelectedCouponCode(null);
+    setCouponError(null);
+  };
+
   const isInitialLoading = summaryQuery.isLoading && !summaryQuery.data;
   const summaryError = summaryQuery.isError && !summaryQuery.data
     ? extractErrorMessage(summaryQuery.error, 'Unable to load checkout summary.')
     : null;
+  const appliedCoupon = orderSummary?.appliedCoupon ?? null;
+  const discountTotal = orderSummary?.discountTotal ?? 0;
 
   return (
     <div className="min-h-screen bg-slate-50 pb-16">
@@ -556,6 +669,14 @@ const CheckoutPage = () => {
       </header>
 
       <main className="mx-auto mt-10 max-w-6xl px-6">
+        {lastOrderNumber && (
+          <div className="mb-6 rounded-3xl border border-emerald-200 bg-emerald-50/80 p-6 text-sm text-emerald-700 shadow-sm">
+            <p className="text-base font-semibold text-emerald-800">Order {lastOrderNumber} placed successfully.</p>
+            <p className="text-xs text-emerald-700">
+              Your order details are now available from the Orders section in your account.
+            </p>
+          </div>
+        )}
         {!hasCartItems && !isInitialLoading && !summaryError && (
           <div className="mb-8 rounded-3xl border border-amber-200 bg-amber-50/80 p-6 text-sm text-amber-700 shadow-sm">
             Your cart is currently empty. Browse the catalog and add items before completing checkout.
@@ -578,22 +699,32 @@ const CheckoutPage = () => {
                 <ol className="mt-4 grid gap-3 md:grid-cols-3">
                   {steps.map((step, index) => {
                     const isActive = activeStep === step;
+                    const isAccessible = isStepAccessible(step);
                     const details = stepDetails[step];
+                    const buttonClasses = isActive
+                      ? 'border-blue-600 bg-blue-50 text-blue-700 shadow-sm'
+                      : isAccessible
+                        ? 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50'
+                        : 'border-slate-200 bg-white text-slate-400 opacity-60 cursor-not-allowed';
+                    const indicatorClasses = isActive
+                      ? 'border-blue-500 bg-white text-blue-600'
+                      : isAccessible
+                        ? 'border-slate-300 text-slate-500'
+                        : 'border-slate-200 text-slate-400';
                     return (
                       <li key={step}>
                         <button
                           type="button"
-                          onClick={() => setActiveStep(step)}
-                          className={`flex h-full w-full flex-col gap-2 rounded-2xl border px-4 py-3 text-left transition ${
-                            isActive
-                              ? 'border-blue-600 bg-blue-50 text-blue-700 shadow-sm'
-                              : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50'
-                          }`}
+                          onClick={() => {
+                            if (isAccessible) {
+                              setActiveStep(step);
+                            }
+                          }}
+                          disabled={!isAccessible}
+                          className={`flex h-full w-full flex-col gap-2 rounded-2xl border px-4 py-3 text-left transition ${buttonClasses}`}
                         >
                           <span
-                            className={`inline-flex h-8 w-8 items-center justify-center rounded-full border text-sm font-semibold ${
-                              isActive ? 'border-blue-500 bg-white text-blue-600' : 'border-slate-300 text-slate-500'
-                            }`}
+                            className={`inline-flex h-8 w-8 items-center justify-center rounded-full border text-sm font-semibold ${indicatorClasses}`}
                           >
                             {index + 1}
                           </span>
@@ -636,13 +767,13 @@ const CheckoutPage = () => {
                         </Button>
                       </div>
                       <div className="grid gap-4 md:grid-cols-2">
-                        {shippingAddresses.map((address) =>
+                        {sortedAddresses.map((address) =>
                           renderAddressCard(address, shippingAddressId, setShippingAddressId)
                         )}
                       </div>
-                      {!shippingAddresses.length && (
+                      {!sortedAddresses.length && (
                         <p className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-500">
-                          No shipping addresses saved yet. Add one to continue.
+                          No addresses saved yet. Add one to continue.
                         </p>
                       )}
                       {renderAddressForm('SHIPPING')}
@@ -650,7 +781,7 @@ const CheckoutPage = () => {
                         <p className="text-xs text-slate-500">
                           Need to ship to a new location? Add as many addresses as you like and pick the best one.
                         </p>
-                        <Button onClick={nextStep} disabled={!shippingAddressId || !hasCartItems}>
+                        <Button onClick={nextStep} disabled={!shippingStepComplete || !hasCartItems}>
                           Continue to billing
                         </Button>
                       </div>
@@ -690,12 +821,12 @@ const CheckoutPage = () => {
                       </label>
                       {!sameAsShipping && (
                         <div className="grid gap-4 md:grid-cols-2">
-                          {billingAddresses.map((address) =>
+                          {sortedAddresses.map((address) =>
                             renderAddressCard(address, billingAddressId, setBillingAddressId)
                           )}
                         </div>
                       )}
-                      {!sameAsShipping && !billingAddresses.length && (
+                      {!sameAsShipping && !sortedAddresses.length && (
                         <p className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-500">
                           No billing addresses saved yet. Add one or use your shipping address.
                         </p>
@@ -705,10 +836,7 @@ const CheckoutPage = () => {
                         <Button variant="ghost" onClick={prevStep}>
                           Back to shipping
                         </Button>
-                        <Button
-                          onClick={nextStep}
-                          disabled={!hasCartItems || (!sameAsShipping && !billingAddressId)}
-                        >
+                        <Button onClick={nextStep} disabled={!hasCartItems || !billingStepComplete}>
                           Continue to payment
                         </Button>
                       </div>
@@ -778,7 +906,8 @@ const CheckoutPage = () => {
                             !selectedPaymentKey ||
                             placeOrderMutation.isPending ||
                             !paymentMethods.length ||
-                            !hasCartItems
+                            !hasCartItems ||
+                            !paymentStepReady
                           }
                           loading={placeOrderMutation.isPending}
                         >
@@ -807,32 +936,79 @@ const CheckoutPage = () => {
                     <span>Shipping</span>
                     <span>{formatCurrency(orderSummary.shippingTotal ?? 0, baseCurrency)}</span>
                   </div>
+                  {discountTotal > 0 && (
+                    <div className="flex justify-between text-emerald-600">
+                      <span>Discount</span>
+                      <span>-{formatCurrency(discountTotal, baseCurrency)}</span>
+                    </div>
+                  )}
+                  <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 text-xs text-slate-600">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold text-slate-800">Apply coupon</p>
+                        <p>
+                          {appliedCoupon
+                            ? `Coupon ${appliedCoupon.code} is applied to this order.`
+                            : 'Have a coupon code? Apply it to save instantly on your order.'}
+                        </p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        className="px-3 py-1 text-xs"
+                        onClick={() => setIsCouponModalOpen(true)}
+                        disabled={!availableCoupons.length}
+                      >
+                        {availableCoupons.length ? 'View coupons' : 'No coupons available'}
+                      </Button>
+                    </div>
+                    {!!featuredCoupons.length && (
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {featuredCoupons.map((coupon) => (
+                          <button
+                            key={coupon.id}
+                            type="button"
+                            onClick={() => handleApplyCoupon(coupon)}
+                            className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700 transition hover:border-blue-300 hover:bg-blue-100"
+                          >
+                            {coupon.code} · {describeCoupon(coupon)}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    {appliedCoupon && (
+                      <div className="mt-3 rounded-xl border border-emerald-200 bg-white p-3 text-xs text-emerald-700">
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <div>
+                            <p className="text-sm font-semibold text-emerald-800">{appliedCoupon.name}</p>
+                            <p className="font-medium">Code: {appliedCoupon.code}</p>
+                            <p>
+                              {describeCoupon(appliedCoupon)} — saves {formatCurrency(appliedCoupon.discountAmount ?? 0, baseCurrency)}
+                            </p>
+                          </div>
+                          <Button variant="ghost" className="px-3 py-1 text-xs" onClick={handleRemoveCoupon}>
+                            Remove
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                    {couponError && <p className="mt-3 text-xs text-rose-600">{couponError}</p>}
+                  </div>
                   {orderSummary.shippingBreakdown &&
                     (() => {
                       const breakdown = orderSummary.shippingBreakdown;
-                      const levels = [
-                        breakdown.countryName
-                          ? { label: breakdown.countryName, amount: breakdown.countryCost }
-                          : null,
-                        breakdown.stateName
-                          ? { label: breakdown.stateName, amount: breakdown.stateCost }
-                          : null,
-                        breakdown.cityName
-                          ? { label: breakdown.cityName, amount: breakdown.cityCost }
-                          : null
-                      ].filter((entry): entry is { label: string; amount: number | null } => Boolean(entry));
+                      if (!breakdown.cityName) {
+                        return null;
+                      }
                       return (
                         <details className="rounded-2xl border border-slate-200 p-3 text-xs">
                           <summary className="cursor-pointer font-semibold text-slate-700">
                             Shipping breakdown
                           </summary>
                           <ul className="mt-2 space-y-1">
-                            {levels.map((entry) => (
-                              <li key={entry.label} className="flex justify-between">
-                                <span>{entry.label}</span>
-                                <span>{formatMaybeCurrency(entry.amount)}</span>
-                              </li>
-                            ))}
+                            <li className="flex justify-between">
+                              <span>{breakdown.cityName}</span>
+                              <span>{formatMaybeCurrency(breakdown.cityCost)}</span>
+                            </li>
                             <li className="flex justify-between font-medium text-slate-800">
                               <span>Effective rate</span>
                               <span>{formatMaybeCurrency(breakdown.effectiveCost)}</span>
@@ -873,6 +1049,68 @@ const CheckoutPage = () => {
           </div>
         )}
       </main>
+      {isCouponModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 px-4">
+          <div className="max-h-[80vh] w-full max-w-xl overflow-y-auto rounded-3xl bg-white p-6 shadow-xl">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 className="text-lg font-semibold text-slate-900">Available coupons</h3>
+                <p className="text-sm text-slate-500">Select a coupon to apply it to your order.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsCouponModalOpen(false)}
+                className="rounded-full border border-slate-200 px-3 py-1 text-lg text-slate-500 transition hover:bg-slate-100"
+                aria-label="Close coupon list"
+              >
+                ×
+              </button>
+            </div>
+            <div className="mt-4 space-y-3">
+              {availableCoupons.length ? (
+                availableCoupons.map((coupon) => {
+                  const discountLabel = describeCoupon(coupon);
+                  const minimumLabel =
+                    coupon.minimumCartValue != null
+                      ? formatCurrency(coupon.minimumCartValue, baseCurrency)
+                      : null;
+                  const isApplied = appliedCoupon?.code === coupon.code;
+                  return (
+                    <div
+                      key={coupon.id}
+                      className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 shadow-sm md:flex-row md:items-center md:justify-between"
+                    >
+                      <div>
+                        <p className="text-base font-semibold text-slate-900">{coupon.name}</p>
+                        <p className="text-xs text-slate-500">
+                          {coupon.shortDescription || 'Use this coupon to unlock a discount at checkout.'}
+                        </p>
+                        <p className="mt-2 text-xs font-medium text-slate-600">Code: {coupon.code}</p>
+                        <p className="text-xs text-slate-500">
+                          {discountLabel}
+                          {minimumLabel ? ` · Min cart ${minimumLabel}` : ''}
+                        </p>
+                        <p className="text-xs text-slate-400">Valid until {formatDateLabel(coupon.endDate)}</p>
+                      </div>
+                      <div className="flex flex-col items-end gap-2 text-xs text-slate-500">
+                        <Button
+                          className="px-3 py-1 text-xs"
+                          onClick={() => handleApplyCoupon(coupon)}
+                          disabled={isApplied}
+                        >
+                          {isApplied ? 'Applied' : 'Apply coupon'}
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <p className="text-sm text-slate-500">No coupons are currently available.</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

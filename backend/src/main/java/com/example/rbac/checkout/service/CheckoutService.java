@@ -3,6 +3,7 @@ package com.example.rbac.checkout.service;
 import com.example.rbac.cart.model.Cart;
 import com.example.rbac.cart.model.CartItem;
 import com.example.rbac.cart.repository.CartRepository;
+import com.example.rbac.checkout.dto.AppliedCouponDto;
 import com.example.rbac.checkout.dto.CheckoutAddressDto;
 import com.example.rbac.checkout.dto.CheckoutAddressRequest;
 import com.example.rbac.checkout.dto.CheckoutOrderLineRequest;
@@ -46,6 +47,7 @@ public class CheckoutService {
     private final CheckoutAddressService addressService;
     private final PaymentMethodService paymentMethodService;
     private final ShippingLocationService shippingLocationService;
+    private final CheckoutCouponService checkoutCouponService;
     private final OrderService orderService;
     private final CartRepository cartRepository;
     private final UserRepository userRepository;
@@ -53,12 +55,14 @@ public class CheckoutService {
     public CheckoutService(CheckoutAddressService addressService,
                            PaymentMethodService paymentMethodService,
                            ShippingLocationService shippingLocationService,
+                           CheckoutCouponService checkoutCouponService,
                            OrderService orderService,
                            UserRepository userRepository,
                            CartRepository cartRepository) {
         this.addressService = addressService;
         this.paymentMethodService = paymentMethodService;
         this.shippingLocationService = shippingLocationService;
+        this.checkoutCouponService = checkoutCouponService;
         this.orderService = orderService;
         this.userRepository = userRepository;
         this.cartRepository = cartRepository;
@@ -79,6 +83,7 @@ public class CheckoutService {
         CheckoutSummaryDto summary = new CheckoutSummaryDto();
         summary.setAddresses(addressService.listAddresses(userId));
         summary.setPaymentMethods(paymentMethodService.listForCustomer());
+        summary.setCoupons(checkoutCouponService.listActiveCoupons(userId));
         summary.setOrderSummary(calculateOrderTotals(userId, request));
         return summary;
     }
@@ -226,13 +231,30 @@ public class CheckoutService {
                 ? quote.getEffectiveCost().setScale(2, RoundingMode.HALF_UP)
                 : ZERO;
 
+        AppliedCouponDto appliedCoupon = checkoutCouponService.applyCoupon(
+                request != null ? request.getCouponCode() : null,
+                userId,
+                productTotal);
+        BigDecimal discountTotal = appliedCoupon != null
+                ? Optional.ofNullable(appliedCoupon.getDiscountAmount()).orElse(ZERO)
+                : ZERO;
+        if (discountTotal.compareTo(BigDecimal.ZERO) < 0) {
+            discountTotal = BigDecimal.ZERO;
+        }
+
         OrderSummaryDto summary = new OrderSummaryDto();
         summary.setProductTotal(productTotal.setScale(2, RoundingMode.HALF_UP));
         summary.setTaxTotal(taxTotal.setScale(2, RoundingMode.HALF_UP));
         summary.setShippingTotal(shippingTotal);
-        summary.setGrandTotal(productTotal.add(taxTotal).add(shippingTotal).setScale(2, RoundingMode.HALF_UP));
+        summary.setDiscountTotal(discountTotal.setScale(2, RoundingMode.HALF_UP));
+        BigDecimal grandTotal = productTotal.add(taxTotal).add(shippingTotal).subtract(discountTotal);
+        if (grandTotal.compareTo(BigDecimal.ZERO) < 0) {
+            grandTotal = BigDecimal.ZERO;
+        }
+        summary.setGrandTotal(grandTotal.setScale(2, RoundingMode.HALF_UP));
         summary.setShippingBreakdown(quote);
         summary.setTaxLines(taxLines);
+        summary.setAppliedCoupon(appliedCoupon);
         return summary;
     }
 
@@ -242,6 +264,7 @@ public class CheckoutService {
         summary.setTaxTotal(ZERO);
         summary.setShippingTotal(ZERO);
         summary.setGrandTotal(ZERO);
+        summary.setDiscountTotal(ZERO);
         summary.setTaxLines(List.of());
         return summary;
     }
