@@ -13,5 +13,6 @@ public interface ShippingCountryRepository extends JpaRepository<ShippingCountry
     boolean existsByCodeIgnoreCaseAndIdNot(String code, Long id);
     List<ShippingCountry> findAllByOrderByEnabledDescNameAsc();
     List<ShippingCountry> findAllByOrderByNameAsc();
+    List<ShippingCountry> findByEnabledTrueOrderByNameAsc();
     Optional<ShippingCountry> findByCodeIgnoreCase(String code);
 }

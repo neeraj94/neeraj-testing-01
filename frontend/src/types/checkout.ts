@@ -1,5 +1,10 @@
 export type AddressType = 'SHIPPING' | 'BILLING';
 
+export interface CheckoutRegionOption {
+  id: number;
+  name: string;
+}
+
 export interface CheckoutAddress {
   id: number;
   type: AddressType;
@@ -77,4 +82,11 @@ export interface CheckoutOrderPayload {
   sameAsShipping: boolean;
   paymentMethodKey: string;
   lines: CheckoutOrderLine[];
+}
+
+export interface CheckoutOrderResponse {
+  orderId: number;
+  orderNumber: string;
+  summary: OrderSummary;
+  createdAt: string;
 }

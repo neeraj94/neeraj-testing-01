@@ -72,6 +72,14 @@ public class ShippingLocationService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
+    public List<ShippingOptionDto> enabledCountryOptions() {
+        return countryRepository.findByEnabledTrueOrderByNameAsc()
+                .stream()
+                .map(country -> new ShippingOptionDto(country.getId(), country.getName()))
+                .collect(Collectors.toList());
+    }
+
     @Transactional
     public ShippingCountryDto createCountry(ShippingCountryRequest request) {
         ShippingCountry country = new ShippingCountry();
@@ -160,6 +168,20 @@ public class ShippingLocationService {
         Hibernate.initialize(country);
         ensureReferenceStates(country);
         return stateRepository.findByCountryIdOrderByEnabledDescNameAsc(country.getId())
+                .stream()
+                .map(state -> new ShippingOptionDto(state.getId(), state.getName()))
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<ShippingOptionDto> enabledStateOptions(Long countryId) {
+        ShippingCountry country = getCountryOrThrow(countryId);
+        Hibernate.initialize(country);
+        if (!country.isEnabled()) {
+            return List.of();
+        }
+        ensureReferenceStates(country);
+        return stateRepository.findByCountryIdAndEnabledTrueOrderByNameAsc(country.getId())
                 .stream()
                 .map(state -> new ShippingOptionDto(state.getId(), state.getName()))
                 .collect(Collectors.toList());
@@ -338,6 +360,23 @@ public class ShippingLocationService {
         ensureReferenceStates(state.getCountry());
         ensureReferenceCities(state);
         return cityRepository.findByStateIdOrderByEnabledDescNameAsc(state.getId())
+                .stream()
+                .map(city -> new ShippingOptionDto(city.getId(), city.getName()))
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<ShippingOptionDto> enabledCityOptions(Long stateId) {
+        ShippingState state = getStateOrThrow(stateId);
+        Hibernate.initialize(state);
+        if (state.getCountry() != null) {
+            Hibernate.initialize(state.getCountry());
+        }
+        if (!state.isEnabled() || (state.getCountry() != null && !state.getCountry().isEnabled())) {
+            return List.of();
+        }
+        ensureReferenceCities(state);
+        return cityRepository.findByStateIdAndEnabledTrueOrderByNameAsc(state.getId())
                 .stream()
                 .map(city -> new ShippingOptionDto(city.getId(), city.getName()))
                 .collect(Collectors.toList());

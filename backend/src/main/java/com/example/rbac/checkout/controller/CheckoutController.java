@@ -8,9 +8,11 @@ import com.example.rbac.checkout.dto.CheckoutSummaryDto;
 import com.example.rbac.checkout.dto.OrderSummaryDto;
 import com.example.rbac.checkout.dto.PaymentMethodDto;
 import com.example.rbac.checkout.service.CheckoutService;
+import com.example.rbac.shipping.dto.ShippingOptionDto;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -48,6 +50,24 @@ public class CheckoutController {
     @PreAuthorize("isAuthenticated()")
     public List<PaymentMethodDto> listPaymentMethods() {
         return checkoutService.listPaymentMethodsForCustomer();
+    }
+
+    @GetMapping("/regions/countries")
+    @PreAuthorize("isAuthenticated()")
+    public List<ShippingOptionDto> listCountriesForCheckout() {
+        return checkoutService.listEnabledCountries();
+    }
+
+    @GetMapping("/regions/countries/{countryId}/states")
+    @PreAuthorize("isAuthenticated()")
+    public List<ShippingOptionDto> listStatesForCheckout(@PathVariable Long countryId) {
+        return checkoutService.listEnabledStates(countryId);
+    }
+
+    @GetMapping("/regions/states/{stateId}/cities")
+    @PreAuthorize("isAuthenticated()")
+    public List<ShippingOptionDto> listCitiesForCheckout(@PathVariable Long stateId) {
+        return checkoutService.listEnabledCities(stateId);
     }
 
     @PostMapping("/summary")
