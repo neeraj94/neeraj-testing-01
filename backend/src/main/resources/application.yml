@@ -23,7 +23,7 @@ spring:
     locations: classpath:db/migration
     baseline-on-migrate: true
     ignore-migration-patterns:
-      - MIGRATION:MISSING_SUCCESS:48:checkout_permissions
+      - VERSIONED:MISSING_SUCCESS
   jackson:
     serialization:
       write-dates-as-timestamps: false
