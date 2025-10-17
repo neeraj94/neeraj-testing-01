@@ -1,0 +1,2080 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Shipping Location APIs</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="page">
+    <div class="docs">
+      <aside class="docs__nav sidebar" aria-label="API navigation">
+        <div class="sidebar__brand">
+          <div class="sidebar__badge">RBAC Commerce</div>
+          <h1>Shipping Location APIs</h1>
+          <p>Endpoints implemented by the Shipping Location controller.</p>
+          <p class="sidebar__hint">Base path: <code>/api/v1/shipping</code></p>
+        </div>
+        <div class="sidebar__controls">
+          <label class="control">
+            <span class="control__label">Environment</span>
+            <select id="environmentSelect">
+              <option value="https://sandbox.api.rbac-commerce.dev">Sandbox</option>
+              <option value="https://staging.api.rbac-commerce.dev">Staging</option>
+              <option value="https://api.rbac-commerce.dev">Production</option>
+              <option value="custom">Custom…</option>
+            </select>
+          </label>
+          <label class="control" id="customUrlControl" hidden>
+            <span class="control__label">Custom base URL</span>
+            <input id="baseUrl" type="url" spellcheck="false" value="https://sandbox.api.rbac-commerce.dev" />
+          </label>
+          <label class="control">
+            <span class="control__label">Bearer token</span>
+            <input id="authToken" type="text" spellcheck="false" placeholder="Optional token for private endpoints" />
+          </label>
+        </div>
+        <nav class="sidebar__nav" aria-label="Endpoints">
+          <h2>Endpoints</h2>
+          <ul class="sidebar__tree" role="tree">
+            <li role="treeitem"><a href="#get-countries" data-endpoint-link="get-countries"><span class="sidebar__method">GET</span>List Countries</a></li><li role="treeitem"><a href="#get-countries-options" data-endpoint-link="get-countries-options"><span class="sidebar__method">GET</span>Country Options</a></li><li role="treeitem"><a href="#post-countries" data-endpoint-link="post-countries"><span class="sidebar__method">POST</span>Create Country</a></li><li role="treeitem"><a href="#put-countries-id" data-endpoint-link="put-countries-id"><span class="sidebar__method">PUT</span>Update Country</a></li><li role="treeitem"><a href="#put-countries-id-settings" data-endpoint-link="put-countries-id-settings"><span class="sidebar__method">PUT</span>Update Country Settings</a></li><li role="treeitem"><a href="#put-countries-bulk-settings" data-endpoint-link="put-countries-bulk-settings"><span class="sidebar__method">PUT</span>Bulk Update Country Settings</a></li><li role="treeitem"><a href="#delete-countries-id" data-endpoint-link="delete-countries-id"><span class="sidebar__method">DELETE</span>Delete Country</a></li><li role="treeitem"><a href="#get-countries-countryId-states" data-endpoint-link="get-countries-countryId-states"><span class="sidebar__method">GET</span>List States</a></li><li role="treeitem"><a href="#get-countries-countryId-states-options" data-endpoint-link="get-countries-countryId-states-options"><span class="sidebar__method">GET</span>State Options</a></li><li role="treeitem"><a href="#post-countries-countryId-states" data-endpoint-link="post-countries-countryId-states"><span class="sidebar__method">POST</span>Create State</a></li><li role="treeitem"><a href="#put-states-id" data-endpoint-link="put-states-id"><span class="sidebar__method">PUT</span>Update State</a></li><li role="treeitem"><a href="#put-states-id-settings" data-endpoint-link="put-states-id-settings"><span class="sidebar__method">PUT</span>Update State Settings</a></li><li role="treeitem"><a href="#put-states-bulk-settings" data-endpoint-link="put-states-bulk-settings"><span class="sidebar__method">PUT</span>Bulk Update State Settings</a></li><li role="treeitem"><a href="#delete-states-id" data-endpoint-link="delete-states-id"><span class="sidebar__method">DELETE</span>Delete State</a></li><li role="treeitem"><a href="#get-states-stateId-cities" data-endpoint-link="get-states-stateId-cities"><span class="sidebar__method">GET</span>List Cities</a></li><li role="treeitem"><a href="#get-rates-quote" data-endpoint-link="get-rates-quote"><span class="sidebar__method">GET</span>Quote Shipping Rate</a></li><li role="treeitem"><a href="#get-states-stateId-cities-options" data-endpoint-link="get-states-stateId-cities-options"><span class="sidebar__method">GET</span>City Options</a></li><li role="treeitem"><a href="#post-states-stateId-cities" data-endpoint-link="post-states-stateId-cities"><span class="sidebar__method">POST</span>Create City</a></li><li role="treeitem"><a href="#put-cities-id" data-endpoint-link="put-cities-id"><span class="sidebar__method">PUT</span>Update City</a></li><li role="treeitem"><a href="#put-cities-id-settings" data-endpoint-link="put-cities-id-settings"><span class="sidebar__method">PUT</span>Update City Settings</a></li><li role="treeitem"><a href="#put-cities-bulk-settings" data-endpoint-link="put-cities-bulk-settings"><span class="sidebar__method">PUT</span>Bulk Update City Settings</a></li><li role="treeitem"><a href="#delete-cities-id" data-endpoint-link="delete-cities-id"><span class="sidebar__method">DELETE</span>Delete City</a></li>
+          </ul>
+        </nav>
+      </aside>
+      <main class="docs__content content" id="docsContent" tabindex="-1">
+        <header class="hero">
+          <h2>Shipping Location APIs</h2>
+          <p>Endpoints implemented by the Shipping Location controller.</p>
+          <p><strong>Selected base URL:</strong> <span data-base-display>https://sandbox.api.rbac-commerce.dev</span></p>
+        </header>
+        <article class="endpoint" id="get-countries" data-endpoint-id="get-countries" data-method="GET" data-base-path="/api/v1/shipping" data-path="/countries" data-auth="Bearer" data-body='null'>
+  <div class="endpoint__header">
+    <div class="endpoint__title">
+      <span class="http-badge http-badge--get">GET</span>
+      <div>
+        <h3>List Countries</h3>
+        <p><code>/api/v1/shipping/countries</code></p>
+      </div>
+    </div>
+    <span class="auth-badge auth-badge--protected">Protected</span>
+  </div>
+  <div class="endpoint__layout">
+    <div class="endpoint__body">
+      <section class="endpoint__section">
+        <h4>Summary</h4>
+        <p>List Countries handler in ShippingLocationController for GET /countries requests.</p>
+      </section>
+      <section class="endpoint__section"><h4>Authentication</h4><p>Provide an <code>Authorization: Bearer &lt;token&gt;</code> header.</p></section>
+      
+      
+      <section class="endpoint__section"><h4>Request body</h4><p>No body required.</p></section>
+      <section class="endpoint__section">
+        <h4>Success response</h4>
+        <p class="status success">HTTP 200</p>
+        <p>No body returned.</p>
+      </section>
+      <section class="endpoint__section">
+        <h4>Error scenarios</h4>
+        <p>No specific error payloads documented.</p>
+      </section>
+    </div>
+    <div class="endpoint__panels">
+      <section class="panel">
+        <header class="panel__header">
+          <h4>cURL samples</h4>
+          <span class="panel__format">Interpolates current environment</span>
+        </header>
+        <div class="code-samples" data-endpoint="get-countries">
+          <div class="code-samples__tabs" role="tablist">
+            <button type="button" class="code-samples__tab is-active" role="tab" id="get-countries-bash-tab" aria-selected="true" data-tab-target="get-countries-bash">bash/zsh</button>
+            <button type="button" class="code-samples__tab" role="tab" id="get-countries-powershell-tab" aria-selected="false" data-tab-target="get-countries-powershell">PowerShell/CMD</button>
+          </div>
+          <pre id="get-countries-bash" class="code-block" role="tabpanel" aria-labelledby="get-countries-bash-tab" data-template="curl-bash" data-endpoint="get-countries"></pre>
+          <pre id="get-countries-powershell" class="code-block is-hidden" role="tabpanel" aria-labelledby="get-countries-powershell-tab" data-template="curl-powershell" data-endpoint="get-countries" hidden></pre>
+          <div class="panel__actions">
+            <button type="button" class="copy-button" data-copy>Copy</button>
+          </div>
+        </div>
+      </section>
+      <section class="panel panel--try">
+        <header class="panel__header">
+          <h4>Try it</h4>
+          <span class="panel__format">Send a real request with your environment</span>
+        </header>
+        <form class="try-form" data-try-form>
+          <label class="field">
+            <span class="field__label">Request URL</span>
+            <input type="url" spellcheck="false" data-try-url required />
+            <span class="field__hint">Update path parameters before sending.</span>
+          </label>
+          <label class="field">
+            <span class="field__label">Headers</span>
+            <textarea rows="3" spellcheck="false" data-try-headers></textarea>
+            <span class="field__hint">One header per line (<code>Name: Value</code>).</span>
+          </label>
+          <label class="field" data-try-body-wrapper>
+            <span class="field__label">Body</span>
+            <textarea rows="8" spellcheck="false" data-try-body></textarea>
+            <span class="field__hint">JSON payload; leave blank to omit.</span>
+          </label>
+          <button type="submit" class="button" data-try-submit>Send GET</button>
+        </form>
+        <div class="try-response" data-try-response hidden>
+          <div class="try-response__meta">
+            <span data-try-status>Waiting…</span>
+            <span data-try-duration></span>
+          </div>
+          <pre class="try-response__body" data-try-output></pre>
+        </div>
+      </section>
+    </div>
+  </div>
+</article>
+<article class="endpoint" id="get-countries-options" data-endpoint-id="get-countries-options" data-method="GET" data-base-path="/api/v1/shipping" data-path="/countries/options" data-auth="Bearer" data-body='null'>
+  <div class="endpoint__header">
+    <div class="endpoint__title">
+      <span class="http-badge http-badge--get">GET</span>
+      <div>
+        <h3>Country Options</h3>
+        <p><code>/api/v1/shipping/countries/options</code></p>
+      </div>
+    </div>
+    <span class="auth-badge auth-badge--protected">Protected</span>
+  </div>
+  <div class="endpoint__layout">
+    <div class="endpoint__body">
+      <section class="endpoint__section">
+        <h4>Summary</h4>
+        <p>Country Options handler in ShippingLocationController for GET /countries/options requests.</p>
+      </section>
+      <section class="endpoint__section"><h4>Authentication</h4><p>Provide an <code>Authorization: Bearer &lt;token&gt;</code> header.</p></section>
+      
+      
+      <section class="endpoint__section"><h4>Request body</h4><p>No body required.</p></section>
+      <section class="endpoint__section">
+        <h4>Success response</h4>
+        <p class="status success">HTTP 200</p>
+        <p>No body returned.</p>
+      </section>
+      <section class="endpoint__section">
+        <h4>Error scenarios</h4>
+        <p>No specific error payloads documented.</p>
+      </section>
+    </div>
+    <div class="endpoint__panels">
+      <section class="panel">
+        <header class="panel__header">
+          <h4>cURL samples</h4>
+          <span class="panel__format">Interpolates current environment</span>
+        </header>
+        <div class="code-samples" data-endpoint="get-countries-options">
+          <div class="code-samples__tabs" role="tablist">
+            <button type="button" class="code-samples__tab is-active" role="tab" id="get-countries-options-bash-tab" aria-selected="true" data-tab-target="get-countries-options-bash">bash/zsh</button>
+            <button type="button" class="code-samples__tab" role="tab" id="get-countries-options-powershell-tab" aria-selected="false" data-tab-target="get-countries-options-powershell">PowerShell/CMD</button>
+          </div>
+          <pre id="get-countries-options-bash" class="code-block" role="tabpanel" aria-labelledby="get-countries-options-bash-tab" data-template="curl-bash" data-endpoint="get-countries-options"></pre>
+          <pre id="get-countries-options-powershell" class="code-block is-hidden" role="tabpanel" aria-labelledby="get-countries-options-powershell-tab" data-template="curl-powershell" data-endpoint="get-countries-options" hidden></pre>
+          <div class="panel__actions">
+            <button type="button" class="copy-button" data-copy>Copy</button>
+          </div>
+        </div>
+      </section>
+      <section class="panel panel--try">
+        <header class="panel__header">
+          <h4>Try it</h4>
+          <span class="panel__format">Send a real request with your environment</span>
+        </header>
+        <form class="try-form" data-try-form>
+          <label class="field">
+            <span class="field__label">Request URL</span>
+            <input type="url" spellcheck="false" data-try-url required />
+            <span class="field__hint">Update path parameters before sending.</span>
+          </label>
+          <label class="field">
+            <span class="field__label">Headers</span>
+            <textarea rows="3" spellcheck="false" data-try-headers></textarea>
+            <span class="field__hint">One header per line (<code>Name: Value</code>).</span>
+          </label>
+          <label class="field" data-try-body-wrapper>
+            <span class="field__label">Body</span>
+            <textarea rows="8" spellcheck="false" data-try-body></textarea>
+            <span class="field__hint">JSON payload; leave blank to omit.</span>
+          </label>
+          <button type="submit" class="button" data-try-submit>Send GET</button>
+        </form>
+        <div class="try-response" data-try-response hidden>
+          <div class="try-response__meta">
+            <span data-try-status>Waiting…</span>
+            <span data-try-duration></span>
+          </div>
+          <pre class="try-response__body" data-try-output></pre>
+        </div>
+      </section>
+    </div>
+  </div>
+</article>
+<article class="endpoint" id="post-countries" data-endpoint-id="post-countries" data-method="POST" data-base-path="/api/v1/shipping" data-path="/countries" data-auth="Bearer" data-headers='[[&quot;Content-Type&quot;, &quot;application/json&quot;]]' data-body='&quot;{}&quot;'>
+  <div class="endpoint__header">
+    <div class="endpoint__title">
+      <span class="http-badge http-badge--post">POST</span>
+      <div>
+        <h3>Create Country</h3>
+        <p><code>/api/v1/shipping/countries</code></p>
+      </div>
+    </div>
+    <span class="auth-badge auth-badge--protected">Protected</span>
+  </div>
+  <div class="endpoint__layout">
+    <div class="endpoint__body">
+      <section class="endpoint__section">
+        <h4>Summary</h4>
+        <p>Create Country handler in ShippingLocationController for POST /countries requests.</p>
+      </section>
+      <section class="endpoint__section"><h4>Authentication</h4><p>Provide an <code>Authorization: Bearer &lt;token&gt;</code> header.</p></section>
+      
+      <section class="endpoint__section">
+  <h4>Headers</h4>
+  <table>
+    <thead><tr><th>Name</th><th>Value</th></tr></thead>
+    <tbody><tr><td>Content-Type</td><td>application/json</td></tr></tbody>
+  </table>
+</section>
+
+      <section class="endpoint__section"><h4>Request body</h4><pre>{}</pre></section>
+      <section class="endpoint__section">
+        <h4>Success response</h4>
+        <p class="status success">HTTP 201</p>
+        <p>No body returned.</p>
+      </section>
+      <section class="endpoint__section">
+        <h4>Error scenarios</h4>
+        <p>No specific error payloads documented.</p>
+      </section>
+    </div>
+    <div class="endpoint__panels">
+      <section class="panel">
+        <header class="panel__header">
+          <h4>cURL samples</h4>
+          <span class="panel__format">Interpolates current environment</span>
+        </header>
+        <div class="code-samples" data-endpoint="post-countries">
+          <div class="code-samples__tabs" role="tablist">
+            <button type="button" class="code-samples__tab is-active" role="tab" id="post-countries-bash-tab" aria-selected="true" data-tab-target="post-countries-bash">bash/zsh</button>
+            <button type="button" class="code-samples__tab" role="tab" id="post-countries-powershell-tab" aria-selected="false" data-tab-target="post-countries-powershell">PowerShell/CMD</button>
+          </div>
+          <pre id="post-countries-bash" class="code-block" role="tabpanel" aria-labelledby="post-countries-bash-tab" data-template="curl-bash" data-endpoint="post-countries"></pre>
+          <pre id="post-countries-powershell" class="code-block is-hidden" role="tabpanel" aria-labelledby="post-countries-powershell-tab" data-template="curl-powershell" data-endpoint="post-countries" hidden></pre>
+          <div class="panel__actions">
+            <button type="button" class="copy-button" data-copy>Copy</button>
+          </div>
+        </div>
+      </section>
+      <section class="panel panel--try">
+        <header class="panel__header">
+          <h4>Try it</h4>
+          <span class="panel__format">Send a real request with your environment</span>
+        </header>
+        <form class="try-form" data-try-form>
+          <label class="field">
+            <span class="field__label">Request URL</span>
+            <input type="url" spellcheck="false" data-try-url required />
+            <span class="field__hint">Update path parameters before sending.</span>
+          </label>
+          <label class="field">
+            <span class="field__label">Headers</span>
+            <textarea rows="3" spellcheck="false" data-try-headers></textarea>
+            <span class="field__hint">One header per line (<code>Name: Value</code>).</span>
+          </label>
+          <label class="field" data-try-body-wrapper>
+            <span class="field__label">Body</span>
+            <textarea rows="8" spellcheck="false" data-try-body></textarea>
+            <span class="field__hint">JSON payload; leave blank to omit.</span>
+          </label>
+          <button type="submit" class="button" data-try-submit>Send POST</button>
+        </form>
+        <div class="try-response" data-try-response hidden>
+          <div class="try-response__meta">
+            <span data-try-status>Waiting…</span>
+            <span data-try-duration></span>
+          </div>
+          <pre class="try-response__body" data-try-output></pre>
+        </div>
+      </section>
+    </div>
+  </div>
+</article>
+<article class="endpoint" id="put-countries-id" data-endpoint-id="put-countries-id" data-method="PUT" data-base-path="/api/v1/shipping" data-path="/countries/{id}" data-auth="Bearer" data-headers='[[&quot;Content-Type&quot;, &quot;application/json&quot;]]' data-body='&quot;{}&quot;'>
+  <div class="endpoint__header">
+    <div class="endpoint__title">
+      <span class="http-badge http-badge--put">PUT</span>
+      <div>
+        <h3>Update Country</h3>
+        <p><code>/api/v1/shipping/countries/{id}</code></p>
+      </div>
+    </div>
+    <span class="auth-badge auth-badge--protected">Protected</span>
+  </div>
+  <div class="endpoint__layout">
+    <div class="endpoint__body">
+      <section class="endpoint__section">
+        <h4>Summary</h4>
+        <p>Update Country handler in ShippingLocationController for PUT /countries/{id} requests.</p>
+      </section>
+      <section class="endpoint__section"><h4>Authentication</h4><p>Provide an <code>Authorization: Bearer &lt;token&gt;</code> header.</p></section>
+      <section class="endpoint__section">
+  <h4>Parameters</h4>
+  <table>
+    <thead><tr><th>Name</th><th>Description</th></tr></thead>
+    <tbody><tr><td>id</td><td>Path parameter</td></tr></tbody>
+  </table>
+</section>
+
+      <section class="endpoint__section">
+  <h4>Headers</h4>
+  <table>
+    <thead><tr><th>Name</th><th>Value</th></tr></thead>
+    <tbody><tr><td>Content-Type</td><td>application/json</td></tr></tbody>
+  </table>
+</section>
+
+      <section class="endpoint__section"><h4>Request body</h4><pre>{}</pre></section>
+      <section class="endpoint__section">
+        <h4>Success response</h4>
+        <p class="status success">HTTP 200</p>
+        <p>No body returned.</p>
+      </section>
+      <section class="endpoint__section">
+        <h4>Error scenarios</h4>
+        <p>No specific error payloads documented.</p>
+      </section>
+    </div>
+    <div class="endpoint__panels">
+      <section class="panel">
+        <header class="panel__header">
+          <h4>cURL samples</h4>
+          <span class="panel__format">Interpolates current environment</span>
+        </header>
+        <div class="code-samples" data-endpoint="put-countries-id">
+          <div class="code-samples__tabs" role="tablist">
+            <button type="button" class="code-samples__tab is-active" role="tab" id="put-countries-id-bash-tab" aria-selected="true" data-tab-target="put-countries-id-bash">bash/zsh</button>
+            <button type="button" class="code-samples__tab" role="tab" id="put-countries-id-powershell-tab" aria-selected="false" data-tab-target="put-countries-id-powershell">PowerShell/CMD</button>
+          </div>
+          <pre id="put-countries-id-bash" class="code-block" role="tabpanel" aria-labelledby="put-countries-id-bash-tab" data-template="curl-bash" data-endpoint="put-countries-id"></pre>
+          <pre id="put-countries-id-powershell" class="code-block is-hidden" role="tabpanel" aria-labelledby="put-countries-id-powershell-tab" data-template="curl-powershell" data-endpoint="put-countries-id" hidden></pre>
+          <div class="panel__actions">
+            <button type="button" class="copy-button" data-copy>Copy</button>
+          </div>
+        </div>
+      </section>
+      <section class="panel panel--try">
+        <header class="panel__header">
+          <h4>Try it</h4>
+          <span class="panel__format">Send a real request with your environment</span>
+        </header>
+        <form class="try-form" data-try-form>
+          <label class="field">
+            <span class="field__label">Request URL</span>
+            <input type="url" spellcheck="false" data-try-url required />
+            <span class="field__hint">Update path parameters before sending.</span>
+          </label>
+          <label class="field">
+            <span class="field__label">Headers</span>
+            <textarea rows="3" spellcheck="false" data-try-headers></textarea>
+            <span class="field__hint">One header per line (<code>Name: Value</code>).</span>
+          </label>
+          <label class="field" data-try-body-wrapper>
+            <span class="field__label">Body</span>
+            <textarea rows="8" spellcheck="false" data-try-body></textarea>
+            <span class="field__hint">JSON payload; leave blank to omit.</span>
+          </label>
+          <button type="submit" class="button" data-try-submit>Send PUT</button>
+        </form>
+        <div class="try-response" data-try-response hidden>
+          <div class="try-response__meta">
+            <span data-try-status>Waiting…</span>
+            <span data-try-duration></span>
+          </div>
+          <pre class="try-response__body" data-try-output></pre>
+        </div>
+      </section>
+    </div>
+  </div>
+</article>
+<article class="endpoint" id="put-countries-id-settings" data-endpoint-id="put-countries-id-settings" data-method="PUT" data-base-path="/api/v1/shipping" data-path="/countries/{id}/settings" data-auth="Bearer" data-headers='[[&quot;Content-Type&quot;, &quot;application/json&quot;]]' data-body='&quot;{}&quot;'>
+  <div class="endpoint__header">
+    <div class="endpoint__title">
+      <span class="http-badge http-badge--put">PUT</span>
+      <div>
+        <h3>Update Country Settings</h3>
+        <p><code>/api/v1/shipping/countries/{id}/settings</code></p>
+      </div>
+    </div>
+    <span class="auth-badge auth-badge--protected">Protected</span>
+  </div>
+  <div class="endpoint__layout">
+    <div class="endpoint__body">
+      <section class="endpoint__section">
+        <h4>Summary</h4>
+        <p>Update Country Settings handler in ShippingLocationController for PUT /countries/{id}/settings requests.</p>
+      </section>
+      <section class="endpoint__section"><h4>Authentication</h4><p>Provide an <code>Authorization: Bearer &lt;token&gt;</code> header.</p></section>
+      <section class="endpoint__section">
+  <h4>Parameters</h4>
+  <table>
+    <thead><tr><th>Name</th><th>Description</th></tr></thead>
+    <tbody><tr><td>id</td><td>Path parameter</td></tr></tbody>
+  </table>
+</section>
+
+      <section class="endpoint__section">
+  <h4>Headers</h4>
+  <table>
+    <thead><tr><th>Name</th><th>Value</th></tr></thead>
+    <tbody><tr><td>Content-Type</td><td>application/json</td></tr></tbody>
+  </table>
+</section>
+
+      <section class="endpoint__section"><h4>Request body</h4><pre>{}</pre></section>
+      <section class="endpoint__section">
+        <h4>Success response</h4>
+        <p class="status success">HTTP 200</p>
+        <p>No body returned.</p>
+      </section>
+      <section class="endpoint__section">
+        <h4>Error scenarios</h4>
+        <p>No specific error payloads documented.</p>
+      </section>
+    </div>
+    <div class="endpoint__panels">
+      <section class="panel">
+        <header class="panel__header">
+          <h4>cURL samples</h4>
+          <span class="panel__format">Interpolates current environment</span>
+        </header>
+        <div class="code-samples" data-endpoint="put-countries-id-settings">
+          <div class="code-samples__tabs" role="tablist">
+            <button type="button" class="code-samples__tab is-active" role="tab" id="put-countries-id-settings-bash-tab" aria-selected="true" data-tab-target="put-countries-id-settings-bash">bash/zsh</button>
+            <button type="button" class="code-samples__tab" role="tab" id="put-countries-id-settings-powershell-tab" aria-selected="false" data-tab-target="put-countries-id-settings-powershell">PowerShell/CMD</button>
+          </div>
+          <pre id="put-countries-id-settings-bash" class="code-block" role="tabpanel" aria-labelledby="put-countries-id-settings-bash-tab" data-template="curl-bash" data-endpoint="put-countries-id-settings"></pre>
+          <pre id="put-countries-id-settings-powershell" class="code-block is-hidden" role="tabpanel" aria-labelledby="put-countries-id-settings-powershell-tab" data-template="curl-powershell" data-endpoint="put-countries-id-settings" hidden></pre>
+          <div class="panel__actions">
+            <button type="button" class="copy-button" data-copy>Copy</button>
+          </div>
+        </div>
+      </section>
+      <section class="panel panel--try">
+        <header class="panel__header">
+          <h4>Try it</h4>
+          <span class="panel__format">Send a real request with your environment</span>
+        </header>
+        <form class="try-form" data-try-form>
+          <label class="field">
+            <span class="field__label">Request URL</span>
+            <input type="url" spellcheck="false" data-try-url required />
+            <span class="field__hint">Update path parameters before sending.</span>
+          </label>
+          <label class="field">
+            <span class="field__label">Headers</span>
+            <textarea rows="3" spellcheck="false" data-try-headers></textarea>
+            <span class="field__hint">One header per line (<code>Name: Value</code>).</span>
+          </label>
+          <label class="field" data-try-body-wrapper>
+            <span class="field__label">Body</span>
+            <textarea rows="8" spellcheck="false" data-try-body></textarea>
+            <span class="field__hint">JSON payload; leave blank to omit.</span>
+          </label>
+          <button type="submit" class="button" data-try-submit>Send PUT</button>
+        </form>
+        <div class="try-response" data-try-response hidden>
+          <div class="try-response__meta">
+            <span data-try-status>Waiting…</span>
+            <span data-try-duration></span>
+          </div>
+          <pre class="try-response__body" data-try-output></pre>
+        </div>
+      </section>
+    </div>
+  </div>
+</article>
+<article class="endpoint" id="put-countries-bulk-settings" data-endpoint-id="put-countries-bulk-settings" data-method="PUT" data-base-path="/api/v1/shipping" data-path="/countries/bulk-settings" data-auth="Bearer" data-headers='[[&quot;Content-Type&quot;, &quot;application/json&quot;]]' data-body='&quot;{}&quot;'>
+  <div class="endpoint__header">
+    <div class="endpoint__title">
+      <span class="http-badge http-badge--put">PUT</span>
+      <div>
+        <h3>Bulk Update Country Settings</h3>
+        <p><code>/api/v1/shipping/countries/bulk-settings</code></p>
+      </div>
+    </div>
+    <span class="auth-badge auth-badge--protected">Protected</span>
+  </div>
+  <div class="endpoint__layout">
+    <div class="endpoint__body">
+      <section class="endpoint__section">
+        <h4>Summary</h4>
+        <p>Bulk Update Country Settings handler in ShippingLocationController for PUT /countries/bulk-settings requests.</p>
+      </section>
+      <section class="endpoint__section"><h4>Authentication</h4><p>Provide an <code>Authorization: Bearer &lt;token&gt;</code> header.</p></section>
+      
+      <section class="endpoint__section">
+  <h4>Headers</h4>
+  <table>
+    <thead><tr><th>Name</th><th>Value</th></tr></thead>
+    <tbody><tr><td>Content-Type</td><td>application/json</td></tr></tbody>
+  </table>
+</section>
+
+      <section class="endpoint__section"><h4>Request body</h4><pre>{}</pre></section>
+      <section class="endpoint__section">
+        <h4>Success response</h4>
+        <p class="status success">HTTP 200</p>
+        <p>No body returned.</p>
+      </section>
+      <section class="endpoint__section">
+        <h4>Error scenarios</h4>
+        <p>No specific error payloads documented.</p>
+      </section>
+    </div>
+    <div class="endpoint__panels">
+      <section class="panel">
+        <header class="panel__header">
+          <h4>cURL samples</h4>
+          <span class="panel__format">Interpolates current environment</span>
+        </header>
+        <div class="code-samples" data-endpoint="put-countries-bulk-settings">
+          <div class="code-samples__tabs" role="tablist">
+            <button type="button" class="code-samples__tab is-active" role="tab" id="put-countries-bulk-settings-bash-tab" aria-selected="true" data-tab-target="put-countries-bulk-settings-bash">bash/zsh</button>
+            <button type="button" class="code-samples__tab" role="tab" id="put-countries-bulk-settings-powershell-tab" aria-selected="false" data-tab-target="put-countries-bulk-settings-powershell">PowerShell/CMD</button>
+          </div>
+          <pre id="put-countries-bulk-settings-bash" class="code-block" role="tabpanel" aria-labelledby="put-countries-bulk-settings-bash-tab" data-template="curl-bash" data-endpoint="put-countries-bulk-settings"></pre>
+          <pre id="put-countries-bulk-settings-powershell" class="code-block is-hidden" role="tabpanel" aria-labelledby="put-countries-bulk-settings-powershell-tab" data-template="curl-powershell" data-endpoint="put-countries-bulk-settings" hidden></pre>
+          <div class="panel__actions">
+            <button type="button" class="copy-button" data-copy>Copy</button>
+          </div>
+        </div>
+      </section>
+      <section class="panel panel--try">
+        <header class="panel__header">
+          <h4>Try it</h4>
+          <span class="panel__format">Send a real request with your environment</span>
+        </header>
+        <form class="try-form" data-try-form>
+          <label class="field">
+            <span class="field__label">Request URL</span>
+            <input type="url" spellcheck="false" data-try-url required />
+            <span class="field__hint">Update path parameters before sending.</span>
+          </label>
+          <label class="field">
+            <span class="field__label">Headers</span>
+            <textarea rows="3" spellcheck="false" data-try-headers></textarea>
+            <span class="field__hint">One header per line (<code>Name: Value</code>).</span>
+          </label>
+          <label class="field" data-try-body-wrapper>
+            <span class="field__label">Body</span>
+            <textarea rows="8" spellcheck="false" data-try-body></textarea>
+            <span class="field__hint">JSON payload; leave blank to omit.</span>
+          </label>
+          <button type="submit" class="button" data-try-submit>Send PUT</button>
+        </form>
+        <div class="try-response" data-try-response hidden>
+          <div class="try-response__meta">
+            <span data-try-status>Waiting…</span>
+            <span data-try-duration></span>
+          </div>
+          <pre class="try-response__body" data-try-output></pre>
+        </div>
+      </section>
+    </div>
+  </div>
+</article>
+<article class="endpoint" id="delete-countries-id" data-endpoint-id="delete-countries-id" data-method="DELETE" data-base-path="/api/v1/shipping" data-path="/countries/{id}" data-auth="Bearer" data-body='null'>
+  <div class="endpoint__header">
+    <div class="endpoint__title">
+      <span class="http-badge http-badge--delete">DELETE</span>
+      <div>
+        <h3>Delete Country</h3>
+        <p><code>/api/v1/shipping/countries/{id}</code></p>
+      </div>
+    </div>
+    <span class="auth-badge auth-badge--protected">Protected</span>
+  </div>
+  <div class="endpoint__layout">
+    <div class="endpoint__body">
+      <section class="endpoint__section">
+        <h4>Summary</h4>
+        <p>Delete Country handler in ShippingLocationController for DELETE /countries/{id} requests.</p>
+      </section>
+      <section class="endpoint__section"><h4>Authentication</h4><p>Provide an <code>Authorization: Bearer &lt;token&gt;</code> header.</p></section>
+      <section class="endpoint__section">
+  <h4>Parameters</h4>
+  <table>
+    <thead><tr><th>Name</th><th>Description</th></tr></thead>
+    <tbody><tr><td>id</td><td>Path parameter</td></tr></tbody>
+  </table>
+</section>
+
+      
+      <section class="endpoint__section"><h4>Request body</h4><p>No body required.</p></section>
+      <section class="endpoint__section">
+        <h4>Success response</h4>
+        <p class="status success">HTTP 204</p>
+        <p>No body returned.</p>
+      </section>
+      <section class="endpoint__section">
+        <h4>Error scenarios</h4>
+        <p>No specific error payloads documented.</p>
+      </section>
+    </div>
+    <div class="endpoint__panels">
+      <section class="panel">
+        <header class="panel__header">
+          <h4>cURL samples</h4>
+          <span class="panel__format">Interpolates current environment</span>
+        </header>
+        <div class="code-samples" data-endpoint="delete-countries-id">
+          <div class="code-samples__tabs" role="tablist">
+            <button type="button" class="code-samples__tab is-active" role="tab" id="delete-countries-id-bash-tab" aria-selected="true" data-tab-target="delete-countries-id-bash">bash/zsh</button>
+            <button type="button" class="code-samples__tab" role="tab" id="delete-countries-id-powershell-tab" aria-selected="false" data-tab-target="delete-countries-id-powershell">PowerShell/CMD</button>
+          </div>
+          <pre id="delete-countries-id-bash" class="code-block" role="tabpanel" aria-labelledby="delete-countries-id-bash-tab" data-template="curl-bash" data-endpoint="delete-countries-id"></pre>
+          <pre id="delete-countries-id-powershell" class="code-block is-hidden" role="tabpanel" aria-labelledby="delete-countries-id-powershell-tab" data-template="curl-powershell" data-endpoint="delete-countries-id" hidden></pre>
+          <div class="panel__actions">
+            <button type="button" class="copy-button" data-copy>Copy</button>
+          </div>
+        </div>
+      </section>
+      <section class="panel panel--try">
+        <header class="panel__header">
+          <h4>Try it</h4>
+          <span class="panel__format">Send a real request with your environment</span>
+        </header>
+        <form class="try-form" data-try-form>
+          <label class="field">
+            <span class="field__label">Request URL</span>
+            <input type="url" spellcheck="false" data-try-url required />
+            <span class="field__hint">Update path parameters before sending.</span>
+          </label>
+          <label class="field">
+            <span class="field__label">Headers</span>
+            <textarea rows="3" spellcheck="false" data-try-headers></textarea>
+            <span class="field__hint">One header per line (<code>Name: Value</code>).</span>
+          </label>
+          <label class="field" data-try-body-wrapper>
+            <span class="field__label">Body</span>
+            <textarea rows="8" spellcheck="false" data-try-body></textarea>
+            <span class="field__hint">JSON payload; leave blank to omit.</span>
+          </label>
+          <button type="submit" class="button" data-try-submit>Send DELETE</button>
+        </form>
+        <div class="try-response" data-try-response hidden>
+          <div class="try-response__meta">
+            <span data-try-status>Waiting…</span>
+            <span data-try-duration></span>
+          </div>
+          <pre class="try-response__body" data-try-output></pre>
+        </div>
+      </section>
+    </div>
+  </div>
+</article>
+<article class="endpoint" id="get-countries-countryId-states" data-endpoint-id="get-countries-countryId-states" data-method="GET" data-base-path="/api/v1/shipping" data-path="/countries/{countryId}/states" data-auth="Bearer" data-body='null'>
+  <div class="endpoint__header">
+    <div class="endpoint__title">
+      <span class="http-badge http-badge--get">GET</span>
+      <div>
+        <h3>List States</h3>
+        <p><code>/api/v1/shipping/countries/{countryId}/states</code></p>
+      </div>
+    </div>
+    <span class="auth-badge auth-badge--protected">Protected</span>
+  </div>
+  <div class="endpoint__layout">
+    <div class="endpoint__body">
+      <section class="endpoint__section">
+        <h4>Summary</h4>
+        <p>List States handler in ShippingLocationController for GET /countries/{countryId}/states requests.</p>
+      </section>
+      <section class="endpoint__section"><h4>Authentication</h4><p>Provide an <code>Authorization: Bearer &lt;token&gt;</code> header.</p></section>
+      <section class="endpoint__section">
+  <h4>Parameters</h4>
+  <table>
+    <thead><tr><th>Name</th><th>Description</th></tr></thead>
+    <tbody><tr><td>countryId</td><td>Path parameter</td></tr></tbody>
+  </table>
+</section>
+
+      
+      <section class="endpoint__section"><h4>Request body</h4><p>No body required.</p></section>
+      <section class="endpoint__section">
+        <h4>Success response</h4>
+        <p class="status success">HTTP 200</p>
+        <p>No body returned.</p>
+      </section>
+      <section class="endpoint__section">
+        <h4>Error scenarios</h4>
+        <p>No specific error payloads documented.</p>
+      </section>
+    </div>
+    <div class="endpoint__panels">
+      <section class="panel">
+        <header class="panel__header">
+          <h4>cURL samples</h4>
+          <span class="panel__format">Interpolates current environment</span>
+        </header>
+        <div class="code-samples" data-endpoint="get-countries-countryId-states">
+          <div class="code-samples__tabs" role="tablist">
+            <button type="button" class="code-samples__tab is-active" role="tab" id="get-countries-countryId-states-bash-tab" aria-selected="true" data-tab-target="get-countries-countryId-states-bash">bash/zsh</button>
+            <button type="button" class="code-samples__tab" role="tab" id="get-countries-countryId-states-powershell-tab" aria-selected="false" data-tab-target="get-countries-countryId-states-powershell">PowerShell/CMD</button>
+          </div>
+          <pre id="get-countries-countryId-states-bash" class="code-block" role="tabpanel" aria-labelledby="get-countries-countryId-states-bash-tab" data-template="curl-bash" data-endpoint="get-countries-countryId-states"></pre>
+          <pre id="get-countries-countryId-states-powershell" class="code-block is-hidden" role="tabpanel" aria-labelledby="get-countries-countryId-states-powershell-tab" data-template="curl-powershell" data-endpoint="get-countries-countryId-states" hidden></pre>
+          <div class="panel__actions">
+            <button type="button" class="copy-button" data-copy>Copy</button>
+          </div>
+        </div>
+      </section>
+      <section class="panel panel--try">
+        <header class="panel__header">
+          <h4>Try it</h4>
+          <span class="panel__format">Send a real request with your environment</span>
+        </header>
+        <form class="try-form" data-try-form>
+          <label class="field">
+            <span class="field__label">Request URL</span>
+            <input type="url" spellcheck="false" data-try-url required />
+            <span class="field__hint">Update path parameters before sending.</span>
+          </label>
+          <label class="field">
+            <span class="field__label">Headers</span>
+            <textarea rows="3" spellcheck="false" data-try-headers></textarea>
+            <span class="field__hint">One header per line (<code>Name: Value</code>).</span>
+          </label>
+          <label class="field" data-try-body-wrapper>
+            <span class="field__label">Body</span>
+            <textarea rows="8" spellcheck="false" data-try-body></textarea>
+            <span class="field__hint">JSON payload; leave blank to omit.</span>
+          </label>
+          <button type="submit" class="button" data-try-submit>Send GET</button>
+        </form>
+        <div class="try-response" data-try-response hidden>
+          <div class="try-response__meta">
+            <span data-try-status>Waiting…</span>
+            <span data-try-duration></span>
+          </div>
+          <pre class="try-response__body" data-try-output></pre>
+        </div>
+      </section>
+    </div>
+  </div>
+</article>
+<article class="endpoint" id="get-countries-countryId-states-options" data-endpoint-id="get-countries-countryId-states-options" data-method="GET" data-base-path="/api/v1/shipping" data-path="/countries/{countryId}/states/options" data-auth="Bearer" data-body='null'>
+  <div class="endpoint__header">
+    <div class="endpoint__title">
+      <span class="http-badge http-badge--get">GET</span>
+      <div>
+        <h3>State Options</h3>
+        <p><code>/api/v1/shipping/countries/{countryId}/states/options</code></p>
+      </div>
+    </div>
+    <span class="auth-badge auth-badge--protected">Protected</span>
+  </div>
+  <div class="endpoint__layout">
+    <div class="endpoint__body">
+      <section class="endpoint__section">
+        <h4>Summary</h4>
+        <p>State Options handler in ShippingLocationController for GET /countries/{countryId}/states/options requests.</p>
+      </section>
+      <section class="endpoint__section"><h4>Authentication</h4><p>Provide an <code>Authorization: Bearer &lt;token&gt;</code> header.</p></section>
+      <section class="endpoint__section">
+  <h4>Parameters</h4>
+  <table>
+    <thead><tr><th>Name</th><th>Description</th></tr></thead>
+    <tbody><tr><td>countryId</td><td>Path parameter</td></tr></tbody>
+  </table>
+</section>
+
+      
+      <section class="endpoint__section"><h4>Request body</h4><p>No body required.</p></section>
+      <section class="endpoint__section">
+        <h4>Success response</h4>
+        <p class="status success">HTTP 200</p>
+        <p>No body returned.</p>
+      </section>
+      <section class="endpoint__section">
+        <h4>Error scenarios</h4>
+        <p>No specific error payloads documented.</p>
+      </section>
+    </div>
+    <div class="endpoint__panels">
+      <section class="panel">
+        <header class="panel__header">
+          <h4>cURL samples</h4>
+          <span class="panel__format">Interpolates current environment</span>
+        </header>
+        <div class="code-samples" data-endpoint="get-countries-countryId-states-options">
+          <div class="code-samples__tabs" role="tablist">
+            <button type="button" class="code-samples__tab is-active" role="tab" id="get-countries-countryId-states-options-bash-tab" aria-selected="true" data-tab-target="get-countries-countryId-states-options-bash">bash/zsh</button>
+            <button type="button" class="code-samples__tab" role="tab" id="get-countries-countryId-states-options-powershell-tab" aria-selected="false" data-tab-target="get-countries-countryId-states-options-powershell">PowerShell/CMD</button>
+          </div>
+          <pre id="get-countries-countryId-states-options-bash" class="code-block" role="tabpanel" aria-labelledby="get-countries-countryId-states-options-bash-tab" data-template="curl-bash" data-endpoint="get-countries-countryId-states-options"></pre>
+          <pre id="get-countries-countryId-states-options-powershell" class="code-block is-hidden" role="tabpanel" aria-labelledby="get-countries-countryId-states-options-powershell-tab" data-template="curl-powershell" data-endpoint="get-countries-countryId-states-options" hidden></pre>
+          <div class="panel__actions">
+            <button type="button" class="copy-button" data-copy>Copy</button>
+          </div>
+        </div>
+      </section>
+      <section class="panel panel--try">
+        <header class="panel__header">
+          <h4>Try it</h4>
+          <span class="panel__format">Send a real request with your environment</span>
+        </header>
+        <form class="try-form" data-try-form>
+          <label class="field">
+            <span class="field__label">Request URL</span>
+            <input type="url" spellcheck="false" data-try-url required />
+            <span class="field__hint">Update path parameters before sending.</span>
+          </label>
+          <label class="field">
+            <span class="field__label">Headers</span>
+            <textarea rows="3" spellcheck="false" data-try-headers></textarea>
+            <span class="field__hint">One header per line (<code>Name: Value</code>).</span>
+          </label>
+          <label class="field" data-try-body-wrapper>
+            <span class="field__label">Body</span>
+            <textarea rows="8" spellcheck="false" data-try-body></textarea>
+            <span class="field__hint">JSON payload; leave blank to omit.</span>
+          </label>
+          <button type="submit" class="button" data-try-submit>Send GET</button>
+        </form>
+        <div class="try-response" data-try-response hidden>
+          <div class="try-response__meta">
+            <span data-try-status>Waiting…</span>
+            <span data-try-duration></span>
+          </div>
+          <pre class="try-response__body" data-try-output></pre>
+        </div>
+      </section>
+    </div>
+  </div>
+</article>
+<article class="endpoint" id="post-countries-countryId-states" data-endpoint-id="post-countries-countryId-states" data-method="POST" data-base-path="/api/v1/shipping" data-path="/countries/{countryId}/states" data-auth="Bearer" data-headers='[[&quot;Content-Type&quot;, &quot;application/json&quot;]]' data-body='&quot;{}&quot;'>
+  <div class="endpoint__header">
+    <div class="endpoint__title">
+      <span class="http-badge http-badge--post">POST</span>
+      <div>
+        <h3>Create State</h3>
+        <p><code>/api/v1/shipping/countries/{countryId}/states</code></p>
+      </div>
+    </div>
+    <span class="auth-badge auth-badge--protected">Protected</span>
+  </div>
+  <div class="endpoint__layout">
+    <div class="endpoint__body">
+      <section class="endpoint__section">
+        <h4>Summary</h4>
+        <p>Create State handler in ShippingLocationController for POST /countries/{countryId}/states requests.</p>
+      </section>
+      <section class="endpoint__section"><h4>Authentication</h4><p>Provide an <code>Authorization: Bearer &lt;token&gt;</code> header.</p></section>
+      <section class="endpoint__section">
+  <h4>Parameters</h4>
+  <table>
+    <thead><tr><th>Name</th><th>Description</th></tr></thead>
+    <tbody><tr><td>countryId</td><td>Path parameter</td></tr></tbody>
+  </table>
+</section>
+
+      <section class="endpoint__section">
+  <h4>Headers</h4>
+  <table>
+    <thead><tr><th>Name</th><th>Value</th></tr></thead>
+    <tbody><tr><td>Content-Type</td><td>application/json</td></tr></tbody>
+  </table>
+</section>
+
+      <section class="endpoint__section"><h4>Request body</h4><pre>{}</pre></section>
+      <section class="endpoint__section">
+        <h4>Success response</h4>
+        <p class="status success">HTTP 201</p>
+        <p>No body returned.</p>
+      </section>
+      <section class="endpoint__section">
+        <h4>Error scenarios</h4>
+        <p>No specific error payloads documented.</p>
+      </section>
+    </div>
+    <div class="endpoint__panels">
+      <section class="panel">
+        <header class="panel__header">
+          <h4>cURL samples</h4>
+          <span class="panel__format">Interpolates current environment</span>
+        </header>
+        <div class="code-samples" data-endpoint="post-countries-countryId-states">
+          <div class="code-samples__tabs" role="tablist">
+            <button type="button" class="code-samples__tab is-active" role="tab" id="post-countries-countryId-states-bash-tab" aria-selected="true" data-tab-target="post-countries-countryId-states-bash">bash/zsh</button>
+            <button type="button" class="code-samples__tab" role="tab" id="post-countries-countryId-states-powershell-tab" aria-selected="false" data-tab-target="post-countries-countryId-states-powershell">PowerShell/CMD</button>
+          </div>
+          <pre id="post-countries-countryId-states-bash" class="code-block" role="tabpanel" aria-labelledby="post-countries-countryId-states-bash-tab" data-template="curl-bash" data-endpoint="post-countries-countryId-states"></pre>
+          <pre id="post-countries-countryId-states-powershell" class="code-block is-hidden" role="tabpanel" aria-labelledby="post-countries-countryId-states-powershell-tab" data-template="curl-powershell" data-endpoint="post-countries-countryId-states" hidden></pre>
+          <div class="panel__actions">
+            <button type="button" class="copy-button" data-copy>Copy</button>
+          </div>
+        </div>
+      </section>
+      <section class="panel panel--try">
+        <header class="panel__header">
+          <h4>Try it</h4>
+          <span class="panel__format">Send a real request with your environment</span>
+        </header>
+        <form class="try-form" data-try-form>
+          <label class="field">
+            <span class="field__label">Request URL</span>
+            <input type="url" spellcheck="false" data-try-url required />
+            <span class="field__hint">Update path parameters before sending.</span>
+          </label>
+          <label class="field">
+            <span class="field__label">Headers</span>
+            <textarea rows="3" spellcheck="false" data-try-headers></textarea>
+            <span class="field__hint">One header per line (<code>Name: Value</code>).</span>
+          </label>
+          <label class="field" data-try-body-wrapper>
+            <span class="field__label">Body</span>
+            <textarea rows="8" spellcheck="false" data-try-body></textarea>
+            <span class="field__hint">JSON payload; leave blank to omit.</span>
+          </label>
+          <button type="submit" class="button" data-try-submit>Send POST</button>
+        </form>
+        <div class="try-response" data-try-response hidden>
+          <div class="try-response__meta">
+            <span data-try-status>Waiting…</span>
+            <span data-try-duration></span>
+          </div>
+          <pre class="try-response__body" data-try-output></pre>
+        </div>
+      </section>
+    </div>
+  </div>
+</article>
+<article class="endpoint" id="put-states-id" data-endpoint-id="put-states-id" data-method="PUT" data-base-path="/api/v1/shipping" data-path="/states/{id}" data-auth="Bearer" data-headers='[[&quot;Content-Type&quot;, &quot;application/json&quot;]]' data-body='&quot;{}&quot;'>
+  <div class="endpoint__header">
+    <div class="endpoint__title">
+      <span class="http-badge http-badge--put">PUT</span>
+      <div>
+        <h3>Update State</h3>
+        <p><code>/api/v1/shipping/states/{id}</code></p>
+      </div>
+    </div>
+    <span class="auth-badge auth-badge--protected">Protected</span>
+  </div>
+  <div class="endpoint__layout">
+    <div class="endpoint__body">
+      <section class="endpoint__section">
+        <h4>Summary</h4>
+        <p>Update State handler in ShippingLocationController for PUT /states/{id} requests.</p>
+      </section>
+      <section class="endpoint__section"><h4>Authentication</h4><p>Provide an <code>Authorization: Bearer &lt;token&gt;</code> header.</p></section>
+      <section class="endpoint__section">
+  <h4>Parameters</h4>
+  <table>
+    <thead><tr><th>Name</th><th>Description</th></tr></thead>
+    <tbody><tr><td>id</td><td>Path parameter</td></tr></tbody>
+  </table>
+</section>
+
+      <section class="endpoint__section">
+  <h4>Headers</h4>
+  <table>
+    <thead><tr><th>Name</th><th>Value</th></tr></thead>
+    <tbody><tr><td>Content-Type</td><td>application/json</td></tr></tbody>
+  </table>
+</section>
+
+      <section class="endpoint__section"><h4>Request body</h4><pre>{}</pre></section>
+      <section class="endpoint__section">
+        <h4>Success response</h4>
+        <p class="status success">HTTP 200</p>
+        <p>No body returned.</p>
+      </section>
+      <section class="endpoint__section">
+        <h4>Error scenarios</h4>
+        <p>No specific error payloads documented.</p>
+      </section>
+    </div>
+    <div class="endpoint__panels">
+      <section class="panel">
+        <header class="panel__header">
+          <h4>cURL samples</h4>
+          <span class="panel__format">Interpolates current environment</span>
+        </header>
+        <div class="code-samples" data-endpoint="put-states-id">
+          <div class="code-samples__tabs" role="tablist">
+            <button type="button" class="code-samples__tab is-active" role="tab" id="put-states-id-bash-tab" aria-selected="true" data-tab-target="put-states-id-bash">bash/zsh</button>
+            <button type="button" class="code-samples__tab" role="tab" id="put-states-id-powershell-tab" aria-selected="false" data-tab-target="put-states-id-powershell">PowerShell/CMD</button>
+          </div>
+          <pre id="put-states-id-bash" class="code-block" role="tabpanel" aria-labelledby="put-states-id-bash-tab" data-template="curl-bash" data-endpoint="put-states-id"></pre>
+          <pre id="put-states-id-powershell" class="code-block is-hidden" role="tabpanel" aria-labelledby="put-states-id-powershell-tab" data-template="curl-powershell" data-endpoint="put-states-id" hidden></pre>
+          <div class="panel__actions">
+            <button type="button" class="copy-button" data-copy>Copy</button>
+          </div>
+        </div>
+      </section>
+      <section class="panel panel--try">
+        <header class="panel__header">
+          <h4>Try it</h4>
+          <span class="panel__format">Send a real request with your environment</span>
+        </header>
+        <form class="try-form" data-try-form>
+          <label class="field">
+            <span class="field__label">Request URL</span>
+            <input type="url" spellcheck="false" data-try-url required />
+            <span class="field__hint">Update path parameters before sending.</span>
+          </label>
+          <label class="field">
+            <span class="field__label">Headers</span>
+            <textarea rows="3" spellcheck="false" data-try-headers></textarea>
+            <span class="field__hint">One header per line (<code>Name: Value</code>).</span>
+          </label>
+          <label class="field" data-try-body-wrapper>
+            <span class="field__label">Body</span>
+            <textarea rows="8" spellcheck="false" data-try-body></textarea>
+            <span class="field__hint">JSON payload; leave blank to omit.</span>
+          </label>
+          <button type="submit" class="button" data-try-submit>Send PUT</button>
+        </form>
+        <div class="try-response" data-try-response hidden>
+          <div class="try-response__meta">
+            <span data-try-status>Waiting…</span>
+            <span data-try-duration></span>
+          </div>
+          <pre class="try-response__body" data-try-output></pre>
+        </div>
+      </section>
+    </div>
+  </div>
+</article>
+<article class="endpoint" id="put-states-id-settings" data-endpoint-id="put-states-id-settings" data-method="PUT" data-base-path="/api/v1/shipping" data-path="/states/{id}/settings" data-auth="Bearer" data-headers='[[&quot;Content-Type&quot;, &quot;application/json&quot;]]' data-body='&quot;{}&quot;'>
+  <div class="endpoint__header">
+    <div class="endpoint__title">
+      <span class="http-badge http-badge--put">PUT</span>
+      <div>
+        <h3>Update State Settings</h3>
+        <p><code>/api/v1/shipping/states/{id}/settings</code></p>
+      </div>
+    </div>
+    <span class="auth-badge auth-badge--protected">Protected</span>
+  </div>
+  <div class="endpoint__layout">
+    <div class="endpoint__body">
+      <section class="endpoint__section">
+        <h4>Summary</h4>
+        <p>Update State Settings handler in ShippingLocationController for PUT /states/{id}/settings requests.</p>
+      </section>
+      <section class="endpoint__section"><h4>Authentication</h4><p>Provide an <code>Authorization: Bearer &lt;token&gt;</code> header.</p></section>
+      <section class="endpoint__section">
+  <h4>Parameters</h4>
+  <table>
+    <thead><tr><th>Name</th><th>Description</th></tr></thead>
+    <tbody><tr><td>id</td><td>Path parameter</td></tr></tbody>
+  </table>
+</section>
+
+      <section class="endpoint__section">
+  <h4>Headers</h4>
+  <table>
+    <thead><tr><th>Name</th><th>Value</th></tr></thead>
+    <tbody><tr><td>Content-Type</td><td>application/json</td></tr></tbody>
+  </table>
+</section>
+
+      <section class="endpoint__section"><h4>Request body</h4><pre>{}</pre></section>
+      <section class="endpoint__section">
+        <h4>Success response</h4>
+        <p class="status success">HTTP 200</p>
+        <p>No body returned.</p>
+      </section>
+      <section class="endpoint__section">
+        <h4>Error scenarios</h4>
+        <p>No specific error payloads documented.</p>
+      </section>
+    </div>
+    <div class="endpoint__panels">
+      <section class="panel">
+        <header class="panel__header">
+          <h4>cURL samples</h4>
+          <span class="panel__format">Interpolates current environment</span>
+        </header>
+        <div class="code-samples" data-endpoint="put-states-id-settings">
+          <div class="code-samples__tabs" role="tablist">
+            <button type="button" class="code-samples__tab is-active" role="tab" id="put-states-id-settings-bash-tab" aria-selected="true" data-tab-target="put-states-id-settings-bash">bash/zsh</button>
+            <button type="button" class="code-samples__tab" role="tab" id="put-states-id-settings-powershell-tab" aria-selected="false" data-tab-target="put-states-id-settings-powershell">PowerShell/CMD</button>
+          </div>
+          <pre id="put-states-id-settings-bash" class="code-block" role="tabpanel" aria-labelledby="put-states-id-settings-bash-tab" data-template="curl-bash" data-endpoint="put-states-id-settings"></pre>
+          <pre id="put-states-id-settings-powershell" class="code-block is-hidden" role="tabpanel" aria-labelledby="put-states-id-settings-powershell-tab" data-template="curl-powershell" data-endpoint="put-states-id-settings" hidden></pre>
+          <div class="panel__actions">
+            <button type="button" class="copy-button" data-copy>Copy</button>
+          </div>
+        </div>
+      </section>
+      <section class="panel panel--try">
+        <header class="panel__header">
+          <h4>Try it</h4>
+          <span class="panel__format">Send a real request with your environment</span>
+        </header>
+        <form class="try-form" data-try-form>
+          <label class="field">
+            <span class="field__label">Request URL</span>
+            <input type="url" spellcheck="false" data-try-url required />
+            <span class="field__hint">Update path parameters before sending.</span>
+          </label>
+          <label class="field">
+            <span class="field__label">Headers</span>
+            <textarea rows="3" spellcheck="false" data-try-headers></textarea>
+            <span class="field__hint">One header per line (<code>Name: Value</code>).</span>
+          </label>
+          <label class="field" data-try-body-wrapper>
+            <span class="field__label">Body</span>
+            <textarea rows="8" spellcheck="false" data-try-body></textarea>
+            <span class="field__hint">JSON payload; leave blank to omit.</span>
+          </label>
+          <button type="submit" class="button" data-try-submit>Send PUT</button>
+        </form>
+        <div class="try-response" data-try-response hidden>
+          <div class="try-response__meta">
+            <span data-try-status>Waiting…</span>
+            <span data-try-duration></span>
+          </div>
+          <pre class="try-response__body" data-try-output></pre>
+        </div>
+      </section>
+    </div>
+  </div>
+</article>
+<article class="endpoint" id="put-states-bulk-settings" data-endpoint-id="put-states-bulk-settings" data-method="PUT" data-base-path="/api/v1/shipping" data-path="/states/bulk-settings" data-auth="Bearer" data-headers='[[&quot;Content-Type&quot;, &quot;application/json&quot;]]' data-body='&quot;{}&quot;'>
+  <div class="endpoint__header">
+    <div class="endpoint__title">
+      <span class="http-badge http-badge--put">PUT</span>
+      <div>
+        <h3>Bulk Update State Settings</h3>
+        <p><code>/api/v1/shipping/states/bulk-settings</code></p>
+      </div>
+    </div>
+    <span class="auth-badge auth-badge--protected">Protected</span>
+  </div>
+  <div class="endpoint__layout">
+    <div class="endpoint__body">
+      <section class="endpoint__section">
+        <h4>Summary</h4>
+        <p>Bulk Update State Settings handler in ShippingLocationController for PUT /states/bulk-settings requests.</p>
+      </section>
+      <section class="endpoint__section"><h4>Authentication</h4><p>Provide an <code>Authorization: Bearer &lt;token&gt;</code> header.</p></section>
+      
+      <section class="endpoint__section">
+  <h4>Headers</h4>
+  <table>
+    <thead><tr><th>Name</th><th>Value</th></tr></thead>
+    <tbody><tr><td>Content-Type</td><td>application/json</td></tr></tbody>
+  </table>
+</section>
+
+      <section class="endpoint__section"><h4>Request body</h4><pre>{}</pre></section>
+      <section class="endpoint__section">
+        <h4>Success response</h4>
+        <p class="status success">HTTP 200</p>
+        <p>No body returned.</p>
+      </section>
+      <section class="endpoint__section">
+        <h4>Error scenarios</h4>
+        <p>No specific error payloads documented.</p>
+      </section>
+    </div>
+    <div class="endpoint__panels">
+      <section class="panel">
+        <header class="panel__header">
+          <h4>cURL samples</h4>
+          <span class="panel__format">Interpolates current environment</span>
+        </header>
+        <div class="code-samples" data-endpoint="put-states-bulk-settings">
+          <div class="code-samples__tabs" role="tablist">
+            <button type="button" class="code-samples__tab is-active" role="tab" id="put-states-bulk-settings-bash-tab" aria-selected="true" data-tab-target="put-states-bulk-settings-bash">bash/zsh</button>
+            <button type="button" class="code-samples__tab" role="tab" id="put-states-bulk-settings-powershell-tab" aria-selected="false" data-tab-target="put-states-bulk-settings-powershell">PowerShell/CMD</button>
+          </div>
+          <pre id="put-states-bulk-settings-bash" class="code-block" role="tabpanel" aria-labelledby="put-states-bulk-settings-bash-tab" data-template="curl-bash" data-endpoint="put-states-bulk-settings"></pre>
+          <pre id="put-states-bulk-settings-powershell" class="code-block is-hidden" role="tabpanel" aria-labelledby="put-states-bulk-settings-powershell-tab" data-template="curl-powershell" data-endpoint="put-states-bulk-settings" hidden></pre>
+          <div class="panel__actions">
+            <button type="button" class="copy-button" data-copy>Copy</button>
+          </div>
+        </div>
+      </section>
+      <section class="panel panel--try">
+        <header class="panel__header">
+          <h4>Try it</h4>
+          <span class="panel__format">Send a real request with your environment</span>
+        </header>
+        <form class="try-form" data-try-form>
+          <label class="field">
+            <span class="field__label">Request URL</span>
+            <input type="url" spellcheck="false" data-try-url required />
+            <span class="field__hint">Update path parameters before sending.</span>
+          </label>
+          <label class="field">
+            <span class="field__label">Headers</span>
+            <textarea rows="3" spellcheck="false" data-try-headers></textarea>
+            <span class="field__hint">One header per line (<code>Name: Value</code>).</span>
+          </label>
+          <label class="field" data-try-body-wrapper>
+            <span class="field__label">Body</span>
+            <textarea rows="8" spellcheck="false" data-try-body></textarea>
+            <span class="field__hint">JSON payload; leave blank to omit.</span>
+          </label>
+          <button type="submit" class="button" data-try-submit>Send PUT</button>
+        </form>
+        <div class="try-response" data-try-response hidden>
+          <div class="try-response__meta">
+            <span data-try-status>Waiting…</span>
+            <span data-try-duration></span>
+          </div>
+          <pre class="try-response__body" data-try-output></pre>
+        </div>
+      </section>
+    </div>
+  </div>
+</article>
+<article class="endpoint" id="delete-states-id" data-endpoint-id="delete-states-id" data-method="DELETE" data-base-path="/api/v1/shipping" data-path="/states/{id}" data-auth="Bearer" data-body='null'>
+  <div class="endpoint__header">
+    <div class="endpoint__title">
+      <span class="http-badge http-badge--delete">DELETE</span>
+      <div>
+        <h3>Delete State</h3>
+        <p><code>/api/v1/shipping/states/{id}</code></p>
+      </div>
+    </div>
+    <span class="auth-badge auth-badge--protected">Protected</span>
+  </div>
+  <div class="endpoint__layout">
+    <div class="endpoint__body">
+      <section class="endpoint__section">
+        <h4>Summary</h4>
+        <p>Delete State handler in ShippingLocationController for DELETE /states/{id} requests.</p>
+      </section>
+      <section class="endpoint__section"><h4>Authentication</h4><p>Provide an <code>Authorization: Bearer &lt;token&gt;</code> header.</p></section>
+      <section class="endpoint__section">
+  <h4>Parameters</h4>
+  <table>
+    <thead><tr><th>Name</th><th>Description</th></tr></thead>
+    <tbody><tr><td>id</td><td>Path parameter</td></tr></tbody>
+  </table>
+</section>
+
+      
+      <section class="endpoint__section"><h4>Request body</h4><p>No body required.</p></section>
+      <section class="endpoint__section">
+        <h4>Success response</h4>
+        <p class="status success">HTTP 204</p>
+        <p>No body returned.</p>
+      </section>
+      <section class="endpoint__section">
+        <h4>Error scenarios</h4>
+        <p>No specific error payloads documented.</p>
+      </section>
+    </div>
+    <div class="endpoint__panels">
+      <section class="panel">
+        <header class="panel__header">
+          <h4>cURL samples</h4>
+          <span class="panel__format">Interpolates current environment</span>
+        </header>
+        <div class="code-samples" data-endpoint="delete-states-id">
+          <div class="code-samples__tabs" role="tablist">
+            <button type="button" class="code-samples__tab is-active" role="tab" id="delete-states-id-bash-tab" aria-selected="true" data-tab-target="delete-states-id-bash">bash/zsh</button>
+            <button type="button" class="code-samples__tab" role="tab" id="delete-states-id-powershell-tab" aria-selected="false" data-tab-target="delete-states-id-powershell">PowerShell/CMD</button>
+          </div>
+          <pre id="delete-states-id-bash" class="code-block" role="tabpanel" aria-labelledby="delete-states-id-bash-tab" data-template="curl-bash" data-endpoint="delete-states-id"></pre>
+          <pre id="delete-states-id-powershell" class="code-block is-hidden" role="tabpanel" aria-labelledby="delete-states-id-powershell-tab" data-template="curl-powershell" data-endpoint="delete-states-id" hidden></pre>
+          <div class="panel__actions">
+            <button type="button" class="copy-button" data-copy>Copy</button>
+          </div>
+        </div>
+      </section>
+      <section class="panel panel--try">
+        <header class="panel__header">
+          <h4>Try it</h4>
+          <span class="panel__format">Send a real request with your environment</span>
+        </header>
+        <form class="try-form" data-try-form>
+          <label class="field">
+            <span class="field__label">Request URL</span>
+            <input type="url" spellcheck="false" data-try-url required />
+            <span class="field__hint">Update path parameters before sending.</span>
+          </label>
+          <label class="field">
+            <span class="field__label">Headers</span>
+            <textarea rows="3" spellcheck="false" data-try-headers></textarea>
+            <span class="field__hint">One header per line (<code>Name: Value</code>).</span>
+          </label>
+          <label class="field" data-try-body-wrapper>
+            <span class="field__label">Body</span>
+            <textarea rows="8" spellcheck="false" data-try-body></textarea>
+            <span class="field__hint">JSON payload; leave blank to omit.</span>
+          </label>
+          <button type="submit" class="button" data-try-submit>Send DELETE</button>
+        </form>
+        <div class="try-response" data-try-response hidden>
+          <div class="try-response__meta">
+            <span data-try-status>Waiting…</span>
+            <span data-try-duration></span>
+          </div>
+          <pre class="try-response__body" data-try-output></pre>
+        </div>
+      </section>
+    </div>
+  </div>
+</article>
+<article class="endpoint" id="get-states-stateId-cities" data-endpoint-id="get-states-stateId-cities" data-method="GET" data-base-path="/api/v1/shipping" data-path="/states/{stateId}/cities" data-auth="Bearer" data-body='null'>
+  <div class="endpoint__header">
+    <div class="endpoint__title">
+      <span class="http-badge http-badge--get">GET</span>
+      <div>
+        <h3>List Cities</h3>
+        <p><code>/api/v1/shipping/states/{stateId}/cities</code></p>
+      </div>
+    </div>
+    <span class="auth-badge auth-badge--protected">Protected</span>
+  </div>
+  <div class="endpoint__layout">
+    <div class="endpoint__body">
+      <section class="endpoint__section">
+        <h4>Summary</h4>
+        <p>List Cities handler in ShippingLocationController for GET /states/{stateId}/cities requests.</p>
+      </section>
+      <section class="endpoint__section"><h4>Authentication</h4><p>Provide an <code>Authorization: Bearer &lt;token&gt;</code> header.</p></section>
+      <section class="endpoint__section">
+  <h4>Parameters</h4>
+  <table>
+    <thead><tr><th>Name</th><th>Description</th></tr></thead>
+    <tbody><tr><td>stateId</td><td>Path parameter</td></tr></tbody>
+  </table>
+</section>
+
+      
+      <section class="endpoint__section"><h4>Request body</h4><p>No body required.</p></section>
+      <section class="endpoint__section">
+        <h4>Success response</h4>
+        <p class="status success">HTTP 200</p>
+        <p>No body returned.</p>
+      </section>
+      <section class="endpoint__section">
+        <h4>Error scenarios</h4>
+        <p>No specific error payloads documented.</p>
+      </section>
+    </div>
+    <div class="endpoint__panels">
+      <section class="panel">
+        <header class="panel__header">
+          <h4>cURL samples</h4>
+          <span class="panel__format">Interpolates current environment</span>
+        </header>
+        <div class="code-samples" data-endpoint="get-states-stateId-cities">
+          <div class="code-samples__tabs" role="tablist">
+            <button type="button" class="code-samples__tab is-active" role="tab" id="get-states-stateId-cities-bash-tab" aria-selected="true" data-tab-target="get-states-stateId-cities-bash">bash/zsh</button>
+            <button type="button" class="code-samples__tab" role="tab" id="get-states-stateId-cities-powershell-tab" aria-selected="false" data-tab-target="get-states-stateId-cities-powershell">PowerShell/CMD</button>
+          </div>
+          <pre id="get-states-stateId-cities-bash" class="code-block" role="tabpanel" aria-labelledby="get-states-stateId-cities-bash-tab" data-template="curl-bash" data-endpoint="get-states-stateId-cities"></pre>
+          <pre id="get-states-stateId-cities-powershell" class="code-block is-hidden" role="tabpanel" aria-labelledby="get-states-stateId-cities-powershell-tab" data-template="curl-powershell" data-endpoint="get-states-stateId-cities" hidden></pre>
+          <div class="panel__actions">
+            <button type="button" class="copy-button" data-copy>Copy</button>
+          </div>
+        </div>
+      </section>
+      <section class="panel panel--try">
+        <header class="panel__header">
+          <h4>Try it</h4>
+          <span class="panel__format">Send a real request with your environment</span>
+        </header>
+        <form class="try-form" data-try-form>
+          <label class="field">
+            <span class="field__label">Request URL</span>
+            <input type="url" spellcheck="false" data-try-url required />
+            <span class="field__hint">Update path parameters before sending.</span>
+          </label>
+          <label class="field">
+            <span class="field__label">Headers</span>
+            <textarea rows="3" spellcheck="false" data-try-headers></textarea>
+            <span class="field__hint">One header per line (<code>Name: Value</code>).</span>
+          </label>
+          <label class="field" data-try-body-wrapper>
+            <span class="field__label">Body</span>
+            <textarea rows="8" spellcheck="false" data-try-body></textarea>
+            <span class="field__hint">JSON payload; leave blank to omit.</span>
+          </label>
+          <button type="submit" class="button" data-try-submit>Send GET</button>
+        </form>
+        <div class="try-response" data-try-response hidden>
+          <div class="try-response__meta">
+            <span data-try-status>Waiting…</span>
+            <span data-try-duration></span>
+          </div>
+          <pre class="try-response__body" data-try-output></pre>
+        </div>
+      </section>
+    </div>
+  </div>
+</article>
+<article class="endpoint" id="get-rates-quote" data-endpoint-id="get-rates-quote" data-method="GET" data-base-path="/api/v1/shipping" data-path="/rates/quote" data-auth="Bearer" data-body='null'>
+  <div class="endpoint__header">
+    <div class="endpoint__title">
+      <span class="http-badge http-badge--get">GET</span>
+      <div>
+        <h3>Quote Shipping Rate</h3>
+        <p><code>/api/v1/shipping/rates/quote</code></p>
+      </div>
+    </div>
+    <span class="auth-badge auth-badge--protected">Protected</span>
+  </div>
+  <div class="endpoint__layout">
+    <div class="endpoint__body">
+      <section class="endpoint__section">
+        <h4>Summary</h4>
+        <p>Quote Shipping Rate handler in ShippingLocationController for GET /rates/quote requests.</p>
+      </section>
+      <section class="endpoint__section"><h4>Authentication</h4><p>Provide an <code>Authorization: Bearer &lt;token&gt;</code> header.</p></section>
+      <section class="endpoint__section">
+  <h4>Parameters</h4>
+  <table>
+    <thead><tr><th>Name</th><th>Description</th></tr></thead>
+    <tbody><tr><td>countryId</td><td>Query parameter (optional)</td></tr><tr><td>stateId</td><td>Query parameter (optional)</td></tr><tr><td>cityId</td><td>Query parameter (optional)</td></tr></tbody>
+  </table>
+</section>
+
+      
+      <section class="endpoint__section"><h4>Request body</h4><p>No body required.</p></section>
+      <section class="endpoint__section">
+        <h4>Success response</h4>
+        <p class="status success">HTTP 200</p>
+        <p>No body returned.</p>
+      </section>
+      <section class="endpoint__section">
+        <h4>Error scenarios</h4>
+        <p>No specific error payloads documented.</p>
+      </section>
+    </div>
+    <div class="endpoint__panels">
+      <section class="panel">
+        <header class="panel__header">
+          <h4>cURL samples</h4>
+          <span class="panel__format">Interpolates current environment</span>
+        </header>
+        <div class="code-samples" data-endpoint="get-rates-quote">
+          <div class="code-samples__tabs" role="tablist">
+            <button type="button" class="code-samples__tab is-active" role="tab" id="get-rates-quote-bash-tab" aria-selected="true" data-tab-target="get-rates-quote-bash">bash/zsh</button>
+            <button type="button" class="code-samples__tab" role="tab" id="get-rates-quote-powershell-tab" aria-selected="false" data-tab-target="get-rates-quote-powershell">PowerShell/CMD</button>
+          </div>
+          <pre id="get-rates-quote-bash" class="code-block" role="tabpanel" aria-labelledby="get-rates-quote-bash-tab" data-template="curl-bash" data-endpoint="get-rates-quote"></pre>
+          <pre id="get-rates-quote-powershell" class="code-block is-hidden" role="tabpanel" aria-labelledby="get-rates-quote-powershell-tab" data-template="curl-powershell" data-endpoint="get-rates-quote" hidden></pre>
+          <div class="panel__actions">
+            <button type="button" class="copy-button" data-copy>Copy</button>
+          </div>
+        </div>
+      </section>
+      <section class="panel panel--try">
+        <header class="panel__header">
+          <h4>Try it</h4>
+          <span class="panel__format">Send a real request with your environment</span>
+        </header>
+        <form class="try-form" data-try-form>
+          <label class="field">
+            <span class="field__label">Request URL</span>
+            <input type="url" spellcheck="false" data-try-url required />
+            <span class="field__hint">Update path parameters before sending.</span>
+          </label>
+          <label class="field">
+            <span class="field__label">Headers</span>
+            <textarea rows="3" spellcheck="false" data-try-headers></textarea>
+            <span class="field__hint">One header per line (<code>Name: Value</code>).</span>
+          </label>
+          <label class="field" data-try-body-wrapper>
+            <span class="field__label">Body</span>
+            <textarea rows="8" spellcheck="false" data-try-body></textarea>
+            <span class="field__hint">JSON payload; leave blank to omit.</span>
+          </label>
+          <button type="submit" class="button" data-try-submit>Send GET</button>
+        </form>
+        <div class="try-response" data-try-response hidden>
+          <div class="try-response__meta">
+            <span data-try-status>Waiting…</span>
+            <span data-try-duration></span>
+          </div>
+          <pre class="try-response__body" data-try-output></pre>
+        </div>
+      </section>
+    </div>
+  </div>
+</article>
+<article class="endpoint" id="get-states-stateId-cities-options" data-endpoint-id="get-states-stateId-cities-options" data-method="GET" data-base-path="/api/v1/shipping" data-path="/states/{stateId}/cities/options" data-auth="Bearer" data-body='null'>
+  <div class="endpoint__header">
+    <div class="endpoint__title">
+      <span class="http-badge http-badge--get">GET</span>
+      <div>
+        <h3>City Options</h3>
+        <p><code>/api/v1/shipping/states/{stateId}/cities/options</code></p>
+      </div>
+    </div>
+    <span class="auth-badge auth-badge--protected">Protected</span>
+  </div>
+  <div class="endpoint__layout">
+    <div class="endpoint__body">
+      <section class="endpoint__section">
+        <h4>Summary</h4>
+        <p>City Options handler in ShippingLocationController for GET /states/{stateId}/cities/options requests.</p>
+      </section>
+      <section class="endpoint__section"><h4>Authentication</h4><p>Provide an <code>Authorization: Bearer &lt;token&gt;</code> header.</p></section>
+      <section class="endpoint__section">
+  <h4>Parameters</h4>
+  <table>
+    <thead><tr><th>Name</th><th>Description</th></tr></thead>
+    <tbody><tr><td>stateId</td><td>Path parameter</td></tr></tbody>
+  </table>
+</section>
+
+      
+      <section class="endpoint__section"><h4>Request body</h4><p>No body required.</p></section>
+      <section class="endpoint__section">
+        <h4>Success response</h4>
+        <p class="status success">HTTP 200</p>
+        <p>No body returned.</p>
+      </section>
+      <section class="endpoint__section">
+        <h4>Error scenarios</h4>
+        <p>No specific error payloads documented.</p>
+      </section>
+    </div>
+    <div class="endpoint__panels">
+      <section class="panel">
+        <header class="panel__header">
+          <h4>cURL samples</h4>
+          <span class="panel__format">Interpolates current environment</span>
+        </header>
+        <div class="code-samples" data-endpoint="get-states-stateId-cities-options">
+          <div class="code-samples__tabs" role="tablist">
+            <button type="button" class="code-samples__tab is-active" role="tab" id="get-states-stateId-cities-options-bash-tab" aria-selected="true" data-tab-target="get-states-stateId-cities-options-bash">bash/zsh</button>
+            <button type="button" class="code-samples__tab" role="tab" id="get-states-stateId-cities-options-powershell-tab" aria-selected="false" data-tab-target="get-states-stateId-cities-options-powershell">PowerShell/CMD</button>
+          </div>
+          <pre id="get-states-stateId-cities-options-bash" class="code-block" role="tabpanel" aria-labelledby="get-states-stateId-cities-options-bash-tab" data-template="curl-bash" data-endpoint="get-states-stateId-cities-options"></pre>
+          <pre id="get-states-stateId-cities-options-powershell" class="code-block is-hidden" role="tabpanel" aria-labelledby="get-states-stateId-cities-options-powershell-tab" data-template="curl-powershell" data-endpoint="get-states-stateId-cities-options" hidden></pre>
+          <div class="panel__actions">
+            <button type="button" class="copy-button" data-copy>Copy</button>
+          </div>
+        </div>
+      </section>
+      <section class="panel panel--try">
+        <header class="panel__header">
+          <h4>Try it</h4>
+          <span class="panel__format">Send a real request with your environment</span>
+        </header>
+        <form class="try-form" data-try-form>
+          <label class="field">
+            <span class="field__label">Request URL</span>
+            <input type="url" spellcheck="false" data-try-url required />
+            <span class="field__hint">Update path parameters before sending.</span>
+          </label>
+          <label class="field">
+            <span class="field__label">Headers</span>
+            <textarea rows="3" spellcheck="false" data-try-headers></textarea>
+            <span class="field__hint">One header per line (<code>Name: Value</code>).</span>
+          </label>
+          <label class="field" data-try-body-wrapper>
+            <span class="field__label">Body</span>
+            <textarea rows="8" spellcheck="false" data-try-body></textarea>
+            <span class="field__hint">JSON payload; leave blank to omit.</span>
+          </label>
+          <button type="submit" class="button" data-try-submit>Send GET</button>
+        </form>
+        <div class="try-response" data-try-response hidden>
+          <div class="try-response__meta">
+            <span data-try-status>Waiting…</span>
+            <span data-try-duration></span>
+          </div>
+          <pre class="try-response__body" data-try-output></pre>
+        </div>
+      </section>
+    </div>
+  </div>
+</article>
+<article class="endpoint" id="post-states-stateId-cities" data-endpoint-id="post-states-stateId-cities" data-method="POST" data-base-path="/api/v1/shipping" data-path="/states/{stateId}/cities" data-auth="Bearer" data-headers='[[&quot;Content-Type&quot;, &quot;application/json&quot;]]' data-body='&quot;{}&quot;'>
+  <div class="endpoint__header">
+    <div class="endpoint__title">
+      <span class="http-badge http-badge--post">POST</span>
+      <div>
+        <h3>Create City</h3>
+        <p><code>/api/v1/shipping/states/{stateId}/cities</code></p>
+      </div>
+    </div>
+    <span class="auth-badge auth-badge--protected">Protected</span>
+  </div>
+  <div class="endpoint__layout">
+    <div class="endpoint__body">
+      <section class="endpoint__section">
+        <h4>Summary</h4>
+        <p>Create City handler in ShippingLocationController for POST /states/{stateId}/cities requests.</p>
+      </section>
+      <section class="endpoint__section"><h4>Authentication</h4><p>Provide an <code>Authorization: Bearer &lt;token&gt;</code> header.</p></section>
+      <section class="endpoint__section">
+  <h4>Parameters</h4>
+  <table>
+    <thead><tr><th>Name</th><th>Description</th></tr></thead>
+    <tbody><tr><td>stateId</td><td>Path parameter</td></tr></tbody>
+  </table>
+</section>
+
+      <section class="endpoint__section">
+  <h4>Headers</h4>
+  <table>
+    <thead><tr><th>Name</th><th>Value</th></tr></thead>
+    <tbody><tr><td>Content-Type</td><td>application/json</td></tr></tbody>
+  </table>
+</section>
+
+      <section class="endpoint__section"><h4>Request body</h4><pre>{}</pre></section>
+      <section class="endpoint__section">
+        <h4>Success response</h4>
+        <p class="status success">HTTP 201</p>
+        <p>No body returned.</p>
+      </section>
+      <section class="endpoint__section">
+        <h4>Error scenarios</h4>
+        <p>No specific error payloads documented.</p>
+      </section>
+    </div>
+    <div class="endpoint__panels">
+      <section class="panel">
+        <header class="panel__header">
+          <h4>cURL samples</h4>
+          <span class="panel__format">Interpolates current environment</span>
+        </header>
+        <div class="code-samples" data-endpoint="post-states-stateId-cities">
+          <div class="code-samples__tabs" role="tablist">
+            <button type="button" class="code-samples__tab is-active" role="tab" id="post-states-stateId-cities-bash-tab" aria-selected="true" data-tab-target="post-states-stateId-cities-bash">bash/zsh</button>
+            <button type="button" class="code-samples__tab" role="tab" id="post-states-stateId-cities-powershell-tab" aria-selected="false" data-tab-target="post-states-stateId-cities-powershell">PowerShell/CMD</button>
+          </div>
+          <pre id="post-states-stateId-cities-bash" class="code-block" role="tabpanel" aria-labelledby="post-states-stateId-cities-bash-tab" data-template="curl-bash" data-endpoint="post-states-stateId-cities"></pre>
+          <pre id="post-states-stateId-cities-powershell" class="code-block is-hidden" role="tabpanel" aria-labelledby="post-states-stateId-cities-powershell-tab" data-template="curl-powershell" data-endpoint="post-states-stateId-cities" hidden></pre>
+          <div class="panel__actions">
+            <button type="button" class="copy-button" data-copy>Copy</button>
+          </div>
+        </div>
+      </section>
+      <section class="panel panel--try">
+        <header class="panel__header">
+          <h4>Try it</h4>
+          <span class="panel__format">Send a real request with your environment</span>
+        </header>
+        <form class="try-form" data-try-form>
+          <label class="field">
+            <span class="field__label">Request URL</span>
+            <input type="url" spellcheck="false" data-try-url required />
+            <span class="field__hint">Update path parameters before sending.</span>
+          </label>
+          <label class="field">
+            <span class="field__label">Headers</span>
+            <textarea rows="3" spellcheck="false" data-try-headers></textarea>
+            <span class="field__hint">One header per line (<code>Name: Value</code>).</span>
+          </label>
+          <label class="field" data-try-body-wrapper>
+            <span class="field__label">Body</span>
+            <textarea rows="8" spellcheck="false" data-try-body></textarea>
+            <span class="field__hint">JSON payload; leave blank to omit.</span>
+          </label>
+          <button type="submit" class="button" data-try-submit>Send POST</button>
+        </form>
+        <div class="try-response" data-try-response hidden>
+          <div class="try-response__meta">
+            <span data-try-status>Waiting…</span>
+            <span data-try-duration></span>
+          </div>
+          <pre class="try-response__body" data-try-output></pre>
+        </div>
+      </section>
+    </div>
+  </div>
+</article>
+<article class="endpoint" id="put-cities-id" data-endpoint-id="put-cities-id" data-method="PUT" data-base-path="/api/v1/shipping" data-path="/cities/{id}" data-auth="Bearer" data-headers='[[&quot;Content-Type&quot;, &quot;application/json&quot;]]' data-body='&quot;{}&quot;'>
+  <div class="endpoint__header">
+    <div class="endpoint__title">
+      <span class="http-badge http-badge--put">PUT</span>
+      <div>
+        <h3>Update City</h3>
+        <p><code>/api/v1/shipping/cities/{id}</code></p>
+      </div>
+    </div>
+    <span class="auth-badge auth-badge--protected">Protected</span>
+  </div>
+  <div class="endpoint__layout">
+    <div class="endpoint__body">
+      <section class="endpoint__section">
+        <h4>Summary</h4>
+        <p>Update City handler in ShippingLocationController for PUT /cities/{id} requests.</p>
+      </section>
+      <section class="endpoint__section"><h4>Authentication</h4><p>Provide an <code>Authorization: Bearer &lt;token&gt;</code> header.</p></section>
+      <section class="endpoint__section">
+  <h4>Parameters</h4>
+  <table>
+    <thead><tr><th>Name</th><th>Description</th></tr></thead>
+    <tbody><tr><td>id</td><td>Path parameter</td></tr></tbody>
+  </table>
+</section>
+
+      <section class="endpoint__section">
+  <h4>Headers</h4>
+  <table>
+    <thead><tr><th>Name</th><th>Value</th></tr></thead>
+    <tbody><tr><td>Content-Type</td><td>application/json</td></tr></tbody>
+  </table>
+</section>
+
+      <section class="endpoint__section"><h4>Request body</h4><pre>{}</pre></section>
+      <section class="endpoint__section">
+        <h4>Success response</h4>
+        <p class="status success">HTTP 200</p>
+        <p>No body returned.</p>
+      </section>
+      <section class="endpoint__section">
+        <h4>Error scenarios</h4>
+        <p>No specific error payloads documented.</p>
+      </section>
+    </div>
+    <div class="endpoint__panels">
+      <section class="panel">
+        <header class="panel__header">
+          <h4>cURL samples</h4>
+          <span class="panel__format">Interpolates current environment</span>
+        </header>
+        <div class="code-samples" data-endpoint="put-cities-id">
+          <div class="code-samples__tabs" role="tablist">
+            <button type="button" class="code-samples__tab is-active" role="tab" id="put-cities-id-bash-tab" aria-selected="true" data-tab-target="put-cities-id-bash">bash/zsh</button>
+            <button type="button" class="code-samples__tab" role="tab" id="put-cities-id-powershell-tab" aria-selected="false" data-tab-target="put-cities-id-powershell">PowerShell/CMD</button>
+          </div>
+          <pre id="put-cities-id-bash" class="code-block" role="tabpanel" aria-labelledby="put-cities-id-bash-tab" data-template="curl-bash" data-endpoint="put-cities-id"></pre>
+          <pre id="put-cities-id-powershell" class="code-block is-hidden" role="tabpanel" aria-labelledby="put-cities-id-powershell-tab" data-template="curl-powershell" data-endpoint="put-cities-id" hidden></pre>
+          <div class="panel__actions">
+            <button type="button" class="copy-button" data-copy>Copy</button>
+          </div>
+        </div>
+      </section>
+      <section class="panel panel--try">
+        <header class="panel__header">
+          <h4>Try it</h4>
+          <span class="panel__format">Send a real request with your environment</span>
+        </header>
+        <form class="try-form" data-try-form>
+          <label class="field">
+            <span class="field__label">Request URL</span>
+            <input type="url" spellcheck="false" data-try-url required />
+            <span class="field__hint">Update path parameters before sending.</span>
+          </label>
+          <label class="field">
+            <span class="field__label">Headers</span>
+            <textarea rows="3" spellcheck="false" data-try-headers></textarea>
+            <span class="field__hint">One header per line (<code>Name: Value</code>).</span>
+          </label>
+          <label class="field" data-try-body-wrapper>
+            <span class="field__label">Body</span>
+            <textarea rows="8" spellcheck="false" data-try-body></textarea>
+            <span class="field__hint">JSON payload; leave blank to omit.</span>
+          </label>
+          <button type="submit" class="button" data-try-submit>Send PUT</button>
+        </form>
+        <div class="try-response" data-try-response hidden>
+          <div class="try-response__meta">
+            <span data-try-status>Waiting…</span>
+            <span data-try-duration></span>
+          </div>
+          <pre class="try-response__body" data-try-output></pre>
+        </div>
+      </section>
+    </div>
+  </div>
+</article>
+<article class="endpoint" id="put-cities-id-settings" data-endpoint-id="put-cities-id-settings" data-method="PUT" data-base-path="/api/v1/shipping" data-path="/cities/{id}/settings" data-auth="Bearer" data-headers='[[&quot;Content-Type&quot;, &quot;application/json&quot;]]' data-body='&quot;{}&quot;'>
+  <div class="endpoint__header">
+    <div class="endpoint__title">
+      <span class="http-badge http-badge--put">PUT</span>
+      <div>
+        <h3>Update City Settings</h3>
+        <p><code>/api/v1/shipping/cities/{id}/settings</code></p>
+      </div>
+    </div>
+    <span class="auth-badge auth-badge--protected">Protected</span>
+  </div>
+  <div class="endpoint__layout">
+    <div class="endpoint__body">
+      <section class="endpoint__section">
+        <h4>Summary</h4>
+        <p>Update City Settings handler in ShippingLocationController for PUT /cities/{id}/settings requests.</p>
+      </section>
+      <section class="endpoint__section"><h4>Authentication</h4><p>Provide an <code>Authorization: Bearer &lt;token&gt;</code> header.</p></section>
+      <section class="endpoint__section">
+  <h4>Parameters</h4>
+  <table>
+    <thead><tr><th>Name</th><th>Description</th></tr></thead>
+    <tbody><tr><td>id</td><td>Path parameter</td></tr></tbody>
+  </table>
+</section>
+
+      <section class="endpoint__section">
+  <h4>Headers</h4>
+  <table>
+    <thead><tr><th>Name</th><th>Value</th></tr></thead>
+    <tbody><tr><td>Content-Type</td><td>application/json</td></tr></tbody>
+  </table>
+</section>
+
+      <section class="endpoint__section"><h4>Request body</h4><pre>{}</pre></section>
+      <section class="endpoint__section">
+        <h4>Success response</h4>
+        <p class="status success">HTTP 200</p>
+        <p>No body returned.</p>
+      </section>
+      <section class="endpoint__section">
+        <h4>Error scenarios</h4>
+        <p>No specific error payloads documented.</p>
+      </section>
+    </div>
+    <div class="endpoint__panels">
+      <section class="panel">
+        <header class="panel__header">
+          <h4>cURL samples</h4>
+          <span class="panel__format">Interpolates current environment</span>
+        </header>
+        <div class="code-samples" data-endpoint="put-cities-id-settings">
+          <div class="code-samples__tabs" role="tablist">
+            <button type="button" class="code-samples__tab is-active" role="tab" id="put-cities-id-settings-bash-tab" aria-selected="true" data-tab-target="put-cities-id-settings-bash">bash/zsh</button>
+            <button type="button" class="code-samples__tab" role="tab" id="put-cities-id-settings-powershell-tab" aria-selected="false" data-tab-target="put-cities-id-settings-powershell">PowerShell/CMD</button>
+          </div>
+          <pre id="put-cities-id-settings-bash" class="code-block" role="tabpanel" aria-labelledby="put-cities-id-settings-bash-tab" data-template="curl-bash" data-endpoint="put-cities-id-settings"></pre>
+          <pre id="put-cities-id-settings-powershell" class="code-block is-hidden" role="tabpanel" aria-labelledby="put-cities-id-settings-powershell-tab" data-template="curl-powershell" data-endpoint="put-cities-id-settings" hidden></pre>
+          <div class="panel__actions">
+            <button type="button" class="copy-button" data-copy>Copy</button>
+          </div>
+        </div>
+      </section>
+      <section class="panel panel--try">
+        <header class="panel__header">
+          <h4>Try it</h4>
+          <span class="panel__format">Send a real request with your environment</span>
+        </header>
+        <form class="try-form" data-try-form>
+          <label class="field">
+            <span class="field__label">Request URL</span>
+            <input type="url" spellcheck="false" data-try-url required />
+            <span class="field__hint">Update path parameters before sending.</span>
+          </label>
+          <label class="field">
+            <span class="field__label">Headers</span>
+            <textarea rows="3" spellcheck="false" data-try-headers></textarea>
+            <span class="field__hint">One header per line (<code>Name: Value</code>).</span>
+          </label>
+          <label class="field" data-try-body-wrapper>
+            <span class="field__label">Body</span>
+            <textarea rows="8" spellcheck="false" data-try-body></textarea>
+            <span class="field__hint">JSON payload; leave blank to omit.</span>
+          </label>
+          <button type="submit" class="button" data-try-submit>Send PUT</button>
+        </form>
+        <div class="try-response" data-try-response hidden>
+          <div class="try-response__meta">
+            <span data-try-status>Waiting…</span>
+            <span data-try-duration></span>
+          </div>
+          <pre class="try-response__body" data-try-output></pre>
+        </div>
+      </section>
+    </div>
+  </div>
+</article>
+<article class="endpoint" id="put-cities-bulk-settings" data-endpoint-id="put-cities-bulk-settings" data-method="PUT" data-base-path="/api/v1/shipping" data-path="/cities/bulk-settings" data-auth="Bearer" data-headers='[[&quot;Content-Type&quot;, &quot;application/json&quot;]]' data-body='&quot;{}&quot;'>
+  <div class="endpoint__header">
+    <div class="endpoint__title">
+      <span class="http-badge http-badge--put">PUT</span>
+      <div>
+        <h3>Bulk Update City Settings</h3>
+        <p><code>/api/v1/shipping/cities/bulk-settings</code></p>
+      </div>
+    </div>
+    <span class="auth-badge auth-badge--protected">Protected</span>
+  </div>
+  <div class="endpoint__layout">
+    <div class="endpoint__body">
+      <section class="endpoint__section">
+        <h4>Summary</h4>
+        <p>Bulk Update City Settings handler in ShippingLocationController for PUT /cities/bulk-settings requests.</p>
+      </section>
+      <section class="endpoint__section"><h4>Authentication</h4><p>Provide an <code>Authorization: Bearer &lt;token&gt;</code> header.</p></section>
+      
+      <section class="endpoint__section">
+  <h4>Headers</h4>
+  <table>
+    <thead><tr><th>Name</th><th>Value</th></tr></thead>
+    <tbody><tr><td>Content-Type</td><td>application/json</td></tr></tbody>
+  </table>
+</section>
+
+      <section class="endpoint__section"><h4>Request body</h4><pre>{}</pre></section>
+      <section class="endpoint__section">
+        <h4>Success response</h4>
+        <p class="status success">HTTP 200</p>
+        <p>No body returned.</p>
+      </section>
+      <section class="endpoint__section">
+        <h4>Error scenarios</h4>
+        <p>No specific error payloads documented.</p>
+      </section>
+    </div>
+    <div class="endpoint__panels">
+      <section class="panel">
+        <header class="panel__header">
+          <h4>cURL samples</h4>
+          <span class="panel__format">Interpolates current environment</span>
+        </header>
+        <div class="code-samples" data-endpoint="put-cities-bulk-settings">
+          <div class="code-samples__tabs" role="tablist">
+            <button type="button" class="code-samples__tab is-active" role="tab" id="put-cities-bulk-settings-bash-tab" aria-selected="true" data-tab-target="put-cities-bulk-settings-bash">bash/zsh</button>
+            <button type="button" class="code-samples__tab" role="tab" id="put-cities-bulk-settings-powershell-tab" aria-selected="false" data-tab-target="put-cities-bulk-settings-powershell">PowerShell/CMD</button>
+          </div>
+          <pre id="put-cities-bulk-settings-bash" class="code-block" role="tabpanel" aria-labelledby="put-cities-bulk-settings-bash-tab" data-template="curl-bash" data-endpoint="put-cities-bulk-settings"></pre>
+          <pre id="put-cities-bulk-settings-powershell" class="code-block is-hidden" role="tabpanel" aria-labelledby="put-cities-bulk-settings-powershell-tab" data-template="curl-powershell" data-endpoint="put-cities-bulk-settings" hidden></pre>
+          <div class="panel__actions">
+            <button type="button" class="copy-button" data-copy>Copy</button>
+          </div>
+        </div>
+      </section>
+      <section class="panel panel--try">
+        <header class="panel__header">
+          <h4>Try it</h4>
+          <span class="panel__format">Send a real request with your environment</span>
+        </header>
+        <form class="try-form" data-try-form>
+          <label class="field">
+            <span class="field__label">Request URL</span>
+            <input type="url" spellcheck="false" data-try-url required />
+            <span class="field__hint">Update path parameters before sending.</span>
+          </label>
+          <label class="field">
+            <span class="field__label">Headers</span>
+            <textarea rows="3" spellcheck="false" data-try-headers></textarea>
+            <span class="field__hint">One header per line (<code>Name: Value</code>).</span>
+          </label>
+          <label class="field" data-try-body-wrapper>
+            <span class="field__label">Body</span>
+            <textarea rows="8" spellcheck="false" data-try-body></textarea>
+            <span class="field__hint">JSON payload; leave blank to omit.</span>
+          </label>
+          <button type="submit" class="button" data-try-submit>Send PUT</button>
+        </form>
+        <div class="try-response" data-try-response hidden>
+          <div class="try-response__meta">
+            <span data-try-status>Waiting…</span>
+            <span data-try-duration></span>
+          </div>
+          <pre class="try-response__body" data-try-output></pre>
+        </div>
+      </section>
+    </div>
+  </div>
+</article>
+<article class="endpoint" id="delete-cities-id" data-endpoint-id="delete-cities-id" data-method="DELETE" data-base-path="/api/v1/shipping" data-path="/cities/{id}" data-auth="Bearer" data-body='null'>
+  <div class="endpoint__header">
+    <div class="endpoint__title">
+      <span class="http-badge http-badge--delete">DELETE</span>
+      <div>
+        <h3>Delete City</h3>
+        <p><code>/api/v1/shipping/cities/{id}</code></p>
+      </div>
+    </div>
+    <span class="auth-badge auth-badge--protected">Protected</span>
+  </div>
+  <div class="endpoint__layout">
+    <div class="endpoint__body">
+      <section class="endpoint__section">
+        <h4>Summary</h4>
+        <p>Delete City handler in ShippingLocationController for DELETE /cities/{id} requests.</p>
+      </section>
+      <section class="endpoint__section"><h4>Authentication</h4><p>Provide an <code>Authorization: Bearer &lt;token&gt;</code> header.</p></section>
+      <section class="endpoint__section">
+  <h4>Parameters</h4>
+  <table>
+    <thead><tr><th>Name</th><th>Description</th></tr></thead>
+    <tbody><tr><td>id</td><td>Path parameter</td></tr></tbody>
+  </table>
+</section>
+
+      
+      <section class="endpoint__section"><h4>Request body</h4><p>No body required.</p></section>
+      <section class="endpoint__section">
+        <h4>Success response</h4>
+        <p class="status success">HTTP 204</p>
+        <p>No body returned.</p>
+      </section>
+      <section class="endpoint__section">
+        <h4>Error scenarios</h4>
+        <p>No specific error payloads documented.</p>
+      </section>
+    </div>
+    <div class="endpoint__panels">
+      <section class="panel">
+        <header class="panel__header">
+          <h4>cURL samples</h4>
+          <span class="panel__format">Interpolates current environment</span>
+        </header>
+        <div class="code-samples" data-endpoint="delete-cities-id">
+          <div class="code-samples__tabs" role="tablist">
+            <button type="button" class="code-samples__tab is-active" role="tab" id="delete-cities-id-bash-tab" aria-selected="true" data-tab-target="delete-cities-id-bash">bash/zsh</button>
+            <button type="button" class="code-samples__tab" role="tab" id="delete-cities-id-powershell-tab" aria-selected="false" data-tab-target="delete-cities-id-powershell">PowerShell/CMD</button>
+          </div>
+          <pre id="delete-cities-id-bash" class="code-block" role="tabpanel" aria-labelledby="delete-cities-id-bash-tab" data-template="curl-bash" data-endpoint="delete-cities-id"></pre>
+          <pre id="delete-cities-id-powershell" class="code-block is-hidden" role="tabpanel" aria-labelledby="delete-cities-id-powershell-tab" data-template="curl-powershell" data-endpoint="delete-cities-id" hidden></pre>
+          <div class="panel__actions">
+            <button type="button" class="copy-button" data-copy>Copy</button>
+          </div>
+        </div>
+      </section>
+      <section class="panel panel--try">
+        <header class="panel__header">
+          <h4>Try it</h4>
+          <span class="panel__format">Send a real request with your environment</span>
+        </header>
+        <form class="try-form" data-try-form>
+          <label class="field">
+            <span class="field__label">Request URL</span>
+            <input type="url" spellcheck="false" data-try-url required />
+            <span class="field__hint">Update path parameters before sending.</span>
+          </label>
+          <label class="field">
+            <span class="field__label">Headers</span>
+            <textarea rows="3" spellcheck="false" data-try-headers></textarea>
+            <span class="field__hint">One header per line (<code>Name: Value</code>).</span>
+          </label>
+          <label class="field" data-try-body-wrapper>
+            <span class="field__label">Body</span>
+            <textarea rows="8" spellcheck="false" data-try-body></textarea>
+            <span class="field__hint">JSON payload; leave blank to omit.</span>
+          </label>
+          <button type="submit" class="button" data-try-submit>Send DELETE</button>
+        </form>
+        <div class="try-response" data-try-response hidden>
+          <div class="try-response__meta">
+            <span data-try-status>Waiting…</span>
+            <span data-try-duration></span>
+          </div>
+          <pre class="try-response__body" data-try-output></pre>
+        </div>
+      </section>
+    </div>
+  </div>
+</article>
+
+      </main>
+    </div>
+    <footer class="docs__footer">
+      <a href="index.html">Back to index</a>
+    </footer>
+    <script src="app.js" defer></script>
+  </body>
+</html>
