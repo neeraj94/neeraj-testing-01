@@ -230,7 +230,8 @@ const CheckoutPage = () => {
         productId: item.productId,
         name: item.productName,
         quantity: item.quantity,
-        unitPrice: item.unitPrice
+        unitPrice: item.unitPrice,
+        taxRate: item.taxRate ?? undefined
       })),
     [cart.items]
   );
