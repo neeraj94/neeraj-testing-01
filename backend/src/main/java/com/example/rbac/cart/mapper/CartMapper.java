@@ -9,8 +9,8 @@ import com.example.rbac.products.model.Product;
 import com.example.rbac.products.model.ProductGalleryImage;
 import com.example.rbac.products.model.ProductVariant;
 import com.example.rbac.products.model.ProductVariantMedia;
-import com.example.rbac.products.model.TaxRate;
-import com.example.rbac.products.model.TaxRateType;
+import com.example.rbac.finance.taxrate.model.TaxRate;
+import com.example.rbac.finance.taxrate.model.TaxRateType;
 import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
 
