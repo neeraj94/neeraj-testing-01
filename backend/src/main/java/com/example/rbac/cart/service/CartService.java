@@ -1,6 +1,7 @@
 package com.example.rbac.cart.service;
 
 import com.example.rbac.cart.dto.AddCartItemRequest;
+import com.example.rbac.cart.dto.CartAdminListItemDto;
 import com.example.rbac.cart.dto.CartDto;
 import com.example.rbac.cart.dto.GuestCartLineRequest;
 import com.example.rbac.cart.dto.MergeCartRequest;
@@ -10,6 +11,7 @@ import com.example.rbac.cart.model.Cart;
 import com.example.rbac.cart.model.CartItem;
 import com.example.rbac.cart.repository.CartRepository;
 import com.example.rbac.common.exception.ApiException;
+import com.example.rbac.common.pagination.PageResponse;
 import com.example.rbac.products.model.DiscountType;
 import com.example.rbac.products.model.Product;
 import com.example.rbac.products.model.ProductVariant;
@@ -19,9 +21,15 @@ import com.example.rbac.users.model.UserPrincipal;
 import com.example.rbac.users.repository.UserRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
+import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -47,6 +55,18 @@ public class CartService {
         this.productRepository = productRepository;
         this.userRepository = userRepository;
         this.cartMapper = cartMapper;
+    }
+
+    @Transactional(readOnly = true)
+    @PreAuthorize("hasAnyAuthority('ORDER_MANAGE', 'CHECKOUT_MANAGE', 'USER_VIEW', 'USER_VIEW_GLOBAL')")
+    public PageResponse<CartAdminListItemDto> listCarts(String search, int page, int size) {
+        int safeSize = Math.max(1, Math.min(size, 100));
+        Pageable pageable = PageRequest.of(Math.max(page, 0), safeSize,
+                Sort.by(Sort.Direction.DESC, "updatedAt"));
+        Specification<Cart> specification = buildCartSpecification(search);
+        Page<Cart> result = cartRepository.findAll(specification, pageable);
+        Page<CartAdminListItemDto> mapped = result.map(this::toAdminListItem);
+        return PageResponse.from(mapped);
     }
 
     @Transactional(readOnly = true)
@@ -230,6 +250,28 @@ public class CartService {
         return cartMapper.toDto(cart);
     }
 
+    @Transactional
+    @PreAuthorize("hasAnyAuthority('USER_UPDATE','USER_UPDATE_GLOBAL')")
+    public CartDto clearCartForUser(Long userId) {
+        Optional<Cart> optionalCart = cartRepository.findByUserId(userId);
+        if (optionalCart.isEmpty()) {
+            return emptyCartDto();
+        }
+        Cart cart = optionalCart.get();
+        cart.getItems().clear();
+        cartRepository.saveAndFlush(cart);
+        return cartMapper.toDto(cart);
+    }
+
+    @Transactional
+    @PreAuthorize("hasAnyAuthority('USER_UPDATE','USER_UPDATE_GLOBAL')")
+    public CartDto createCartForUser(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "User not found"));
+        Cart cart = getOrCreateCart(user);
+        return cartMapper.toDto(cart);
+    }
+
     private Cart getExistingCart(Long userId) {
         return cartRepository.findByUserId(userId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Cart is empty"));
@@ -340,5 +382,67 @@ public class CartService {
 
     private CartDto emptyCartDto() {
         return new CartDto();
+    }
+
+    private Specification<Cart> buildCartSpecification(String search) {
+        Specification<Cart> specification = Specification.where(null);
+        if (StringUtils.hasText(search)) {
+            String like = "%" + search.trim().toLowerCase() + "%";
+            specification = specification.and((root, query, builder) -> {
+                query.distinct(true);
+                var userJoin = root.join("user", jakarta.persistence.criteria.JoinType.LEFT);
+                var itemsJoin = root.join("items", jakarta.persistence.criteria.JoinType.LEFT);
+                var productJoin = itemsJoin.join("product", jakarta.persistence.criteria.JoinType.LEFT);
+                return builder.or(
+                        builder.like(builder.lower(userJoin.get("fullName")), like),
+                        builder.like(builder.lower(userJoin.get("email")), like),
+                        builder.like(builder.lower(productJoin.get("name")), like)
+                );
+            });
+        }
+        return specification;
+    }
+
+    private CartAdminListItemDto toAdminListItem(Cart cart) {
+        CartAdminListItemDto dto = new CartAdminListItemDto();
+        dto.setCartId(cart.getId());
+        dto.setUpdatedAt(cart.getUpdatedAt());
+        if (cart.getUser() != null) {
+            dto.setUserId(cart.getUser().getId());
+            dto.setUserName(cart.getUser().getFullName());
+            dto.setUserEmail(cart.getUser().getEmail());
+        }
+        List<CartItem> items = cart.getItems();
+        int totalQuantity = 0;
+        BigDecimal subtotal = BigDecimal.ZERO;
+        List<CartAdminListItemDto.ProductSummary> summaries = new ArrayList<>();
+        if (!CollectionUtils.isEmpty(items)) {
+            for (CartItem item : items) {
+                if (item == null) {
+                    continue;
+                }
+                Integer quantity = item.getQuantity();
+                if (quantity != null) {
+                    totalQuantity += quantity;
+                }
+                BigDecimal unitPrice = Optional.ofNullable(item.getUnitPrice()).orElse(BigDecimal.ZERO);
+                if (quantity != null) {
+                    subtotal = subtotal.add(unitPrice.multiply(BigDecimal.valueOf(quantity)));
+                }
+                CartAdminListItemDto.ProductSummary summary = new CartAdminListItemDto.ProductSummary();
+                if (item.getProduct() != null) {
+                    summary.setProductId(item.getProduct().getId());
+                    summary.setProductName(item.getProduct().getName());
+                }
+                summary.setVariantLabel(item.getVariantLabel());
+                summary.setQuantity(quantity);
+                summaries.add(summary);
+            }
+        }
+        dto.setProducts(summaries);
+        dto.setProductCount(summaries.size());
+        dto.setTotalQuantity(totalQuantity);
+        dto.setSubtotal(subtotal.setScale(2, RoundingMode.HALF_UP));
+        return dto;
     }
 }

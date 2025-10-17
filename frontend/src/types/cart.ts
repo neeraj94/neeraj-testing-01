@@ -43,3 +43,20 @@ export interface MergeCartPayload {
     quantity: number;
   }>;
 }
+
+export interface CartAdminListItem {
+  userId: number;
+  userName?: string | null;
+  userEmail?: string | null;
+  cartId?: number | null;
+  updatedAt?: string | null;
+  productCount: number;
+  totalQuantity: number;
+  subtotal: number;
+  products: Array<{
+    productId?: number | null;
+    productName?: string | null;
+    variantLabel?: string | null;
+    quantity?: number | null;
+  }>;
+}

@@ -11,6 +11,9 @@ public class OrderLineDto {
     private BigDecimal lineTotal;
     private BigDecimal taxRate;
     private String productSlug;
+    private Long variantId;
+    private String variantLabel;
+    private String variantSku;
 
     public Long getProductId() {
         return productId;
@@ -66,5 +69,29 @@ public class OrderLineDto {
 
     public void setProductSlug(String productSlug) {
         this.productSlug = productSlug;
+    }
+
+    public Long getVariantId() {
+        return variantId;
+    }
+
+    public void setVariantId(Long variantId) {
+        this.variantId = variantId;
+    }
+
+    public String getVariantLabel() {
+        return variantLabel;
+    }
+
+    public void setVariantLabel(String variantLabel) {
+        this.variantLabel = variantLabel;
+    }
+
+    public String getVariantSku() {
+        return variantSku;
+    }
+
+    public void setVariantSku(String variantSku) {
+        this.variantSku = variantSku;
     }
 }
