@@ -7,6 +7,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -37,5 +38,13 @@ public class UserAddressAdminController {
     public CheckoutAddressDto createAddress(@PathVariable Long userId,
                                             @RequestBody CheckoutAddressRequest request) {
         return checkoutService.createAddress(userId, request);
+    }
+
+    @PutMapping("/{userId}/addresses/{addressId}")
+    @PreAuthorize("hasAnyAuthority('USER_UPDATE', 'USER_UPDATE_GLOBAL', 'ORDER_MANAGE', 'CHECKOUT_MANAGE')")
+    public CheckoutAddressDto updateAddress(@PathVariable Long userId,
+                                            @PathVariable Long addressId,
+                                            @RequestBody CheckoutAddressRequest request) {
+        return checkoutService.updateAddressAsAdmin(userId, addressId, request);
     }
 }
