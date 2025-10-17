@@ -43,8 +43,9 @@ public class CityDirectoryClient {
         }
         try {
             String responseBody = restClient.post()
-                    .uri("/countries/state/cities")
+                    .uri("countries/state/cities")
                     .contentType(MediaType.APPLICATION_JSON)
+                    .accept(MediaType.APPLICATION_JSON)
                     .body(Map.of(
                             "country", countryName.trim(),
                             "state", stateName.trim()
@@ -94,10 +95,11 @@ public class CityDirectoryClient {
         try {
             return restClient.get()
                     .uri(uriBuilder -> uriBuilder
-                            .path("/countries/state/cities/q")
+                            .pathSegment("countries", "state", "cities", "q")
                             .queryParam("country", countryName.trim())
                             .queryParam("state", stateName.trim())
                             .build())
+                    .accept(MediaType.APPLICATION_JSON)
                     .retrieve()
                     .body(String.class);
         } catch (Exception redirectEx) {
