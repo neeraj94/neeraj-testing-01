@@ -73,6 +73,7 @@ public class CheckoutCouponService {
         dto.setDiscountType(coupon.getDiscountType());
         dto.setDiscountValue(coupon.getDiscountValue());
         dto.setDiscountAmount(discountAmount);
+        dto.setDescription(coupon.getShortDescription());
         return dto;
     }
 
