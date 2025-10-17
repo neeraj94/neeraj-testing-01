@@ -19,6 +19,7 @@ import { useToast } from '../components/ToastProvider';
 import { extractErrorMessage } from '../utils/errors';
 import Button from '../components/Button';
 import Spinner from '../components/Spinner';
+import InfoTooltip from '../components/InfoTooltip';
 import { formatCurrency } from '../utils/currency';
 import { useAppDispatch, useAppSelector } from '../app/hooks';
 import { selectBaseCurrency } from '../features/settings/selectors';
@@ -76,6 +77,71 @@ const CheckoutPage = () => {
     makeDefault: true
   };
   const [addressForm, setAddressForm] = useState(defaultAddressForm);
+  const [formMode, setFormMode] = useState<'create' | 'edit'>('create');
+  const [editingAddressId, setEditingAddressId] = useState<number | null>(null);
+
+  const currencyCode = baseCurrency ?? 'USD';
+  const formatMoney = (value?: number | null) => (value == null ? null : formatCurrency(value, currencyCode));
+
+  const resetAddressForm = (type: AddressType) => {
+    setAddressForm({ ...defaultAddressForm, type });
+    setFormMode('create');
+    setEditingAddressId(null);
+  };
+
+  const invalidateAddressQueries = () => {
+    queryClient.invalidateQueries({ queryKey: ['checkout', 'summary'] });
+    queryClient.invalidateQueries({ queryKey: ['profile', 'addresses'] });
+    queryClient.invalidateQueries({
+      predicate: (query) => Array.isArray(query.queryKey) && query.queryKey.includes('addresses')
+    });
+  };
+
+  const handleAddressSuccess = (data: CheckoutAddress, mode: 'create' | 'edit') => {
+    setShowAddressForm(false);
+    resetAddressForm(data.type);
+    invalidateAddressQueries();
+    if (mode === 'create') {
+      if (data.type === 'SHIPPING') {
+        setShippingAddressId(data.id);
+      } else {
+        setBillingAddressId(data.id);
+      }
+    }
+  };
+
+  const buildAddressPayload = () => ({
+    type: addressForm.type,
+    countryId: addressForm.countryId ? Number(addressForm.countryId) : undefined,
+    stateId: addressForm.stateId ? Number(addressForm.stateId) : undefined,
+    cityId: addressForm.cityId ? Number(addressForm.cityId) : undefined,
+    fullName: addressForm.fullName,
+    mobileNumber: addressForm.mobileNumber,
+    pinCode: addressForm.pinCode || undefined,
+    addressLine1: addressForm.addressLine1,
+    addressLine2: addressForm.addressLine2 || undefined,
+    landmark: addressForm.landmark || undefined,
+    makeDefault: Boolean(addressForm.makeDefault)
+  });
+
+  const startEditAddress = (address: CheckoutAddress) => {
+    setFormMode('edit');
+    setEditingAddressId(address.id);
+    setAddressForm({
+      type: address.type,
+      fullName: address.fullName,
+      mobileNumber: address.mobileNumber,
+      pinCode: address.pinCode ?? '',
+      addressLine1: address.addressLine1,
+      addressLine2: address.addressLine2 ?? '',
+      landmark: address.landmark ?? '',
+      countryId: address.countryId ? String(address.countryId) : '',
+      stateId: address.stateId ? String(address.stateId) : '',
+      cityId: address.cityId ? String(address.cityId) : '',
+      makeDefault: Boolean(address.defaultAddress)
+    });
+    setShowAddressForm(true);
+  };
 
   useEffect(() => {
     dispatch(fetchCart());
@@ -187,13 +253,13 @@ const CheckoutPage = () => {
   const featuredCoupons = useMemo(() => availableCoupons.slice(0, 2), [availableCoupons]);
 
   const formatMaybeCurrency = (value?: number | null) =>
-    value == null ? '—' : formatCurrency(value, baseCurrency);
+    value == null ? '—' : formatCurrency(value, currencyCode);
 
   const describeCoupon = (coupon: { discountType: 'FLAT' | 'PERCENTAGE'; discountValue: number | null }) => {
     if (coupon.discountType === 'PERCENTAGE') {
       return `${coupon.discountValue ?? 0}% off`;
     }
-    return formatCurrency(coupon.discountValue ?? 0, baseCurrency);
+    return formatCurrency(coupon.discountValue ?? 0, currencyCode);
   };
 
   const formatDateLabel = (value?: string | null) =>
@@ -314,33 +380,36 @@ const CheckoutPage = () => {
 
   const createAddressMutation = useMutation({
     mutationFn: async () => {
-      const payload = {
-        ...addressForm,
-        countryId: addressForm.countryId ? Number(addressForm.countryId) : undefined,
-        stateId: addressForm.stateId ? Number(addressForm.stateId) : undefined,
-        cityId: addressForm.cityId ? Number(addressForm.cityId) : undefined,
-        makeDefault: Boolean(addressForm.makeDefault)
-      };
+      const payload = buildAddressPayload();
       const { data } = await api.post<CheckoutAddress>('/checkout/addresses', payload);
       return data;
     },
     onSuccess: (data) => {
       notify({ type: 'success', message: 'Address saved successfully.' });
-      setShowAddressForm(false);
-      setAddressForm((prev) => ({ ...defaultAddressForm, type: prev.type }));
-      queryClient.invalidateQueries({ queryKey: ['checkout', 'summary'] });
-      queryClient.invalidateQueries({ queryKey: ['profile', 'addresses'] });
-      queryClient.invalidateQueries({
-        predicate: (query) => Array.isArray(query.queryKey) && query.queryKey.includes('addresses')
-      });
-      if (data.type === 'SHIPPING') {
-        setShippingAddressId(data.id);
-      } else {
-        setBillingAddressId(data.id);
-      }
+      handleAddressSuccess(data, 'create');
     },
     onError: (error) => {
       notify({ type: 'error', message: extractErrorMessage(error, 'Unable to save address.') });
+    }
+  });
+
+  const isAddressMutationPending = createAddressMutation.isPending || updateAddressMutation.isPending;
+
+  const updateAddressMutation = useMutation({
+    mutationFn: async () => {
+      if (!editingAddressId) {
+        throw new Error('No address selected for editing.');
+      }
+      const payload = buildAddressPayload();
+      const { data } = await api.put<CheckoutAddress>(`/checkout/addresses/${editingAddressId}`, payload);
+      return data;
+    },
+    onSuccess: (data) => {
+      notify({ type: 'success', message: 'Address updated successfully.' });
+      handleAddressSuccess(data, 'edit');
+    },
+    onError: (error) => {
+      notify({ type: 'error', message: extractErrorMessage(error, 'Unable to update address.') });
     }
   });
 
@@ -395,10 +464,15 @@ const CheckoutPage = () => {
 
   const handleSubmitAddress = (event: FormEvent) => {
     event.preventDefault();
-    if (createAddressMutation.isPending) {
+    if (formMode === 'edit') {
+      if (!updateAddressMutation.isPending) {
+        updateAddressMutation.mutate();
+      }
       return;
     }
-    createAddressMutation.mutate();
+    if (!createAddressMutation.isPending) {
+      createAddressMutation.mutate();
+    }
   };
 
   const nextStep = () => {
@@ -419,17 +493,24 @@ const CheckoutPage = () => {
   };
 
   const renderAddressCard = (address: CheckoutAddress, selectedId: number | null, onSelect: (id: number) => void) => (
-    <button
+    <div
       key={address.id}
-      type="button"
+      role="button"
+      tabIndex={0}
       onClick={() => onSelect(address.id)}
-      className={`w-full text-left rounded-2xl border p-4 transition-all hover:-translate-y-0.5 hover:border-slate-400 ${
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onSelect(address.id);
+        }
+      }}
+      className={`w-full cursor-pointer rounded-2xl border p-4 text-left transition-all hover:-translate-y-0.5 hover:border-slate-400 ${
         selectedId === address.id
           ? 'border-blue-600 bg-blue-50/70 shadow-lg shadow-blue-100'
           : 'border-slate-200 bg-white shadow-sm'
       }`}
     >
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h4 className="text-sm font-semibold text-slate-800">{address.fullName}</h4>
         <div className="flex items-center gap-2">
           <span className="rounded bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
@@ -438,6 +519,17 @@ const CheckoutPage = () => {
           {address.defaultAddress && (
             <span className="rounded bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">Default</span>
           )}
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              startEditAddress(address);
+            }}
+            disabled={isAddressMutationPending}
+            className="rounded-full border border-slate-200 px-2 py-0.5 text-xs font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-800 disabled:opacity-60"
+          >
+            Edit
+          </button>
         </div>
       </div>
       <p className="mt-1 text-sm text-slate-600">
@@ -448,7 +540,7 @@ const CheckoutPage = () => {
         {[address.cityName, address.stateName, address.countryName].filter(Boolean).join(', ')}
       </p>
       <p className="text-xs text-slate-500">{address.mobileNumber}</p>
-    </button>
+    </div>
   );
 
   const optionLabel = (option: CheckoutRegionOption) => option.name ?? option.label;
@@ -479,7 +571,11 @@ const CheckoutPage = () => {
         className="space-y-4 rounded-2xl border border-slate-200 bg-slate-50/70 p-5 shadow-inner"
       >
         <h3 className="text-sm font-semibold text-slate-700">
-          {formType === 'SHIPPING' ? 'Add shipping address' : 'Add billing address'}
+          {formMode === 'edit' && editingAddressId
+            ? `Edit ${formType === 'SHIPPING' ? 'shipping' : 'billing'} address`
+            : formType === 'SHIPPING'
+              ? 'Add shipping address'
+              : 'Add billing address'}
         </h3>
         <div className="grid gap-3 md:grid-cols-3">
           <label className="text-xs font-medium uppercase text-slate-500">
@@ -496,7 +592,7 @@ const CheckoutPage = () => {
                 }))
               }
               className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none"
-              disabled={countriesQuery.isLoading}
+              disabled={countriesQuery.isLoading || isAddressMutationPending}
             >
               <option value="">Select country</option>
               {countryOptions.map((option) => (
@@ -519,7 +615,7 @@ const CheckoutPage = () => {
                 }))
               }
               className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none"
-              disabled={!addressForm.countryId || statesQuery.isLoading}
+              disabled={!addressForm.countryId || statesQuery.isLoading || isAddressMutationPending}
             >
               <option value="">Select state</option>
               {stateOptions.map((option) => (
@@ -541,7 +637,7 @@ const CheckoutPage = () => {
                 }))
               }
               className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none"
-              disabled={!addressForm.stateId || citiesQuery.isLoading}
+              disabled={!addressForm.stateId || citiesQuery.isLoading || isAddressMutationPending}
             >
               <option value="">Select city</option>
               {cityOptions.map((option) => (
@@ -574,6 +670,7 @@ const CheckoutPage = () => {
                 setAddressForm((prev) => ({ ...prev, fullName: event.target.value }))
               }
               className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none"
+              disabled={isAddressMutationPending}
             />
           </label>
           <label className="text-xs font-medium uppercase text-slate-500">
@@ -585,6 +682,7 @@ const CheckoutPage = () => {
                 setAddressForm((prev) => ({ ...prev, mobileNumber: event.target.value }))
               }
               className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none"
+              disabled={isAddressMutationPending}
             />
           </label>
         </div>
@@ -597,6 +695,7 @@ const CheckoutPage = () => {
             className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none"
             placeholder="Postal code"
             inputMode="numeric"
+            disabled={isAddressMutationPending}
           />
         </label>
         <label className="text-xs font-medium uppercase text-slate-500">
@@ -609,6 +708,7 @@ const CheckoutPage = () => {
             }
             className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none"
             placeholder="Flat, House No., Building, Company, Apartment"
+            disabled={isAddressMutationPending}
           />
         </label>
         <label className="text-xs font-medium uppercase text-slate-500">
@@ -620,6 +720,7 @@ const CheckoutPage = () => {
             }
             className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none"
             placeholder="Area, Street, Sector, Place"
+            disabled={isAddressMutationPending}
           />
         </label>
         <label className="text-xs font-medium uppercase text-slate-500">
@@ -629,6 +730,7 @@ const CheckoutPage = () => {
             onChange={(event) => setAddressForm((prev) => ({ ...prev, landmark: event.target.value }))}
             className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none"
             placeholder="Nearby landmark"
+            disabled={isAddressMutationPending}
           />
         </label>
         <div className="flex items-center gap-2">
@@ -639,13 +741,14 @@ const CheckoutPage = () => {
             onChange={(event) =>
               setAddressForm((prev) => ({ ...prev, makeDefault: event.target.checked }))
             }
+            disabled={isAddressMutationPending}
           />
           <label htmlFor={defaultCheckboxId} className="text-sm text-slate-600">
             Make this my default address
           </label>
         </div>
-        <Button type="submit" loading={createAddressMutation.isPending}>
-          Save address
+        <Button type="submit" loading={isAddressMutationPending}>
+          {formMode === 'edit' ? 'Update address' : 'Save address'}
         </Button>
       </form>
     );
@@ -779,13 +882,18 @@ const CheckoutPage = () => {
                           onClick={() => {
                             if (showAddressForm && addressForm.type === 'SHIPPING') {
                               setShowAddressForm(false);
+                              resetAddressForm('SHIPPING');
                               return;
                             }
-                            setAddressForm({ ...defaultAddressForm, type: 'SHIPPING' });
+                            resetAddressForm('SHIPPING');
                             setShowAddressForm(true);
                           }}
                         >
-                          {showAddressForm && addressForm.type === 'SHIPPING' ? 'Cancel' : 'Add new address'}
+                          {showAddressForm && addressForm.type === 'SHIPPING'
+                            ? formMode === 'edit'
+                              ? 'Cancel edit'
+                              : 'Cancel'
+                            : 'Add new address'}
                         </Button>
                       </div>
                       <div className="grid gap-4 md:grid-cols-2">
@@ -822,14 +930,17 @@ const CheckoutPage = () => {
                           onClick={() => {
                             if (showAddressForm && addressForm.type === 'BILLING') {
                               setShowAddressForm(false);
+                              resetAddressForm('BILLING');
                               return;
                             }
-                            setAddressForm({ ...defaultAddressForm, type: 'BILLING' });
+                            resetAddressForm('BILLING');
                             setShowAddressForm(true);
                           }}
                         >
                           {showAddressForm && addressForm.type === 'BILLING'
-                            ? 'Cancel'
+                            ? formMode === 'edit'
+                              ? 'Cancel edit'
+                              : 'Cancel'
                             : 'Add new billing address'}
                         </Button>
                       </div>
@@ -948,20 +1059,46 @@ const CheckoutPage = () => {
                 <div className="space-y-3 text-sm text-slate-700">
                   <div className="flex justify-between">
                     <span>Products</span>
-                    <span>{formatCurrency(orderSummary.productTotal ?? 0, baseCurrency)}</span>
+                    <span>{formatCurrency(orderSummary.productTotal ?? 0, currencyCode)}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span>Tax</span>
-                    <span>{formatCurrency(orderSummary.taxTotal ?? 0, baseCurrency)}</span>
+                  <div className="flex items-center justify-between">
+                    <span className="inline-flex items-center gap-2">
+                      Tax
+                      {!!orderSummary.taxLines?.length && (
+                        <InfoTooltip label="Tax breakdown">
+                          <div className="space-y-1">
+                            <ul className="space-y-1 text-left">
+                              {orderSummary.taxLines.map((line) => (
+                                <li key={`${line.productId ?? 'item'}-${line.taxRate}`}>
+                                  <span className="block font-medium text-slate-700">
+                                    {line.productName ?? 'Item'}
+                                  </span>
+                                  <span className="text-slate-500">
+                                    {formatCurrency(line.taxAmount ?? 0, currencyCode)}
+                                    {line.taxRate != null
+                                      ? ` · ${(line.taxRate * 100).toFixed(1)}%`
+                                      : ''}
+                                  </span>
+                                </li>
+                              ))}
+                            </ul>
+                            <div className="mt-2 border-t border-slate-200 pt-1 text-right font-semibold text-slate-700">
+                              Total: {formatCurrency(orderSummary.taxTotal ?? 0, currencyCode)}
+                            </div>
+                          </div>
+                        </InfoTooltip>
+                      )}
+                    </span>
+                    <span>{formatCurrency(orderSummary.taxTotal ?? 0, currencyCode)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Shipping</span>
-                    <span>{formatCurrency(orderSummary.shippingTotal ?? 0, baseCurrency)}</span>
+                    <span>{formatCurrency(orderSummary.shippingTotal ?? 0, currencyCode)}</span>
                   </div>
                   {discountTotal > 0 && (
                     <div className="flex justify-between text-emerald-600">
                       <span>Discount</span>
-                      <span>-{formatCurrency(discountTotal, baseCurrency)}</span>
+                      <span>-{formatCurrency(discountTotal, currencyCode)}</span>
                     </div>
                   )}
                   <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 text-xs text-slate-600">
@@ -1004,7 +1141,7 @@ const CheckoutPage = () => {
                             <p className="text-sm font-semibold text-emerald-800">{appliedCoupon.name}</p>
                             <p className="font-medium">Code: {appliedCoupon.code}</p>
                             <p>
-                              {describeCoupon(appliedCoupon)} — saves {formatCurrency(appliedCoupon.discountAmount ?? 0, baseCurrency)}
+                              {describeCoupon(appliedCoupon)} — saves {formatCurrency(appliedCoupon.discountAmount ?? 0, currencyCode)}
                             </p>
                           </div>
                           <Button variant="ghost" className="px-3 py-1 text-xs" onClick={handleRemoveCoupon}>
@@ -1041,7 +1178,7 @@ const CheckoutPage = () => {
                     })()}
                   <div className="flex justify-between rounded-xl bg-slate-100 px-3 py-2 text-base font-semibold text-slate-900">
                     <span>Total due</span>
-                    <span>{formatCurrency(orderSummary.grandTotal ?? 0, baseCurrency)}</span>
+                    <span>{formatCurrency(orderSummary.grandTotal ?? 0, currencyCode)}</span>
                   </div>
                   {!!orderSummary.taxLines?.length && (
                     <details className="rounded-2xl border border-slate-200 p-3 text-xs">
@@ -1050,7 +1187,7 @@ const CheckoutPage = () => {
                         {orderSummary.taxLines.map((line: OrderTaxLine) => (
                           <li key={`${line.productId}-${line.taxRate}`} className="flex justify-between">
                             <span>{line.productName ?? 'Item'}</span>
-                            <span>{formatCurrency(line.taxAmount, baseCurrency)}</span>
+                            <span>{formatCurrency(line.taxAmount, currencyCode)}</span>
                           </li>
                         ))}
                       </ul>
@@ -1094,7 +1231,7 @@ const CheckoutPage = () => {
                   const discountLabel = describeCoupon(coupon);
                   const minimumLabel =
                     coupon.minimumCartValue != null
-                      ? formatCurrency(coupon.minimumCartValue, baseCurrency)
+                      ? formatCurrency(coupon.minimumCartValue, currencyCode)
                       : null;
                   const isApplied = appliedCoupon?.code === coupon.code;
                   return (

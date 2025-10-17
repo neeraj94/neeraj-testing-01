@@ -83,6 +83,16 @@ public class CheckoutService {
         return addressService.createAddress(userId, request);
     }
 
+    @Transactional
+    public CheckoutAddressDto updateAddress(Long userId, Long addressId, CheckoutAddressRequest request) {
+        return addressService.updateAddress(userId, addressId, request);
+    }
+
+    @Transactional
+    public CheckoutAddressDto updateAddressAsAdmin(Long userId, Long addressId, CheckoutAddressRequest request) {
+        return addressService.updateAddressAsAdmin(userId, addressId, request);
+    }
+
     @Transactional(readOnly = true)
     public CheckoutSummaryDto buildSummary(Long userId, CheckoutOrderRequest request) {
         CheckoutSummaryDto summary = new CheckoutSummaryDto();
