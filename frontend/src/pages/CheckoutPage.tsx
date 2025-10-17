@@ -291,6 +291,12 @@ const CheckoutPage = () => {
     selectedCouponCode
   ]);
 
+  useEffect(() => {
+    if (hasCartItems) {
+      setLastOrderNumber(null);
+    }
+  }, [hasCartItems]);
+
   const createAddressMutation = useMutation({
     mutationFn: async () => {
       const payload = {
@@ -670,6 +676,14 @@ const CheckoutPage = () => {
       </header>
 
       <main className="mx-auto mt-10 max-w-6xl px-6">
+        {lastOrderNumber && (
+          <div className="mb-6 rounded-3xl border border-emerald-200 bg-emerald-50/80 p-6 text-sm text-emerald-700 shadow-sm">
+            <p className="text-base font-semibold text-emerald-800">Order {lastOrderNumber} placed successfully.</p>
+            <p className="text-xs text-emerald-700">
+              Your order details are now available from the Orders section in your account.
+            </p>
+          </div>
+        )}
         {!hasCartItems && !isInitialLoading && !summaryError && (
           <div className="mb-8 rounded-3xl border border-amber-200 bg-amber-50/80 p-6 text-sm text-amber-700 shadow-sm">
             Your cart is currently empty. Browse the catalog and add items before completing checkout.
