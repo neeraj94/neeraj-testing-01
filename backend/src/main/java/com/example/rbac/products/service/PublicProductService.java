@@ -160,6 +160,7 @@ public class PublicProductService {
         User viewer = principal != null ? principal.getUser() : null;
         List<Product> recentProducts;
         if (viewer != null && viewer.getId() != null) {
+            userRecentViewService.synchronizeGuestRecentViews(viewer, guestRecentProductIds, currentProduct.getId());
             userRecentViewService.recordView(viewer, currentProduct);
             recentProducts = userRecentViewService.findRecentProductsForUser(viewer.getId(), currentProduct.getId());
         } else {
