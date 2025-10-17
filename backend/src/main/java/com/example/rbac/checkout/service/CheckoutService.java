@@ -212,10 +212,14 @@ public class CheckoutService {
 
         ShippingRateQuoteDto quote = null;
         if (shippingAddress != null) {
-            quote = shippingLocationService.resolveShippingRate(
-                    shippingAddress.getCountryId(),
-                    shippingAddress.getStateId(),
-                    shippingAddress.getCityId());
+            try {
+                quote = shippingLocationService.resolveShippingRate(
+                        shippingAddress.getCountryId(),
+                        shippingAddress.getStateId(),
+                        shippingAddress.getCityId());
+            } catch (ApiException ex) {
+                quote = null;
+            }
         }
 
         List<OrderTaxLineDto> taxLines = new ArrayList<>();
