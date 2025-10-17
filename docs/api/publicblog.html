@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Settings APIs</title>
+    <title>Public Blog APIs</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body class="page">
@@ -11,9 +11,9 @@
       <aside class="docs__nav sidebar" aria-label="API navigation">
         <div class="sidebar__brand">
           <div class="sidebar__badge">RBAC Commerce</div>
-          <h1>Settings APIs</h1>
-          <p>Endpoints implemented by the Settings controller.</p>
-          <p class="sidebar__hint">Base path: <code>/api/v1/settings</code></p>
+          <h1>Public Blog APIs</h1>
+          <p>Endpoints implemented by the Public Blog controller.</p>
+          <p class="sidebar__hint">Base path: <code>/api/v1/blog/public</code></p>
         </div>
         <div class="sidebar__controls">
           <label class="control">
@@ -37,35 +37,42 @@
         <nav class="sidebar__nav" aria-label="Endpoints">
           <h2>Endpoints</h2>
           <ul class="sidebar__tree" role="tree">
-            <li role="treeitem"><a href="#get-root" data-endpoint-link="get-root"><span class="sidebar__method">GET</span>Get Settings</a></li><li role="treeitem"><a href="#patch-root" data-endpoint-link="patch-root"><span class="sidebar__method">PATCH</span>Update Settings</a></li><li role="treeitem"><a href="#get-theme" data-endpoint-link="get-theme"><span class="sidebar__method">GET</span>Get Theme</a></li>
+            <li role="treeitem"><a href="#get-posts" data-endpoint-link="get-posts"><span class="sidebar__method">GET</span>List</a></li><li role="treeitem"><a href="#get-posts-slug" data-endpoint-link="get-posts-slug"><span class="sidebar__method">GET</span>Get</a></li><li role="treeitem"><a href="#get-categories" data-endpoint-link="get-categories"><span class="sidebar__method">GET</span>Categories</a></li>
           </ul>
         </nav>
       </aside>
       <main class="docs__content content" id="docsContent" tabindex="-1">
         <header class="hero">
-          <h2>Settings APIs</h2>
-          <p>Endpoints implemented by the Settings controller.</p>
+          <h2>Public Blog APIs</h2>
+          <p>Endpoints implemented by the Public Blog controller.</p>
           <p><strong>Selected base URL:</strong> <span data-base-display>https://sandbox.api.rbac-commerce.dev</span></p>
         </header>
-        <article class="endpoint" id="get-root" data-endpoint-id="get-root" data-method="GET" data-base-path="/api/v1/settings" data-path="" data-auth="Bearer" data-body='null'>
+        <article class="endpoint" id="get-posts" data-endpoint-id="get-posts" data-method="GET" data-base-path="/api/v1/blog/public" data-path="/posts" data-auth="Public" data-body='null'>
   <div class="endpoint__header">
     <div class="endpoint__title">
       <span class="http-badge http-badge--get">GET</span>
       <div>
-        <h3>Get Settings</h3>
-        <p><code>/api/v1/settings</code></p>
+        <h3>List</h3>
+        <p><code>/api/v1/blog/public/posts</code></p>
       </div>
     </div>
-    <span class="auth-badge auth-badge--protected">Protected</span>
+    <span class="auth-badge auth-badge--public">Public</span>
   </div>
   <div class="endpoint__layout">
     <div class="endpoint__body">
       <section class="endpoint__section">
         <h4>Summary</h4>
-        <p>Get Settings handler in SettingsController for GET / requests.</p>
+        <p>List handler in PublicBlogController for GET /posts requests.</p>
       </section>
-      <section class="endpoint__section"><h4>Authentication</h4><p>Provide an <code>Authorization: Bearer &lt;token&gt;</code> header.</p></section>
-      
+      <section class="endpoint__section"><h4>Authentication</h4><p>No authentication required.</p></section>
+      <section class="endpoint__section">
+  <h4>Parameters</h4>
+  <table>
+    <thead><tr><th>Name</th><th>Description</th></tr></thead>
+    <tbody><tr><td>page</td><td>Query parameter</td></tr><tr><td>size</td><td>Query parameter</td></tr><tr><td>category</td><td>Query parameter (optional)</td></tr><tr><td>search</td><td>Query parameter (optional)</td></tr></tbody>
+  </table>
+</section>
+
       
       <section class="endpoint__section"><h4>Request body</h4><p>No body required.</p></section>
       <section class="endpoint__section">
@@ -84,13 +91,13 @@
           <h4>cURL samples</h4>
           <span class="panel__format">Interpolates current environment</span>
         </header>
-        <div class="code-samples" data-endpoint="get-root">
+        <div class="code-samples" data-endpoint="get-posts">
           <div class="code-samples__tabs" role="tablist">
-            <button type="button" class="code-samples__tab is-active" role="tab" id="get-root-bash-tab" aria-selected="true" data-tab-target="get-root-bash">bash/zsh</button>
-            <button type="button" class="code-samples__tab" role="tab" id="get-root-powershell-tab" aria-selected="false" data-tab-target="get-root-powershell">PowerShell/CMD</button>
+            <button type="button" class="code-samples__tab is-active" role="tab" id="get-posts-bash-tab" aria-selected="true" data-tab-target="get-posts-bash">bash/zsh</button>
+            <button type="button" class="code-samples__tab" role="tab" id="get-posts-powershell-tab" aria-selected="false" data-tab-target="get-posts-powershell">PowerShell/CMD</button>
           </div>
-          <pre id="get-root-bash" class="code-block" role="tabpanel" aria-labelledby="get-root-bash-tab" data-template="curl-bash" data-endpoint="get-root"></pre>
-          <pre id="get-root-powershell" class="code-block is-hidden" role="tabpanel" aria-labelledby="get-root-powershell-tab" data-template="curl-powershell" data-endpoint="get-root" hidden></pre>
+          <pre id="get-posts-bash" class="code-block" role="tabpanel" aria-labelledby="get-posts-bash-tab" data-template="curl-bash" data-endpoint="get-posts"></pre>
+          <pre id="get-posts-powershell" class="code-block is-hidden" role="tabpanel" aria-labelledby="get-posts-powershell-tab" data-template="curl-powershell" data-endpoint="get-posts" hidden></pre>
           <div class="panel__actions">
             <button type="button" class="copy-button" data-copy>Copy</button>
           </div>
@@ -130,34 +137,34 @@
     </div>
   </div>
 </article>
-<article class="endpoint" id="patch-root" data-endpoint-id="patch-root" data-method="PATCH" data-base-path="/api/v1/settings" data-path="" data-auth="Bearer" data-headers='[[&quot;Content-Type&quot;, &quot;application/json&quot;]]' data-body='&quot;{}&quot;'>
+<article class="endpoint" id="get-posts-slug" data-endpoint-id="get-posts-slug" data-method="GET" data-base-path="/api/v1/blog/public" data-path="/posts/{slug}" data-auth="Public" data-body='null'>
   <div class="endpoint__header">
     <div class="endpoint__title">
-      <span class="http-badge http-badge--patch">PATCH</span>
+      <span class="http-badge http-badge--get">GET</span>
       <div>
-        <h3>Update Settings</h3>
-        <p><code>/api/v1/settings</code></p>
+        <h3>Get</h3>
+        <p><code>/api/v1/blog/public/posts/{slug}</code></p>
       </div>
     </div>
-    <span class="auth-badge auth-badge--protected">Protected</span>
+    <span class="auth-badge auth-badge--public">Public</span>
   </div>
   <div class="endpoint__layout">
     <div class="endpoint__body">
       <section class="endpoint__section">
         <h4>Summary</h4>
-        <p>Update Settings handler in SettingsController for PATCH / requests.</p>
+        <p>Get handler in PublicBlogController for GET /posts/{slug} requests.</p>
       </section>
-      <section class="endpoint__section"><h4>Authentication</h4><p>Provide an <code>Authorization: Bearer &lt;token&gt;</code> header.</p></section>
-      
+      <section class="endpoint__section"><h4>Authentication</h4><p>No authentication required.</p></section>
       <section class="endpoint__section">
-  <h4>Headers</h4>
+  <h4>Parameters</h4>
   <table>
-    <thead><tr><th>Name</th><th>Value</th></tr></thead>
-    <tbody><tr><td>Content-Type</td><td>application/json</td></tr></tbody>
+    <thead><tr><th>Name</th><th>Description</th></tr></thead>
+    <tbody><tr><td>slug</td><td>Path parameter</td></tr></tbody>
   </table>
 </section>
 
-      <section class="endpoint__section"><h4>Request body</h4><pre>{}</pre></section>
+      
+      <section class="endpoint__section"><h4>Request body</h4><p>No body required.</p></section>
       <section class="endpoint__section">
         <h4>Success response</h4>
         <p class="status success">HTTP 200</p>
@@ -174,13 +181,13 @@
           <h4>cURL samples</h4>
           <span class="panel__format">Interpolates current environment</span>
         </header>
-        <div class="code-samples" data-endpoint="patch-root">
+        <div class="code-samples" data-endpoint="get-posts-slug">
           <div class="code-samples__tabs" role="tablist">
-            <button type="button" class="code-samples__tab is-active" role="tab" id="patch-root-bash-tab" aria-selected="true" data-tab-target="patch-root-bash">bash/zsh</button>
-            <button type="button" class="code-samples__tab" role="tab" id="patch-root-powershell-tab" aria-selected="false" data-tab-target="patch-root-powershell">PowerShell/CMD</button>
+            <button type="button" class="code-samples__tab is-active" role="tab" id="get-posts-slug-bash-tab" aria-selected="true" data-tab-target="get-posts-slug-bash">bash/zsh</button>
+            <button type="button" class="code-samples__tab" role="tab" id="get-posts-slug-powershell-tab" aria-selected="false" data-tab-target="get-posts-slug-powershell">PowerShell/CMD</button>
           </div>
-          <pre id="patch-root-bash" class="code-block" role="tabpanel" aria-labelledby="patch-root-bash-tab" data-template="curl-bash" data-endpoint="patch-root"></pre>
-          <pre id="patch-root-powershell" class="code-block is-hidden" role="tabpanel" aria-labelledby="patch-root-powershell-tab" data-template="curl-powershell" data-endpoint="patch-root" hidden></pre>
+          <pre id="get-posts-slug-bash" class="code-block" role="tabpanel" aria-labelledby="get-posts-slug-bash-tab" data-template="curl-bash" data-endpoint="get-posts-slug"></pre>
+          <pre id="get-posts-slug-powershell" class="code-block is-hidden" role="tabpanel" aria-labelledby="get-posts-slug-powershell-tab" data-template="curl-powershell" data-endpoint="get-posts-slug" hidden></pre>
           <div class="panel__actions">
             <button type="button" class="copy-button" data-copy>Copy</button>
           </div>
@@ -207,7 +214,7 @@
             <textarea rows="8" spellcheck="false" data-try-body></textarea>
             <span class="field__hint">JSON payload; leave blank to omit.</span>
           </label>
-          <button type="submit" class="button" data-try-submit>Send PATCH</button>
+          <button type="submit" class="button" data-try-submit>Send GET</button>
         </form>
         <div class="try-response" data-try-response hidden>
           <div class="try-response__meta">
@@ -220,13 +227,13 @@
     </div>
   </div>
 </article>
-<article class="endpoint" id="get-theme" data-endpoint-id="get-theme" data-method="GET" data-base-path="/api/v1/settings" data-path="/theme" data-auth="Public" data-body='null'>
+<article class="endpoint" id="get-categories" data-endpoint-id="get-categories" data-method="GET" data-base-path="/api/v1/blog/public" data-path="/categories" data-auth="Public" data-body='null'>
   <div class="endpoint__header">
     <div class="endpoint__title">
       <span class="http-badge http-badge--get">GET</span>
       <div>
-        <h3>Get Theme</h3>
-        <p><code>/api/v1/settings/theme</code></p>
+        <h3>Categories</h3>
+        <p><code>/api/v1/blog/public/categories</code></p>
       </div>
     </div>
     <span class="auth-badge auth-badge--public">Public</span>
@@ -235,7 +242,7 @@
     <div class="endpoint__body">
       <section class="endpoint__section">
         <h4>Summary</h4>
-        <p>Get Theme handler in SettingsController for GET /theme requests.</p>
+        <p>Categories handler in PublicBlogController for GET /categories requests.</p>
       </section>
       <section class="endpoint__section"><h4>Authentication</h4><p>No authentication required.</p></section>
       
@@ -257,13 +264,13 @@
           <h4>cURL samples</h4>
           <span class="panel__format">Interpolates current environment</span>
         </header>
-        <div class="code-samples" data-endpoint="get-theme">
+        <div class="code-samples" data-endpoint="get-categories">
           <div class="code-samples__tabs" role="tablist">
-            <button type="button" class="code-samples__tab is-active" role="tab" id="get-theme-bash-tab" aria-selected="true" data-tab-target="get-theme-bash">bash/zsh</button>
-            <button type="button" class="code-samples__tab" role="tab" id="get-theme-powershell-tab" aria-selected="false" data-tab-target="get-theme-powershell">PowerShell/CMD</button>
+            <button type="button" class="code-samples__tab is-active" role="tab" id="get-categories-bash-tab" aria-selected="true" data-tab-target="get-categories-bash">bash/zsh</button>
+            <button type="button" class="code-samples__tab" role="tab" id="get-categories-powershell-tab" aria-selected="false" data-tab-target="get-categories-powershell">PowerShell/CMD</button>
           </div>
-          <pre id="get-theme-bash" class="code-block" role="tabpanel" aria-labelledby="get-theme-bash-tab" data-template="curl-bash" data-endpoint="get-theme"></pre>
-          <pre id="get-theme-powershell" class="code-block is-hidden" role="tabpanel" aria-labelledby="get-theme-powershell-tab" data-template="curl-powershell" data-endpoint="get-theme" hidden></pre>
+          <pre id="get-categories-bash" class="code-block" role="tabpanel" aria-labelledby="get-categories-bash-tab" data-template="curl-bash" data-endpoint="get-categories"></pre>
+          <pre id="get-categories-powershell" class="code-block is-hidden" role="tabpanel" aria-labelledby="get-categories-powershell-tab" data-template="curl-powershell" data-endpoint="get-categories" hidden></pre>
           <div class="panel__actions">
             <button type="button" class="copy-button" data-copy>Copy</button>
           </div>
