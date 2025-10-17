@@ -1011,7 +1011,7 @@ const CheckoutPage = () => {
                   {orderSummary.shippingBreakdown &&
                     (() => {
                       const breakdown = orderSummary.shippingBreakdown;
-                      if (!breakdown.cityName) {
+                      if (!breakdown || !breakdown.cityName) {
                         return null;
                       }
                       return (
