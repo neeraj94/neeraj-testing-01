@@ -1,7 +1,0 @@
-ALTER TABLE checkout_orders
-    ADD COLUMN IF NOT EXISTS grand_total DECIMAL(12,2) NULL,
-    ADD COLUMN IF NOT EXISTS payment_method_key VARCHAR(100) NULL,
-    ADD COLUMN IF NOT EXISTS coupon_code VARCHAR(100) NULL,
-    ADD COLUMN IF NOT EXISTS coupon_type VARCHAR(40) NULL,
-    ADD COLUMN IF NOT EXISTS coupon_description VARCHAR(255) NULL,
-    ADD COLUMN IF NOT EXISTS coupon_discount_amount DECIMAL(12,2) NULL;
