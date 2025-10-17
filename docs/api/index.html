@@ -6,9 +6,9 @@
     <title>API Reference</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
-  <body>
-    <div class="layout">
-      <aside class="sidebar" aria-label="Primary">
+  <body class="page">
+    <div class="docs">
+      <aside class="docs__nav sidebar" aria-label="API navigation">
         <div class="sidebar__brand">
           <div class="sidebar__badge">RBAC Commerce</div>
           <h1>API Reference</h1>
@@ -20,6 +20,7 @@
             <span class="control__label">Environment</span>
             <select id="environmentSelect">
               <option value="https://sandbox.api.rbac-commerce.dev">Sandbox</option>
+              <option value="https://staging.api.rbac-commerce.dev">Staging</option>
               <option value="https://api.rbac-commerce.dev">Production</option>
               <option value="custom">Custom…</option>
             </select>
@@ -34,34 +35,25 @@
           </label>
         </div>
 
-        <div class="sidebar__nav">
+        <nav class="sidebar__nav" aria-label="Endpoints">
           <h2>Endpoints</h2>
-          <nav>
-            <div class="sidebar__group" data-group="public">
-              <div class="sidebar__group-title">Public</div>
-              <ul>
-                <li><a href="#public-products-list">List catalog products</a></li>
-                <li><a href="#public-products-detail">Retrieve product</a></li>
-              </ul>
-            </div>
-            <div class="sidebar__group" data-group="private">
-              <div class="sidebar__group-title">Private</div>
-              <ul>
-                <li><a href="#private-orders-authorize">Authorize payment for order</a></li>
-                <li><a href="#private-orders-capture">Capture authorized payment</a></li>
-              </ul>
-            </div>
-          </nav>
-        </div>
+          <ul class="sidebar__tree" role="tree">
+            <li><a href="#public-products-list" data-endpoint-link="public-products-list"><span class="sidebar__method">GET</span>List catalog products</a></li>
+            <li><a href="#public-products-detail" data-endpoint-link="public-products-detail"><span class="sidebar__method">GET</span>Retrieve product</a></li>
+            <li><a href="#private-orders-authorize" data-endpoint-link="private-orders-authorize"><span class="sidebar__method">POST</span>Authorize payment for order</a></li>
+            <li><a href="#private-orders-capture" data-endpoint-link="private-orders-capture"><span class="sidebar__method">POST</span>Capture authorized payment</a></li>
+          </ul>
+        </nav>
       </aside>
 
-      <main class="content" id="mainContent">
+      <main class="docs__content content" id="docsContent" tabindex="-1">
         <header class="hero">
           <h2>Design, test, and ship with RBAC Commerce APIs</h2>
           <p>
             Use runnable request samples to validate payloads directly from your browser. Provide a token to access private
             endpoints, tweak parameters, and inspect responses in real time.
           </p>
+          <p><strong>Selected base URL:</strong> <span data-base-display>https://sandbox.api.rbac-commerce.dev</span></p>
         </header>
 
         <section class="category" id="category-public">
@@ -71,16 +63,24 @@
             <code>application/json</code> payloads and are accessible without a token.
           </p>
 
-          <article class="endpoint" id="public-products-list" data-method="GET" data-path="/v1/catalog/products">
+          <article
+            class="endpoint"
+            id="public-products-list"
+            data-endpoint-id="public-products-list"
+            data-method="GET"
+            data-base-path="/v1/catalog"
+            data-path="/products"
+            data-auth="Public"
+            data-body="null"
+          >
             <div class="endpoint__header">
               <div class="endpoint__title">
                 <span class="http-badge http-badge--get">GET</span>
                 <div>
                   <h3>List catalog products</h3>
-                  <p>/v1/catalog/products</p>
+                  <p><code>/v1/catalog/products</code></p>
                 </div>
               </div>
-              <button class="try-button" data-endpoint="public-products-list">Try it</button>
             </div>
 
             <div class="endpoint__layout">
@@ -117,13 +117,52 @@
               <div class="endpoint__panels">
                 <section class="panel">
                   <header class="panel__header">
-                    <h4>Request samples</h4>
-                    <span class="panel__format">cURL</span>
+                    <h4>cURL samples</h4>
+                    <span class="panel__format">Interpolates current environment</span>
                   </header>
-                  <pre class="code-block" data-template="curl" data-endpoint="public-products-list"></pre>
-                  <div class="panel__actions">
-                    <button class="copy-button" data-copy>Copy</button>
-                    <button class="run-button" data-endpoint="public-products-list">Run</button>
+                  <div class="code-samples" data-endpoint="public-products-list">
+                    <div class="code-samples__tabs" role="tablist">
+                      <button
+                        type="button"
+                        class="code-samples__tab is-active"
+                        role="tab"
+                        id="public-products-list-bash-tab"
+                        aria-selected="true"
+                        data-tab-target="public-products-list-bash"
+                      >
+                        bash/zsh
+                      </button>
+                      <button
+                        type="button"
+                        class="code-samples__tab"
+                        role="tab"
+                        id="public-products-list-powershell-tab"
+                        aria-selected="false"
+                        data-tab-target="public-products-list-powershell"
+                      >
+                        PowerShell/CMD
+                      </button>
+                    </div>
+                    <pre
+                      id="public-products-list-bash"
+                      class="code-block"
+                      role="tabpanel"
+                      aria-labelledby="public-products-list-bash-tab"
+                      data-template="curl-bash"
+                      data-endpoint="public-products-list"
+                    ></pre>
+                    <pre
+                      id="public-products-list-powershell"
+                      class="code-block is-hidden"
+                      role="tabpanel"
+                      aria-labelledby="public-products-list-powershell-tab"
+                      data-template="curl-powershell"
+                      data-endpoint="public-products-list"
+                      hidden
+                    ></pre>
+                    <div class="panel__actions">
+                      <button type="button" class="copy-button" data-copy>Copy</button>
+                    </div>
                   </div>
                 </section>
 
@@ -152,16 +191,24 @@
             </div>
           </article>
 
-          <article class="endpoint" id="public-products-detail" data-method="GET" data-path="/v1/catalog/products/{productId}">
+          <article
+            class="endpoint"
+            id="public-products-detail"
+            data-endpoint-id="public-products-detail"
+            data-method="GET"
+            data-base-path="/v1/catalog"
+            data-path="/products/{productId}"
+            data-auth="Public"
+            data-body="null"
+          >
             <div class="endpoint__header">
               <div class="endpoint__title">
                 <span class="http-badge http-badge--get">GET</span>
                 <div>
                   <h3>Retrieve product</h3>
-                  <p>/v1/catalog/products/{productId}</p>
+                  <p><code>/v1/catalog/products/{productId}</code></p>
                 </div>
               </div>
-              <button class="try-button" data-endpoint="public-products-detail">Try it</button>
             </div>
 
             <div class="endpoint__layout">
@@ -191,13 +238,52 @@
               <div class="endpoint__panels">
                 <section class="panel">
                   <header class="panel__header">
-                    <h4>Request samples</h4>
-                    <span class="panel__format">cURL</span>
+                    <h4>cURL samples</h4>
+                    <span class="panel__format">Interpolates current environment</span>
                   </header>
-                  <pre class="code-block" data-template="curl" data-endpoint="public-products-detail"></pre>
-                  <div class="panel__actions">
-                    <button class="copy-button" data-copy>Copy</button>
-                    <button class="run-button" data-endpoint="public-products-detail">Run</button>
+                  <div class="code-samples" data-endpoint="public-products-detail">
+                    <div class="code-samples__tabs" role="tablist">
+                      <button
+                        type="button"
+                        class="code-samples__tab is-active"
+                        role="tab"
+                        id="public-products-detail-bash-tab"
+                        aria-selected="true"
+                        data-tab-target="public-products-detail-bash"
+                      >
+                        bash/zsh
+                      </button>
+                      <button
+                        type="button"
+                        class="code-samples__tab"
+                        role="tab"
+                        id="public-products-detail-powershell-tab"
+                        aria-selected="false"
+                        data-tab-target="public-products-detail-powershell"
+                      >
+                        PowerShell/CMD
+                      </button>
+                    </div>
+                    <pre
+                      id="public-products-detail-bash"
+                      class="code-block"
+                      role="tabpanel"
+                      aria-labelledby="public-products-detail-bash-tab"
+                      data-template="curl-bash"
+                      data-endpoint="public-products-detail"
+                    ></pre>
+                    <pre
+                      id="public-products-detail-powershell"
+                      class="code-block is-hidden"
+                      role="tabpanel"
+                      aria-labelledby="public-products-detail-powershell-tab"
+                      data-template="curl-powershell"
+                      data-endpoint="public-products-detail"
+                      hidden
+                    ></pre>
+                    <div class="panel__actions">
+                      <button type="button" class="copy-button" data-copy>Copy</button>
+                    </div>
                   </div>
                 </section>
 
@@ -232,16 +318,25 @@
             RBAC scopes. Provide a token above and run the requests directly from the browser.
           </p>
 
-          <article class="endpoint" id="private-orders-authorize" data-method="POST" data-path="/v1/checkout/orders/{orderId}/authorize">
+          <article
+            class="endpoint"
+            id="private-orders-authorize"
+            data-endpoint-id="private-orders-authorize"
+            data-method="POST"
+            data-base-path="/v1/checkout"
+            data-path="/orders/{orderId}/authorize"
+            data-auth="Bearer"
+            data-headers='[["Content-Type","application/json"]]'
+            data-body='{"amount":{"currency":"USD","value":"120.00"},"final_capture":false}'
+          >
             <div class="endpoint__header">
               <div class="endpoint__title">
                 <span class="http-badge http-badge--post">POST</span>
                 <div>
                   <h3>Authorize payment for order</h3>
-                  <p>/v1/checkout/orders/{orderId}/authorize</p>
+                  <p><code>/v1/checkout/orders/{orderId}/authorize</code></p>
                 </div>
               </div>
-              <button class="try-button" data-endpoint="private-orders-authorize">Try it</button>
             </div>
 
             <div class="endpoint__layout">
@@ -287,13 +382,52 @@
               <div class="endpoint__panels">
                 <section class="panel">
                   <header class="panel__header">
-                    <h4>Request samples</h4>
-                    <span class="panel__format">cURL</span>
+                    <h4>cURL samples</h4>
+                    <span class="panel__format">Interpolates current environment</span>
                   </header>
-                  <pre class="code-block" data-template="curl" data-endpoint="private-orders-authorize"></pre>
-                  <div class="panel__actions">
-                    <button class="copy-button" data-copy>Copy</button>
-                    <button class="run-button" data-endpoint="private-orders-authorize">Run</button>
+                  <div class="code-samples" data-endpoint="private-orders-authorize">
+                    <div class="code-samples__tabs" role="tablist">
+                      <button
+                        type="button"
+                        class="code-samples__tab is-active"
+                        role="tab"
+                        id="private-orders-authorize-bash-tab"
+                        aria-selected="true"
+                        data-tab-target="private-orders-authorize-bash"
+                      >
+                        bash/zsh
+                      </button>
+                      <button
+                        type="button"
+                        class="code-samples__tab"
+                        role="tab"
+                        id="private-orders-authorize-powershell-tab"
+                        aria-selected="false"
+                        data-tab-target="private-orders-authorize-powershell"
+                      >
+                        PowerShell/CMD
+                      </button>
+                    </div>
+                    <pre
+                      id="private-orders-authorize-bash"
+                      class="code-block"
+                      role="tabpanel"
+                      aria-labelledby="private-orders-authorize-bash-tab"
+                      data-template="curl-bash"
+                      data-endpoint="private-orders-authorize"
+                    ></pre>
+                    <pre
+                      id="private-orders-authorize-powershell"
+                      class="code-block is-hidden"
+                      role="tabpanel"
+                      aria-labelledby="private-orders-authorize-powershell-tab"
+                      data-template="curl-powershell"
+                      data-endpoint="private-orders-authorize"
+                      hidden
+                    ></pre>
+                    <div class="panel__actions">
+                      <button type="button" class="copy-button" data-copy>Copy</button>
+                    </div>
                   </div>
                 </section>
 
@@ -321,16 +455,25 @@
             </div>
           </article>
 
-          <article class="endpoint" id="private-orders-capture" data-method="POST" data-path="/v1/payments/authorizations/{authorizationId}/capture">
+          <article
+            class="endpoint"
+            id="private-orders-capture"
+            data-endpoint-id="private-orders-capture"
+            data-method="POST"
+            data-base-path="/v1/payments"
+            data-path="/authorizations/{authorizationId}/capture"
+            data-auth="Bearer"
+            data-headers='[["Content-Type","application/json"]]'
+            data-body='{"amount":{"currency":"USD","value":"120.00"},"invoice_id":"INV-11520","final_capture":true}'
+          >
             <div class="endpoint__header">
               <div class="endpoint__title">
                 <span class="http-badge http-badge--post">POST</span>
                 <div>
                   <h3>Capture authorized payment</h3>
-                  <p>/v1/payments/authorizations/{authorizationId}/capture</p>
+                  <p><code>/v1/payments/authorizations/{authorizationId}/capture</code></p>
                 </div>
               </div>
-              <button class="try-button" data-endpoint="private-orders-capture">Try it</button>
             </div>
 
             <div class="endpoint__layout">
@@ -374,13 +517,52 @@
               <div class="endpoint__panels">
                 <section class="panel">
                   <header class="panel__header">
-                    <h4>Request samples</h4>
-                    <span class="panel__format">cURL</span>
+                    <h4>cURL samples</h4>
+                    <span class="panel__format">Interpolates current environment</span>
                   </header>
-                  <pre class="code-block" data-template="curl" data-endpoint="private-orders-capture"></pre>
-                  <div class="panel__actions">
-                    <button class="copy-button" data-copy>Copy</button>
-                    <button class="run-button" data-endpoint="private-orders-capture">Run</button>
+                  <div class="code-samples" data-endpoint="private-orders-capture">
+                    <div class="code-samples__tabs" role="tablist">
+                      <button
+                        type="button"
+                        class="code-samples__tab is-active"
+                        role="tab"
+                        id="private-orders-capture-bash-tab"
+                        aria-selected="true"
+                        data-tab-target="private-orders-capture-bash"
+                      >
+                        bash/zsh
+                      </button>
+                      <button
+                        type="button"
+                        class="code-samples__tab"
+                        role="tab"
+                        id="private-orders-capture-powershell-tab"
+                        aria-selected="false"
+                        data-tab-target="private-orders-capture-powershell"
+                      >
+                        PowerShell/CMD
+                      </button>
+                    </div>
+                    <pre
+                      id="private-orders-capture-bash"
+                      class="code-block"
+                      role="tabpanel"
+                      aria-labelledby="private-orders-capture-bash-tab"
+                      data-template="curl-bash"
+                      data-endpoint="private-orders-capture"
+                    ></pre>
+                    <pre
+                      id="private-orders-capture-powershell"
+                      class="code-block is-hidden"
+                      role="tabpanel"
+                      aria-labelledby="private-orders-capture-powershell-tab"
+                      data-template="curl-powershell"
+                      data-endpoint="private-orders-capture"
+                      hidden
+                    ></pre>
+                    <div class="panel__actions">
+                      <button type="button" class="copy-button" data-copy>Copy</button>
+                    </div>
                   </div>
                 </section>
 
@@ -413,168 +595,13 @@
           </article>
         </section>
 
-        <footer class="page-footer">
-          <p>Looking for more? Explore the <a href="../guides/index.html">integration guides</a>.</p>
-        </footer>
       </main>
     </div>
 
-    <template id="curlTemplate">
-      curl -X {{METHOD}} "{{URL}}" \
-  -H "Content-Type: application/json"{{AUTH_HEADER}}{{BODY}}
-    </template>
+    <footer class="docs__footer">
+      <a href="public.html">Browse module reference</a>
+    </footer>
 
-    <script>
-      const environmentSelect = document.getElementById('environmentSelect');
-      const baseUrlInput = document.getElementById('baseUrl');
-      const customUrlControl = document.getElementById('customUrlControl');
-      const authTokenInput = document.getElementById('authToken');
-      const template = document.getElementById('curlTemplate').innerHTML;
-
-      const endpoints = Array.from(document.querySelectorAll('.endpoint'));
-
-      function getBaseUrl() {
-        const selected = environmentSelect.value;
-        if (selected === 'custom') {
-          return baseUrlInput.value.replace(/\/$/, '');
-        }
-        return selected.replace(/\/$/, '');
-      }
-
-      function formatCurl(endpointEl) {
-        const method = endpointEl.dataset.method || 'GET';
-        const rawPath = endpointEl.dataset.path || '';
-        let path = rawPath;
-        const params = {};
-        endpointEl.querySelectorAll('[data-param]').forEach((input) => {
-          const value = input.value || input.placeholder || '';
-          params[input.dataset.param] = value;
-          path = path.replace(new RegExp(`{${input.dataset.param}}`, 'g'), encodeURIComponent(value));
-        });
-
-        const url = `${getBaseUrl()}${path}`;
-        const authHeader = authTokenInput.value ? ` \\\n  -H "Authorization: Bearer ${authTokenInput.value}"` : '';
-
-        const payloadField = endpointEl.querySelector(`[data-payload="${endpointEl.id}"]`);
-        const body = payloadField && payloadField.value.trim()
-          ? ` \\\n  -d '${payloadField.value.replace(/'/g, "'\\''")}'`
-          : '';
-
-        return template
-          .replace('{{METHOD}}', method)
-          .replace('{{URL}}', url)
-          .replace('{{AUTH_HEADER}}', authHeader)
-          .replace('{{BODY}}', body);
-      }
-
-      function updateCurlBlocks() {
-        endpoints.forEach((endpointEl) => {
-          endpointEl.querySelectorAll('[data-template="curl"]').forEach((pre) => {
-            pre.textContent = formatCurl(endpointEl);
-          });
-        });
-      }
-
-      function runEndpoint(endpointId) {
-        const endpointEl = document.getElementById(endpointId);
-        if (!endpointEl) return;
-
-        const method = endpointEl.dataset.method || 'GET';
-        let path = endpointEl.dataset.path || '';
-        endpointEl.querySelectorAll('[data-param]').forEach((input) => {
-          const value = input.value || input.placeholder || '';
-          path = path.replace(new RegExp(`{${input.dataset.param}}`, 'g'), encodeURIComponent(value));
-        });
-        const url = `${getBaseUrl()}${path}`;
-
-        let body;
-        const payloadField = endpointEl.querySelector(`[data-payload="${endpointId}"]`);
-        if (payloadField && payloadField.value.trim()) {
-          try {
-            body = JSON.stringify(JSON.parse(payloadField.value));
-          } catch (error) {
-            body = payloadField.value;
-          }
-        }
-
-        const headers = { 'Content-Type': 'application/json' };
-        if (authTokenInput.value) {
-          headers['Authorization'] = `Bearer ${authTokenInput.value}`;
-        }
-
-        const responseTarget = document.getElementById(`response-${endpointId}`);
-        responseTarget.textContent = 'Loading…';
-
-        fetch(url, {
-          method,
-          headers,
-          body: method === 'GET' || method === 'DELETE' ? undefined : body,
-        })
-          .then(async (response) => {
-            const contentType = response.headers.get('content-type') || '';
-            if (contentType.includes('application/json')) {
-              const data = await response.json();
-              return JSON.stringify(data, null, 2);
-            }
-            return response.text();
-          })
-          .then((text) => {
-            responseTarget.textContent = text || '(empty response)';
-          })
-          .catch((error) => {
-            responseTarget.textContent = `Request failed: ${error.message}`;
-          });
-      }
-
-      environmentSelect.addEventListener('change', (event) => {
-        if (event.target.value === 'custom') {
-          customUrlControl.hidden = false;
-          baseUrlInput.focus();
-        } else {
-          customUrlControl.hidden = true;
-          if (baseUrlInput) {
-            baseUrlInput.value = event.target.value;
-          }
-        }
-        updateCurlBlocks();
-      });
-
-      baseUrlInput?.addEventListener('input', updateCurlBlocks);
-      authTokenInput.addEventListener('input', updateCurlBlocks);
-
-      endpoints.forEach((endpointEl) => {
-        endpointEl.querySelectorAll('[data-param]').forEach((input) => {
-          input.addEventListener('input', updateCurlBlocks);
-        });
-        const payloadField = endpointEl.querySelector(`[data-payload="${endpointEl.id}"]`);
-        if (payloadField) {
-          payloadField.addEventListener('input', updateCurlBlocks);
-        }
-      });
-
-      document.querySelectorAll('.run-button, .try-button').forEach((button) => {
-        button.addEventListener('click', () => {
-          const endpointId = button.dataset.endpoint;
-          if (endpointId) {
-            runEndpoint(endpointId);
-          }
-        });
-      });
-
-      document.querySelectorAll('[data-copy]').forEach((button) => {
-        button.addEventListener('click', () => {
-          const pre = button.closest('.panel').querySelector('.code-block');
-          if (!pre) return;
-          navigator.clipboard.writeText(pre.textContent).then(() => {
-            button.textContent = 'Copied!';
-            setTimeout(() => {
-              button.textContent = 'Copy';
-            }, 1500);
-          });
-        });
-      });
-
-      updateCurlBlocks();
-    </script>
+    <script src="app.js" defer></script>
   </body>
 </html>
