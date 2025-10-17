@@ -292,7 +292,7 @@ public class CartService {
             if (product.getDiscountType() == DiscountType.PERCENTAGE) {
                 BigDecimal percentage = discountValue.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP);
                 price = price.subtract(price.multiply(percentage));
-            } else if (product.getDiscountType() == DiscountType.FLAT_VALUE) {
+            } else if (product.getDiscountType() == DiscountType.FLAT) {
                 price = price.subtract(discountValue);
             }
         }
