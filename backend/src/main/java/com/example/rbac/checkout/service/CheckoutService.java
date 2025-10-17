@@ -3,12 +3,14 @@ package com.example.rbac.checkout.service;
 import com.example.rbac.cart.model.Cart;
 import com.example.rbac.cart.model.CartItem;
 import com.example.rbac.cart.repository.CartRepository;
+import com.example.rbac.checkout.dto.AppliedCouponDto;
 import com.example.rbac.checkout.dto.CheckoutAddressDto;
 import com.example.rbac.checkout.dto.CheckoutAddressRequest;
 import com.example.rbac.checkout.dto.CheckoutOrderLineRequest;
 import com.example.rbac.checkout.dto.CheckoutOrderRequest;
 import com.example.rbac.checkout.dto.CheckoutOrderResponse;
 import com.example.rbac.checkout.dto.CheckoutSummaryDto;
+import com.example.rbac.checkout.dto.OrderDetailDto;
 import com.example.rbac.checkout.dto.OrderListItemDto;
 import com.example.rbac.checkout.dto.OrderSummaryDto;
 import com.example.rbac.checkout.dto.OrderTaxLineDto;
@@ -23,6 +25,8 @@ import com.example.rbac.shipping.service.ShippingLocationService;
 import com.example.rbac.users.model.User;
 import com.example.rbac.users.model.UserPrincipal;
 import com.example.rbac.users.repository.UserRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -41,11 +45,14 @@ import java.util.stream.Collectors;
 @Service
 public class CheckoutService {
 
+    private static final Logger log = LoggerFactory.getLogger(CheckoutService.class);
+
     private static final BigDecimal ZERO = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
 
     private final CheckoutAddressService addressService;
     private final PaymentMethodService paymentMethodService;
     private final ShippingLocationService shippingLocationService;
+    private final CheckoutCouponService checkoutCouponService;
     private final OrderService orderService;
     private final CartRepository cartRepository;
     private final UserRepository userRepository;
@@ -53,12 +60,14 @@ public class CheckoutService {
     public CheckoutService(CheckoutAddressService addressService,
                            PaymentMethodService paymentMethodService,
                            ShippingLocationService shippingLocationService,
+                           CheckoutCouponService checkoutCouponService,
                            OrderService orderService,
                            UserRepository userRepository,
                            CartRepository cartRepository) {
         this.addressService = addressService;
         this.paymentMethodService = paymentMethodService;
         this.shippingLocationService = shippingLocationService;
+        this.checkoutCouponService = checkoutCouponService;
         this.orderService = orderService;
         this.userRepository = userRepository;
         this.cartRepository = cartRepository;
@@ -79,7 +88,15 @@ public class CheckoutService {
         CheckoutSummaryDto summary = new CheckoutSummaryDto();
         summary.setAddresses(addressService.listAddresses(userId));
         summary.setPaymentMethods(paymentMethodService.listForCustomer());
-        summary.setOrderSummary(calculateOrderTotals(userId, request));
+        summary.setCoupons(checkoutCouponService.listActiveCoupons(userId));
+        OrderSummaryDto orderSummary;
+        try {
+            orderSummary = calculateOrderTotals(userId, request);
+        } catch (RuntimeException ex) {
+            log.warn("Unable to calculate checkout summary for user {}", userId, ex);
+            orderSummary = emptySummary();
+        }
+        summary.setOrderSummary(orderSummary);
         return summary;
     }
 
@@ -109,7 +126,15 @@ public class CheckoutService {
         if (orderSummary.getProductTotal() == null || orderSummary.getProductTotal().compareTo(BigDecimal.ZERO) <= 0) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "Add items to your cart before placing an order");
         }
-        CheckoutOrderResponse response = orderService.createOrder(userId, user.getFullName(), shippingAddress, billingAddress, paymentMethod, orderSummary, orderLines);
+        CheckoutOrderResponse response = orderService.createOrder(
+                userId,
+                user.getEmail(),
+                user.getFullName(),
+                shippingAddress,
+                billingAddress,
+                paymentMethod,
+                orderSummary,
+                orderLines);
         clearCart(userId);
         return response;
     }
@@ -150,6 +175,21 @@ public class CheckoutService {
     }
 
     @Transactional(readOnly = true)
+    public List<OrderListItemDto> listOrdersForUser(Long userId) {
+        return orderService.listOrdersForUser(userId);
+    }
+
+    @Transactional(readOnly = true)
+    public OrderDetailDto getOrderDetail(Long orderId) {
+        return orderService.getOrder(orderId);
+    }
+
+    @Transactional(readOnly = true)
+    public OrderDetailDto getOrderDetailForUser(Long userId, Long orderId) {
+        return orderService.getOrderForUser(userId, orderId);
+    }
+
+    @Transactional(readOnly = true)
     public List<CheckoutAddressDto> listAddressesForAdmin(Long userId) {
         return addressService.listAddressesForAdmin(userId);
     }
@@ -183,10 +223,14 @@ public class CheckoutService {
 
         ShippingRateQuoteDto quote = null;
         if (shippingAddress != null) {
-            quote = shippingLocationService.resolveShippingRate(
-                    shippingAddress.getCountryId(),
-                    shippingAddress.getStateId(),
-                    shippingAddress.getCityId());
+            try {
+                quote = shippingLocationService.resolveShippingRate(
+                        shippingAddress.getCountryId(),
+                        shippingAddress.getStateId(),
+                        shippingAddress.getCityId());
+            } catch (ApiException ex) {
+                quote = null;
+            }
         }
 
         List<OrderTaxLineDto> taxLines = new ArrayList<>();
@@ -226,13 +270,30 @@ public class CheckoutService {
                 ? quote.getEffectiveCost().setScale(2, RoundingMode.HALF_UP)
                 : ZERO;
 
+        AppliedCouponDto appliedCoupon = checkoutCouponService.applyCoupon(
+                request != null ? request.getCouponCode() : null,
+                userId,
+                productTotal);
+        BigDecimal discountTotal = appliedCoupon != null
+                ? Optional.ofNullable(appliedCoupon.getDiscountAmount()).orElse(ZERO)
+                : ZERO;
+        if (discountTotal.compareTo(BigDecimal.ZERO) < 0) {
+            discountTotal = BigDecimal.ZERO;
+        }
+
         OrderSummaryDto summary = new OrderSummaryDto();
         summary.setProductTotal(productTotal.setScale(2, RoundingMode.HALF_UP));
         summary.setTaxTotal(taxTotal.setScale(2, RoundingMode.HALF_UP));
         summary.setShippingTotal(shippingTotal);
-        summary.setGrandTotal(productTotal.add(taxTotal).add(shippingTotal).setScale(2, RoundingMode.HALF_UP));
+        summary.setDiscountTotal(discountTotal.setScale(2, RoundingMode.HALF_UP));
+        BigDecimal grandTotal = productTotal.add(taxTotal).add(shippingTotal).subtract(discountTotal);
+        if (grandTotal.compareTo(BigDecimal.ZERO) < 0) {
+            grandTotal = BigDecimal.ZERO;
+        }
+        summary.setGrandTotal(grandTotal.setScale(2, RoundingMode.HALF_UP));
         summary.setShippingBreakdown(quote);
         summary.setTaxLines(taxLines);
+        summary.setAppliedCoupon(appliedCoupon);
         return summary;
     }
 
@@ -242,7 +303,10 @@ public class CheckoutService {
         summary.setTaxTotal(ZERO);
         summary.setShippingTotal(ZERO);
         summary.setGrandTotal(ZERO);
+        summary.setDiscountTotal(ZERO);
         summary.setTaxLines(List.of());
+        summary.setShippingBreakdown(null);
+        summary.setAppliedCoupon(null);
         return summary;
     }
 

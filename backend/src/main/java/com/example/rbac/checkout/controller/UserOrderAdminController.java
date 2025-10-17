@@ -12,24 +12,24 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/admin/orders")
-public class OrderAdminController {
+@RequestMapping("/api/v1/admin/users/{userId}/orders")
+public class UserOrderAdminController {
 
     private final CheckoutService checkoutService;
 
-    public OrderAdminController(CheckoutService checkoutService) {
+    public UserOrderAdminController(CheckoutService checkoutService) {
         this.checkoutService = checkoutService;
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('ORDER_MANAGE', 'CHECKOUT_MANAGE')")
-    public List<OrderListItemDto> listOrders() {
-        return checkoutService.listOrders();
+    @PreAuthorize("hasAnyAuthority('USER_VIEW', 'USER_VIEW_GLOBAL', 'USER_VIEW_OWN', 'ORDER_MANAGE', 'CHECKOUT_MANAGE')")
+    public List<OrderListItemDto> listOrders(@PathVariable Long userId) {
+        return checkoutService.listOrdersForUser(userId);
     }
 
     @GetMapping("/{orderId}")
-    @PreAuthorize("hasAnyAuthority('ORDER_MANAGE', 'CHECKOUT_MANAGE')")
-    public OrderDetailDto getOrder(@PathVariable Long orderId) {
-        return checkoutService.getOrderDetail(orderId);
+    @PreAuthorize("hasAnyAuthority('USER_VIEW', 'USER_VIEW_GLOBAL', 'USER_VIEW_OWN', 'ORDER_MANAGE', 'CHECKOUT_MANAGE')")
+    public OrderDetailDto getOrder(@PathVariable Long userId, @PathVariable Long orderId) {
+        return checkoutService.getOrderDetailForUser(userId, orderId);
     }
 }
