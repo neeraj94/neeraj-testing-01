@@ -32,16 +32,19 @@ public class ShippingReferenceData {
     private final ObjectMapper objectMapper;
     private final Resource globalStatesResource;
     private final Resource indiaStatesResource;
+    private final CityDirectoryClient cityDirectoryClient;
 
     private final Map<String, Map<String, StateReference>> referenceStates = new LinkedHashMap<>();
     private final Map<String, String> countryAliases = new LinkedHashMap<>();
 
     public ShippingReferenceData(ObjectMapper objectMapper,
                                  @Value("classpath:data/shipping/global_states_cities.json") Resource globalStatesResource,
-                                 @Value("classpath:data/shipping/india_states.json") Resource indiaStatesResource) {
+                                 @Value("classpath:data/shipping/india_states.json") Resource indiaStatesResource,
+                                 CityDirectoryClient cityDirectoryClient) {
         this.objectMapper = objectMapper;
         this.globalStatesResource = globalStatesResource;
         this.indiaStatesResource = indiaStatesResource;
+        this.cityDirectoryClient = cityDirectoryClient;
     }
 
     @PostConstruct
@@ -73,10 +76,22 @@ public class ShippingReferenceData {
             return cities;
         }
         String resolvedCode = resolveCountryCodeByName(countryName);
-        if (resolvedCode == null || resolvedCode.equals(normalizedCode)) {
-            return Collections.emptyList();
+        if (resolvedCode != null && !resolvedCode.equals(normalizedCode)) {
+            cities = getCityNamesByCode(resolvedCode, stateName);
+            if (!cities.isEmpty()) {
+                return cities;
+            }
         }
-        return getCityNamesByCode(resolvedCode, stateName);
+        String apiCountryName = resolveCountryDisplayName(normalizedCode != null ? normalizedCode : resolvedCode, countryName);
+        List<String> externalCities = cityDirectoryClient.fetchCities(apiCountryName, stateName);
+        if (!CollectionUtils.isEmpty(externalCities)) {
+            String codeToRegister = normalizedCode != null ? normalizedCode : resolvedCode;
+            if (codeToRegister != null) {
+                registerExternalCities(codeToRegister, apiCountryName, stateName, externalCities);
+            }
+            return externalCities;
+        }
+        return Collections.emptyList();
     }
 
     private void loadGlobalStates() {
@@ -164,6 +179,20 @@ public class ShippingReferenceData {
         return StringUtils.hasText(code) ? code.trim().toUpperCase(Locale.ENGLISH) : null;
     }
 
+    private String resolveCountryDisplayName(String countryCode, String fallbackName) {
+        if (StringUtils.hasText(fallbackName)) {
+            return fallbackName;
+        }
+        if (StringUtils.hasText(countryCode)) {
+            Locale locale = new Locale("", countryCode);
+            String displayName = locale.getDisplayCountry(Locale.ENGLISH);
+            if (StringUtils.hasText(displayName)) {
+                return displayName;
+            }
+        }
+        return fallbackName;
+    }
+
     private List<String> getStateNamesByCode(String countryCode) {
         if (countryCode == null) {
             return Collections.emptyList();
@@ -198,6 +227,30 @@ public class ShippingReferenceData {
         List<String> cities = new ArrayList<>(reference.getCities());
         cities.sort(String.CASE_INSENSITIVE_ORDER);
         return cities;
+    }
+
+    private void registerExternalCities(String countryCode, String countryName, String stateName, List<String> cities) {
+        if (!StringUtils.hasText(countryCode) || !StringUtils.hasText(stateName) || CollectionUtils.isEmpty(cities)) {
+            return;
+        }
+        registerCountryAlias(countryCode, countryName);
+        registerLocaleAliases(countryCode);
+        Map<String, StateReference> states = referenceStates.computeIfAbsent(countryCode, key -> new LinkedHashMap<>());
+        String normalizedStateName = normalizeDisplayName(stateName);
+        if (!StringUtils.hasText(normalizedStateName)) {
+            return;
+        }
+        String stateKey = normalizeKey(normalizedStateName);
+        StateReference reference = states.computeIfAbsent(stateKey, key -> new StateReference(normalizedStateName));
+        if (!reference.getDisplayName().equals(normalizedStateName)) {
+            reference.setDisplayName(selectDisplayName(reference.getDisplayName(), normalizedStateName));
+        }
+        for (String cityName : cities) {
+            String normalizedCity = normalizeDisplayName(cityName);
+            if (StringUtils.hasText(normalizedCity)) {
+                reference.getCities().add(normalizedCity);
+            }
+        }
     }
 
     private String resolveCountryCodeByName(String countryName) {

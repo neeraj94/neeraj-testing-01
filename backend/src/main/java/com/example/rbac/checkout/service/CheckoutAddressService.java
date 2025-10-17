@@ -3,6 +3,8 @@ package com.example.rbac.checkout.service;
 import com.example.rbac.checkout.dto.CheckoutAddressDto;
 import com.example.rbac.checkout.dto.CheckoutAddressRequest;
 import com.example.rbac.checkout.dto.CheckoutAddressType;
+import com.example.rbac.checkout.model.CheckoutAddress;
+import com.example.rbac.checkout.repository.CheckoutAddressRepository;
 import com.example.rbac.common.exception.ApiException;
 import com.example.rbac.shipping.model.ShippingCity;
 import com.example.rbac.shipping.model.ShippingCountry;
@@ -10,77 +12,152 @@ import com.example.rbac.shipping.model.ShippingState;
 import com.example.rbac.shipping.repository.ShippingCityRepository;
 import com.example.rbac.shipping.repository.ShippingCountryRepository;
 import com.example.rbac.shipping.repository.ShippingStateRepository;
+import com.example.rbac.users.model.User;
+import com.example.rbac.users.repository.UserRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
 @Service
 public class CheckoutAddressService {
 
+    private final CheckoutAddressRepository addressRepository;
     private final ShippingCountryRepository countryRepository;
     private final ShippingStateRepository stateRepository;
     private final ShippingCityRepository cityRepository;
-    private final AtomicLong addressSequence = new AtomicLong(1L);
-    private final Map<Long, List<AddressRecord>> addressStore = new ConcurrentHashMap<>();
+    private final UserRepository userRepository;
 
-    public CheckoutAddressService(ShippingCountryRepository countryRepository,
+    public CheckoutAddressService(CheckoutAddressRepository addressRepository,
+                                  ShippingCountryRepository countryRepository,
                                   ShippingStateRepository stateRepository,
-                                  ShippingCityRepository cityRepository) {
+                                  ShippingCityRepository cityRepository,
+                                  UserRepository userRepository) {
+        this.addressRepository = addressRepository;
         this.countryRepository = countryRepository;
         this.stateRepository = stateRepository;
         this.cityRepository = cityRepository;
+        this.userRepository = userRepository;
     }
 
+    @Transactional(readOnly = true)
     public List<CheckoutAddressDto> listAddresses(Long userId) {
-        return addressStore.getOrDefault(userId, List.of()).stream()
-                .sorted(Comparator.comparing(AddressRecord::createdAt))
+        if (userId == null) {
+            return List.of();
+        }
+        return addressRepository.findByUserIdOrderByDefaultAddressDescCreatedAtAsc(userId).stream()
                 .map(this::toDto)
                 .collect(Collectors.toList());
     }
 
+    @Transactional
     public CheckoutAddressDto createAddress(Long userId, CheckoutAddressRequest request) {
-        AddressRecord record = buildRecord(userId, request);
-        List<AddressRecord> records = addressStore.computeIfAbsent(userId, key -> new ArrayList<>());
-        if (Boolean.TRUE.equals(request.getMakeDefault())) {
-            for (AddressRecord existing : records) {
-                if (existing.type == record.type) {
-                    existing.defaultAddress = false;
-                }
-            }
-            record.defaultAddress = true;
+        if (userId == null) {
+            throw new ApiException(HttpStatus.UNAUTHORIZED, "User is required");
         }
-        records.add(record);
-        records.sort(Comparator.comparing(AddressRecord::createdAt));
-        return toDto(record);
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "User not found"));
+        CheckoutAddress address = new CheckoutAddress();
+        address.setUser(user);
+        applyRequest(address, request);
+        boolean makeDefault = Boolean.TRUE.equals(request.getMakeDefault());
+        if (makeDefault) {
+            addressRepository.clearDefaultForType(userId, address.getType(), null);
+            address.setDefaultAddress(true);
+        } else if (!addressRepository.existsByUserIdAndTypeAndDefaultAddressTrue(userId, address.getType())) {
+            address.setDefaultAddress(true);
+        } else {
+            address.setDefaultAddress(false);
+        }
+        CheckoutAddress saved = addressRepository.save(address);
+        return toDto(saved);
     }
 
+    @Transactional(readOnly = true)
     public CheckoutAddressDto getAddress(Long userId, Long addressId) {
-        return addressStore.getOrDefault(userId, List.of()).stream()
-                .filter(record -> Objects.equals(record.id, addressId))
-                .findFirst()
-                .map(this::toDto)
+        if (userId == null || addressId == null) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Address not found");
+        }
+        CheckoutAddress address = addressRepository.findByIdAndUserId(addressId, userId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Address not found"));
+        return toDto(address);
     }
 
+    @Transactional
+    public CheckoutAddressDto updateAddress(Long userId, Long addressId, CheckoutAddressRequest request) {
+        if (userId == null) {
+            throw new ApiException(HttpStatus.UNAUTHORIZED, "User is required");
+        }
+        CheckoutAddress address = addressRepository.findByIdAndUserId(addressId, userId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Address not found"));
+
+        CheckoutAddressType previousType = address.getType();
+
+        applyRequest(address, request);
+
+        if (Boolean.TRUE.equals(request.getMakeDefault())) {
+            addressRepository.clearDefaultForType(userId, address.getType(), address.getId());
+            address.setDefaultAddress(true);
+        } else if (Boolean.FALSE.equals(request.getMakeDefault())) {
+            address.setDefaultAddress(false);
+        } else if (!addressRepository.existsByUserIdAndTypeAndDefaultAddressTrue(userId, address.getType())) {
+            address.setDefaultAddress(true);
+        }
+
+        CheckoutAddress saved = addressRepository.save(address);
+
+        if (!saved.isDefaultAddress()) {
+            ensureDefaultExists(userId, saved.getType());
+        }
+        if (!Objects.equals(previousType, saved.getType())) {
+            ensureDefaultExists(userId, previousType);
+        }
+
+        return toDto(saved);
+    }
+
+    @Transactional(readOnly = true)
     public List<CheckoutAddressDto> listAddressesForAdmin(Long userId) {
         return listAddresses(userId);
     }
 
-    private AddressRecord buildRecord(Long userId, CheckoutAddressRequest request) {
+    @Transactional
+    public CheckoutAddressDto updateAddressAsAdmin(Long userId, Long addressId, CheckoutAddressRequest request) {
         if (userId == null) {
-            throw new ApiException(HttpStatus.UNAUTHORIZED, "User is required");
+            throw new ApiException(HttpStatus.BAD_REQUEST, "User is required");
         }
+        CheckoutAddress address = addressRepository.findById(addressId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Address not found"));
+        if (address.getUser() == null || !Objects.equals(address.getUser().getId(), userId)) {
+            throw new ApiException(HttpStatus.NOT_FOUND, "Address not found");
+        }
+        return updateAddress(userId, addressId, request);
+    }
+
+    private void ensureDefaultExists(Long userId, CheckoutAddressType type) {
+        if (userId == null || type == null) {
+            return;
+        }
+        if (addressRepository.existsByUserIdAndTypeAndDefaultAddressTrue(userId, type)) {
+            return;
+        }
+        List<CheckoutAddress> addresses = addressRepository.findByUserIdOrderByDefaultAddressDescCreatedAtAsc(userId).stream()
+                .filter(address -> type == address.getType())
+                .collect(Collectors.toList());
+        if (!CollectionUtils.isEmpty(addresses)) {
+            CheckoutAddress fallback = addresses.get(0);
+            fallback.setDefaultAddress(true);
+            addressRepository.save(fallback);
+        }
+    }
+
+    private void applyRequest(CheckoutAddress address, CheckoutAddressRequest request) {
         if (request == null) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "Address payload is required");
         }
@@ -101,6 +178,7 @@ public class CheckoutAddressService {
             country = countryRepository.findById(request.getCountryId())
                     .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Country not found"));
         }
+
         ShippingState state = null;
         if (request.getStateId() != null) {
             state = stateRepository.findById(request.getStateId())
@@ -113,6 +191,7 @@ public class CheckoutAddressService {
                 country = state.getCountry();
             }
         }
+
         ShippingCity city = null;
         if (request.getCityId() != null) {
             city = cityRepository.findById(request.getCityId())
@@ -129,73 +208,37 @@ public class CheckoutAddressService {
             }
         }
 
-        Instant now = Instant.now();
-        AddressRecord record = new AddressRecord();
-        record.id = addressSequence.getAndIncrement();
-        record.userId = userId;
-        record.type = type;
-        record.countryId = country != null ? country.getId() : null;
-        record.countryName = country != null ? country.getName() : null;
-        record.stateId = state != null ? state.getId() : null;
-        record.stateName = state != null ? state.getName() : null;
-        record.cityId = city != null ? city.getId() : null;
-        record.cityName = city != null ? city.getName() : null;
-        record.fullName = request.getFullName().trim();
-        record.mobileNumber = request.getMobileNumber().trim();
-        record.pinCode = Optional.ofNullable(request.getPinCode()).map(String::trim).orElse(null);
-        record.addressLine1 = request.getAddressLine1().trim();
-        record.addressLine2 = Optional.ofNullable(request.getAddressLine2()).map(String::trim).orElse(null);
-        record.landmark = Optional.ofNullable(request.getLandmark()).map(String::trim).orElse(null);
-        record.defaultAddress = false;
-        record.createdAt = now;
-        record.updatedAt = now;
-        return record;
+        address.setType(type);
+        address.setCountry(country);
+        address.setState(state);
+        address.setCity(city);
+        address.setFullName(request.getFullName().trim());
+        address.setMobileNumber(request.getMobileNumber().trim());
+        address.setPinCode(Optional.ofNullable(request.getPinCode()).map(String::trim).orElse(null));
+        address.setAddressLine1(request.getAddressLine1().trim());
+        address.setAddressLine2(Optional.ofNullable(request.getAddressLine2()).map(String::trim).orElse(null));
+        address.setLandmark(Optional.ofNullable(request.getLandmark()).map(String::trim).orElse(null));
     }
 
-    private CheckoutAddressDto toDto(AddressRecord record) {
+    private CheckoutAddressDto toDto(CheckoutAddress address) {
         CheckoutAddressDto dto = new CheckoutAddressDto();
-        dto.setId(record.id);
-        dto.setType(record.type);
-        dto.setCountryId(record.countryId);
-        dto.setCountryName(record.countryName);
-        dto.setStateId(record.stateId);
-        dto.setStateName(record.stateName);
-        dto.setCityId(record.cityId);
-        dto.setCityName(record.cityName);
-        dto.setFullName(record.fullName);
-        dto.setMobileNumber(record.mobileNumber);
-        dto.setPinCode(record.pinCode);
-        dto.setAddressLine1(record.addressLine1);
-        dto.setAddressLine2(record.addressLine2);
-        dto.setLandmark(record.landmark);
-        dto.setDefaultAddress(record.defaultAddress);
-        dto.setCreatedAt(record.createdAt);
-        dto.setUpdatedAt(record.updatedAt);
+        dto.setId(address.getId());
+        dto.setType(address.getType());
+        dto.setCountryId(address.getCountry() != null ? address.getCountry().getId() : null);
+        dto.setCountryName(address.getCountry() != null ? address.getCountry().getName() : null);
+        dto.setStateId(address.getState() != null ? address.getState().getId() : null);
+        dto.setStateName(address.getState() != null ? address.getState().getName() : null);
+        dto.setCityId(address.getCity() != null ? address.getCity().getId() : null);
+        dto.setCityName(address.getCity() != null ? address.getCity().getName() : null);
+        dto.setFullName(address.getFullName());
+        dto.setMobileNumber(address.getMobileNumber());
+        dto.setPinCode(address.getPinCode());
+        dto.setAddressLine1(address.getAddressLine1());
+        dto.setAddressLine2(address.getAddressLine2());
+        dto.setLandmark(address.getLandmark());
+        dto.setDefaultAddress(address.isDefaultAddress());
+        dto.setCreatedAt(address.getCreatedAt());
+        dto.setUpdatedAt(address.getUpdatedAt());
         return dto;
-    }
-
-    private static final class AddressRecord {
-        private Long id;
-        private Long userId;
-        private CheckoutAddressType type;
-        private Long countryId;
-        private String countryName;
-        private Long stateId;
-        private String stateName;
-        private Long cityId;
-        private String cityName;
-        private String fullName;
-        private String mobileNumber;
-        private String pinCode;
-        private String addressLine1;
-        private String addressLine2;
-        private String landmark;
-        private boolean defaultAddress;
-        private Instant createdAt;
-        private Instant updatedAt;
-
-        private Instant createdAt() {
-            return createdAt;
-        }
     }
 }
