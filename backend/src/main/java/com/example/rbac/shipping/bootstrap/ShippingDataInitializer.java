@@ -3,6 +3,7 @@ package com.example.rbac.shipping.bootstrap;
 import com.example.rbac.shipping.model.ShippingCity;
 import com.example.rbac.shipping.model.ShippingCountry;
 import com.example.rbac.shipping.model.ShippingState;
+import com.example.rbac.shipping.reference.ShippingReferenceData;
 import com.example.rbac.shipping.repository.ShippingCityRepository;
 import com.example.rbac.shipping.repository.ShippingCountryRepository;
 import com.example.rbac.shipping.repository.ShippingStateRepository;
@@ -22,8 +23,11 @@ import org.springframework.util.StringUtils;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 
 @Component
 public class ShippingDataInitializer implements ApplicationRunner {
@@ -33,6 +37,7 @@ public class ShippingDataInitializer implements ApplicationRunner {
     private final ShippingCountryRepository countryRepository;
     private final ShippingStateRepository stateRepository;
     private final ShippingCityRepository cityRepository;
+    private final ShippingReferenceData shippingReferenceData;
     private final ObjectMapper objectMapper;
     private final Resource indiaStatesResource;
     private final Resource globalStatesResource;
@@ -40,12 +45,14 @@ public class ShippingDataInitializer implements ApplicationRunner {
     public ShippingDataInitializer(ShippingCountryRepository countryRepository,
                                    ShippingStateRepository stateRepository,
                                    ShippingCityRepository cityRepository,
+                                   ShippingReferenceData shippingReferenceData,
                                    ObjectMapper objectMapper,
                                    @Value("classpath:data/shipping/india_states.json") Resource indiaStatesResource,
                                    @Value("classpath:data/shipping/global_states_cities.json") Resource globalStatesResource) {
         this.countryRepository = countryRepository;
         this.stateRepository = stateRepository;
         this.cityRepository = cityRepository;
+        this.shippingReferenceData = shippingReferenceData;
         this.objectMapper = objectMapper;
         this.indiaStatesResource = indiaStatesResource;
         this.globalStatesResource = globalStatesResource;
@@ -257,17 +264,54 @@ public class ShippingDataInitializer implements ApplicationRunner {
 
     private void ensureDefaultCities(ShippingState state) {
         List<ShippingCity> cities = cityRepository.findByStateIdOrderByNameAsc(state.getId());
-        if (!cities.isEmpty()) {
-            boolean updated = false;
-            for (ShippingCity city : cities) {
-                if (!city.isEnabled()) {
-                    city.setEnabled(true);
-                    updated = true;
+        boolean updated = false;
+        Set<String> existingCityNames = new HashSet<>();
+        for (ShippingCity city : cities) {
+            if (!city.isEnabled()) {
+                city.setEnabled(true);
+                updated = true;
+            }
+            if (StringUtils.hasText(city.getName())) {
+                existingCityNames.add(city.getName().trim().toLowerCase(Locale.ENGLISH));
+            }
+        }
+        if (updated) {
+            cityRepository.saveAll(cities);
+        }
+
+        List<String> referenceCities = Collections.emptyList();
+        if (state.getCountry() != null) {
+            referenceCities = shippingReferenceData.getCityNames(
+                    state.getCountry().getCode(),
+                    state.getCountry().getName(),
+                    state.getName());
+        }
+
+        boolean createdFromReference = false;
+        if (!CollectionUtils.isEmpty(referenceCities)) {
+            for (String referenceCity : referenceCities) {
+                if (!StringUtils.hasText(referenceCity)) {
+                    continue;
                 }
+                String normalizedName = referenceCity.trim();
+                String normalizedKey = normalizedName.toLowerCase(Locale.ENGLISH);
+                if (existingCityNames.contains(normalizedKey)) {
+                    continue;
+                }
+                ShippingCity city = new ShippingCity();
+                city.setState(state);
+                city.setName(normalizedName);
+                city.setEnabled(true);
+                cityRepository.save(city);
+                existingCityNames.add(normalizedKey);
+                createdFromReference = true;
             }
-            if (updated) {
-                cityRepository.saveAll(cities);
+            if (createdFromReference) {
+                return;
             }
+        }
+
+        if (!cities.isEmpty()) {
             return;
         }
         String baseName = StringUtils.hasText(state.getName()) ? state.getName().trim() : "State " + state.getId();
