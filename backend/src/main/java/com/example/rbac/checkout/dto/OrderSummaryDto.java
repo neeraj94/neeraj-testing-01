@@ -10,8 +10,10 @@ public class OrderSummaryDto {
     private BigDecimal taxTotal;
     private BigDecimal shippingTotal;
     private BigDecimal grandTotal;
+    private BigDecimal discountTotal;
     private ShippingRateQuoteDto shippingBreakdown;
     private List<OrderTaxLineDto> taxLines = new ArrayList<>();
+    private AppliedCouponDto appliedCoupon;
 
     public BigDecimal getProductTotal() {
         return productTotal;
@@ -45,6 +47,14 @@ public class OrderSummaryDto {
         this.grandTotal = grandTotal;
     }
 
+    public BigDecimal getDiscountTotal() {
+        return discountTotal;
+    }
+
+    public void setDiscountTotal(BigDecimal discountTotal) {
+        this.discountTotal = discountTotal;
+    }
+
     public ShippingRateQuoteDto getShippingBreakdown() {
         return shippingBreakdown;
     }
@@ -59,5 +69,13 @@ public class OrderSummaryDto {
 
     public void setTaxLines(List<OrderTaxLineDto> taxLines) {
         this.taxLines = taxLines;
+    }
+
+    public AppliedCouponDto getAppliedCoupon() {
+        return appliedCoupon;
+    }
+
+    public void setAppliedCoupon(AppliedCouponDto appliedCoupon) {
+        this.appliedCoupon = appliedCoupon;
     }
 }

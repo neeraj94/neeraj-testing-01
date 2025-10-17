@@ -1,6 +1,7 @@
 package com.example.rbac.coupons.repository;
 
 import com.example.rbac.coupons.model.Coupon;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
@@ -9,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 public interface CouponRepository extends JpaRepository<Coupon, Long>, JpaSpecificationExecutor<Coupon> {
 
@@ -37,4 +39,16 @@ public interface CouponRepository extends JpaRepository<Coupon, Long>, JpaSpecif
               and category.id in :categoryIds
             """)
     List<Coupon> findActiveCategoryCoupons(@Param("categoryIds") Collection<Long> categoryIds, @Param("now") Instant now);
+
+    @EntityGraph(attributePaths = {"users"})
+    @Query("""
+            select c from Coupon c
+            where c.status = com.example.rbac.coupons.model.CouponStatus.ENABLED
+              and c.startDate <= :now
+              and c.endDate >= :now
+            """)
+    List<Coupon> findActiveCoupons(@Param("now") Instant now);
+
+    @EntityGraph(attributePaths = {"users"})
+    Optional<Coupon> findByCodeIgnoreCase(String code);
 }

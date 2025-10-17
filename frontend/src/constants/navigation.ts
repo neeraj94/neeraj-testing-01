@@ -266,7 +266,7 @@ export const DEFAULT_NAVIGATION_MENU: NavigationNode[] = [
         icon: '📦',
         path: '/admin/orders',
         group: false,
-        permissions: ['ORDER_MANAGE'],
+        permissions: ['ORDER_MANAGE', 'CHECKOUT_MANAGE'],
         children: []
       },
       {
