@@ -1,5 +1,7 @@
 package com.example.rbac.checkout.dto;
 
+import com.example.rbac.shipping.dto.ShippingRateQuoteDto;
+
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
