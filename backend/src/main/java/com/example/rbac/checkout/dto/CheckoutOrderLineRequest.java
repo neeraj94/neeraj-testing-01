@@ -9,6 +9,7 @@ public class CheckoutOrderLineRequest {
     private Integer quantity;
     private BigDecimal unitPrice;
     private BigDecimal taxRate;
+    private String productSlug;
 
     public Long getProductId() {
         return productId;
@@ -48,5 +49,13 @@ public class CheckoutOrderLineRequest {
 
     public void setTaxRate(BigDecimal taxRate) {
         this.taxRate = taxRate;
+    }
+
+    public String getProductSlug() {
+        return productSlug;
+    }
+
+    public void setProductSlug(String productSlug) {
+        this.productSlug = productSlug;
     }
 }
