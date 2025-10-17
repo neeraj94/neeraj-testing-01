@@ -22,6 +22,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -74,31 +75,59 @@ public class UserRecentViewService {
 
     @Transactional(readOnly = true)
     public List<Product> findRecentProductsForGuest(List<Long> productIds, Long excludeProductId) {
-        if (CollectionUtils.isEmpty(productIds)) {
-            return List.of();
-        }
-        List<Long> sanitized = productIds.stream()
-                .filter(Objects::nonNull)
-                .map(Math::abs)
-                .filter(id -> !Objects.equals(id, excludeProductId))
-                .distinct()
-                .limit(RESPONSE_LIMIT)
-                .collect(Collectors.toList());
+        List<Long> sanitized = sanitizeRecentProductIds(productIds, excludeProductId);
         if (sanitized.isEmpty()) {
             return List.of();
         }
-        List<Product> products = productRepository.findByIdIn(sanitized);
+        List<Long> limited = sanitized.stream().limit(RESPONSE_LIMIT).collect(Collectors.toList());
+        List<Product> products = productRepository.findByIdIn(limited);
         Map<Long, Product> byId = products.stream()
                 .filter(Objects::nonNull)
                 .collect(Collectors.toMap(Product::getId, product -> product));
         List<Product> ordered = new ArrayList<>();
-        for (Long id : sanitized) {
+        for (Long id : limited) {
             Product product = byId.get(id);
             if (product != null) {
                 ordered.add(product);
             }
         }
         return ordered;
+    }
+
+    @Transactional
+    public void synchronizeGuestRecentViews(User user, List<Long> productIds, Long excludeProductId) {
+        if (user == null || user.getId() == null) {
+            return;
+        }
+        List<Long> sanitized = sanitizeRecentProductIds(productIds, excludeProductId);
+        if (sanitized.isEmpty()) {
+            return;
+        }
+        List<UserRecentView> existingEntries = recentViewRepository.findByUserIdAndProductIdIn(user.getId(), sanitized);
+        Map<Long, UserRecentView> existingByProductId = existingEntries.stream()
+                .filter(entry -> entry.getProduct() != null && entry.getProduct().getId() != null)
+                .collect(Collectors.toMap(entry -> entry.getProduct().getId(), entry -> entry));
+        List<Product> products = productRepository.findByIdIn(sanitized);
+        Map<Long, Product> productsById = products.stream()
+                .filter(Objects::nonNull)
+                .collect(Collectors.toMap(Product::getId, product -> product));
+        Instant baseTime = Instant.now();
+        for (int index = 0; index < sanitized.size(); index++) {
+            Long productId = sanitized.get(index);
+            Product product = productsById.get(productId);
+            if (product == null) {
+                continue;
+            }
+            UserRecentView entry = existingByProductId.get(productId);
+            if (entry == null) {
+                entry = new UserRecentView();
+            }
+            entry.setUser(user);
+            entry.setProduct(product);
+            entry.setViewedAt(baseTime.minusSeconds(index + 1L));
+            recentViewRepository.save(entry);
+        }
+        pruneExcessEntries(user.getId());
     }
 
     @Transactional(readOnly = true)
@@ -108,9 +137,30 @@ public class UserRecentViewService {
             throw new ApiException(HttpStatus.BAD_REQUEST, "User id is required");
         }
         List<UserRecentView> entries = recentViewRepository.findTop20ByUserIdOrderByViewedAtDesc(userId);
+        List<Long> productIds = entries.stream()
+                .map(UserRecentView::getProduct)
+                .filter(Objects::nonNull)
+                .map(Product::getId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+
+        if (productIds.isEmpty()) {
+            return List.of();
+        }
+
+        Map<Long, Product> productsById = productRepository.findByIdIn(productIds).stream()
+                .filter(Objects::nonNull)
+                .collect(Collectors.toMap(Product::getId, product -> product, (existing, replacement) -> existing));
+
         List<UserRecentViewDto> result = new ArrayList<>();
         for (UserRecentView entry : entries) {
-            Product product = entry.getProduct();
+            Product productRef = entry.getProduct();
+            Long productId = productRef != null ? productRef.getId() : null;
+            if (productId == null) {
+                continue;
+            }
+            Product product = productsById.get(productId);
             if (product == null) {
                 continue;
             }
@@ -140,6 +190,19 @@ public class UserRecentViewService {
         for (int index = MAX_RECENTS; index < entries.size(); index++) {
             recentViewRepository.delete(entries.get(index));
         }
+    }
+
+    private List<Long> sanitizeRecentProductIds(Collection<Long> productIds, Long excludeProductId) {
+        if (CollectionUtils.isEmpty(productIds)) {
+            return List.of();
+        }
+        return productIds.stream()
+                .filter(Objects::nonNull)
+                .map(Math::abs)
+                .filter(id -> !Objects.equals(id, excludeProductId))
+                .distinct()
+                .limit(MAX_RECENTS)
+                .collect(Collectors.toList());
     }
 
     private void initializeRecommendationAssociations(Product product) {

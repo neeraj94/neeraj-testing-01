@@ -5,6 +5,7 @@ import type { CouponType, PublicCoupon, PublicCouponPage } from '../types/coupon
 import { useAppSelector } from '../app/hooks';
 import { selectBaseCurrency } from '../features/settings/selectors';
 import { formatCurrency as formatCurrencyValue } from '../utils/currency';
+import StorefrontHeader from '../components/StorefrontHeader';
 
 const PAGE_SIZE = 12;
 
@@ -124,6 +125,8 @@ const PublicCouponsPage = () => {
 
   return (
     <div className="min-h-screen bg-slate-50">
+      <StorefrontHeader activeKey="coupons" />
+
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-6xl flex-col gap-6 px-6 py-12 md:flex-row md:items-center md:justify-between">
           <div className="max-w-3xl">

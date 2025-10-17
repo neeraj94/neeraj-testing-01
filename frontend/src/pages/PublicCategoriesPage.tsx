@@ -4,14 +4,7 @@ import { Link } from 'react-router-dom';
 import api from '../services/http';
 import type { PublicCategory } from '../types/category';
 import type { PublicBrand } from '../types/brand';
-
-const navLinks = [
-  { href: '/', label: 'Home' },
-  { href: '/categories', label: 'Categories' },
-  { href: '/brands', label: 'Brands' },
-  { href: '/blog', label: 'Blog' },
-  { href: '/product/demo-product', label: 'Product' }
-];
+import StorefrontHeader from '../components/StorefrontHeader';
 
 const PublicCategoriesPage = () => {
   const [search, setSearch] = useState('');
@@ -65,34 +58,7 @@ const PublicCategoriesPage = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-6xl flex-col gap-6 px-6 py-6 sm:flex-row sm:items-center sm:justify-between">
-          <Link to="/" className="text-2xl font-semibold tracking-tight text-slate-900">
-            Aurora Market
-          </Link>
-          <nav className="flex flex-wrap items-center gap-3 text-sm text-slate-600">
-            {navLinks.map((link) => (
-              <Link
-                key={link.href}
-                to={link.href}
-                className={`rounded-full px-4 py-2 transition ${
-                  link.href === '/categories'
-                    ? 'bg-slate-900 text-white shadow-sm shadow-slate-900/20'
-                    : 'hover:bg-slate-100 hover:text-slate-900'
-                }`}
-              >
-                {link.label}
-              </Link>
-            ))}
-          </nav>
-          <div className="flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-slate-500">
-            <span className="hidden sm:inline">Call us</span>
-            <a href="tel:+18004561234" className="font-semibold text-slate-900">
-              +1 (800) 456-1234
-            </a>
-          </div>
-        </div>
-      </header>
+      <StorefrontHeader activeKey="categories" />
 
       <main className="relative">
         <section className="mx-auto max-w-6xl px-6 py-16">

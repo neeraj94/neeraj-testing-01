@@ -1,4 +1,4 @@
-import { Dispatch, FormEvent, SetStateAction, useCallback, useEffect, useMemo, useState } from 'react';
+import { Dispatch, FormEvent, Fragment, SetStateAction, useCallback, useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import type { AxiosError } from 'axios';
 import api from '../services/http';
@@ -6,7 +6,13 @@ import type { Pagination, Permission, Role } from '../types/models';
 import type { PermissionKey } from '../types/auth';
 import { useToast } from '../components/ToastProvider';
 import { useConfirm } from '../components/ConfirmDialogProvider';
-import { CAPABILITY_COLUMNS, type PermissionGroup, buildPermissionGroups } from '../utils/permissionGroups';
+import {
+  CAPABILITY_COLUMNS,
+  PERMISSION_AUDIENCE_HEADERS,
+  PERMISSION_AUDIENCE_ORDER,
+  type PermissionGroup,
+  buildPermissionGroups
+} from '../utils/permissionGroups';
 import SortableColumnHeader from '../components/SortableColumnHeader';
 import { useAppSelector } from '../app/hooks';
 import { hasAnyPermission } from '../utils/permissions';
@@ -85,11 +91,16 @@ const PermissionMatrix = ({
     );
   }
 
-  const visibleColumns = CAPABILITY_COLUMNS.filter((column) =>
-    groups.some((group) => Boolean(group.slots[column.slot]))
-  );
+  const visibleColumns = CAPABILITY_COLUMNS;
   const showExtras = groups.some((group) => group.extras.length > 0);
   const selectedSet = new Set(selected);
+  const colSpan = 1 + visibleColumns.length + (showExtras ? 1 : 0);
+
+  const grouped = PERMISSION_AUDIENCE_ORDER.map((audience) => ({
+    audience,
+    title: PERMISSION_AUDIENCE_HEADERS[audience],
+    rows: groups.filter((group) => group.category === audience)
+  })).filter((entry) => entry.rows.length > 0);
 
   return (
     <div className="overflow-x-auto">
@@ -108,87 +119,98 @@ const PermissionMatrix = ({
               </th>
             ))}
             {showExtras && (
-              <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Other</th>
+              <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Additional
+              </th>
             )}
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-200 bg-white">
-          {groups.map((group) => {
-            const viewGlobalId = group.slots.viewGlobal?.id;
-            const viewOwnId = group.slots.viewOwn?.id;
-            const viewGlobalSelected = viewGlobalId ? selectedSet.has(viewGlobalId) : false;
-
-            return (
-              <tr key={group.feature}>
-                <td className="whitespace-nowrap px-6 py-4 text-sm font-semibold text-slate-800">{group.feature}</td>
-                {visibleColumns.map((column) => {
-                  const option = group.slots[column.slot];
-                  if (!option) {
-                    return (
-                      <td key={column.slot} className="px-6 py-4 text-center text-xs text-slate-300">
-                        —
-                      </td>
-                    );
-                  }
-
-                  const checked = selectedSet.has(option.id);
-                  const disableOwn = column.slot === 'viewOwn' && viewGlobalSelected;
-
-                  return (
-                    <td key={column.slot} className="px-6 py-4 text-center">
-                      <label className="inline-flex items-center justify-center gap-2">
-                        <input
-                          type="checkbox"
-                          className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary disabled:cursor-not-allowed"
-                          checked={checked}
-                          disabled={disableOwn}
-                          onChange={(event) =>
-                            onToggle(option.id, event.target.checked, {
-                              deselect:
-                                event.target.checked && column.slot === 'viewGlobal' && viewOwnId
-                                  ? [viewOwnId]
-                                  : undefined
-                            })
-                          }
-                        />
-                        <span className="sr-only">{`${group.feature} – ${column.label}`}</span>
-                      </label>
-                    </td>
-                  );
-                })}
-                {showExtras && (
-                  <td className="px-6 py-4">
-                    {group.extras.length ? (
-                      <div className="space-y-2">
-                        {group.extras.map((option) => {
-                          const checked = selectedSet.has(option.id);
-                          return (
-                            <label
-                              key={option.id}
-                              className="flex items-start gap-3 rounded-md border border-slate-200 p-3 transition hover:border-slate-300"
-                            >
-                              <input
-                                type="checkbox"
-                                className="mt-1 h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary"
-                                checked={checked}
-                                onChange={(event) => onToggle(option.id, event.target.checked)}
-                              />
-                              <span className="text-sm text-slate-600">
-                                <span className="block font-medium text-slate-700">{option.label}</span>
-                                <span className="text-xs uppercase tracking-wide text-slate-400">{option.key}</span>
-                              </span>
-                            </label>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <span className="block text-center text-xs text-slate-300">—</span>
-                    )}
-                  </td>
-                )}
+          {grouped.map((section) => (
+            <Fragment key={section.audience}>
+              <tr className="bg-slate-100">
+                <td colSpan={colSpan} className="px-6 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  {section.title}
+                </td>
               </tr>
-            );
-          })}
+              {section.rows.map((group) => {
+                const viewGlobalId = group.slots.viewGlobal?.id;
+                const viewOwnId = group.slots.viewOwn?.id;
+                const viewGlobalSelected = viewGlobalId ? selectedSet.has(viewGlobalId) : false;
+
+                return (
+                  <tr key={`${section.audience}-${group.feature}`}>
+                    <td className="whitespace-nowrap px-6 py-4 text-sm font-semibold text-slate-800">{group.feature}</td>
+                    {visibleColumns.map((column) => {
+                      const option = group.slots[column.slot];
+                      if (!option) {
+                        return (
+                          <td key={column.slot} className="px-6 py-4 text-center text-xs text-slate-300">
+                            —
+                          </td>
+                        );
+                      }
+
+                      const checked = selectedSet.has(option.id);
+                      const disableOwn = column.slot === 'viewOwn' && viewGlobalSelected;
+
+                      return (
+                        <td key={column.slot} className="px-6 py-4 text-center">
+                          <label className="inline-flex items-center justify-center gap-2">
+                            <input
+                              type="checkbox"
+                              className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary disabled:cursor-not-allowed"
+                              checked={checked}
+                              disabled={disableOwn}
+                              onChange={(event) =>
+                                onToggle(option.id, event.target.checked, {
+                                  deselect:
+                                    event.target.checked && column.slot === 'viewGlobal' && viewOwnId
+                                      ? [viewOwnId]
+                                      : undefined
+                                })
+                              }
+                            />
+                            <span className="sr-only">{`${group.feature} – ${column.label}`}</span>
+                          </label>
+                        </td>
+                      );
+                    })}
+                    {showExtras && (
+                      <td className="px-6 py-4">
+                        {group.extras.length ? (
+                          <div className="space-y-2">
+                            {group.extras.map((option) => {
+                              const checked = selectedSet.has(option.id);
+                              return (
+                                <label
+                                  key={option.id}
+                                  className="flex items-start gap-3 rounded-md border border-slate-200 p-3 transition hover:border-slate-300"
+                                >
+                                  <input
+                                    type="checkbox"
+                                    className="mt-1 h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary"
+                                    checked={checked}
+                                    onChange={(event) => onToggle(option.id, event.target.checked)}
+                                  />
+                                  <span className="text-sm text-slate-600">
+                                    <span className="block font-medium text-slate-700">{option.label}</span>
+                                    <span className="text-xs uppercase tracking-wide text-slate-400">{option.key}</span>
+                                  </span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <span className="block text-center text-xs text-slate-300">—</span>
+                        )}
+                      </td>
+                    )}
+                  </tr>
+                );
+              })}
+            </Fragment>
+          ))}
         </tbody>
       </table>
     </div>

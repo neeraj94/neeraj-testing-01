@@ -80,6 +80,9 @@ export interface CheckoutOrderLine {
   unitPrice: number;
   taxRate?: number;
   productSlug?: string | null;
+  variantId?: number | null;
+  variantSku?: string | null;
+  variantLabel?: string | null;
 }
 
 export interface OrderLine {
@@ -90,6 +93,9 @@ export interface OrderLine {
   lineTotal?: number | null;
   taxRate?: number | null;
   productSlug?: string | null;
+  variantId?: number | null;
+  variantSku?: string | null;
+  variantLabel?: string | null;
 }
 
 export interface CheckoutOrderPayload {
@@ -135,4 +141,5 @@ export interface AppliedCoupon {
   discountType: 'FLAT' | 'PERCENTAGE';
   discountValue: number | null;
   discountAmount: number | null;
+  description?: string | null;
 }

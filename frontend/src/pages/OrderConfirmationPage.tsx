@@ -128,6 +128,14 @@ const OrderConfirmationPage = () => {
   });
 
   const currency = baseCurrency ?? 'USD';
+  const appliedCoupon = orderQuery.data?.summary?.appliedCoupon ?? null;
+  const couponDescription = appliedCoupon
+    ? appliedCoupon.description?.trim()?.length
+      ? appliedCoupon.description
+      : appliedCoupon.discountType === 'PERCENTAGE'
+        ? `${appliedCoupon.discountValue ?? 0}% off`
+        : `Save ${formatCurrency(appliedCoupon.discountValue ?? 0, currency)}`
+    : null;
 
   const estimatedDeliveryDate = useMemo(() => {
     if (!orderQuery.data?.createdAt) {
@@ -262,8 +270,12 @@ const OrderConfirmationPage = () => {
                         key={`${orderQuery.data.id}-${line.productId ?? index}`}
                         className="flex flex-wrap justify-between gap-4"
                       >
-                        <div>
+                        <div className="space-y-1">
                           <p className="text-sm font-semibold text-slate-900">{line.name ?? 'Product'}</p>
+                          {line.variantLabel && <p className="text-xs font-medium text-slate-600">{line.variantLabel}</p>}
+                          {line.variantSku && (
+                            <p className="text-[11px] uppercase tracking-wide text-slate-400">SKU: {line.variantSku}</p>
+                          )}
                           <p className="text-xs text-slate-500">
                             Qty {line.quantity} × {formatCurrency(line.unitPrice ?? 0, currency)}
                           </p>
@@ -282,6 +294,16 @@ const OrderConfirmationPage = () => {
                     <p className="text-sm text-slate-500">No items were recorded for this order.</p>
                   )}
                 </div>
+                {appliedCoupon && (
+                  <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50/60 p-4 text-xs text-emerald-700">
+                    <p className="text-sm font-semibold text-emerald-800">Coupon applied</p>
+                    <p className="mt-1 font-medium">Code: {appliedCoupon.code}</p>
+                    {couponDescription && <p className="mt-1">{couponDescription}</p>}
+                    <p className="mt-1">
+                      Discount saved: {formatCurrency(appliedCoupon.discountAmount ?? 0, currency)} · Type: {appliedCoupon.discountType}
+                    </p>
+                  </div>
+                )}
                 {orderQuery.data.summary && (
                   <dl className="mt-6 space-y-2 text-sm text-slate-600">
                     <div className="flex items-center justify-between">

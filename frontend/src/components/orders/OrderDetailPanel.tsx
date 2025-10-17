@@ -50,6 +50,14 @@ const OrderDetailPanel = ({ order, baseCurrency, onClose }: OrderDetailPanelProp
   const lines = order.lines ?? [];
   const summary = order.summary;
   const paymentMethod = order.paymentMethod;
+  const appliedCoupon = summary?.appliedCoupon ?? null;
+  const couponDescription = appliedCoupon
+    ? appliedCoupon.description?.trim()?.length
+      ? appliedCoupon.description
+      : appliedCoupon.discountType === 'PERCENTAGE'
+        ? `${appliedCoupon.discountValue ?? 0}% off`
+        : `Save ${formatCurrency(appliedCoupon.discountValue ?? 0, currency)}`
+    : null;
 
   return (
     <section className="space-y-6 rounded-2xl border border-slate-200 bg-slate-50 p-6 shadow-sm">
@@ -118,6 +126,8 @@ const OrderDetailPanel = ({ order, baseCurrency, onClose }: OrderDetailPanelProp
               <div key={`${order.id}-${line.productId ?? index}`} className="flex flex-wrap justify-between gap-4">
                 <div className="space-y-1">
                   <p className="text-sm font-semibold text-slate-900">{line.name ?? 'Product'}</p>
+                  {line.variantLabel && <p className="text-xs font-medium text-slate-600">{line.variantLabel}</p>}
+                  {line.variantSku && <p className="text-[11px] uppercase tracking-wide text-slate-400">SKU: {line.variantSku}</p>}
                   {line.productSlug ? (
                     <a
                       href={`/product/${line.productSlug}`}
@@ -172,6 +182,16 @@ const OrderDetailPanel = ({ order, baseCurrency, onClose }: OrderDetailPanelProp
               <dd>{formatCurrency(summary.grandTotal ?? 0, currency)}</dd>
             </div>
           </dl>
+        )}
+        {appliedCoupon && (
+          <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50/60 p-4 text-xs text-emerald-700">
+            <p className="text-sm font-semibold text-emerald-800">Coupon applied</p>
+            <p className="mt-1 font-medium">Code: {appliedCoupon.code}</p>
+            {couponDescription && <p className="mt-1">{couponDescription}</p>}
+            <p className="mt-1">
+              Discount saved: {formatCurrency(appliedCoupon.discountAmount ?? 0, currency)} · Type: {appliedCoupon.discountType}
+            </p>
+          </div>
         )}
       </div>
     </section>

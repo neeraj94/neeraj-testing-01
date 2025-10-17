@@ -12,6 +12,7 @@ public class AppliedCouponDto {
     private DiscountType discountType;
     private BigDecimal discountValue;
     private BigDecimal discountAmount;
+    private String description;
 
     public Long getId() {
         return id;
@@ -59,6 +60,14 @@ public class AppliedCouponDto {
 
     public void setDiscountAmount(BigDecimal discountAmount) {
         this.discountAmount = discountAmount;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
     }
 }
 
