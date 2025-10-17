@@ -10,6 +10,7 @@ public class OrderLineDto {
     private BigDecimal unitPrice;
     private BigDecimal lineTotal;
     private BigDecimal taxRate;
+    private String productSlug;
 
     public Long getProductId() {
         return productId;
@@ -57,5 +58,13 @@ public class OrderLineDto {
 
     public void setTaxRate(BigDecimal taxRate) {
         this.taxRate = taxRate;
+    }
+
+    public String getProductSlug() {
+        return productSlug;
+    }
+
+    public void setProductSlug(String productSlug) {
+        this.productSlug = productSlug;
     }
 }

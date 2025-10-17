@@ -17,6 +17,7 @@ public class CartItemDto {
     private BigDecimal unitPrice;
     private BigDecimal lineTotal;
     private String thumbnailUrl;
+    private BigDecimal taxRate;
 
     public Long getId() {
         return id;
@@ -120,5 +121,13 @@ public class CartItemDto {
 
     public void setThumbnailUrl(String thumbnailUrl) {
         this.thumbnailUrl = thumbnailUrl;
+    }
+
+    public BigDecimal getTaxRate() {
+        return taxRate;
+    }
+
+    public void setTaxRate(BigDecimal taxRate) {
+        this.taxRate = taxRate;
     }
 }

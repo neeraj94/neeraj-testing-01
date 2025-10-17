@@ -45,6 +45,7 @@ import PublicCategoriesPage from './pages/PublicCategoriesPage';
 import PublicProductPage from './pages/PublicProductPage';
 import PublicBrandsPage from './pages/PublicBrandsPage';
 import PublicCouponsPage from './pages/PublicCouponsPage';
+import PublicProductsPage from './pages/PublicProductsPage';
 import CartPage from './pages/CartPage';
 import CheckoutPage from './pages/CheckoutPage';
 import OrderConfirmationPage from './pages/OrderConfirmationPage';
@@ -130,7 +131,7 @@ const App = () => {
     };
   }, [accessToken, refreshToken, dispatch]);
 
-  const publicExact = ['/', '/login', '/signup', '/categories', '/brands', '/products/showcase', '/coupons'];
+  const publicExact = ['/', '/login', '/signup', '/categories', '/brands', '/products', '/products/showcase', '/coupons'];
   const publicPrefixes = ['/blog', '/product', '/products'];
   const isPublicRoute =
     publicExact.includes(location.pathname) ||
@@ -155,6 +156,7 @@ const App = () => {
       <Route path="/blog/:slug" element={<PublicBlogPostPage />} />
       <Route path="/categories" element={<PublicCategoriesPage />} />
       <Route path="/brands" element={<PublicBrandsPage />} />
+      <Route path="/products" element={<PublicProductsPage />} />
       <Route path="/coupons" element={<PublicCouponsPage />} />
       <Route path="/cart" element={<CartPage />} />
       <Route path="/order-confirmation/:orderId" element={<OrderConfirmationPage />} />

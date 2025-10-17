@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import api from '../services/http';
 import type { BlogCategory, PublicBlogPost, PublicBlogPostPage } from '../types/blog';
+import StorefrontHeader from '../components/StorefrontHeader';
 
 const DEFAULT_PAGE_SIZE = 9;
 
@@ -87,6 +88,8 @@ const PublicBlogListPage = () => {
 
   return (
     <div className="min-h-screen bg-slate-50">
+      <StorefrontHeader activeKey="blog" />
+
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-6xl flex-col gap-4 px-6 py-10 sm:flex-row sm:items-center sm:justify-between">
           <div>

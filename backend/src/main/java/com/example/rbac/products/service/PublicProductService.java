@@ -4,11 +4,14 @@ import com.example.rbac.common.exception.ApiException;
 import com.example.rbac.coupons.model.Coupon;
 import com.example.rbac.coupons.repository.CouponRepository;
 import com.example.rbac.products.dto.storefront.PublicProductDetailDto;
+import com.example.rbac.products.dto.storefront.PublicProductSearchCriteria;
+import com.example.rbac.products.dto.storefront.PublicProductSearchResponse;
 import com.example.rbac.products.mapper.PublicProductMapper;
 import com.example.rbac.products.model.Product;
 import com.example.rbac.products.model.ProductReview;
 import com.example.rbac.products.repository.ProductRepository;
 import com.example.rbac.products.repository.ProductReviewRepository;
+import com.example.rbac.products.repository.PublicProductSearchRepository;
 import com.example.rbac.wedges.model.Wedge;
 import com.example.rbac.wedges.repository.WedgeRepository;
 import com.example.rbac.users.model.User;
@@ -44,19 +47,27 @@ public class PublicProductService {
     private final WedgeRepository wedgeRepository;
     private final PublicProductMapper publicProductMapper;
     private final UserRecentViewService userRecentViewService;
+    private final PublicProductSearchRepository publicProductSearchRepository;
 
     public PublicProductService(ProductRepository productRepository,
                                 ProductReviewRepository productReviewRepository,
                                 CouponRepository couponRepository,
                                 WedgeRepository wedgeRepository,
                                 PublicProductMapper publicProductMapper,
-                                UserRecentViewService userRecentViewService) {
+                                UserRecentViewService userRecentViewService,
+                                PublicProductSearchRepository publicProductSearchRepository) {
         this.productRepository = productRepository;
         this.productReviewRepository = productReviewRepository;
         this.couponRepository = couponRepository;
         this.wedgeRepository = wedgeRepository;
         this.publicProductMapper = publicProductMapper;
         this.userRecentViewService = userRecentViewService;
+        this.publicProductSearchRepository = publicProductSearchRepository;
+    }
+
+    @Transactional(readOnly = true)
+    public PublicProductSearchResponse searchProducts(PublicProductSearchCriteria criteria) {
+        return publicProductSearchRepository.search(criteria);
     }
 
     @Transactional(readOnly = true)

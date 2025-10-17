@@ -8,6 +8,7 @@ import com.example.rbac.uploadedfile.mapper.UploadedFileMapper;
 import com.example.rbac.uploadedfile.model.UploadedFile;
 import com.example.rbac.uploadedfile.model.UploadedFileModule;
 import com.example.rbac.uploadedfile.repository.UploadedFileRepository;
+import com.example.rbac.uploadedfile.service.UploadedFileStorageService;
 import com.example.rbac.uploadedfile.spec.UploadedFileSpecifications;
 import com.example.rbac.users.model.User;
 import com.example.rbac.users.model.UserPrincipal;
@@ -42,9 +43,12 @@ public class UploadedFileService {
     private static final String FILE_TYPE_DOCUMENT = "DOCUMENT";
 
     private final UploadedFileRepository repository;
+    private final UploadedFileStorageService storageService;
 
-    public UploadedFileService(UploadedFileRepository repository) {
+    public UploadedFileService(UploadedFileRepository repository,
+                               UploadedFileStorageService storageService) {
         this.repository = repository;
+        this.storageService = storageService;
     }
 
     @Transactional
@@ -95,7 +99,7 @@ public class UploadedFileService {
         );
 
         List<UploadedFileDto> content = result.getContent().stream()
-                .map(UploadedFileMapper::toDto)
+                .map(this::mapWithResolvedPublicUrl)
                 .collect(Collectors.toList());
 
         return new PageResponse<>(content,
@@ -109,7 +113,7 @@ public class UploadedFileService {
     public UploadedFileDto get(Long id) {
         UploadedFile file = repository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Uploaded file not found"));
-        return UploadedFileMapper.toDto(file);
+        return mapWithResolvedPublicUrl(file);
     }
 
     @Transactional(readOnly = true)
@@ -151,6 +155,14 @@ public class UploadedFileService {
                 .filter(Optional::isPresent)
                 .map(Optional::get)
                 .collect(Collectors.toCollection(() -> EnumSet.noneOf(UploadedFileModule.class)));
+    }
+
+    private UploadedFileDto mapWithResolvedPublicUrl(UploadedFile entity) {
+        UploadedFileDto dto = UploadedFileMapper.toDto(entity);
+        if (!StringUtils.hasText(dto.getPublicUrl()) && StringUtils.hasText(dto.getStorageKey())) {
+            dto.setPublicUrl(storageService.publicUrlForKey(dto.getStorageKey()));
+        }
+        return dto;
     }
 
     private Optional<UserInfo> resolveCurrentUser() {

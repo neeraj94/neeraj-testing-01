@@ -1,7 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import api from '../services/http';
 import { useQuery } from '@tanstack/react-query';
 import type { CouponType, PublicCoupon, PublicCouponPage } from '../types/coupon';
+import { useAppSelector } from '../app/hooks';
+import { selectBaseCurrency } from '../features/settings/selectors';
+import { formatCurrency as formatCurrencyValue } from '../utils/currency';
+import StorefrontHeader from '../components/StorefrontHeader';
 
 const PAGE_SIZE = 12;
 
@@ -9,18 +13,6 @@ const typeLabels: Record<CouponType, string> = {
   PRODUCT: 'Product specific',
   CART_VALUE: 'Cart threshold',
   NEW_SIGNUP: 'New signup'
-};
-
-const formatCurrency = (value?: number | null) => {
-  if (value == null) {
-    return null;
-  }
-  return value.toLocaleString(undefined, {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0
-  });
 };
 
 const formatDateLabel = (value: string) => {
@@ -41,15 +33,24 @@ const buildRangeLabel = (coupon: PublicCoupon) => {
   return `${start} – ${end}`;
 };
 
-const describeDiscount = (coupon: PublicCoupon) => {
+const describeDiscount = (
+  coupon: PublicCoupon,
+  formatAmount: (value?: number | null) => string | null
+) => {
   if (coupon.discountType === 'PERCENTAGE') {
     return `${coupon.discountValue}% off`;
   }
-  const amount = formatCurrency(Number(coupon.discountValue));
+  const amount = formatAmount(Number(coupon.discountValue));
   return amount ? `${amount} off` : 'Special savings';
 };
 
 const PublicCouponsPage = () => {
+  const baseCurrency = useAppSelector(selectBaseCurrency);
+  const currencyCode = baseCurrency ?? 'USD';
+  const formatAmount = useCallback(
+    (value?: number | null) => (value == null ? null : formatCurrencyValue(value, currencyCode)),
+    [currencyCode]
+  );
   const [page, setPage] = useState(0);
   const [searchDraft, setSearchDraft] = useState('');
   const [search, setSearch] = useState('');
@@ -124,6 +125,8 @@ const PublicCouponsPage = () => {
 
   return (
     <div className="min-h-screen bg-slate-50">
+      <StorefrontHeader activeKey="coupons" />
+
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-6xl flex-col gap-6 px-6 py-12 md:flex-row md:items-center md:justify-between">
           <div className="max-w-3xl">
@@ -176,8 +179,8 @@ const PublicCouponsPage = () => {
         {!couponsQuery.isLoading && coupons.length > 0 && (
           <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
             {coupons.map((coupon) => {
-              const discountLabel = describeDiscount(coupon);
-              const minimumLabel = formatCurrency(coupon.minimumCartValue ?? null);
+              const discountLabel = describeDiscount(coupon, formatAmount);
+              const minimumLabel = formatAmount(coupon.minimumCartValue ?? null);
               const productHighlights = coupon.products.slice(0, 3).map((product) => product.name).filter(Boolean);
               const extraProducts = Math.max(coupon.products.length - productHighlights.length, 0);
               const categoryHighlights = coupon.categories.slice(0, 3);

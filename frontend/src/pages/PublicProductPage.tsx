@@ -1,4 +1,4 @@
-import { Fragment, forwardRef, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, forwardRef, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { MouseEvent } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -7,6 +7,9 @@ import api from '../services/http';
 import { useAppDispatch, useAppSelector } from '../app/hooks';
 import { addCartItem, addGuestItem } from '../features/cart/cartSlice';
 import { useToast } from '../components/ToastProvider';
+import { selectBaseCurrency } from '../features/settings/selectors';
+import { formatCurrency as formatCurrencyValue } from '../utils/currency';
+import StorefrontHeader from '../components/StorefrontHeader';
 import type {
   PublicProductDetail,
   PublicProductOffer,
@@ -18,25 +21,6 @@ import type {
   PublicProductVariantAttribute,
   PublicProductVariantAttributeValue
 } from '../types/public-product';
-
-const navLinks = [
-  { href: '/', label: 'Home' },
-  { href: '/categories', label: 'Categories' },
-  { href: '/brands', label: 'Brands' },
-  { href: '/blog', label: 'Blog' }
-];
-
-const formatCurrency = (value?: number | null) => {
-  if (value == null) {
-    return null;
-  }
-  return value.toLocaleString(undefined, {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0
-  });
-};
 
 const formatDate = (value: string) => {
   const parsed = new Date(value);
@@ -98,6 +82,13 @@ const PublicProductPage = () => {
   const dispatch = useAppDispatch();
   const { notify } = useToast();
   const authUser = useAppSelector((state) => state.auth.user);
+  const baseCurrency = useAppSelector(selectBaseCurrency);
+  const currencyCode = baseCurrency ?? 'USD';
+
+  const formatPrice = useCallback(
+    (value?: number | null) => (value == null ? null : formatCurrencyValue(value, currencyCode)),
+    [currencyCode]
+  );
 
   const productQuery = useQuery<PublicProductDetail>({
     queryKey: ['public-product', slug],
@@ -179,11 +170,12 @@ const PublicProductPage = () => {
   const displayPrice = activeVariant?.finalPrice ?? basePrice;
   const originalPrice = product?.pricing.unitPrice ?? displayPrice;
   const savings = originalPrice != null && displayPrice != null ? Math.max(originalPrice - displayPrice, 0) : 0;
+  const savingsLabel = savings > 0 ? formatPrice(savings) : null;
   const discountLabel =
     product?.pricing.discountType === 'PERCENTAGE' && product.pricing.discountPercentage != null
       ? `${product.pricing.discountPercentage}% off`
-      : savings > 0
-        ? `${formatCurrency(savings)} off`
+      : savingsLabel
+        ? `${savingsLabel} off`
         : null;
 
   const inStock = activeVariant ? activeVariant.inStock : product?.stock.inStock ?? false;
@@ -296,24 +288,7 @@ const PublicProductPage = () => {
 
   return (
     <div className="min-h-screen bg-[#EEF2F7] text-slate-900">
-      <header className="border-b border-slate-200 bg-white/95 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-6 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
-          <Link to="/" className="text-2xl font-semibold tracking-tight text-slate-900">
-            ShopHub
-          </Link>
-          <nav className="flex flex-wrap items-center gap-3 text-sm text-slate-600">
-            {navLinks.map((link) => (
-              <Link
-                key={link.href}
-                to={link.href}
-                className="rounded-full px-4 py-2 transition hover:bg-slate-100 hover:text-slate-900"
-              >
-                {link.label}
-              </Link>
-            ))}
-          </nav>
-        </div>
-      </header>
+      <StorefrontHeader activeKey="products" />
 
       <main className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
         {productQuery.isLoading && (
@@ -431,10 +406,10 @@ const PublicProductPage = () => {
                     <div className="flex flex-col gap-2">
                       <div className="flex flex-wrap items-baseline gap-4">
                         <span className="text-4xl font-semibold text-slate-900">
-                          {formatCurrency(displayPrice) ?? '—'}
+                          {formatPrice(displayPrice) ?? '—'}
                         </span>
                         {originalPrice != null && originalPrice > (displayPrice ?? 0) && (
-                          <span className="text-base text-slate-400 line-through">{formatCurrency(originalPrice)}</span>
+                          <span className="text-base text-slate-400 line-through">{formatPrice(originalPrice)}</span>
                         )}
                         {discountLabel && (
                           <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-700">
@@ -442,9 +417,7 @@ const PublicProductPage = () => {
                           </span>
                         )}
                       </div>
-                      {savings > 0 && (
-                        <p className="text-sm text-emerald-600">You save {formatCurrency(savings)}</p>
-                      )}
+                      {savingsLabel && <p className="text-sm text-emerald-600">You save {savingsLabel}</p>}
                       {product.shortDescription && (
                         <p className="text-sm text-slate-600">{product.shortDescription}</p>
                       )}
@@ -457,13 +430,13 @@ const PublicProductPage = () => {
                           <span className="text-xs text-slate-400">Apply at checkout</span>
                         </div>
                         <div className="space-y-3">
-                          {product.offers.map((offer) => (
-                            <OfferCard key={offer.id} offer={offer} />
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                    {product.offers.map((offer) => (
+                      <OfferCard key={offer.id} offer={offer} formatPrice={formatPrice} />
+                    ))}
                   </div>
+                </div>
+              )}
+            </div>
 
                   {product.variantAttributes.length > 0 && (
                     <div className="space-y-6">
@@ -553,7 +526,11 @@ const PublicProductPage = () => {
             </section>
 
             {product.frequentlyBought.length > 0 && (
-              <FrequentlyBoughtTogether product={product} items={product.frequentlyBought} />
+              <FrequentlyBoughtTogether
+                product={product}
+                items={product.frequentlyBought}
+                formatPrice={formatPrice}
+              />
             )}
 
             {(product.expandableSections.length > 0 || product.infoSections.length > 0) && (
@@ -580,7 +557,7 @@ const PublicProductPage = () => {
                 <div className="mt-6 overflow-x-auto pb-2">
                   <div className="flex gap-6">
                     {product.recentlyViewed.map((item) => (
-                      <RecommendationTile key={item.id} item={item} />
+                      <RecommendationTile key={item.id} item={item} formatPrice={formatPrice} />
                     ))}
                   </div>
                 </div>
@@ -593,13 +570,20 @@ const PublicProductPage = () => {
   );
 };
 
-const OfferCard = ({ offer }: { offer: PublicProductOffer }) => {
+const OfferCard = ({
+  offer,
+  formatPrice
+}: {
+  offer: PublicProductOffer;
+  formatPrice: (value?: number | null) => string | null;
+}) => {
   const discountLabel =
     offer.discountType === 'PERCENTAGE'
       ? `${offer.discountValue}% off`
-      : offer.discountValue
-        ? `${formatCurrency(offer.discountValue)} off`
-        : 'Special savings';
+      : (() => {
+          const amount = formatPrice(offer.discountValue);
+          return amount ? `${amount} off` : 'Special savings';
+        })();
 
   return (
     <div className="flex flex-col gap-2 rounded-2xl border border-emerald-100 bg-emerald-50/60 p-4 shadow-sm">
@@ -688,10 +672,12 @@ const VariantSelector = ({
 
 const FrequentlyBoughtTogether = ({
   product,
-  items
+  items,
+  formatPrice
 }: {
   product: PublicProductDetail;
   items: PublicProductRecommendation[];
+  formatPrice: (value?: number | null) => string | null;
 }) => {
   const [selectedIds, setSelectedIds] = useState<Set<number>>(() => new Set(items.map((item) => item.id)));
 
@@ -751,7 +737,7 @@ const FrequentlyBoughtTogether = ({
                       <Link to={`/product/${item.slug}`} className="text-sm font-semibold text-slate-800 hover:text-emerald-600">
                         {item.name}
                       </Link>
-                      <span className="text-sm text-slate-500">{formatCurrency(price)}</span>
+                      <span className="text-sm text-slate-500">{formatPrice(price) ?? '—'}</span>
                     </div>
                   </div>
                   {isPrimary && <span className="text-xs font-medium uppercase tracking-wide text-emerald-600">Main product</span>}
@@ -761,7 +747,7 @@ const FrequentlyBoughtTogether = ({
         </div>
         <div className="rounded-[28px] border border-emerald-100 bg-emerald-500 p-6 text-white shadow-xl shadow-emerald-200/70">
           <p className="text-sm uppercase tracking-wide text-white/80">Bundle total</p>
-          <p className="mt-3 text-3xl font-bold">{formatCurrency(bundlePrice)}</p>
+          <p className="mt-3 text-3xl font-bold">{formatPrice(bundlePrice) ?? '—'}</p>
           <p className="mt-2 text-xs text-white/80">
             Includes base product and {selectedIds.size} add-on{selectedIds.size === 1 ? '' : 's'}.
           </p>
@@ -913,7 +899,13 @@ const ReviewCard = ({ review }: { review: PublicProductReview }) => (
   </article>
 );
 
-const RecommendationTile = ({ item }: { item: PublicProductRecommendation }) => {
+const RecommendationTile = ({
+  item,
+  formatPrice
+}: {
+  item: PublicProductRecommendation;
+  formatPrice: (value?: number | null) => string | null;
+}) => {
   const dispatch = useAppDispatch();
   const { notify } = useToast();
   const authUser = useAppSelector((state) => state.auth.user);
@@ -968,7 +960,7 @@ const RecommendationTile = ({ item }: { item: PublicProductRecommendation }) => 
         </div>
         <div className="flex flex-1 flex-col gap-2 px-4 py-4">
           <p className="text-sm font-semibold text-slate-800">{item.name}</p>
-          <p className="text-sm text-slate-500">{formatCurrency(item.finalPrice ?? item.originalPrice)}</p>
+          <p className="text-sm text-slate-500">{formatPrice(item.finalPrice ?? item.originalPrice) ?? '—'}</p>
           <span className="mt-auto text-xs font-medium text-emerald-600">View details →</span>
         </div>
       </Link>
@@ -1047,24 +1039,31 @@ const SectionAccordion = ({ title, sections }: { title: string; sections: Public
   );
 };
 
-const RecommendationCard = ({ item }: { item: PublicProductRecommendation }) => (
-  <Link
-    to={`/product/${item.slug}`}
-    className="group flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
-  >
-    <div className="h-48 w-full overflow-hidden bg-slate-100">
-      {item.imageUrl ? (
-        <img src={item.imageUrl} alt={item.name} className="h-full w-full object-cover transition group-hover:scale-105" />
-      ) : (
-        <div className="flex h-full items-center justify-center text-sm text-slate-400">No image</div>
-      )}
-    </div>
-    <div className="flex flex-1 flex-col gap-2 px-4 py-4">
-      <p className="text-sm font-semibold text-slate-800">{item.name}</p>
-      <p className="text-sm text-slate-500">{formatCurrency(item.finalPrice ?? item.originalPrice)}</p>
-      <span className="mt-auto text-xs font-medium text-slate-900">View details →</span>
-    </div>
-  </Link>
-);
+const RecommendationCard = ({ item }: { item: PublicProductRecommendation }) => {
+  const baseCurrency = useAppSelector(selectBaseCurrency);
+  const currencyCode = baseCurrency ?? 'USD';
+  const priceAmount = item.finalPrice ?? item.originalPrice;
+  const priceLabel = priceAmount == null ? '—' : formatCurrencyValue(priceAmount, currencyCode);
+
+  return (
+    <Link
+      to={`/product/${item.slug}`}
+      className="group flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
+    >
+      <div className="h-48 w-full overflow-hidden bg-slate-100">
+        {item.imageUrl ? (
+          <img src={item.imageUrl} alt={item.name} className="h-full w-full object-cover transition group-hover:scale-105" />
+        ) : (
+          <div className="flex h-full items-center justify-center text-sm text-slate-400">No image</div>
+        )}
+      </div>
+      <div className="flex flex-1 flex-col gap-2 px-4 py-4">
+        <p className="text-sm font-semibold text-slate-800">{item.name}</p>
+        <p className="text-sm text-slate-500">{priceLabel}</p>
+        <span className="mt-auto text-xs font-medium text-slate-900">View details →</span>
+      </div>
+    </Link>
+  );
+};
 
 export default PublicProductPage;

@@ -79,6 +79,7 @@ export interface CheckoutOrderLine {
   quantity: number;
   unitPrice: number;
   taxRate?: number;
+  productSlug?: string | null;
 }
 
 export interface OrderLine {
@@ -88,6 +89,7 @@ export interface OrderLine {
   unitPrice?: number | null;
   lineTotal?: number | null;
   taxRate?: number | null;
+  productSlug?: string | null;
 }
 
 export interface CheckoutOrderPayload {
