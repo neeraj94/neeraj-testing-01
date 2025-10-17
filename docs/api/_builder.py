@@ -4,7 +4,7 @@ import html
 
 TEMPLATE = """<!DOCTYPE html>\n<html lang=\"en\">\n  <head>\n    <meta charset=\"UTF-8\" />\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />\n    <title>{title}</title>\n    <link rel=\"stylesheet\" href=\"styles.css\" />\n  </head>\n  <body class=\"page\">\n    <div class=\"docs\">\n      <aside class=\"docs__nav sidebar\" aria-label=\"API navigation\">\n        <div class=\"sidebar__brand\">\n          <div class=\"sidebar__badge\">RBAC Commerce</div>\n          <h1>{title}</h1>\n          <p>{summary}</p>\n          <p class=\"sidebar__hint\">Base path: <code>{base}</code></p>\n        </div>\n        <div class=\"sidebar__controls\">\n          <label class=\"control\">\n            <span class=\"control__label\">Environment</span>\n            <select id=\"environmentSelect\">\n              <option value=\"https://sandbox.api.rbac-commerce.dev\">Sandbox</option>\n              <option value=\"https://staging.api.rbac-commerce.dev\">Staging</option>\n              <option value=\"https://api.rbac-commerce.dev\">Production</option>\n              <option value=\"custom\">Custom…</option>\n            </select>\n          </label>\n          <label class=\"control\" id=\"customUrlControl\" hidden>\n            <span class=\"control__label\">Custom base URL</span>\n            <input id=\"baseUrl\" type=\"url\" spellcheck=\"false\" value=\"https://sandbox.api.rbac-commerce.dev\" />\n          </label>\n          <label class=\"control\">\n            <span class=\"control__label\">Bearer token</span>\n            <input id=\"authToken\" type=\"text\" spellcheck=\"false\" placeholder=\"Optional token for private endpoints\" />\n          </label>\n        </div>\n        <nav class=\"sidebar__nav\" aria-label=\"Endpoints\">\n          <h2>Endpoints</h2>\n          <ul class=\"sidebar__tree\" role=\"tree\">\n            {nav_items}\n          </ul>\n        </nav>\n      </aside>\n      <main class=\"docs__content content\" id=\"docsContent\" tabindex=\"-1\">\n        <header class=\"hero\">\n          <h2>{title}</h2>\n          <p>{summary}</p>\n          <p><strong>Selected base URL:</strong> <span data-base-display>https://sandbox.api.rbac-commerce.dev</span></p>\n        </header>\n        {sections}\n      </main>\n    </div>\n    <footer class=\"docs__footer\">\n      <a href=\"index.html\">Back to index</a>\n    </footer>\n    <script src=\"app.js\" defer></script>\n  </body>\n</html>\n"""
 
-SECTION = """<article class=\"endpoint\" id=\"{anchor}\" data-endpoint-id=\"{anchor}\" data-method=\"{method}\" data-base-path=\"{base_path}\" data-path=\"{path}\" data-auth=\"{auth}\"{headers_attr}{body_attr}>\n  <div class=\"endpoint__header\">\n    <div class=\"endpoint__title\">\n      <span class=\"http-badge http-badge--{method_class}\">{method}</span>\n      <div>\n        <h3>{name}</h3>\n        <p><code>{full_path}</code></p>\n      </div>\n    </div>\n  </div>\n  <div class=\"endpoint__layout\">\n    <div class=\"endpoint__body\">\n      <section class=\"endpoint__section\">\n        <h4>Summary</h4>\n        <p>{description}</p>\n      </section>\n      {params}\n      {headers}\n      {body}\n      <section class=\"endpoint__section\">\n        <h4>Success response</h4>\n        <p class=\"status success\">HTTP {success_status}</p>\n        {success_body}\n      </section>\n      <section class=\"endpoint__section\">\n        <h4>Error scenarios</h4>\n        {error_table}\n      </section>\n    </div>\n    <div class=\"endpoint__panels\">\n      <section class=\"panel\">\n        <header class=\"panel__header\">\n          <h4>cURL samples</h4>\n          <span class=\"panel__format\">Interpolates current environment</span>\n        </header>\n        <div class=\"code-samples\" data-endpoint=\"{anchor}\">\n          <div class=\"code-samples__tabs\" role=\"tablist\">\n            <button type=\"button\" class=\"code-samples__tab is-active\" role=\"tab\" id=\"{anchor}-bash-tab\" aria-selected=\"true\" data-tab-target=\"{anchor}-bash\">bash/zsh</button>\n            <button type=\"button\" class=\"code-samples__tab\" role=\"tab\" id=\"{anchor}-powershell-tab\" aria-selected=\"false\" data-tab-target=\"{anchor}-powershell\">PowerShell/CMD</button>\n          </div>\n          <pre id=\"{anchor}-bash\" class=\"code-block\" role=\"tabpanel\" aria-labelledby=\"{anchor}-bash-tab\" data-template=\"curl-bash\" data-endpoint=\"{anchor}\"></pre>\n          <pre id=\"{anchor}-powershell\" class=\"code-block is-hidden\" role=\"tabpanel\" aria-labelledby=\"{anchor}-powershell-tab\" data-template=\"curl-powershell\" data-endpoint=\"{anchor}\" hidden></pre>\n          <div class=\"panel__actions\">\n            <button type=\"button\" class=\"copy-button\" data-copy>Copy</button>\n          </div>\n        </div>\n      </section>\n    </div>\n  </div>\n</article>\n"""
+SECTION = """<article class=\"endpoint\" id=\"{anchor}\" data-endpoint-id=\"{anchor}\" data-method=\"{method}\" data-base-path=\"{base_path}\" data-path=\"{path}\" data-auth=\"{auth}\"{headers_attr}{body_attr}>\n  <div class=\"endpoint__header\">\n    <div class=\"endpoint__title\">\n      <span class=\"http-badge http-badge--{method_class}\">{method}</span>\n      <div>\n        <h3>{name}</h3>\n        <p><code>{full_path}</code></p>\n      </div>\n    </div>\n    {auth_badge}\n  </div>\n  <div class=\"endpoint__layout\">\n    <div class=\"endpoint__body\">\n      <section class=\"endpoint__section\">\n        <h4>Summary</h4>\n        <p>{description}</p>\n      </section>\n      {auth_section}\n      {params}\n      {headers}\n      {body}\n      <section class=\"endpoint__section\">\n        <h4>Success response</h4>\n        <p class=\"status success\">HTTP {success_status}</p>\n        {success_body}\n      </section>\n      <section class=\"endpoint__section\">\n        <h4>Error scenarios</h4>\n        {error_table}\n      </section>\n    </div>\n    <div class=\"endpoint__panels\">\n      <section class=\"panel\">\n        <header class=\"panel__header\">\n          <h4>cURL samples</h4>\n          <span class=\"panel__format\">Interpolates current environment</span>\n        </header>\n        <div class=\"code-samples\" data-endpoint=\"{anchor}\">\n          <div class=\"code-samples__tabs\" role=\"tablist\">\n            <button type=\"button\" class=\"code-samples__tab is-active\" role=\"tab\" id=\"{anchor}-bash-tab\" aria-selected=\"true\" data-tab-target=\"{anchor}-bash\">bash/zsh</button>\n            <button type=\"button\" class=\"code-samples__tab\" role=\"tab\" id=\"{anchor}-powershell-tab\" aria-selected=\"false\" data-tab-target=\"{anchor}-powershell\">PowerShell/CMD</button>\n          </div>\n          <pre id=\"{anchor}-bash\" class=\"code-block\" role=\"tabpanel\" aria-labelledby=\"{anchor}-bash-tab\" data-template=\"curl-bash\" data-endpoint=\"{anchor}\"></pre>\n          <pre id=\"{anchor}-powershell\" class=\"code-block is-hidden\" role=\"tabpanel\" aria-labelledby=\"{anchor}-powershell-tab\" data-template=\"curl-powershell\" data-endpoint=\"{anchor}\" hidden></pre>\n          <div class=\"panel__actions\">\n            <button type=\"button\" class=\"copy-button\" data-copy>Copy</button>\n          </div>\n        </div>\n      </section>\n      <section class=\"panel panel--try\">\n        <header class=\"panel__header\">\n          <h4>Try it</h4>\n          <span class=\"panel__format\">Send a real request with your environment</span>\n        </header>\n        <form class=\"try-form\" data-try-form>\n          <label class=\"field\">\n            <span class=\"field__label\">Request URL</span>\n            <input type=\"url\" spellcheck=\"false\" data-try-url required />\n            <span class=\"field__hint\">Update path parameters before sending.</span>\n          </label>\n          <label class=\"field\">\n            <span class=\"field__label\">Headers</span>\n            <textarea rows=\"3\" spellcheck=\"false\" data-try-headers></textarea>\n            <span class=\"field__hint\">One header per line (<code>Name: Value</code>).</span>\n          </label>\n          <label class=\"field\" data-try-body-wrapper>\n            <span class=\"field__label\">Body</span>\n            <textarea rows=\"8\" spellcheck=\"false\" data-try-body></textarea>\n            <span class=\"field__hint\">JSON payload; leave blank to omit.</span>\n          </label>\n          <button type=\"submit\" class=\"button\" data-try-submit>Send {method}</button>\n        </form>\n        <div class=\"try-response\" data-try-response hidden>\n          <div class=\"try-response__meta\">\n            <span data-try-status>Waiting…</span>\n            <span data-try-duration></span>\n          </div>\n          <pre class=\"try-response__body\" data-try-output></pre>\n        </div>\n      </section>\n    </div>\n  </div>\n</article>\n"""
 
 HEADER_SECTION = """<section class=\"endpoint__section\">\n  <h4>Headers</h4>\n  <table>\n    <thead><tr><th>Name</th><th>Value</th></tr></thead>\n    <tbody>{rows}</tbody>\n  </table>\n</section>\n"""
 
@@ -25,6 +25,7 @@ def write_module(module: dict) -> None:
     for ep in module['endpoints']:
         path_fragment = ep['path'].strip('/').replace('/', '-') or 'root'
         path_fragment = path_fragment.replace('{', '').replace('}', '')
+        path_fragment = ''.join(ch if ch.isalnum() or ch == '-' else '-' for ch in path_fragment)
         anchor = f"{ep['method'].lower()}-{path_fragment}"
         nav_items.append(
             "<li role=\"treeitem\">"
@@ -54,17 +55,22 @@ def write_module(module: dict) -> None:
         body_section = ''
         body_attr = ''
         if 'body' in ep:
-            if ep['body'] is None:
+            body_value = ep['body']
+            if body_value is None:
                 body_section = "<section class=\"endpoint__section\"><h4>Request body</h4><p>No body required.</p></section>"
                 body_attr = _attribute_from_json('body', None)
             else:
-                body_json = json.dumps(ep['body'], indent=2)
+                if isinstance(body_value, str):
+                    body_text = body_value
+                    body_attr = _attribute_from_json('body', body_value)
+                else:
+                    body_text = json.dumps(body_value, indent=2)
+                    body_attr = _attribute_from_json('body', body_value)
                 body_section = (
                     "<section class=\"endpoint__section\"><h4>Request body</h4><pre>"
-                    f"{html.escape(body_json)}"
+                    f"{html.escape(body_text)}"
                     "</pre></section>"
                 )
-                body_attr = _attribute_from_json('body', ep['body'])
 
         success_body = '<p>No body returned.</p>'
         if ep['success'].get('body') is not None:
@@ -75,9 +81,22 @@ def write_module(module: dict) -> None:
             example_json = html.escape(json.dumps(example, indent=2)) if example is not None else ''
             error_rows.append(
                 f"<tr><td class='status client'>HTTP {status}</td><td>{html.escape(desc)}</td><td><pre>{example_json}</pre></td></tr>"
-            )
+        )
         error_table = (
             ERROR_TABLE.format(rows=''.join(error_rows)) if error_rows else '<p>No specific error payloads documented.</p>'
+        )
+
+        auth_label = ep.get('auth', 'Bearer')
+        if auth_label.lower() == 'public':
+            auth_badge = "<span class=\"auth-badge auth-badge--public\">Public</span>"
+            auth_copy = "No authentication required."
+        else:
+            auth_badge = "<span class=\"auth-badge auth-badge--protected\">Protected</span>"
+            auth_copy = "Provide an <code>Authorization: Bearer &lt;token&gt;</code> header."
+        auth_section = (
+            "<section class=\"endpoint__section\"><h4>Authentication</h4><p>"
+            f"{auth_copy}"
+            "</p></section>"
         )
 
         sections.append(
@@ -96,7 +115,9 @@ def write_module(module: dict) -> None:
                 error_table=error_table,
                 base_path=html.escape(module['base']),
                 path=html.escape(ep['path']),
-                auth=html.escape(ep.get('auth', 'Bearer')),
+                auth=html.escape(auth_label),
+                auth_section=auth_section,
+                auth_badge=auth_badge,
                 headers_attr=headers_attr,
                 body_attr=body_attr,
             )
