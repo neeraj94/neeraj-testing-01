@@ -18,6 +18,15 @@ type ConfettiPiece = {
   color: string;
 };
 
+type Sparkle = {
+  id: number;
+  top: number;
+  left: number;
+  delay: number;
+  duration: number;
+  size: number;
+};
+
 const CelebrationOverlay = ({ visible }: { visible: boolean }) => {
   const pieces = useMemo<ConfettiPiece[]>(() => {
     const colors = ['#2563eb', '#60a5fa', '#34d399', '#fbbf24', '#f472b6', '#c084fc'];
@@ -48,6 +57,42 @@ const CelebrationOverlay = ({ visible }: { visible: boolean }) => {
             animationDuration: `${piece.duration}s`,
             backgroundColor: piece.color,
             transform: `rotate(${piece.rotation}deg) scale(${piece.scale})`
+          }}
+        />
+      ))}
+    </div>
+  );
+};
+
+const SparkleOverlay = ({ visible }: { visible: boolean }) => {
+  const sparkles = useMemo<Sparkle[]>(() =>
+    Array.from({ length: 36 }).map((_, index) => ({
+      id: index,
+      top: Math.random() * 100,
+      left: Math.random() * 100,
+      delay: Math.random() * 1.5,
+      duration: 2 + Math.random() * 1.5,
+      size: 12 + Math.random() * 10
+    })),
+  []);
+
+  if (!visible) {
+    return null;
+  }
+
+  return (
+    <div className="pointer-events-none fixed inset-0 z-20 overflow-hidden">
+      {sparkles.map((sparkle) => (
+        <span
+          key={sparkle.id}
+          className="sparkle"
+          style={{
+            top: `${sparkle.top}%`,
+            left: `${sparkle.left}%`,
+            animationDelay: `${sparkle.delay}s`,
+            animationDuration: `${sparkle.duration}s`,
+            width: `${sparkle.size}px`,
+            height: `${sparkle.size}px`
           }}
         />
       ))}
@@ -97,20 +142,88 @@ const OrderConfirmationPage = () => {
   }, [orderQuery.data?.createdAt]);
 
   const orderNumberFromState = (location.state as { orderNumber?: string } | undefined)?.orderNumber;
+  const resolvedOrderNumber =
+    orderQuery.data?.orderNumber ??
+    orderNumberFromState ??
+    (orderQuery.data?.id != null ? String(orderQuery.data.id) : null);
+
+  const formattedOrderNumber =
+    resolvedOrderNumber && resolvedOrderNumber.trim().length > 0
+      ? resolvedOrderNumber.startsWith('#')
+        ? resolvedOrderNumber
+        : `#${resolvedOrderNumber}`
+      : null;
+
+  const celebrationMessage = formattedOrderNumber
+    ? `🎉 Thank you for your order! Your Order ID is ${formattedOrderNumber}.`
+    : '🎉 Thank you for your order!';
+
+  const customerGreeting = orderQuery.data?.customerName
+    ? `We’re excited to serve you, ${orderQuery.data.customerName}.`
+    : 'We’re excited to get your order ready.';
+
+  const statusMessage = formattedOrderNumber
+    ? `We're preparing everything for ${formattedOrderNumber}.`
+    : 'We are getting your order ready.';
+
+  const emailMessage = orderQuery.data?.customerEmail
+    ? `A confirmation email has been sent to ${orderQuery.data.customerEmail}.`
+    : 'A confirmation email with your order details has been sent.';
+
+  const deliveryMessage = estimatedDeliveryDate
+    ? `Estimated delivery by ${estimatedDeliveryDate}.`
+    : 'We will notify you as soon as your order ships.';
+
+  const totalPaidLabel =
+    orderQuery.data?.summary?.grandTotal != null
+      ? formatCurrency(orderQuery.data.summary.grandTotal, currency)
+      : null;
 
   return (
     <div className="relative min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 py-12">
       <CelebrationOverlay visible={showCelebration} />
+      <SparkleOverlay visible={showCelebration} />
       <div className="mx-auto flex max-w-5xl flex-col gap-8 px-4">
-        <header className="relative z-20 rounded-3xl bg-white/80 p-10 text-center shadow-xl backdrop-blur">
-          <p className="text-sm font-semibold uppercase tracking-[0.3em] text-primary">Order confirmed</p>
-          <h1 className="mt-4 text-3xl font-bold text-slate-900 sm:text-4xl">Thank you for your order!</h1>
-          <p className="mt-3 text-sm text-slate-600">
-            {orderQuery.data?.orderNumber || orderNumberFromState
-              ? `Your order ${orderQuery.data?.orderNumber ?? orderNumberFromState} is now being prepared.`
-              : 'We are getting your order ready.'}
-          </p>
-          <p className="mt-1 text-xs text-slate-500">A confirmation email with your order details has been sent.</p>
+        <header className="relative z-20 overflow-hidden rounded-3xl bg-white/85 p-10 text-center shadow-xl backdrop-blur">
+          <div className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-br from-primary/5 via-white to-emerald-50" />
+          <div className="pointer-events-none absolute -top-20 left-1/2 -z-10 h-40 w-72 -translate-x-1/2 rounded-full bg-primary/15 blur-3xl" />
+          <p className="text-sm font-semibold uppercase tracking-[0.35em] text-primary">Order confirmed</p>
+          <h1 className="mt-4 text-3xl font-bold text-slate-900 sm:text-4xl">{celebrationMessage}</h1>
+          {formattedOrderNumber && (
+            <span className="mt-4 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-2 text-sm font-semibold text-primary shadow-sm">
+              <span aria-hidden>🧾</span>
+              <span>Order ID {formattedOrderNumber}</span>
+            </span>
+          )}
+          <p className="mt-4 text-sm text-slate-600">{customerGreeting}</p>
+          <p className="mt-1 text-sm text-slate-500">{statusMessage}</p>
+          <p className="mt-1 text-xs text-slate-400">{emailMessage}</p>
+          <div className="mt-6 flex flex-col items-center gap-2 text-sm">
+            <span className="inline-flex items-center gap-2 rounded-full bg-emerald-100/80 px-4 py-2 font-medium text-emerald-700 shadow-sm">
+              <span aria-hidden>🚚</span>
+              {deliveryMessage}
+            </span>
+            {totalPaidLabel && (
+              <span className="inline-flex items-center gap-2 rounded-full bg-white/90 px-4 py-2 font-semibold text-primary shadow">
+                <span aria-hidden>💳</span>
+                Total paid {totalPaidLabel}
+              </span>
+            )}
+          </div>
+          <div className="mt-8 flex flex-wrap justify-center gap-3">
+            <Link
+              to="/"
+              className="inline-flex items-center justify-center rounded-full bg-primary px-5 py-2 text-sm font-semibold text-white shadow-md transition hover:translate-y-[-2px] hover:shadow-lg"
+            >
+              Continue shopping
+            </Link>
+            <Link
+              to="/admin/orders"
+              className="inline-flex items-center justify-center rounded-full border border-slate-300 px-5 py-2 text-sm font-semibold text-slate-700 transition hover:border-primary/40 hover:text-primary"
+            >
+              View my orders
+            </Link>
+          </div>
         </header>
 
         {orderQuery.isLoading ? (
@@ -290,21 +403,21 @@ const OrderConfirmationPage = () => {
 
               <SectionCard title="Need help?">
                 <p>
-                  If you have any questions about your order, reply to the confirmation email or contact our support team.
-                  We’re happy to help.
+                  If you have any questions about your order, reply to the confirmation email or reach out to our support
+                  team. We’re happy to help and usually respond within one business day.
                 </p>
-                <div className="mt-4 flex flex-col gap-3">
-                  <Link
-                    to="/"
+                <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+                  <a
+                    href="mailto:support@example.com"
                     className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:opacity-90"
                   >
-                    Continue shopping
-                  </Link>
+                    Email support
+                  </a>
                   <Link
                     to="/admin/orders"
-                    className="inline-flex items-center justify-center rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
+                    className="inline-flex items-center justify-center rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-primary/40 hover:text-primary"
                   >
-                    View my orders
+                    Track my orders
                   </Link>
                 </div>
               </SectionCard>
