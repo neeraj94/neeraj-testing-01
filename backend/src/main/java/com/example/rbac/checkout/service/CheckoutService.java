@@ -25,6 +25,8 @@ import com.example.rbac.shipping.service.ShippingLocationService;
 import com.example.rbac.users.model.User;
 import com.example.rbac.users.model.UserPrincipal;
 import com.example.rbac.users.repository.UserRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -42,6 +44,8 @@ import java.util.stream.Collectors;
 
 @Service
 public class CheckoutService {
+
+    private static final Logger log = LoggerFactory.getLogger(CheckoutService.class);
 
     private static final BigDecimal ZERO = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
 
@@ -85,7 +89,14 @@ public class CheckoutService {
         summary.setAddresses(addressService.listAddresses(userId));
         summary.setPaymentMethods(paymentMethodService.listForCustomer());
         summary.setCoupons(checkoutCouponService.listActiveCoupons(userId));
-        summary.setOrderSummary(calculateOrderTotals(userId, request));
+        OrderSummaryDto orderSummary;
+        try {
+            orderSummary = calculateOrderTotals(userId, request);
+        } catch (RuntimeException ex) {
+            log.warn("Unable to calculate checkout summary for user {}", userId, ex);
+            orderSummary = emptySummary();
+        }
+        summary.setOrderSummary(orderSummary);
         return summary;
     }
 
@@ -294,6 +305,8 @@ public class CheckoutService {
         summary.setGrandTotal(ZERO);
         summary.setDiscountTotal(ZERO);
         summary.setTaxLines(List.of());
+        summary.setShippingBreakdown(null);
+        summary.setAppliedCoupon(null);
         return summary;
     }
 
