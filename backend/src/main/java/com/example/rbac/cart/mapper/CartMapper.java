@@ -9,7 +9,10 @@ import com.example.rbac.products.model.Product;
 import com.example.rbac.products.model.ProductGalleryImage;
 import com.example.rbac.products.model.ProductVariant;
 import com.example.rbac.products.model.ProductVariantMedia;
+import com.example.rbac.finance.taxrate.model.TaxRate;
+import com.example.rbac.finance.taxrate.model.TaxRateType;
 import org.springframework.stereotype.Component;
+import org.springframework.util.CollectionUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -68,7 +71,39 @@ public class CartMapper {
             dto.setInStock(resolveInStock(item));
             dto.setThumbnailUrl(resolveThumbnailUrl(product, item.getVariant()));
         }
+        dto.setTaxRate(resolveEffectiveTaxRate(item));
         return dto;
+    }
+
+    private BigDecimal resolveEffectiveTaxRate(CartItem item) {
+        if (item == null) {
+            return null;
+        }
+        Product product = item.getProduct();
+        if (product == null || CollectionUtils.isEmpty(product.getTaxRates())) {
+            return null;
+        }
+        BigDecimal unitPrice = item.getUnitPrice();
+        if (unitPrice == null) {
+            unitPrice = BigDecimal.ZERO;
+        }
+        BigDecimal totalRate = BigDecimal.ZERO;
+        for (TaxRate taxRate : product.getTaxRates()) {
+            if (taxRate == null || taxRate.getRateValue() == null) {
+                continue;
+            }
+            if (taxRate.getRateType() == TaxRateType.PERCENTAGE) {
+                totalRate = totalRate.add(taxRate.getRateValue()
+                        .divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP));
+            } else if (taxRate.getRateType() == TaxRateType.FLAT && unitPrice.compareTo(BigDecimal.ZERO) > 0) {
+                totalRate = totalRate.add(taxRate.getRateValue()
+                        .divide(unitPrice, 6, RoundingMode.HALF_UP));
+            }
+        }
+        if (totalRate.compareTo(BigDecimal.ZERO) <= 0) {
+            return null;
+        }
+        return totalRate.setScale(6, RoundingMode.HALF_UP);
     }
 
     private String resolveSku(CartItem item) {

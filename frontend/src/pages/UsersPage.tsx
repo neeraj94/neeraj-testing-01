@@ -155,6 +155,7 @@ const UsersPage = () => {
   });
   const [addressFormOpen, setAddressFormOpen] = useState(false);
   const [addressForm, setAddressForm] = useState(createEmptyAddressForm());
+  const [editingAddressId, setEditingAddressId] = useState<number | null>(null);
 
   const clampQuantity = (value: number) => {
     if (!Number.isFinite(value)) {
@@ -736,24 +737,26 @@ const UsersPage = () => {
       Boolean(addressForm.stateId)
   });
 
+  const buildAddressPayload = () => ({
+    type: addressForm.type,
+    countryId: addressForm.countryId ? Number(addressForm.countryId) : undefined,
+    stateId: addressForm.stateId ? Number(addressForm.stateId) : undefined,
+    cityId: addressForm.cityId ? Number(addressForm.cityId) : undefined,
+    fullName: addressForm.fullName,
+    mobileNumber: addressForm.mobileNumber,
+    pinCode: addressForm.pinCode || undefined,
+    addressLine1: addressForm.addressLine1,
+    addressLine2: addressForm.addressLine2 || undefined,
+    landmark: addressForm.landmark || undefined,
+    makeDefault: Boolean(addressForm.makeDefault)
+  });
+
   const createAddressMutation = useMutation({
     mutationFn: async () => {
       if (!selectedUserId) {
         throw new Error('Select a user before adding an address.');
       }
-      const payload = {
-        type: addressForm.type,
-        countryId: addressForm.countryId ? Number(addressForm.countryId) : undefined,
-        stateId: addressForm.stateId ? Number(addressForm.stateId) : undefined,
-        cityId: addressForm.cityId ? Number(addressForm.cityId) : undefined,
-        fullName: addressForm.fullName,
-        mobileNumber: addressForm.mobileNumber,
-        pinCode: addressForm.pinCode || undefined,
-        addressLine1: addressForm.addressLine1,
-        addressLine2: addressForm.addressLine2 || undefined,
-        landmark: addressForm.landmark || undefined,
-        makeDefault: Boolean(addressForm.makeDefault)
-      };
+      const payload = buildAddressPayload();
       const { data } = await api.post<CheckoutAddress>(
         `/admin/users/${selectedUserId}/addresses`,
         payload
@@ -764,10 +767,35 @@ const UsersPage = () => {
       notify({ type: 'success', message: 'Address added successfully.' });
       setAddressForm(createEmptyAddressForm());
       setAddressFormOpen(false);
+      setEditingAddressId(null);
       void addressesQuery.refetch();
     },
     onError: (error) => {
       notify({ type: 'error', message: extractErrorMessage(error, 'Unable to add address.') });
+    }
+  });
+
+  const updateAddressMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedUserId || editingAddressId == null) {
+        throw new Error('Select an address before updating it.');
+      }
+      const payload = buildAddressPayload();
+      const { data } = await api.put<CheckoutAddress>(
+        `/admin/users/${selectedUserId}/addresses/${editingAddressId}`,
+        payload
+      );
+      return data;
+    },
+    onSuccess: () => {
+      notify({ type: 'success', message: 'Address updated successfully.' });
+      setAddressForm(createEmptyAddressForm());
+      setAddressFormOpen(false);
+      setEditingAddressId(null);
+      void addressesQuery.refetch();
+    },
+    onError: (error) => {
+      notify({ type: 'error', message: extractErrorMessage(error, 'Unable to update address.') });
     }
   });
 
@@ -836,6 +864,7 @@ const UsersPage = () => {
     if (activeTab !== 'addresses') {
       setAddressFormOpen(false);
       setAddressForm(createEmptyAddressForm());
+      setEditingAddressId(null);
     }
   }, [activeTab]);
 
@@ -2207,10 +2236,16 @@ const UsersPage = () => {
     const cityError = addressCitiesQuery.isError
       ? extractErrorMessage(addressCitiesQuery.error, 'Unable to load cities.')
       : null;
+    const isAddressSubmitting = createAddressMutation.isPending || updateAddressMutation.isPending;
 
     const handleSubmitAddress = (event: FormEvent) => {
       event.preventDefault();
-      if (!createAddressMutation.isPending) {
+      if (isAddressSubmitting) {
+        return;
+      }
+      if (editingAddressId != null) {
+        updateAddressMutation.mutate();
+      } else {
         createAddressMutation.mutate();
       }
     };
@@ -2219,10 +2254,30 @@ const UsersPage = () => {
       if (addressFormOpen) {
         setAddressFormOpen(false);
         setAddressForm(createEmptyAddressForm());
+        setEditingAddressId(null);
       } else {
+        setEditingAddressId(null);
         setAddressForm(createEmptyAddressForm('SHIPPING'));
         setAddressFormOpen(true);
       }
+    };
+
+    const handleEditAddress = (address: CheckoutAddress) => {
+      setAddressForm({
+        type: address.type,
+        countryId: address.countryId != null ? String(address.countryId) : '',
+        stateId: address.stateId != null ? String(address.stateId) : '',
+        cityId: address.cityId != null ? String(address.cityId) : '',
+        fullName: address.fullName,
+        mobileNumber: address.mobileNumber,
+        pinCode: address.pinCode ?? '',
+        addressLine1: address.addressLine1,
+        addressLine2: address.addressLine2 ?? '',
+        landmark: address.landmark ?? '',
+        makeDefault: Boolean(address.defaultAddress)
+      });
+      setEditingAddressId(address.id);
+      setAddressFormOpen(true);
     };
 
     return (
@@ -2233,7 +2288,7 @@ const UsersPage = () => {
             <p className="text-xs text-slate-500">Manage shipping and billing locations for this customer.</p>
           </div>
           <Button variant="ghost" className="px-3 py-1 text-xs" onClick={handleToggleForm}>
-            {addressFormOpen ? 'Cancel' : 'Add address'}
+            {addressFormOpen ? (editingAddressId ? 'Cancel edit' : 'Cancel') : 'Add address'}
           </Button>
         </div>
         {addressFormOpen && (
@@ -2241,6 +2296,14 @@ const UsersPage = () => {
             onSubmit={handleSubmitAddress}
             className="space-y-4 rounded-xl border border-slate-200 bg-slate-50/80 p-5 shadow-inner"
           >
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h4 className="text-sm font-semibold text-slate-700">
+                {editingAddressId != null ? 'Edit address details' : 'Add a new address'}
+              </h4>
+              {editingAddressId != null && (
+                <span className="text-xs uppercase tracking-wide text-slate-400">ID #{editingAddressId}</span>
+              )}
+            </div>
             <div className="grid gap-3 md:grid-cols-3">
               <label className="text-xs font-medium uppercase text-slate-500">
                 Address type
@@ -2426,12 +2489,13 @@ const UsersPage = () => {
                 onClick={() => {
                   setAddressFormOpen(false);
                   setAddressForm(createEmptyAddressForm());
+                  setEditingAddressId(null);
                 }}
               >
                 Cancel
               </Button>
-              <Button type="submit" loading={createAddressMutation.isPending}>
-                Save address
+              <Button type="submit" loading={isAddressSubmitting}>
+                {editingAddressId != null ? 'Update address' : 'Save address'}
               </Button>
             </div>
           </form>
@@ -2440,13 +2504,29 @@ const UsersPage = () => {
           <div className="grid gap-4 md:grid-cols-2">
             {addressList.map((address) => (
               <div key={address.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-slate-800">{address.fullName}</h3>
-                  <span className="rounded bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
-                    {address.type === 'SHIPPING' ? 'Shipping' : 'Billing'}
-                  </span>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-800">{address.fullName}</h3>
+                    <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
+                      <span className="rounded bg-slate-100 px-2 py-0.5 font-medium text-slate-600">
+                        {address.type === 'SHIPPING' ? 'Shipping' : 'Billing'}
+                      </span>
+                      {address.defaultAddress && (
+                        <span className="rounded bg-emerald-100 px-2 py-0.5 font-semibold text-emerald-700">Default</span>
+                      )}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleEditAddress(address)}
+                    disabled={isAddressSubmitting}
+                    className="rounded-full border border-slate-200 p-2 text-slate-500 transition hover:border-primary/40 hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
+                    aria-label={`Edit address for ${address.fullName}`}
+                  >
+                    <PencilIcon />
+                  </button>
                 </div>
-                <p className="mt-1 text-sm text-slate-600">
+                <p className="mt-2 text-sm text-slate-600">
                   {address.addressLine1}
                   {address.addressLine2 ? `, ${address.addressLine2}` : ''}
                 </p>
@@ -2455,9 +2535,6 @@ const UsersPage = () => {
                 </p>
                 {address.pinCode && <p className="text-xs text-slate-500">PIN: {address.pinCode}</p>}
                 <p className="text-xs text-slate-500">Phone: {address.mobileNumber}</p>
-                {address.defaultAddress && (
-                  <p className="mt-2 text-xs font-medium uppercase text-blue-600">Default</p>
-                )}
               </div>
             ))}
           </div>
