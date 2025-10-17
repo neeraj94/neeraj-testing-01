@@ -10,6 +10,8 @@ public interface UserRecentViewRepository extends JpaRepository<UserRecentView, 
 
     List<UserRecentView> findTop20ByUserIdOrderByViewedAtDesc(Long userId);
 
+    @EntityGraph(attributePaths = {"product", "product.thumbnail", "product.galleryImages", "product.galleryImages.media",
+            "product.variants", "product.variants.media"})
     List<UserRecentView> findByUserIdOrderByViewedAtDesc(Long userId);
 
     Optional<UserRecentView> findByUserIdAndProductId(Long userId, Long productId);
