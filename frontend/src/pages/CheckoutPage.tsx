@@ -232,7 +232,10 @@ const CheckoutPage = () => {
         quantity: item.quantity,
         unitPrice: item.unitPrice,
         taxRate: item.taxRate ?? undefined,
-        productSlug: item.productSlug ?? null
+        productSlug: item.productSlug ?? null,
+        variantId: item.variantId ?? null,
+        variantSku: item.sku ?? null,
+        variantLabel: item.variantLabel ?? null
       })),
     [cart.items]
   );

@@ -136,6 +136,16 @@ const OrderConfirmationPage = () => {
         ? `${appliedCoupon.discountValue ?? 0}% off`
         : `Save ${formatCurrency(appliedCoupon.discountValue ?? 0, currency)}`
     : null;
+  const couponTypeLabel = appliedCoupon
+    ? appliedCoupon.discountType === 'PERCENTAGE'
+      ? 'Percentage discount'
+      : 'Flat discount'
+    : null;
+  const couponValueLabel = appliedCoupon?.discountValue != null
+    ? appliedCoupon.discountType === 'PERCENTAGE'
+      ? `${appliedCoupon.discountValue}% rate`
+      : `Value: ${formatCurrency(appliedCoupon.discountValue, currency)}`
+    : null;
 
   const estimatedDeliveryDate = useMemo(() => {
     if (!orderQuery.data?.createdAt) {
@@ -300,8 +310,10 @@ const OrderConfirmationPage = () => {
                     <p className="mt-1 font-medium">Code: {appliedCoupon.code}</p>
                     {couponDescription && <p className="mt-1">{couponDescription}</p>}
                     <p className="mt-1">
-                      Discount saved: {formatCurrency(appliedCoupon.discountAmount ?? 0, currency)} · Type: {appliedCoupon.discountType}
+                      Discount saved: {formatCurrency(appliedCoupon.discountAmount ?? 0, currency)} · Type:{' '}
+                      {couponTypeLabel ?? appliedCoupon.discountType}
                     </p>
+                    {couponValueLabel && <p className="mt-1">{couponValueLabel}</p>}
                   </div>
                 )}
                 {orderQuery.data.summary && (

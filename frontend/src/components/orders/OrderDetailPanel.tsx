@@ -58,6 +58,16 @@ const OrderDetailPanel = ({ order, baseCurrency, onClose }: OrderDetailPanelProp
         ? `${appliedCoupon.discountValue ?? 0}% off`
         : `Save ${formatCurrency(appliedCoupon.discountValue ?? 0, currency)}`
     : null;
+  const couponTypeLabel = appliedCoupon
+    ? appliedCoupon.discountType === 'PERCENTAGE'
+      ? 'Percentage discount'
+      : 'Flat discount'
+    : null;
+  const couponValueLabel = appliedCoupon?.discountValue != null
+    ? appliedCoupon.discountType === 'PERCENTAGE'
+      ? `${appliedCoupon.discountValue}% rate`
+      : `Value: ${formatCurrency(appliedCoupon.discountValue, currency)}`
+    : null;
 
   return (
     <section className="space-y-6 rounded-2xl border border-slate-200 bg-slate-50 p-6 shadow-sm">
@@ -189,8 +199,10 @@ const OrderDetailPanel = ({ order, baseCurrency, onClose }: OrderDetailPanelProp
             <p className="mt-1 font-medium">Code: {appliedCoupon.code}</p>
             {couponDescription && <p className="mt-1">{couponDescription}</p>}
             <p className="mt-1">
-              Discount saved: {formatCurrency(appliedCoupon.discountAmount ?? 0, currency)} · Type: {appliedCoupon.discountType}
+              Discount saved: {formatCurrency(appliedCoupon.discountAmount ?? 0, currency)} · Type:{' '}
+              {couponTypeLabel ?? appliedCoupon.discountType}
             </p>
+            {couponValueLabel && <p className="mt-1">{couponValueLabel}</p>}
           </div>
         )}
       </div>
