@@ -6,7 +6,6 @@ import com.example.rbac.coupons.repository.CouponRepository;
 import com.example.rbac.products.dto.storefront.PublicProductDetailDto;
 import com.example.rbac.products.dto.storefront.PublicProductSearchCriteria;
 import com.example.rbac.products.dto.storefront.PublicProductSearchResponse;
-import com.example.rbac.products.dto.storefront.PublicProductSuggestionDto;
 import com.example.rbac.products.mapper.PublicProductMapper;
 import com.example.rbac.products.model.Product;
 import com.example.rbac.products.model.ProductReview;
@@ -25,7 +24,6 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.sql.SQLException;
 import java.time.Instant;
@@ -70,23 +68,6 @@ public class PublicProductService {
     @Transactional(readOnly = true)
     public PublicProductSearchResponse searchProducts(PublicProductSearchCriteria criteria) {
         return publicProductSearchRepository.search(criteria);
-    }
-
-    @Transactional(readOnly = true)
-    public List<PublicProductSuggestionDto> searchSuggestions(String term) {
-        if (!StringUtils.hasText(term)) {
-            return List.of();
-        }
-        String sanitized = term.trim();
-        List<Product> products = productRepository
-                .findTop10ByNameContainingIgnoreCaseOrSkuContainingIgnoreCaseOrderByNameAsc(sanitized, sanitized);
-        if (products.isEmpty()) {
-            return List.of();
-        }
-        return products.stream()
-                .map(this::toSuggestion)
-                .filter(Objects::nonNull)
-                .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
@@ -195,35 +176,6 @@ public class PublicProductService {
         if (product.getVariants() != null) {
             product.getVariants().forEach(variant -> Hibernate.initialize(variant.getMedia()));
         }
-    }
-
-    private PublicProductSuggestionDto toSuggestion(Product product) {
-        if (product == null) {
-            return null;
-        }
-        PublicProductSuggestionDto dto = new PublicProductSuggestionDto();
-        dto.setId(product.getId());
-        dto.setName(product.getName());
-        dto.setSlug(product.getSlug());
-        dto.setThumbnailUrl(resolveThumbnail(product));
-        return dto;
-    }
-
-    private String resolveThumbnail(Product product) {
-        if (product.getThumbnail() != null && StringUtils.hasText(product.getThumbnail().getUrl())) {
-            return product.getThumbnail().getUrl();
-        }
-        if (product.getGalleryImages() != null) {
-            return product.getGalleryImages().stream()
-                    .filter(Objects::nonNull)
-                    .map(image -> image.getMedia())
-                    .filter(Objects::nonNull)
-                    .map(media -> media.getUrl())
-                    .filter(StringUtils::hasText)
-                    .findFirst()
-                    .orElse(null);
-        }
-        return null;
     }
 
     private List<Coupon> mergeCoupons(List<Coupon> productCoupons, List<Coupon> categoryCoupons) {
