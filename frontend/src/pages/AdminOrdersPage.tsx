@@ -10,6 +10,9 @@ import OrderDetailPanel from '../components/orders/OrderDetailPanel';
 import Button from '../components/Button';
 import { extractErrorMessage } from '../utils/errors';
 
+const formatDateTime = (value: string) =>
+  new Date(value).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+
 const AdminOrdersPage = () => {
   const baseCurrency = useAppSelector(selectBaseCurrency);
   const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
@@ -64,6 +67,8 @@ const AdminOrdersPage = () => {
     );
   }
 
+  const hasOrders = orders.length > 0;
+
   return (
     <div className="space-y-8">
       <header>
@@ -73,96 +78,87 @@ const AdminOrdersPage = () => {
         </p>
       </header>
 
-      <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-        <table className="min-w-full divide-y divide-slate-200 text-sm">
-          <thead className="bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
-            <tr>
-              <th className="px-5 py-3 text-left">Order</th>
-              <th className="px-5 py-3 text-left">Customer</th>
-              <th className="px-5 py-3 text-left">Placed</th>
-              <th className="px-5 py-3 text-left">Status</th>
-              <th className="px-5 py-3 text-right">Total</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-200">
+      {hasOrders ? (
+        <div className="grid gap-6 lg:grid-cols-[320px,1fr]">
+          <div className="space-y-3">
             {orders.map((order) => {
               const isSelected = selectedOrderId === order.id;
               return (
-                <tr
+                <button
                   key={order.id}
+                  type="button"
                   onClick={() => setSelectedOrderId(order.id)}
-                  className={`cursor-pointer transition ${
-                    isSelected ? 'bg-blue-50/60' : 'hover:bg-slate-50'
+                  className={`w-full rounded-2xl border px-4 py-3 text-left transition ${
+                    isSelected
+                      ? 'border-primary/40 bg-primary/5 shadow-sm'
+                      : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
                   }`}
                 >
-                  <td className="px-5 py-4 text-sm font-semibold text-blue-700">{order.orderNumber}</td>
-                  <td className="px-5 py-4">
-                    <div className="text-sm font-medium text-slate-800">{order.customerName ?? 'Customer'}</div>
-                    {order.customerEmail && <div className="text-xs text-slate-500">{order.customerEmail}</div>}
-                  </td>
-                  <td className="px-5 py-4 text-xs text-slate-500">
-                    {new Date(order.createdAt).toLocaleString(undefined, {
-                      dateStyle: 'medium',
-                      timeStyle: 'short'
-                    })}
-                  </td>
-                  <td className="px-5 py-4">
-                    <span
-                      className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide ${
-                        order.status === 'PROCESSING'
-                          ? 'bg-amber-50 text-amber-700'
-                          : 'bg-emerald-50 text-emerald-700'
-                      }`}
-                    >
-                      {order.status ?? 'Processing'}
-                    </span>
-                  </td>
-                  <td className="px-5 py-4 text-right text-sm font-semibold text-slate-900">
-                    {formatCurrency(order.summary?.grandTotal ?? 0, baseCurrency)}
-                  </td>
-                </tr>
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="space-y-1">
+                      <p className="text-sm font-semibold text-slate-900">{order.orderNumber}</p>
+                      <p className="text-xs text-slate-500">Placed {formatDateTime(order.createdAt)}</p>
+                      <div className="text-xs text-slate-500">
+                        {order.customerName ?? 'Customer'}
+                        {order.customerEmail ? (
+                          <span className="block text-[11px] text-slate-400">{order.customerEmail}</span>
+                        ) : null}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span
+                        className={`inline-flex items-center justify-center rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wide ${
+                          order.status === 'PROCESSING'
+                            ? 'bg-amber-50 text-amber-700'
+                            : 'bg-emerald-50 text-emerald-700'
+                        }`}
+                      >
+                        {order.status ?? 'Processing'}
+                      </span>
+                      <p className="mt-2 text-sm font-semibold text-slate-900">
+                        {formatCurrency(order.summary?.grandTotal ?? 0, baseCurrency)}
+                      </p>
+                    </div>
+                  </div>
+                </button>
               );
             })}
-            {!orders.length && (
-              <tr>
-                <td className="px-5 py-10 text-center text-sm text-slate-500" colSpan={5}>
-                  No orders have been placed yet.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      <div>
-        {selectedOrderId == null ? (
-          <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-sm text-slate-500">
-            Select an order from the list above to view its full details.
           </div>
-        ) : orderDetailQuery.isLoading ? (
-          <div className="flex min-h-[200px] items-center justify-center rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <Spinner />
+          <div>
+            {selectedOrderId == null ? (
+              <section className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-sm text-slate-500">
+                Select an order from the list to review payment, shipping, and line item details.
+              </section>
+            ) : orderDetailQuery.isLoading ? (
+              <section className="flex min-h-[200px] items-center justify-center rounded-2xl border border-slate-200 bg-white shadow-sm">
+                <Spinner />
+              </section>
+            ) : orderDetailQuery.isError ? (
+              <section className="space-y-3 rounded-2xl border border-rose-200 bg-rose-50/80 p-6 text-sm text-rose-600 shadow-sm">
+                <p>{extractErrorMessage(orderDetailQuery.error, 'Unable to load order details.')}</p>
+                <div>
+                  <Button onClick={() => orderDetailQuery.refetch()} className="px-3 py-2 text-xs font-semibold">
+                    Retry
+                  </Button>
+                </div>
+              </section>
+            ) : orderDetailQuery.data ? (
+              <OrderDetailPanel
+                order={orderDetailQuery.data}
+                baseCurrency={baseCurrency}
+                onClose={() => setSelectedOrderId(null)}
+              />
+            ) : null}
           </div>
-        ) : orderDetailQuery.isError ? (
-          <div className="space-y-3 rounded-2xl border border-rose-200 bg-rose-50/80 p-6 text-sm text-rose-600 shadow-sm">
-            <p>{extractErrorMessage(orderDetailQuery.error, 'Unable to load order details.')}</p>
-            <div>
-              <Button
-                onClick={() => orderDetailQuery.refetch()}
-                className="px-3 py-2 text-xs font-semibold"
-              >
-                Retry
-              </Button>
-            </div>
-          </div>
-        ) : orderDetailQuery.data ? (
-          <OrderDetailPanel
-            order={orderDetailQuery.data}
-            baseCurrency={baseCurrency}
-            onClose={() => setSelectedOrderId(null)}
-          />
-        ) : null}
-      </div>
+        </div>
+      ) : (
+        <section className="rounded-2xl border border-slate-200 bg-white p-10 text-center shadow-sm">
+          <h2 className="text-lg font-semibold text-slate-900">No orders yet</h2>
+          <p className="mt-2 text-sm text-slate-500">
+            Orders will appear here automatically once customers complete checkout.
+          </p>
+        </section>
+      )}
     </div>
   );
 };
