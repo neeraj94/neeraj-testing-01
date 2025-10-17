@@ -155,6 +155,9 @@ const CheckoutPage = () => {
     [addresses]
   );
   const [orderSummary, setOrderSummary] = useState<OrderSummary | null>(summaryQuery.data?.orderSummary ?? null);
+  const [lastOrderNumber, setLastOrderNumber] = useState<string | null>(
+    summaryQuery.data?.lastOrderNumber ?? null
+  );
   const checkoutLines: CheckoutOrderLine[] = useMemo(
     () =>
       (cart.items ?? []).map((item) => ({
@@ -254,6 +257,10 @@ const CheckoutPage = () => {
   useEffect(() => {
     setAvailableCoupons(summaryQuery.data?.coupons ?? []);
   }, [summaryQuery.data?.coupons]);
+
+  useEffect(() => {
+    setLastOrderNumber(summaryQuery.data?.lastOrderNumber ?? null);
+  }, [summaryQuery.data?.lastOrderNumber]);
 
   useEffect(() => {
     if (!hasCartItems) {

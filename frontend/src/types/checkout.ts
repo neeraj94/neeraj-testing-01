@@ -70,6 +70,7 @@ export interface CheckoutSummary {
   paymentMethods: PaymentMethod[];
   orderSummary: OrderSummary;
   coupons: CheckoutCoupon[];
+  lastOrderNumber?: string | null;
 }
 
 export interface CheckoutOrderLine {
