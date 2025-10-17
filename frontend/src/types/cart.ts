@@ -12,6 +12,7 @@ export interface CartItem {
   unitPrice: number;
   lineTotal: number;
   thumbnailUrl?: string | null;
+  taxRate?: number | null;
 }
 
 export interface Cart {
