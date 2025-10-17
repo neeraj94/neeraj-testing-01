@@ -1,164 +1,580 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>API Reference Portal</title>
-  <link rel="stylesheet" href="styles.css" />
-</head>
-<body>
-  <header>
-    <h1>RBAC Commerce API Reference</h1>
-    <p>Centralised documentation for the headless commerce platform. Use the quick search and module shortcuts below to jump directly to the endpoint you need.</p>
-    <div class="search-box">
-      <input type="search" id="search" placeholder="Filter modules…" oninput="filterCards(event)" />
-    </div>
-  </header>
-  <main>
-    <section class="section-card">
-      <h2>Getting Started</h2>
-      <p>The API is served under the base URL <code>/api/v1</code>. All private endpoints require a valid JWT bearer token obtained via the authentication module. Unless otherwise noted, requests must include <code>Content-Type: application/json</code> and <code>Authorization: Bearer &lt;token&gt;</code>.</p>
-      <div class="anchor-nav">
-        <a href="auth.html">Authentication</a>
-        <a href="users.html">Users</a>
-        <a href="roles.html">Roles</a>
-        <a href="permissions.html">Permissions</a>
-        <a href="products.html">Products</a>
-        <a href="categories.html">Categories</a>
-        <a href="coupons.html">Coupons</a>
-        <a href="reviews.html">Reviews</a>
-        <a href="gallery.html">Media Gallery</a>
-        <a href="settings.html">Settings</a>
-        <a href="shipping.html">Shipping</a>
-        <a href="wedges.html">Wedges</a>
-        <a href="public.html">Public Storefront</a>
-      </div>
-    </section>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>API Reference</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="layout">
+      <aside class="sidebar" aria-label="Primary">
+        <div class="sidebar__brand">
+          <div class="sidebar__badge">RBAC Commerce</div>
+          <h1>API Reference</h1>
+          <p>Discover public storefront APIs and private back-office integrations with runnable examples.</p>
+        </div>
 
-    <section class="section-card">
-      <h2>Module Directory</h2>
-      <div class="nav-grid" id="moduleGrid">
-        <a class="nav-card" href="auth.html">
-          <h3>Authentication</h3>
-          <p>Signup, login, refresh tokens, logout, and email verification workflows.</p>
-        </a>
-        <a class="nav-card" href="users.html">
-          <h3>Users</h3>
-          <p>User CRUD, profile management, invitations, status toggles, and assignments.</p>
-        </a>
-        <a class="nav-card" href="roles.html">
-          <h3>Roles</h3>
-          <p>Role catalog, creation, updates, and permission binding endpoints.</p>
-        </a>
-        <a class="nav-card" href="permissions.html">
-          <h3>Permissions</h3>
-          <p>Permission directory, bulk assignment helpers, and audit logs.</p>
-        </a>
-        <a class="nav-card" href="products.html">
-          <h3>Products &amp; Catalog</h3>
-          <p>Product authoring, media, variants, pricing, inventory, and dashboard listings.</p>
-        </a>
-        <a class="nav-card" href="categories.html">
-          <h3>Categories &amp; Brands</h3>
-          <p>Category tree management, brand registry, and storefront taxonomy endpoints.</p>
-        </a>
-        <a class="nav-card" href="coupons.html">
-          <h3>Coupons &amp; Offers</h3>
-          <p>Admin coupon management plus public promotion lookups.</p>
-        </a>
-        <a class="nav-card" href="reviews.html">
-          <h3>Reviews</h3>
-          <p>Moderation, visibility, reply, and public rating feed endpoints.</p>
-        </a>
-        <a class="nav-card" href="gallery.html">
-          <h3>Media &amp; Gallery</h3>
-          <p>Asset folders, uploads, image metadata, and signed URL retrieval.</p>
-        </a>
-        <a class="nav-card" href="settings.html">
-          <h3>Platform Settings</h3>
-          <p>Storefront configuration, email templates, tax, and finance settings.</p>
-        </a>
-        <a class="nav-card" href="shipping.html">
-          <h3>Shipping &amp; Logistics</h3>
-          <p>Shipping methods, zones, service level agreements, and rate cards.</p>
-        </a>
-        <a class="nav-card" href="wedges.html">
-          <h3>Wedges &amp; Highlights</h3>
-          <p>Product benefit wedges, icon uploads, and assignment helpers.</p>
-        </a>
-        <a class="nav-card" href="public.html">
-          <h3>Public Storefront APIs</h3>
-          <p>Anonymous catalog endpoints for coupons, products, brands, and categories.</p>
-        </a>
-      </div>
-    </section>
+        <div class="sidebar__controls">
+          <label class="control">
+            <span class="control__label">Environment</span>
+            <select id="environmentSelect">
+              <option value="https://sandbox.api.rbac-commerce.dev">Sandbox</option>
+              <option value="https://api.rbac-commerce.dev">Production</option>
+              <option value="custom">Custom…</option>
+            </select>
+          </label>
+          <label class="control" id="customUrlControl" hidden>
+            <span class="control__label">Custom base URL</span>
+            <input id="baseUrl" type="url" spellcheck="false" value="https://sandbox.api.rbac-commerce.dev" />
+          </label>
+          <label class="control">
+            <span class="control__label">Bearer token</span>
+            <input id="authToken" type="text" spellcheck="false" placeholder="Optional token for private endpoints" />
+          </label>
+        </div>
 
-    <section class="section-card">
-      <h2>Common Error Codes</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>Status</th>
-            <th>Message Template</th>
-            <th>Typical Causes</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td class="status success">200 / 204</td>
-            <td>Success / No Content</td>
-            <td>Request processed without validation errors.</td>
-          </tr>
-          <tr>
-            <td class="status client">400</td>
-            <td>Validation failure, missing fields</td>
-            <td>Constraint violations, malformed JSON, unsupported filters.</td>
-          </tr>
-          <tr>
-            <td class="status client">401</td>
-            <td>Unauthorized</td>
-            <td>Missing or expired bearer token.</td>
-          </tr>
-          <tr>
-            <td class="status client">403</td>
-            <td>Forbidden</td>
-            <td>User lacks the permission guarding the endpoint.</td>
-          </tr>
-          <tr>
-            <td class="status client">404</td>
-            <td>Resource not found</td>
-            <td>Invalid ID/slug or entity removed.</td>
-          </tr>
-          <tr>
-            <td class="status client">409</td>
-            <td>Conflict</td>
-            <td>Uniqueness collisions (codes, slugs, SKUs), invalid transitions.</td>
-          </tr>
-          <tr>
-            <td class="status server">500</td>
-            <td>Internal Server Error</td>
-            <td>Unexpected server conditions, database connectivity, or dependency failures.</td>
-          </tr>
-        </tbody>
-      </table>
-    </section>
-  </main>
-  <footer>
-    <p>Last updated: <span id="lastUpdated"></span></p>
-  </footer>
-  <script>
-    const lastUpdated = new Date().toISOString().split('T')[0];
-    document.getElementById('lastUpdated').textContent = lastUpdated;
-    const searchInput = document.getElementById('search');
-    const cards = Array.from(document.querySelectorAll('#moduleGrid .nav-card'));
-    function filterCards(event) {
-      const term = event.target.value.toLowerCase();
-      cards.forEach(card => {
-        const text = card.textContent.toLowerCase();
-        card.style.display = text.includes(term) ? '' : 'none';
-      });
+        <div class="sidebar__nav">
+          <h2>Endpoints</h2>
+          <nav>
+            <div class="sidebar__group" data-group="public">
+              <div class="sidebar__group-title">Public</div>
+              <ul>
+                <li><a href="#public-products-list">List catalog products</a></li>
+                <li><a href="#public-products-detail">Retrieve product</a></li>
+              </ul>
+            </div>
+            <div class="sidebar__group" data-group="private">
+              <div class="sidebar__group-title">Private</div>
+              <ul>
+                <li><a href="#private-orders-authorize">Authorize payment for order</a></li>
+                <li><a href="#private-orders-capture">Capture authorized payment</a></li>
+              </ul>
+            </div>
+          </nav>
+        </div>
+      </aside>
+
+      <main class="content" id="mainContent">
+        <header class="hero">
+          <h2>Design, test, and ship with RBAC Commerce APIs</h2>
+          <p>
+            Use runnable request samples to validate payloads directly from your browser. Provide a token to access private
+            endpoints, tweak parameters, and inspect responses in real time.
+          </p>
+        </header>
+
+        <section class="category" id="category-public">
+          <h2>Public endpoints</h2>
+          <p class="category__lead">
+            Explore unauthenticated REST endpoints used by the storefront and onboarding flows. These APIs respond with
+            <code>application/json</code> payloads and are accessible without a token.
+          </p>
+
+          <article class="endpoint" id="public-products-list" data-method="GET" data-path="/v1/catalog/products">
+            <div class="endpoint__header">
+              <div class="endpoint__title">
+                <span class="http-badge http-badge--get">GET</span>
+                <div>
+                  <h3>List catalog products</h3>
+                  <p>/v1/catalog/products</p>
+                </div>
+              </div>
+              <button class="try-button" data-endpoint="public-products-list">Try it</button>
+            </div>
+
+            <div class="endpoint__layout">
+              <div class="endpoint__body">
+                <section class="endpoint__section">
+                  <h4>Summary</h4>
+                  <p>Return a paginated list of active products available for purchase.</p>
+                </section>
+
+                <section class="endpoint__section">
+                  <h4>Security</h4>
+                  <ul class="pill-list">
+                    <li class="pill pill--public">Public</li>
+                  </ul>
+                </section>
+
+                <section class="endpoint__section">
+                  <h4>Request</h4>
+                  <div class="field-grid">
+                    <label class="field">
+                      <span class="field__label">page</span>
+                      <input type="number" min="1" value="1" data-param="page" />
+                      <span class="field__hint">Query • Page number to fetch.</span>
+                    </label>
+                    <label class="field">
+                      <span class="field__label">pageSize</span>
+                      <input type="number" min="1" max="100" value="20" data-param="pageSize" />
+                      <span class="field__hint">Query • Number of results per page.</span>
+                    </label>
+                  </div>
+                </section>
+              </div>
+
+              <div class="endpoint__panels">
+                <section class="panel">
+                  <header class="panel__header">
+                    <h4>Request samples</h4>
+                    <span class="panel__format">cURL</span>
+                  </header>
+                  <pre class="code-block" data-template="curl" data-endpoint="public-products-list"></pre>
+                  <div class="panel__actions">
+                    <button class="copy-button" data-copy>Copy</button>
+                    <button class="run-button" data-endpoint="public-products-list">Run</button>
+                  </div>
+                </section>
+
+                <section class="panel">
+                  <header class="panel__header">
+                    <h4>Response samples</h4>
+                    <span class="panel__format">200 application/json</span>
+                  </header>
+                  <pre class="code-block" id="response-public-products-list">{
+  "data": [
+    {
+      "id": "prod_87923",
+      "name": "Everyday Cotton Tee",
+      "price": {
+        "currency": "USD",
+        "value": "22.00"
+      }
     }
-    window.filterCards = filterCards;
-  </script>
-</body>
+  ],
+  "page": 1,
+  "pageSize": 20,
+  "total": 148
+}</pre>
+                </section>
+              </div>
+            </div>
+          </article>
+
+          <article class="endpoint" id="public-products-detail" data-method="GET" data-path="/v1/catalog/products/{productId}">
+            <div class="endpoint__header">
+              <div class="endpoint__title">
+                <span class="http-badge http-badge--get">GET</span>
+                <div>
+                  <h3>Retrieve product</h3>
+                  <p>/v1/catalog/products/{productId}</p>
+                </div>
+              </div>
+              <button class="try-button" data-endpoint="public-products-detail">Try it</button>
+            </div>
+
+            <div class="endpoint__layout">
+              <div class="endpoint__body">
+                <section class="endpoint__section">
+                  <h4>Summary</h4>
+                  <p>Retrieve a single product by identifier to power detail pages.</p>
+                </section>
+
+                <section class="endpoint__section">
+                  <h4>Security</h4>
+                  <ul class="pill-list">
+                    <li class="pill pill--public">Public</li>
+                  </ul>
+                </section>
+
+                <section class="endpoint__section">
+                  <h4>Path parameters</h4>
+                  <label class="field">
+                    <span class="field__label">productId</span>
+                    <input type="text" value="prod_87923" data-param="productId" />
+                    <span class="field__hint">Required • Unique product identifier.</span>
+                  </label>
+                </section>
+              </div>
+
+              <div class="endpoint__panels">
+                <section class="panel">
+                  <header class="panel__header">
+                    <h4>Request samples</h4>
+                    <span class="panel__format">cURL</span>
+                  </header>
+                  <pre class="code-block" data-template="curl" data-endpoint="public-products-detail"></pre>
+                  <div class="panel__actions">
+                    <button class="copy-button" data-copy>Copy</button>
+                    <button class="run-button" data-endpoint="public-products-detail">Run</button>
+                  </div>
+                </section>
+
+                <section class="panel">
+                  <header class="panel__header">
+                    <h4>Response samples</h4>
+                    <span class="panel__format">200 application/json</span>
+                  </header>
+                  <pre class="code-block" id="response-public-products-detail">{
+  "id": "prod_87923",
+  "name": "Everyday Cotton Tee",
+  "description": "A relaxed fit tee with breathable cotton blend.",
+  "price": {
+    "currency": "USD",
+    "value": "22.00"
+  },
+  "inventory": {
+    "available": 421,
+    "backorderable": false
+  }
+}</pre>
+                </section>
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <section class="category" id="category-private">
+          <h2>Private endpoints</h2>
+          <p class="category__lead">
+            Secure checkout, authorization, and settlement workflows that require a valid bearer token with the appropriate
+            RBAC scopes. Provide a token above and run the requests directly from the browser.
+          </p>
+
+          <article class="endpoint" id="private-orders-authorize" data-method="POST" data-path="/v1/checkout/orders/{orderId}/authorize">
+            <div class="endpoint__header">
+              <div class="endpoint__title">
+                <span class="http-badge http-badge--post">POST</span>
+                <div>
+                  <h3>Authorize payment for order</h3>
+                  <p>/v1/checkout/orders/{orderId}/authorize</p>
+                </div>
+              </div>
+              <button class="try-button" data-endpoint="private-orders-authorize">Try it</button>
+            </div>
+
+            <div class="endpoint__layout">
+              <div class="endpoint__body">
+                <section class="endpoint__section">
+                  <h4>Summary</h4>
+                  <p>
+                    Authorize payment for an approved order. Use the returned authorization ID to capture funds once you are
+                    ready to fulfill.
+                  </p>
+                </section>
+
+                <section class="endpoint__section">
+                  <h4>Security</h4>
+                  <ul class="pill-list">
+                    <li class="pill pill--private">Private</li>
+                    <li class="pill">OAuth2 &rsaquo; checkout.authorize</li>
+                  </ul>
+                </section>
+
+                <section class="endpoint__section">
+                  <h4>Path parameters</h4>
+                  <label class="field">
+                    <span class="field__label">orderId</span>
+                    <input type="text" value="ord_93d920f" data-param="orderId" />
+                    <span class="field__hint">Required • Identifier for the approved order.</span>
+                  </label>
+                </section>
+
+                <section class="endpoint__section">
+                  <h4>Request body</h4>
+                  <textarea class="payload" data-payload="private-orders-authorize" rows="10">{
+  "amount": {
+    "currency": "USD",
+    "value": "120.00"
+  },
+  "final_capture": false
+}</textarea>
+                  <p class="field__hint">Send <code>final_capture</code> as <code>true</code> only when you intend to capture immediately.</p>
+                </section>
+              </div>
+
+              <div class="endpoint__panels">
+                <section class="panel">
+                  <header class="panel__header">
+                    <h4>Request samples</h4>
+                    <span class="panel__format">cURL</span>
+                  </header>
+                  <pre class="code-block" data-template="curl" data-endpoint="private-orders-authorize"></pre>
+                  <div class="panel__actions">
+                    <button class="copy-button" data-copy>Copy</button>
+                    <button class="run-button" data-endpoint="private-orders-authorize">Run</button>
+                  </div>
+                </section>
+
+                <section class="panel">
+                  <header class="panel__header">
+                    <h4>Response samples</h4>
+                    <span class="panel__format">201 application/json</span>
+                  </header>
+                  <pre class="code-block" id="response-private-orders-authorize">{
+  "status": "AUTHORIZED",
+  "id": "auth_48abf7e",
+  "links": [
+    {
+      "rel": "self",
+      "href": "https://api.rbac-commerce.dev/v1/payments/authorizations/auth_48abf7e"
+    },
+    {
+      "rel": "capture",
+      "href": "https://api.rbac-commerce.dev/v1/payments/authorizations/auth_48abf7e/capture"
+    }
+  ]
+}</pre>
+                </section>
+              </div>
+            </div>
+          </article>
+
+          <article class="endpoint" id="private-orders-capture" data-method="POST" data-path="/v1/payments/authorizations/{authorizationId}/capture">
+            <div class="endpoint__header">
+              <div class="endpoint__title">
+                <span class="http-badge http-badge--post">POST</span>
+                <div>
+                  <h3>Capture authorized payment</h3>
+                  <p>/v1/payments/authorizations/{authorizationId}/capture</p>
+                </div>
+              </div>
+              <button class="try-button" data-endpoint="private-orders-capture">Try it</button>
+            </div>
+
+            <div class="endpoint__layout">
+              <div class="endpoint__body">
+                <section class="endpoint__section">
+                  <h4>Summary</h4>
+                  <p>Capture funds from a prior authorization. Use when fulfilling the order.</p>
+                </section>
+
+                <section class="endpoint__section">
+                  <h4>Security</h4>
+                  <ul class="pill-list">
+                    <li class="pill pill--private">Private</li>
+                    <li class="pill">OAuth2 &rsaquo; checkout.capture</li>
+                  </ul>
+                </section>
+
+                <section class="endpoint__section">
+                  <h4>Path parameters</h4>
+                  <label class="field">
+                    <span class="field__label">authorizationId</span>
+                    <input type="text" value="auth_48abf7e" data-param="authorizationId" />
+                    <span class="field__hint">Required • Authorization identifier to capture.</span>
+                  </label>
+                </section>
+
+                <section class="endpoint__section">
+                  <h4>Request body</h4>
+                  <textarea class="payload" data-payload="private-orders-capture" rows="10">{
+  "amount": {
+    "currency": "USD",
+    "value": "120.00"
+  },
+  "invoice_id": "INV-11520",
+  "final_capture": true
+}</textarea>
+                  <p class="field__hint">Set <code>final_capture</code> to <code>false</code> when capturing partially.</p>
+                </section>
+              </div>
+
+              <div class="endpoint__panels">
+                <section class="panel">
+                  <header class="panel__header">
+                    <h4>Request samples</h4>
+                    <span class="panel__format">cURL</span>
+                  </header>
+                  <pre class="code-block" data-template="curl" data-endpoint="private-orders-capture"></pre>
+                  <div class="panel__actions">
+                    <button class="copy-button" data-copy>Copy</button>
+                    <button class="run-button" data-endpoint="private-orders-capture">Run</button>
+                  </div>
+                </section>
+
+                <section class="panel">
+                  <header class="panel__header">
+                    <h4>Response samples</h4>
+                    <span class="panel__format">201 application/json</span>
+                  </header>
+                  <pre class="code-block" id="response-private-orders-capture">{
+  "status": "COMPLETED",
+  "id": "cap_1e5f938",
+  "amount": {
+    "currency": "USD",
+    "value": "120.00"
+  },
+  "links": [
+    {
+      "rel": "self",
+      "href": "https://api.rbac-commerce.dev/v1/payments/captures/cap_1e5f938"
+    },
+    {
+      "rel": "refund",
+      "href": "https://api.rbac-commerce.dev/v1/payments/captures/cap_1e5f938/refund"
+    }
+  ]
+}</pre>
+                </section>
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <footer class="page-footer">
+          <p>Looking for more? Explore the <a href="../guides/index.html">integration guides</a>.</p>
+        </footer>
+      </main>
+    </div>
+
+    <template id="curlTemplate">
+      curl -X {{METHOD}} "{{URL}}" \
+  -H "Content-Type: application/json"{{AUTH_HEADER}}{{BODY}}
+    </template>
+
+    <script>
+      const environmentSelect = document.getElementById('environmentSelect');
+      const baseUrlInput = document.getElementById('baseUrl');
+      const customUrlControl = document.getElementById('customUrlControl');
+      const authTokenInput = document.getElementById('authToken');
+      const template = document.getElementById('curlTemplate').innerHTML;
+
+      const endpoints = Array.from(document.querySelectorAll('.endpoint'));
+
+      function getBaseUrl() {
+        const selected = environmentSelect.value;
+        if (selected === 'custom') {
+          return baseUrlInput.value.replace(/\/$/, '');
+        }
+        return selected.replace(/\/$/, '');
+      }
+
+      function formatCurl(endpointEl) {
+        const method = endpointEl.dataset.method || 'GET';
+        const rawPath = endpointEl.dataset.path || '';
+        let path = rawPath;
+        const params = {};
+        endpointEl.querySelectorAll('[data-param]').forEach((input) => {
+          const value = input.value || input.placeholder || '';
+          params[input.dataset.param] = value;
+          path = path.replace(new RegExp(`{${input.dataset.param}}`, 'g'), encodeURIComponent(value));
+        });
+
+        const url = `${getBaseUrl()}${path}`;
+        const authHeader = authTokenInput.value ? ` \\\n  -H "Authorization: Bearer ${authTokenInput.value}"` : '';
+
+        const payloadField = endpointEl.querySelector(`[data-payload="${endpointEl.id}"]`);
+        const body = payloadField && payloadField.value.trim()
+          ? ` \\\n  -d '${payloadField.value.replace(/'/g, "'\\''")}'`
+          : '';
+
+        return template
+          .replace('{{METHOD}}', method)
+          .replace('{{URL}}', url)
+          .replace('{{AUTH_HEADER}}', authHeader)
+          .replace('{{BODY}}', body);
+      }
+
+      function updateCurlBlocks() {
+        endpoints.forEach((endpointEl) => {
+          endpointEl.querySelectorAll('[data-template="curl"]').forEach((pre) => {
+            pre.textContent = formatCurl(endpointEl);
+          });
+        });
+      }
+
+      function runEndpoint(endpointId) {
+        const endpointEl = document.getElementById(endpointId);
+        if (!endpointEl) return;
+
+        const method = endpointEl.dataset.method || 'GET';
+        let path = endpointEl.dataset.path || '';
+        endpointEl.querySelectorAll('[data-param]').forEach((input) => {
+          const value = input.value || input.placeholder || '';
+          path = path.replace(new RegExp(`{${input.dataset.param}}`, 'g'), encodeURIComponent(value));
+        });
+        const url = `${getBaseUrl()}${path}`;
+
+        let body;
+        const payloadField = endpointEl.querySelector(`[data-payload="${endpointId}"]`);
+        if (payloadField && payloadField.value.trim()) {
+          try {
+            body = JSON.stringify(JSON.parse(payloadField.value));
+          } catch (error) {
+            body = payloadField.value;
+          }
+        }
+
+        const headers = { 'Content-Type': 'application/json' };
+        if (authTokenInput.value) {
+          headers['Authorization'] = `Bearer ${authTokenInput.value}`;
+        }
+
+        const responseTarget = document.getElementById(`response-${endpointId}`);
+        responseTarget.textContent = 'Loading…';
+
+        fetch(url, {
+          method,
+          headers,
+          body: method === 'GET' || method === 'DELETE' ? undefined : body,
+        })
+          .then(async (response) => {
+            const contentType = response.headers.get('content-type') || '';
+            if (contentType.includes('application/json')) {
+              const data = await response.json();
+              return JSON.stringify(data, null, 2);
+            }
+            return response.text();
+          })
+          .then((text) => {
+            responseTarget.textContent = text || '(empty response)';
+          })
+          .catch((error) => {
+            responseTarget.textContent = `Request failed: ${error.message}`;
+          });
+      }
+
+      environmentSelect.addEventListener('change', (event) => {
+        if (event.target.value === 'custom') {
+          customUrlControl.hidden = false;
+          baseUrlInput.focus();
+        } else {
+          customUrlControl.hidden = true;
+          if (baseUrlInput) {
+            baseUrlInput.value = event.target.value;
+          }
+        }
+        updateCurlBlocks();
+      });
+
+      baseUrlInput?.addEventListener('input', updateCurlBlocks);
+      authTokenInput.addEventListener('input', updateCurlBlocks);
+
+      endpoints.forEach((endpointEl) => {
+        endpointEl.querySelectorAll('[data-param]').forEach((input) => {
+          input.addEventListener('input', updateCurlBlocks);
+        });
+        const payloadField = endpointEl.querySelector(`[data-payload="${endpointEl.id}"]`);
+        if (payloadField) {
+          payloadField.addEventListener('input', updateCurlBlocks);
+        }
+      });
+
+      document.querySelectorAll('.run-button, .try-button').forEach((button) => {
+        button.addEventListener('click', () => {
+          const endpointId = button.dataset.endpoint;
+          if (endpointId) {
+            runEndpoint(endpointId);
+          }
+        });
+      });
+
+      document.querySelectorAll('[data-copy]').forEach((button) => {
+        button.addEventListener('click', () => {
+          const pre = button.closest('.panel').querySelector('.code-block');
+          if (!pre) return;
+          navigator.clipboard.writeText(pre.textContent).then(() => {
+            button.textContent = 'Copied!';
+            setTimeout(() => {
+              button.textContent = 'Copy';
+            }, 1500);
+          });
+        });
+      });
+
+      updateCurlBlocks();
+    </script>
+  </body>
 </html>
