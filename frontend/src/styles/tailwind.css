@@ -8,3 +8,29 @@
   --color-primary-hex: #2563eb;
   --color-accent: 16 185 129;
 }
+
+@keyframes confetti-fall {
+  0% {
+    transform: translateY(-120vh) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(120vh) rotate(720deg);
+    opacity: 0;
+  }
+}
+
+.confetti-piece {
+  position: absolute;
+  top: -10vh;
+  width: 0.35rem;
+  height: 1.2rem;
+  border-radius: 9999px;
+  opacity: 0;
+  animation-name: confetti-fall;
+  animation-timing-function: ease-in;
+  animation-fill-mode: forwards;
+}

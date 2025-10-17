@@ -103,6 +103,35 @@ export interface CheckoutOrderResponse {
   orderNumber: string;
   summary: OrderSummary;
   createdAt: string;
+  lines: OrderLine[];
+  shippingAddress: CheckoutAddress | null;
+  billingAddress: CheckoutAddress | null;
+  paymentMethod: PaymentMethod | null;
+  status: string;
+  customerId: number | null;
+  customerName: string | null;
+  customerEmail: string | null;
+}
+
+export interface CheckoutCoupon {
+  id: number;
+  name: string;
+  code: string;
+  shortDescription?: string | null;
+  discountType: 'FLAT' | 'PERCENTAGE';
+  discountValue: number | null;
+  minimumCartValue: number | null;
+  startDate: string;
+  endDate: string;
+}
+
+export interface AppliedCoupon {
+  id: number;
+  name: string;
+  code: string;
+  discountType: 'FLAT' | 'PERCENTAGE';
+  discountValue: number | null;
+  discountAmount: number | null;
 }
 
 export interface CheckoutCoupon {

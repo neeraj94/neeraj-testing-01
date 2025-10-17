@@ -47,6 +47,7 @@ import PublicBrandsPage from './pages/PublicBrandsPage';
 import PublicCouponsPage from './pages/PublicCouponsPage';
 import CartPage from './pages/CartPage';
 import CheckoutPage from './pages/CheckoutPage';
+import OrderConfirmationPage from './pages/OrderConfirmationPage';
 import AdminPaymentPage from './pages/AdminPaymentPage';
 import AdminOrdersPage from './pages/AdminOrdersPage';
 
@@ -156,6 +157,7 @@ const App = () => {
       <Route path="/brands" element={<PublicBrandsPage />} />
       <Route path="/coupons" element={<PublicCouponsPage />} />
       <Route path="/cart" element={<CartPage />} />
+      <Route path="/order-confirmation/:orderId" element={<OrderConfirmationPage />} />
       <Route path="/products/showcase" element={<Navigate to="/product/demo-product" replace />} />
       <Route path="/product/:slug" element={<PublicProductPage />} />
       <Route element={<ProtectedRoute />}>

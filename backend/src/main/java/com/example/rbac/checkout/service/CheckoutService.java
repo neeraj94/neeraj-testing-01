@@ -10,6 +10,7 @@ import com.example.rbac.checkout.dto.CheckoutOrderLineRequest;
 import com.example.rbac.checkout.dto.CheckoutOrderRequest;
 import com.example.rbac.checkout.dto.CheckoutOrderResponse;
 import com.example.rbac.checkout.dto.CheckoutSummaryDto;
+import com.example.rbac.checkout.dto.OrderDetailDto;
 import com.example.rbac.checkout.dto.OrderListItemDto;
 import com.example.rbac.checkout.dto.OrderSummaryDto;
 import com.example.rbac.checkout.dto.OrderTaxLineDto;
@@ -114,7 +115,15 @@ public class CheckoutService {
         if (orderSummary.getProductTotal() == null || orderSummary.getProductTotal().compareTo(BigDecimal.ZERO) <= 0) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "Add items to your cart before placing an order");
         }
-        CheckoutOrderResponse response = orderService.createOrder(userId, user.getFullName(), shippingAddress, billingAddress, paymentMethod, orderSummary, orderLines);
+        CheckoutOrderResponse response = orderService.createOrder(
+                userId,
+                user.getEmail(),
+                user.getFullName(),
+                shippingAddress,
+                billingAddress,
+                paymentMethod,
+                orderSummary,
+                orderLines);
         clearCart(userId);
         return response;
     }
@@ -152,6 +161,21 @@ public class CheckoutService {
     @Transactional(readOnly = true)
     public List<OrderListItemDto> listOrders() {
         return orderService.listOrders();
+    }
+
+    @Transactional(readOnly = true)
+    public List<OrderListItemDto> listOrdersForUser(Long userId) {
+        return orderService.listOrdersForUser(userId);
+    }
+
+    @Transactional(readOnly = true)
+    public OrderDetailDto getOrderDetail(Long orderId) {
+        return orderService.getOrder(orderId);
+    }
+
+    @Transactional(readOnly = true)
+    public OrderDetailDto getOrderDetailForUser(Long userId, Long orderId) {
+        return orderService.getOrderForUser(userId, orderId);
     }
 
     @Transactional(readOnly = true)

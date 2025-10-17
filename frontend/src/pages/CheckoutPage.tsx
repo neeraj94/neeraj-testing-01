@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../services/http';
 import type {
@@ -49,6 +49,7 @@ const CheckoutPage = () => {
   const baseCurrency = useAppSelector(selectBaseCurrency);
   const cart = useAppSelector(selectCart);
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const [activeStep, setActiveStep] = useState<StepKey>('shipping');
   const [shippingAddressId, setShippingAddressId] = useState<number | null>(null);
@@ -60,7 +61,6 @@ const CheckoutPage = () => {
   const [couponError, setCouponError] = useState<string | null>(null);
   const [isCouponModalOpen, setIsCouponModalOpen] = useState(false);
   const [availableCoupons, setAvailableCoupons] = useState<CheckoutCoupon[]>([]);
-  const [lastOrderNumber, setLastOrderNumber] = useState<string | null>(null);
   const [showAddressForm, setShowAddressForm] = useState(false);
   const defaultAddressForm = {
     type: 'SHIPPING' as AddressType,
@@ -348,16 +348,20 @@ const CheckoutPage = () => {
     onSuccess: (data) => {
       notify({
         type: 'success',
-        message: data.orderNumber ? `Order ${data.orderNumber} placed successfully.` : 'Order placed successfully.'
+        message: data.orderNumber
+          ? `Order ${data.orderNumber} placed successfully! Redirecting to confirmation…`
+          : 'Order placed successfully! Redirecting to confirmation…'
       });
       setOrderSummary(data.summary);
       setSelectedCouponCode(data.summary.appliedCoupon?.code ?? null);
       setCouponError(null);
-      setLastOrderNumber(data.orderNumber ?? null);
       setActiveStep('shipping');
       setAcceptPolicies(false);
       setSameAsShipping(true);
       setShowAddressForm(false);
+      setShippingAddressId(null);
+      setBillingAddressId(null);
+      setSelectedPaymentKey(null);
       queryClient.invalidateQueries({ queryKey: ['checkout', 'summary'] });
       queryClient.invalidateQueries({ queryKey: ['orders', 'admin'] });
       queryClient.invalidateQueries({ queryKey: ['profile', 'addresses'] });
@@ -365,6 +369,9 @@ const CheckoutPage = () => {
         predicate: (query) => Array.isArray(query.queryKey) && query.queryKey.includes('addresses')
       });
       dispatch(fetchCart());
+      navigate(`/order-confirmation/${data.orderId}`, {
+        state: { orderNumber: data.orderNumber ?? undefined }
+      });
     },
     onError: (error) => {
       notify({ type: 'error', message: extractErrorMessage(error, 'Unable to complete order.') });

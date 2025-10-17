@@ -5,6 +5,7 @@ import api from '../services/http';
 import type { Pagination, Permission, Role, User, UserSummaryMetrics, UserRecentProduct } from '../types/models';
 import type { Cart } from '../types/cart';
 import type { AddressType, CheckoutAddress, CheckoutRegionOption } from '../types/checkout';
+import type { OrderDetail, OrderListItem } from '../types/orders';
 import { useToast } from '../components/ToastProvider';
 import { useConfirm } from '../components/ConfirmDialogProvider';
 import SortableColumnHeader from '../components/SortableColumnHeader';
@@ -21,6 +22,9 @@ import PaginationControls from '../components/PaginationControls';
 import { formatCurrency } from '../utils/currency';
 import type { ProductDetail, ProductSummary } from '../types/product';
 import Button from '../components/Button';
+import OrderDetailPanel from '../components/orders/OrderDetailPanel';
+import { selectBaseCurrency } from '../features/settings/selectors';
+import Spinner from '../components/Spinner';
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100];
 const DEFAULT_PAGE_SIZE = 25;
@@ -61,7 +65,7 @@ const TrashIcon = () => (
 );
 
 type PanelMode = 'empty' | 'create' | 'detail';
-type DetailTab = 'profile' | 'access' | 'addresses' | 'cart' | 'recent';
+type DetailTab = 'profile' | 'access' | 'addresses' | 'orders' | 'cart' | 'recent';
 type UserSortField = 'name' | 'email' | 'status' | 'audience' | 'groups';
 
 type UserFormState = {
@@ -111,6 +115,7 @@ const UsersPage = () => {
   const { notify } = useToast();
   const confirm = useConfirm();
   const { permissions: grantedPermissions, user: currentUser, roles: currentRoles } = useAppSelector((state) => state.auth);
+  const baseCurrency = useAppSelector(selectBaseCurrency);
 
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
@@ -134,6 +139,7 @@ const UsersPage = () => {
   const [cartAddQuantity, setCartAddQuantity] = useState(1);
   const [updatingItemId, setUpdatingItemId] = useState<number | null>(null);
   const [removingItemId, setRemovingItemId] = useState<number | null>(null);
+  const [selectedUserOrderId, setSelectedUserOrderId] = useState<number | null>(null);
   const createEmptyAddressForm = (type: AddressType = 'SHIPPING') => ({
     type,
     countryId: '',
@@ -249,6 +255,122 @@ const UsersPage = () => {
           })}
         </div>
       </section>
+    );
+  };
+
+  const renderOrdersTab = () => {
+    if (panelMode !== 'detail' || !selectedUserId) {
+      return (
+        <section className="rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-600 shadow-sm">
+          Select a user to review their recent orders and fulfilment details.
+        </section>
+      );
+    }
+
+    if (userOrdersQuery.isLoading || userOrdersQuery.isFetching) {
+      return (
+        <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          <p className="text-sm text-slate-500">Loading orders…</p>
+        </section>
+      );
+    }
+
+    if (userOrdersQuery.isError) {
+      const message = extractErrorMessage(userOrdersQuery.error, 'Unable to load orders for this customer.');
+      return (
+        <section className="space-y-4 rounded-xl border border-rose-200 bg-rose-50/80 p-6 shadow-sm">
+          <div className="text-sm font-semibold text-rose-700">{message}</div>
+          <button
+            type="button"
+            onClick={() => userOrdersQuery.refetch()}
+            className="inline-flex items-center justify-center rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-700"
+          >
+            Try again
+          </button>
+        </section>
+      );
+    }
+
+    if (!userOrders.length) {
+      return (
+        <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h3 className="text-sm font-semibold text-slate-800">No orders yet</h3>
+          <p className="mt-2 text-sm text-slate-500">
+            This customer hasn’t placed an order yet. When they complete a checkout, their orders will appear here automatically.
+          </p>
+        </section>
+      );
+    }
+
+    return (
+      <div className="grid gap-6 lg:grid-cols-[320px,1fr]">
+        <div className="space-y-3">
+          {userOrders.map((order) => {
+            const isSelected = selectedUserOrderId === order.id;
+            return (
+              <button
+                key={order.id}
+                type="button"
+                onClick={() => setSelectedUserOrderId(order.id)}
+                className={`w-full rounded-2xl border px-4 py-3 text-left transition ${
+                  isSelected
+                    ? 'border-primary/40 bg-primary/5 shadow-sm'
+                    : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
+                }`}
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900">{order.orderNumber}</p>
+                    <p className="text-xs text-slate-500">Placed {formatDateTime(order.createdAt)}</p>
+                  </div>
+                  <div className="text-right">
+                    <span
+                      className={`inline-flex items-center justify-center rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wide ${
+                        order.status === 'PROCESSING'
+                          ? 'bg-amber-50 text-amber-700'
+                          : 'bg-emerald-50 text-emerald-700'
+                      }`}
+                    >
+                      {order.status ?? 'Processing'}
+                    </span>
+                    <p className="mt-2 text-sm font-semibold text-slate-900">
+                      {formatCurrency(order.summary?.grandTotal ?? 0, baseCurrency)}
+                    </p>
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+        <div>
+          {selectedUserOrderId == null ? (
+            <section className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-sm text-slate-500">
+              Pick an order from the list to view payment, shipping, and line item details.
+            </section>
+          ) : userOrderDetailQuery.isLoading ? (
+            <section className="flex min-h-[200px] items-center justify-center rounded-xl border border-slate-200 bg-white shadow-sm">
+              <Spinner />
+            </section>
+          ) : userOrderDetailQuery.isError ? (
+            <section className="space-y-4 rounded-xl border border-rose-200 bg-rose-50/80 p-6 text-sm text-rose-600 shadow-sm">
+              <p>{extractErrorMessage(userOrderDetailQuery.error, 'Unable to load order details.')}</p>
+              <button
+                type="button"
+                onClick={() => userOrderDetailQuery.refetch()}
+                className="inline-flex items-center justify-center rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-700"
+              >
+                Try again
+              </button>
+            </section>
+          ) : selectedUserOrderDetail ? (
+            <OrderDetailPanel
+              order={selectedUserOrderDetail}
+              baseCurrency={baseCurrency}
+              onClose={() => setSelectedUserOrderId(null)}
+            />
+          ) : null}
+        </div>
+      </div>
     );
   };
 
@@ -551,6 +673,30 @@ const UsersPage = () => {
     enabled: panelMode === 'detail' && activeTab === 'addresses' && selectedUserId != null
   });
 
+  const userOrdersQuery = useQuery<OrderListItem[]>({
+    queryKey: ['users', selectedUserId, 'orders'],
+    queryFn: async () => {
+      const { data } = await api.get<OrderListItem[]>(`/admin/users/${selectedUserId}/orders`);
+      return data;
+    },
+    enabled: panelMode === 'detail' && activeTab === 'orders' && selectedUserId != null
+  });
+
+  const userOrderDetailQuery = useQuery<OrderDetail>({
+    queryKey: ['users', selectedUserId, 'orders', selectedUserOrderId],
+    queryFn: async () => {
+      const { data } = await api.get<OrderDetail>(
+        `/admin/users/${selectedUserId}/orders/${selectedUserOrderId}`
+      );
+      return data;
+    },
+    enabled:
+      panelMode === 'detail' &&
+      activeTab === 'orders' &&
+      selectedUserId != null &&
+      selectedUserOrderId != null
+  });
+
   const addressCountriesQuery = useQuery<CheckoutRegionOption[]>({
     queryKey: ['admin', 'users', 'addresses', 'countries'],
     queryFn: async () => {
@@ -629,6 +775,8 @@ const UsersPage = () => {
   const isSearchingCartProducts = cartProductSearchQuery.isFetching;
   const selectedProductDetail = cartSelectedProductQuery.data;
   const recentViews = recentViewsQuery.data ?? [];
+  const userOrders = userOrdersQuery.data ?? [];
+  const selectedUserOrderDetail = userOrderDetailQuery.data ?? null;
 
   useEffect(() => {
     if (cartQuery.data && selectedUserId != null) {
@@ -658,6 +806,31 @@ const UsersPage = () => {
       setCartAddQuantity(1);
     }
   }, [isCartAddOpen]);
+
+  useEffect(() => {
+    if (panelMode !== 'detail') {
+      setSelectedUserOrderId(null);
+    }
+  }, [panelMode]);
+
+  useEffect(() => {
+    setSelectedUserOrderId(null);
+  }, [selectedUserId]);
+
+  useEffect(() => {
+    if (activeTab !== 'orders') {
+      setSelectedUserOrderId(null);
+      return;
+    }
+    const orders = userOrdersQuery.data ?? [];
+    if (!orders.length) {
+      setSelectedUserOrderId(null);
+      return;
+    }
+    if (!orders.some((order) => order.id === selectedUserOrderId)) {
+      setSelectedUserOrderId(orders[0].id);
+    }
+  }, [activeTab, userOrdersQuery.data, selectedUserOrderId]);
 
   useEffect(() => {
     if (activeTab !== 'addresses') {
@@ -2782,6 +2955,7 @@ const UsersPage = () => {
     if (!isCreate) {
       tabs.push(
         { key: 'addresses', label: 'Addresses' },
+        { key: 'orders', label: 'Orders' },
         { key: 'cart', label: 'Cart' },
         { key: 'recent', label: 'Recently viewed' }
       );
@@ -2908,6 +3082,8 @@ const UsersPage = () => {
               renderAccessTab(isEditable)
             ) : activeTab === 'addresses' ? (
               renderAddressesTab()
+            ) : activeTab === 'orders' ? (
+              renderOrdersTab()
             ) : activeTab === 'cart' ? (
               renderCartTab()
             ) : (
@@ -2924,6 +3100,8 @@ const UsersPage = () => {
                 ? 'Cart adjustments are saved automatically.'
                 : activeTab === 'recent'
                 ? 'Recent views update automatically whenever the customer browses products.'
+                : activeTab === 'orders'
+                ? 'Orders sync automatically once shoppers complete checkout.'
                 : activeTab === 'addresses'
                 ? 'Addresses sync automatically whenever shoppers update them during checkout.'
                 : 'Changes apply immediately after saving and will not modify the underlying role definitions.'}
