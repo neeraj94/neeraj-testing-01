@@ -1,1167 +1,580 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>API Reference Portal</title>
-  <link rel="stylesheet" href="styles.css" />
-</head>
-<body>
-  <div class="page">
-    <aside class="sidebar">
-      <div class="brand">
-        <span class="brand-kicker">RBAC Commerce</span>
-        <h1>API Explorer</h1>
-        <p>Discover authenticated and public endpoints, generate runnable cURL requests, and inspect live responses without leaving the browser.</p>
-      </div>
-      <div class="sidebar-search">
-        <label for="moduleSearch">Quick search</label>
-        <div class="search-control">
-          <input id="moduleSearch" type="search" placeholder="Search endpoints or modules" autocomplete="off" />
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>API Reference</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="layout">
+      <aside class="sidebar" aria-label="Primary">
+        <div class="sidebar__brand">
+          <div class="sidebar__badge">RBAC Commerce</div>
+          <h1>API Reference</h1>
+          <p>Discover public storefront APIs and private back-office integrations with runnable examples.</p>
         </div>
-      </div>
-      <nav class="sidebar-nav">
-        <h2>Contents</h2>
-        <ul id="toc"></ul>
-      </nav>
-      <div class="sidebar-footer">
-        <p class="sidebar-note">Tip: configure the base URL and token from the environment switcher to keep cURL snippets and live requests in sync.</p>
-      </div>
-    </aside>
 
-    <main class="main">
-      <header class="hero">
-        <div class="hero-text">
-          <h2>Your unified API surface</h2>
-          <p>The RBAC Commerce platform exposes RESTful endpoints for both anonymous storefront experiences and secure back-office workflows. Use the controls below to tailor requests to your environment and run them instantly from the browser.</p>
+        <div class="sidebar__controls">
+          <label class="control">
+            <span class="control__label">Environment</span>
+            <select id="environmentSelect">
+              <option value="https://sandbox.api.rbac-commerce.dev">Sandbox</option>
+              <option value="https://api.rbac-commerce.dev">Production</option>
+              <option value="custom">Custom…</option>
+            </select>
+          </label>
+          <label class="control" id="customUrlControl" hidden>
+            <span class="control__label">Custom base URL</span>
+            <input id="baseUrl" type="url" spellcheck="false" value="https://sandbox.api.rbac-commerce.dev" />
+          </label>
+          <label class="control">
+            <span class="control__label">Bearer token</span>
+            <input id="authToken" type="text" spellcheck="false" placeholder="Optional token for private endpoints" />
+          </label>
         </div>
-        <div class="env-panel">
-          <div class="env-buttons" role="group" aria-label="Environment presets">
-            <button type="button" class="env-button is-active" data-base="https://sandbox.api.rbac-commerce.dev/api/v1">Sandbox</button>
-            <button type="button" class="env-button" data-base="https://api.rbac-commerce.dev/api/v1">Production</button>
-          </div>
-          <div class="env-inputs">
-            <label class="field">
-              <span class="field-label">Base URL</span>
-              <input id="baseUrl" type="url" spellcheck="false" value="https://sandbox.api.rbac-commerce.dev/api/v1" />
-            </label>
-            <label class="field">
-              <span class="field-label">Bearer token</span>
-              <input id="authToken" type="text" spellcheck="false" placeholder="Optional. Paste a JWT or leave blank for public endpoints." />
-            </label>
-          </div>
-        </div>
-      </header>
 
-      <section id="getting-started" class="content-section intro">
-        <h3>Getting started</h3>
-        <p>All endpoints accept <code>application/json</code> request bodies and respond with JSON unless noted otherwise. Private endpoints require a valid <code>Authorization: Bearer &lt;token&gt;</code> header with scopes that match the operation. Use the explorer below to inspect schemas, tweak payloads, and execute real requests.</p>
-        <div class="intro-columns">
-          <article class="intro-card">
-            <h4>Authentication &amp; rate limits</h4>
-            <p>Public endpoints can be called without credentials. Private endpoints enforce JWT bearer authentication and honour the RBAC permissions assigned to the token. Standard rate limits apply: 200 requests/minute for public access and 600 requests/minute for authenticated service users.</p>
-          </article>
-          <article class="intro-card">
-            <h4>Error handling</h4>
-            <p>Errors conform to a consistent envelope containing <code>error</code>, <code>message</code>, and optional <code>details</code> arrays. Reference the error catalogue below or inspect the live response body after executing a request.</p>
-          </article>
-          <article class="intro-card">
-            <h4>Change history</h4>
-            <p>Every module links to a detailed reference page with release notes, schema breakdowns, and migration tips. Use the “View full reference” link at the bottom of each module card for complete coverage.</p>
-          </article>
+        <div class="sidebar__nav">
+          <h2>Endpoints</h2>
+          <nav>
+            <div class="sidebar__group" data-group="public">
+              <div class="sidebar__group-title">Public</div>
+              <ul>
+                <li><a href="#public-products-list">List catalog products</a></li>
+                <li><a href="#public-products-detail">Retrieve product</a></li>
+              </ul>
+            </div>
+            <div class="sidebar__group" data-group="private">
+              <div class="sidebar__group-title">Private</div>
+              <ul>
+                <li><a href="#private-orders-authorize">Authorize payment for order</a></li>
+                <li><a href="#private-orders-capture">Capture authorized payment</a></li>
+              </ul>
+            </div>
+          </nav>
         </div>
-      </section>
+      </aside>
 
-      <section id="public-apis" class="content-section category-section" data-category="public">
-        <header class="section-heading">
-          <div>
-            <h3>Public APIs</h3>
-            <p>Anonymous endpoints that power the customer-facing storefront, promotions, and onboarding experiences.</p>
-          </div>
+      <main class="content" id="mainContent">
+        <header class="hero">
+          <h2>Design, test, and ship with RBAC Commerce APIs</h2>
+          <p>
+            Use runnable request samples to validate payloads directly from your browser. Provide a token to access private
+            endpoints, tweak parameters, and inspect responses in real time.
+          </p>
         </header>
-        <div class="module-grid" id="publicModules"></div>
-        <p class="empty-state" hidden>No public endpoints matched your search.</p>
-      </section>
 
-      <section id="private-apis" class="content-section category-section" data-category="private">
-        <header class="section-heading">
-          <div>
-            <h3>Private APIs</h3>
-            <p>Secure endpoints guarded by role-based access controls for administering catalogues, accounts, and configuration.</p>
-          </div>
-        </header>
-        <div class="module-grid" id="privateModules"></div>
-        <p class="empty-state" hidden>No private endpoints matched your search.</p>
-      </section>
+        <section class="category" id="category-public">
+          <h2>Public endpoints</h2>
+          <p class="category__lead">
+            Explore unauthenticated REST endpoints used by the storefront and onboarding flows. These APIs respond with
+            <code>application/json</code> payloads and are accessible without a token.
+          </p>
 
-      <section id="error-catalog" class="content-section">
-        <h3>Common error codes</h3>
-        <table>
-          <thead>
-            <tr>
-              <th>Status</th>
-              <th>Message template</th>
-              <th>Typical causes</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td class="status success">200 / 204</td>
-              <td>Success / No Content</td>
-              <td>Request processed without validation errors.</td>
-            </tr>
-            <tr>
-              <td class="status client">400</td>
-              <td>Bad Request</td>
-              <td>Constraint violations, malformed JSON, unsupported filters.</td>
-            </tr>
-            <tr>
-              <td class="status client">401</td>
-              <td>Unauthorized</td>
-              <td>Missing or expired bearer token.</td>
-            </tr>
-            <tr>
-              <td class="status client">403</td>
-              <td>Forbidden</td>
-              <td>User lacks the permission guarding the endpoint.</td>
-            </tr>
-            <tr>
-              <td class="status client">404</td>
-              <td>Not Found</td>
-              <td>Invalid resource identifier or slug.</td>
-            </tr>
-            <tr>
-              <td class="status client">409</td>
-              <td>Conflict</td>
-              <td>Uniqueness collisions, invalid state transitions.</td>
-            </tr>
-            <tr>
-              <td class="status server">500</td>
-              <td>Internal Server Error</td>
-              <td>Unexpected server conditions or dependency failures.</td>
-            </tr>
-          </tbody>
-        </table>
-      </section>
+          <article class="endpoint" id="public-products-list" data-method="GET" data-path="/v1/catalog/products">
+            <div class="endpoint__header">
+              <div class="endpoint__title">
+                <span class="http-badge http-badge--get">GET</span>
+                <div>
+                  <h3>List catalog products</h3>
+                  <p>/v1/catalog/products</p>
+                </div>
+              </div>
+              <button class="try-button" data-endpoint="public-products-list">Try it</button>
+            </div>
 
-      <footer class="main-footer">
-        <p>Last updated <span id="lastUpdated"></span></p>
-      </footer>
-    </main>
-  </div>
+            <div class="endpoint__layout">
+              <div class="endpoint__body">
+                <section class="endpoint__section">
+                  <h4>Summary</h4>
+                  <p>Return a paginated list of active products available for purchase.</p>
+                </section>
 
-  <script>
-    const modules = [
-      {
-        id: 'authentication',
-        name: 'Authentication',
-        category: 'public',
-        summary: 'Token issuance, refresh, and verification flows for dashboard operators and storefront customers.',
-        docLink: 'auth.html',
-        keywords: 'signup login logout refresh verify token',
-        endpoints: [
-          {
-            id: 'auth-signup',
-            title: 'Create account',
-            method: 'POST',
-            path: '/api/v1/auth/signup',
-            description: 'Register a dashboard operator or storefront customer with role assignment.',
-            longDescription: 'Use this endpoint to enrol new internal staff or customers. When <code>sendInvite</code> is true an activation email is dispatched automatically.',
-            auth: 'none',
-            headers: [
-              { name: 'Content-Type', value: 'application/json' },
-              { name: 'Accept', value: 'application/json' }
-            ],
-            body: `{
-  "email": "alex@example.com",
-  "password": "P@ssw0rd!",
-  "firstName": "Alex",
-  "lastName": "Doe",
-  "role": "CUSTOMER"
-}`,
-            sampleResponse: `HTTP/1.1 201 Created
-{
-  "token": "eyJhbGciOi...",
-  "refreshToken": "c9f7b...",
-  "expiresIn": 3600,
-  "user": {
-    "id": 58,
-    "email": "alex@example.com",
-    "firstName": "Alex",
-    "lastName": "Doe",
-    "roles": [
-      "CUSTOMER"
-    ]
-  }
-}`
-          },
-          {
-            id: 'auth-login',
-            title: 'Authenticate user',
-            method: 'POST',
-            path: '/api/v1/auth/login',
-            description: 'Issue access and refresh tokens for an existing account.',
-            longDescription: 'Submit valid credentials to obtain a short-lived JWT access token and a refresh token. Access tokens expire after one hour.',
-            auth: 'none',
-            headers: [
-              { name: 'Content-Type', value: 'application/json' }
-            ],
-            body: `{
-  "email": "alex@example.com",
-  "password": "P@ssw0rd!"
-}`,
-            sampleResponse: `HTTP/1.1 200 OK
-{
-  "token": "eyJhbGciOi...",
-  "refreshToken": "c9f7b...",
-  "expiresIn": 3600,
-  "user": {
-    "id": 58,
-    "email": "alex@example.com",
-    "firstName": "Alex",
-    "lastName": "Doe"
-  }
-}`
-          },
-          {
-            id: 'auth-refresh',
-            title: 'Refresh access token',
-            method: 'POST',
-            path: '/api/v1/auth/refresh',
-            description: 'Swap a valid refresh token for a new access token.',
-            longDescription: 'Send a refresh token before its expiry to mint a new access token. The response may include a rotated refresh token when rotation is enabled.',
-            auth: 'none',
-            headers: [
-              { name: 'Content-Type', value: 'application/json' }
-            ],
-            body: `{
-  "refreshToken": "c9f7b..."
-}`,
-            sampleResponse: `HTTP/1.1 200 OK
-{
-  "token": "eyJhbGciOi...",
-  "refreshToken": "a8d4...",
-  "expiresIn": 3600
-}`
-          },
-          {
-            id: 'auth-me',
-            title: 'Current profile',
-            method: 'GET',
-            path: '/api/v1/auth/me',
-            description: 'Return the profile of the authenticated principal.',
-            longDescription: 'Requires a bearer token issued by the login or refresh endpoints. Returns roles, permissions, and current status flags.',
-            auth: 'bearer',
-            headers: [
-              { name: 'Accept', value: 'application/json' }
-            ],
-            sampleResponse: `HTTP/1.1 200 OK
-{
-  "id": 12,
-  "email": "ops@example.com",
-  "firstName": "Operations",
-  "lastName": "Lead",
-  "roles": [
-    "ADMIN"
+                <section class="endpoint__section">
+                  <h4>Security</h4>
+                  <ul class="pill-list">
+                    <li class="pill pill--public">Public</li>
+                  </ul>
+                </section>
+
+                <section class="endpoint__section">
+                  <h4>Request</h4>
+                  <div class="field-grid">
+                    <label class="field">
+                      <span class="field__label">page</span>
+                      <input type="number" min="1" value="1" data-param="page" />
+                      <span class="field__hint">Query • Page number to fetch.</span>
+                    </label>
+                    <label class="field">
+                      <span class="field__label">pageSize</span>
+                      <input type="number" min="1" max="100" value="20" data-param="pageSize" />
+                      <span class="field__hint">Query • Number of results per page.</span>
+                    </label>
+                  </div>
+                </section>
+              </div>
+
+              <div class="endpoint__panels">
+                <section class="panel">
+                  <header class="panel__header">
+                    <h4>Request samples</h4>
+                    <span class="panel__format">cURL</span>
+                  </header>
+                  <pre class="code-block" data-template="curl" data-endpoint="public-products-list"></pre>
+                  <div class="panel__actions">
+                    <button class="copy-button" data-copy>Copy</button>
+                    <button class="run-button" data-endpoint="public-products-list">Run</button>
+                  </div>
+                </section>
+
+                <section class="panel">
+                  <header class="panel__header">
+                    <h4>Response samples</h4>
+                    <span class="panel__format">200 application/json</span>
+                  </header>
+                  <pre class="code-block" id="response-public-products-list">{
+  "data": [
+    {
+      "id": "prod_87923",
+      "name": "Everyday Cotton Tee",
+      "price": {
+        "currency": "USD",
+        "value": "22.00"
+      }
+    }
   ],
-  "permissions": [
-    "PRODUCT_VIEW",
-    "ORDER_MANAGE"
-  ],
-  "status": "ACTIVE"
-}`
-          }
-        ]
-      },
-      {
-        id: 'storefront',
-        name: 'Storefront catalogue',
-        category: 'public',
-        summary: 'Anonymous catalogue, category, and promotion feeds that back the public storefront.',
-        docLink: 'public.html',
-        keywords: 'products categories coupons storefront home',
-        endpoints: [
-          {
-            id: 'public-home',
-            title: 'Homepage content',
-            method: 'GET',
-            path: '/api/v1/public/home',
-            description: 'Retrieve hero banners and curated collections for the storefront landing page.',
-            longDescription: 'Use this endpoint to hydrate the storefront landing page with hero modules, featured categories, and personalised suggestions.',
-            auth: 'none',
-            sampleResponse: `HTTP/1.1 200 OK
-{
-  "hero": {
-    "title": "Glow up your space",
-    "cta": "Shop lighting"
+  "page": 1,
+  "pageSize": 20,
+  "total": 148
+}</pre>
+                </section>
+              </div>
+            </div>
+          </article>
+
+          <article class="endpoint" id="public-products-detail" data-method="GET" data-path="/v1/catalog/products/{productId}">
+            <div class="endpoint__header">
+              <div class="endpoint__title">
+                <span class="http-badge http-badge--get">GET</span>
+                <div>
+                  <h3>Retrieve product</h3>
+                  <p>/v1/catalog/products/{productId}</p>
+                </div>
+              </div>
+              <button class="try-button" data-endpoint="public-products-detail">Try it</button>
+            </div>
+
+            <div class="endpoint__layout">
+              <div class="endpoint__body">
+                <section class="endpoint__section">
+                  <h4>Summary</h4>
+                  <p>Retrieve a single product by identifier to power detail pages.</p>
+                </section>
+
+                <section class="endpoint__section">
+                  <h4>Security</h4>
+                  <ul class="pill-list">
+                    <li class="pill pill--public">Public</li>
+                  </ul>
+                </section>
+
+                <section class="endpoint__section">
+                  <h4>Path parameters</h4>
+                  <label class="field">
+                    <span class="field__label">productId</span>
+                    <input type="text" value="prod_87923" data-param="productId" />
+                    <span class="field__hint">Required • Unique product identifier.</span>
+                  </label>
+                </section>
+              </div>
+
+              <div class="endpoint__panels">
+                <section class="panel">
+                  <header class="panel__header">
+                    <h4>Request samples</h4>
+                    <span class="panel__format">cURL</span>
+                  </header>
+                  <pre class="code-block" data-template="curl" data-endpoint="public-products-detail"></pre>
+                  <div class="panel__actions">
+                    <button class="copy-button" data-copy>Copy</button>
+                    <button class="run-button" data-endpoint="public-products-detail">Run</button>
+                  </div>
+                </section>
+
+                <section class="panel">
+                  <header class="panel__header">
+                    <h4>Response samples</h4>
+                    <span class="panel__format">200 application/json</span>
+                  </header>
+                  <pre class="code-block" id="response-public-products-detail">{
+  "id": "prod_87923",
+  "name": "Everyday Cotton Tee",
+  "description": "A relaxed fit tee with breathable cotton blend.",
+  "price": {
+    "currency": "USD",
+    "value": "22.00"
   },
-  "featuredCategories": [
-    {
-      "name": "Lighting",
-      "slug": "lighting"
-    }
-  ]
-}`
-          },
-          {
-            id: 'public-products',
-            title: 'List products',
-            method: 'GET',
-            path: '/api/v1/public/products',
-            description: 'Searchable storefront catalogue with pagination, sorting, and filter facets.',
-            longDescription: 'Combine pagination with filter facets to render category and search result pages. The endpoint returns pricing, availability, and thumbnail metadata.',
-            auth: 'none',
-            params: [
-              { name: 'page', in: 'query', type: 'number', required: false, description: 'Zero-based page index.', default: '0' },
-              { name: 'size', in: 'query', type: 'number', required: false, description: 'Page size (max 100).', default: '20' },
-              { name: 'search', in: 'query', type: 'string', required: false, description: 'Optional name or SKU fragment.' },
-              { name: 'category', in: 'query', type: 'string', required: false, description: 'Category slug filter.' },
-              { name: 'sort', in: 'query', type: 'string', required: false, description: 'Sort field such as price, -price, newest.' }
-            ],
-            sampleResponse: `HTTP/1.1 200 OK
-{
-  "content": [
-    {
-      "id": 101,
-      "name": "Aurora Lamp",
-      "slug": "aurora-lamp",
-      "price": 129.0,
-      "thumbnail": "https://cdn.example.com/products/aurora/primary.jpg"
-    }
-  ],
-  "page": 0,
-  "size": 20,
-  "totalElements": 1,
-  "totalPages": 1,
-  "last": true
-}`
-          },
-          {
-            id: 'public-product',
-            title: 'Get product by slug',
-            method: 'GET',
-            path: '/api/v1/public/products/{slug}',
-            description: 'Return full PDP payload including variants, offers, and recommendations.',
-            longDescription: 'Populate product detail pages by supplying the canonical product slug. Use the promotions array to surface relevant offers to the shopper.',
-            auth: 'none',
-            params: [
-              { name: 'slug', in: 'path', type: 'string', required: true, description: 'Human friendly product slug.' }
-            ],
-            sampleResponse: `HTTP/1.1 200 OK
-{
-  "id": 101,
-  "name": "Aurora Lamp",
-  "slug": "aurora-lamp",
-  "offers": [
-    {
-      "code": "NYGLOW10",
-      "discount": "10% off"
-    }
-  ],
-  "variants": [
-    {
-      "sku": "AUR-LAMP-001",
-      "attributes": {
-        "Color": "Pearl"
-      }
-    }
-  ]
-}`
-          },
-          {
-            id: 'public-coupons',
-            title: 'Active coupons',
-            method: 'GET',
-            path: '/api/v1/public/coupons',
-            description: 'List publicly visible coupon campaigns with eligibility metadata.',
-            longDescription: 'Filter by product or category to surface context-aware promotions on PDPs and cart pages.',
-            auth: 'none',
-            params: [
-              { name: 'productId', in: 'query', type: 'number', required: false, description: 'Filter by applicable product id.' },
-              { name: 'categoryId', in: 'query', type: 'number', required: false, description: 'Filter by category id.' }
-            ],
-            sampleResponse: `HTTP/1.1 200 OK
-{
-  "content": [
-    {
-      "name": "Glow Intro",
-      "code": "GLOW5",
-      "type": "CART",
-      "description": "Save $5 on orders over $50"
-    }
-  ],
-  "page": 0,
-  "size": 20,
-  "totalElements": 1,
-  "totalPages": 1,
-  "last": true
-}`
-          }
-        ]
-      },
-      {
-        id: 'users',
-        name: 'Users & accounts',
-        category: 'private',
-        summary: 'Manage staff and customer profiles, invitations, and lifecycle status.',
-        docLink: 'users.html',
-        keywords: 'users accounts profile status roles permissions',
-        endpoints: [
-          {
-            id: 'users-list',
-            title: 'List users',
-            method: 'GET',
-            path: '/api/v1/users',
-            description: 'Paginated directory with search, sort, and status filters.',
-            longDescription: 'Requires the <code>USER_VIEW</code> permission. Combine search, paging, and sorting to populate the admin user table.',
-            auth: 'bearer',
-            headers: [
-              { name: 'Accept', value: 'application/json' }
-            ],
-            params: [
-              { name: 'search', in: 'query', type: 'string', required: false, description: 'Optional name or email fragment.' },
-              { name: 'page', in: 'query', type: 'number', required: false, description: 'Zero-based page index.', default: '0' },
-              { name: 'size', in: 'query', type: 'number', required: false, description: 'Page size (max 100).', default: '20' },
-              { name: 'sort', in: 'query', type: 'string', required: false, description: 'Sort field, e.g. createdAt.' },
-              { name: 'direction', in: 'query', type: 'string', required: false, description: 'Sort direction asc|desc.', default: 'desc' }
-            ],
-            sampleResponse: `HTTP/1.1 200 OK
-{
-  "content": [
-    {
-      "id": 12,
-      "email": "ops@example.com",
-      "firstName": "Operations",
-      "lastName": "Lead",
-      "roles": [
-        "ADMIN"
-      ],
-      "status": "ACTIVE"
-    }
-  ],
-  "page": 0,
-  "size": 20,
-  "totalElements": 1,
-  "totalPages": 1,
-  "last": true
-}`
-          },
-          {
-            id: 'users-create',
-            title: 'Create user',
-            method: 'POST',
-            path: '/api/v1/users',
-            description: 'Provision a new dashboard or storefront account and optionally send an invite email.',
-            longDescription: 'Requires <code>USER_MANAGE</code>. When <code>sendInvite</code> is true an activation email guides the new user through password setup.',
-            auth: 'bearer',
-            headers: [
-              { name: 'Content-Type', value: 'application/json' }
-            ],
-            body: `{
-  "email": "new.manager@example.com",
-  "firstName": "New",
-  "lastName": "Manager",
-  "password": "Temp@123",
-  "roles": [1],
-  "sendInvite": true
-}`,
-            sampleResponse: `HTTP/1.1 201 Created
-{
-  "id": 89,
-  "email": "new.manager@example.com",
-  "status": "INVITED"
-}`
-          },
-          {
-            id: 'users-status',
-            title: 'Update user status',
-            method: 'PATCH',
-            path: '/api/v1/users/{id}/status',
-            description: 'Activate, suspend, or lock a user account.',
-            longDescription: 'Use to reactivate locked accounts or suspend access. Status transitions are validated against organisational policies.',
-            auth: 'bearer',
-            headers: [
-              { name: 'Content-Type', value: 'application/json' }
-            ],
-            params: [
-              { name: 'id', in: 'path', type: 'number', required: true, description: 'Numeric user identifier.' }
-            ],
-            body: `{
-  "status": "SUSPENDED"
-}`,
-            sampleResponse: `HTTP/1.1 200 OK
-{
-  "id": 12,
-  "status": "SUSPENDED"
-}`
-          }
-        ]
-      },
-      {
-        id: 'roles-permissions',
-        name: 'Roles & permissions',
-        category: 'private',
-        summary: 'Model role catalogues and attach granular permissions to users.',
-        docLink: 'roles.html',
-        keywords: 'roles permissions policy rbac',
-        endpoints: [
-          {
-            id: 'roles-list',
-            title: 'List roles',
-            method: 'GET',
-            path: '/api/v1/roles',
-            description: 'Retrieve all available roles with their assigned permission keys.',
-            longDescription: 'Requires <code>ROLE_VIEW</code>. Use for role management tables or to populate selectors when assigning roles to users.',
-            auth: 'bearer',
-            headers: [
-              { name: 'Accept', value: 'application/json' }
-            ],
-            sampleResponse: `HTTP/1.1 200 OK
-[
-  {
-    "id": 1,
-    "name": "Admin",
-    "permissions": [
-      "USER_MANAGE",
-      "PRODUCT_MANAGE"
-    ]
+  "inventory": {
+    "available": 421,
+    "backorderable": false
   }
-]`
-          },
-          {
-            id: 'roles-create',
-            title: 'Create role',
-            method: 'POST',
-            path: '/api/v1/roles',
-            description: 'Create a custom role and seed it with permission keys.',
-            longDescription: 'Requires <code>ROLE_MANAGE</code>. Use this to introduce specialised roles beyond the defaults.',
-            auth: 'bearer',
-            headers: [
-              { name: 'Content-Type', value: 'application/json' }
-            ],
-            body: `{
-  "name": "Content Curator",
-  "description": "Manages featured content blocks",
-  "permissions": [
-    "PRODUCT_VIEW",
-    "PROMOTION_MANAGE"
-  ]
-}`,
-            sampleResponse: `HTTP/1.1 201 Created
-{
-  "id": 7,
-  "name": "Content Curator"
-}`
-          },
-          {
-            id: 'roles-permissions-update',
-            title: 'Assign permissions to role',
-            method: 'PUT',
-            path: '/api/v1/roles/{id}/permissions',
-            description: 'Replace a role\'s permission set with the supplied keys.',
-            longDescription: 'Provide the complete allow list for the role. Any previously attached permissions not present in the payload are removed.',
-            auth: 'bearer',
-            headers: [
-              { name: 'Content-Type', value: 'application/json' }
-            ],
-            params: [
-              { name: 'id', in: 'path', type: 'number', required: true, description: 'Role identifier.' }
-            ],
-            body: `{
-  "permissions": [
-    "USER_VIEW",
-    "USER_MANAGE"
-  ]
-}`,
-            sampleResponse: `HTTP/1.1 200 OK
-{
-  "id": 7,
-  "permissions": [
-    "USER_VIEW",
-    "USER_MANAGE"
-  ]
-}`
-          }
-        ]
-      },
-      {
-        id: 'products',
-        name: 'Products & catalogue',
-        category: 'private',
-        summary: 'Author products, manage pricing, inventory, and media assets.',
-        docLink: 'products.html',
-        keywords: 'products catalog inventory pricing media',
-        endpoints: [
-          {
-            id: 'products-list',
-            title: 'List products',
-            method: 'GET',
-            path: '/api/v1/products',
-            description: 'Retrieve product records with pagination and publish filters.',
-            longDescription: 'Requires <code>PRODUCT_VIEW</code>. Use query parameters to refine by status, channel, or keyword.',
-            auth: 'bearer',
-            headers: [
-              { name: 'Accept', value: 'application/json' }
-            ],
-            params: [
-              { name: 'page', in: 'query', type: 'number', required: false, description: 'Zero-based page index.', default: '0' },
-              { name: 'size', in: 'query', type: 'number', required: false, description: 'Page size (max 100).', default: '20' },
-              { name: 'status', in: 'query', type: 'string', required: false, description: 'Filter by publish status (DRAFT, PUBLISHED).' },
-              { name: 'search', in: 'query', type: 'string', required: false, description: 'Optional name or SKU fragment.' }
-            ],
-            sampleResponse: `HTTP/1.1 200 OK
-{
-  "content": [
+}</pre>
+                </section>
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <section class="category" id="category-private">
+          <h2>Private endpoints</h2>
+          <p class="category__lead">
+            Secure checkout, authorization, and settlement workflows that require a valid bearer token with the appropriate
+            RBAC scopes. Provide a token above and run the requests directly from the browser.
+          </p>
+
+          <article class="endpoint" id="private-orders-authorize" data-method="POST" data-path="/v1/checkout/orders/{orderId}/authorize">
+            <div class="endpoint__header">
+              <div class="endpoint__title">
+                <span class="http-badge http-badge--post">POST</span>
+                <div>
+                  <h3>Authorize payment for order</h3>
+                  <p>/v1/checkout/orders/{orderId}/authorize</p>
+                </div>
+              </div>
+              <button class="try-button" data-endpoint="private-orders-authorize">Try it</button>
+            </div>
+
+            <div class="endpoint__layout">
+              <div class="endpoint__body">
+                <section class="endpoint__section">
+                  <h4>Summary</h4>
+                  <p>
+                    Authorize payment for an approved order. Use the returned authorization ID to capture funds once you are
+                    ready to fulfill.
+                  </p>
+                </section>
+
+                <section class="endpoint__section">
+                  <h4>Security</h4>
+                  <ul class="pill-list">
+                    <li class="pill pill--private">Private</li>
+                    <li class="pill">OAuth2 &rsaquo; checkout.authorize</li>
+                  </ul>
+                </section>
+
+                <section class="endpoint__section">
+                  <h4>Path parameters</h4>
+                  <label class="field">
+                    <span class="field__label">orderId</span>
+                    <input type="text" value="ord_93d920f" data-param="orderId" />
+                    <span class="field__hint">Required • Identifier for the approved order.</span>
+                  </label>
+                </section>
+
+                <section class="endpoint__section">
+                  <h4>Request body</h4>
+                  <textarea class="payload" data-payload="private-orders-authorize" rows="10">{
+  "amount": {
+    "currency": "USD",
+    "value": "120.00"
+  },
+  "final_capture": false
+}</textarea>
+                  <p class="field__hint">Send <code>final_capture</code> as <code>true</code> only when you intend to capture immediately.</p>
+                </section>
+              </div>
+
+              <div class="endpoint__panels">
+                <section class="panel">
+                  <header class="panel__header">
+                    <h4>Request samples</h4>
+                    <span class="panel__format">cURL</span>
+                  </header>
+                  <pre class="code-block" data-template="curl" data-endpoint="private-orders-authorize"></pre>
+                  <div class="panel__actions">
+                    <button class="copy-button" data-copy>Copy</button>
+                    <button class="run-button" data-endpoint="private-orders-authorize">Run</button>
+                  </div>
+                </section>
+
+                <section class="panel">
+                  <header class="panel__header">
+                    <h4>Response samples</h4>
+                    <span class="panel__format">201 application/json</span>
+                  </header>
+                  <pre class="code-block" id="response-private-orders-authorize">{
+  "status": "AUTHORIZED",
+  "id": "auth_48abf7e",
+  "links": [
     {
-      "id": 501,
-      "name": "Celeste Pendant",
-      "status": "PUBLISHED",
-      "price": 349.0
+      "rel": "self",
+      "href": "https://api.rbac-commerce.dev/v1/payments/authorizations/auth_48abf7e"
+    },
+    {
+      "rel": "capture",
+      "href": "https://api.rbac-commerce.dev/v1/payments/authorizations/auth_48abf7e/capture"
     }
-  ],
-  "page": 0,
-  "size": 20,
-  "totalElements": 1,
-  "totalPages": 1,
-  "last": true
-}`
-          },
-          {
-            id: 'products-create',
-            title: 'Create product',
-            method: 'POST',
-            path: '/api/v1/products',
-            description: 'Author a new product with pricing, inventory, and SEO metadata.',
-            longDescription: 'Requires <code>PRODUCT_MANAGE</code>. Supply base attributes on creation; variants, media, and advanced settings can be patched afterwards.',
-            auth: 'bearer',
-            headers: [
-              { name: 'Content-Type', value: 'application/json' }
-            ],
-            body: `{
-  "name": "Celeste Pendant",
-  "sku": "CEL-PEND-001",
-  "price": 349.0,
-  "status": "DRAFT"
-}`,
-            sampleResponse: `HTTP/1.1 201 Created
-{
-  "id": 501,
-  "name": "Celeste Pendant",
-  "status": "DRAFT"
-}`
-          },
-          {
-            id: 'products-publish',
-            title: 'Publish product',
-            method: 'POST',
-            path: '/api/v1/products/{id}/publish',
-            description: 'Promote a draft product to the live catalogue.',
-            longDescription: 'Requires <code>PRODUCT_MANAGE</code>. Publishing triggers downstream cache invalidation for storefront services.',
-            auth: 'bearer',
-            headers: [
-              { name: 'Content-Type', value: 'application/json' }
-            ],
-            params: [
-              { name: 'id', in: 'path', type: 'number', required: true, description: 'Product identifier.' }
-            ],
-            body: `{
-  "channels": ["WEB"],
-  "scheduleAt": null
-}`,
-            sampleResponse: `HTTP/1.1 200 OK
-{
-  "id": 501,
-  "status": "PUBLISHED"
-}`
-          }
-        ]
-      }
-    ];
+  ]
+}</pre>
+                </section>
+              </div>
+            </div>
+          </article>
 
-    const endpointRegistry = new Map();
-    const moduleCards = new Map();
-    const navEntries = new Map();
+          <article class="endpoint" id="private-orders-capture" data-method="POST" data-path="/v1/payments/authorizations/{authorizationId}/capture">
+            <div class="endpoint__header">
+              <div class="endpoint__title">
+                <span class="http-badge http-badge--post">POST</span>
+                <div>
+                  <h3>Capture authorized payment</h3>
+                  <p>/v1/payments/authorizations/{authorizationId}/capture</p>
+                </div>
+              </div>
+              <button class="try-button" data-endpoint="private-orders-capture">Try it</button>
+            </div>
 
-    const tocList = document.getElementById('toc');
-    const publicContainer = document.getElementById('publicModules');
-    const privateContainer = document.getElementById('privateModules');
-    const baseUrlInput = document.getElementById('baseUrl');
-    const authTokenInput = document.getElementById('authToken');
-    const searchInput = document.getElementById('moduleSearch');
+            <div class="endpoint__layout">
+              <div class="endpoint__body">
+                <section class="endpoint__section">
+                  <h4>Summary</h4>
+                  <p>Capture funds from a prior authorization. Use when fulfilling the order.</p>
+                </section>
 
-    const envButtons = Array.from(document.querySelectorAll('.env-button'));
-    envButtons.forEach(button => {
-      button.addEventListener('click', () => {
-        envButtons.forEach(btn => btn.classList.toggle('is-active', btn === button));
-        const base = button.getAttribute('data-base');
-        if (base) {
-          baseUrlInput.value = base;
-          updateAllCurlSnippets();
+                <section class="endpoint__section">
+                  <h4>Security</h4>
+                  <ul class="pill-list">
+                    <li class="pill pill--private">Private</li>
+                    <li class="pill">OAuth2 &rsaquo; checkout.capture</li>
+                  </ul>
+                </section>
+
+                <section class="endpoint__section">
+                  <h4>Path parameters</h4>
+                  <label class="field">
+                    <span class="field__label">authorizationId</span>
+                    <input type="text" value="auth_48abf7e" data-param="authorizationId" />
+                    <span class="field__hint">Required • Authorization identifier to capture.</span>
+                  </label>
+                </section>
+
+                <section class="endpoint__section">
+                  <h4>Request body</h4>
+                  <textarea class="payload" data-payload="private-orders-capture" rows="10">{
+  "amount": {
+    "currency": "USD",
+    "value": "120.00"
+  },
+  "invoice_id": "INV-11520",
+  "final_capture": true
+}</textarea>
+                  <p class="field__hint">Set <code>final_capture</code> to <code>false</code> when capturing partially.</p>
+                </section>
+              </div>
+
+              <div class="endpoint__panels">
+                <section class="panel">
+                  <header class="panel__header">
+                    <h4>Request samples</h4>
+                    <span class="panel__format">cURL</span>
+                  </header>
+                  <pre class="code-block" data-template="curl" data-endpoint="private-orders-capture"></pre>
+                  <div class="panel__actions">
+                    <button class="copy-button" data-copy>Copy</button>
+                    <button class="run-button" data-endpoint="private-orders-capture">Run</button>
+                  </div>
+                </section>
+
+                <section class="panel">
+                  <header class="panel__header">
+                    <h4>Response samples</h4>
+                    <span class="panel__format">201 application/json</span>
+                  </header>
+                  <pre class="code-block" id="response-private-orders-capture">{
+  "status": "COMPLETED",
+  "id": "cap_1e5f938",
+  "amount": {
+    "currency": "USD",
+    "value": "120.00"
+  },
+  "links": [
+    {
+      "rel": "self",
+      "href": "https://api.rbac-commerce.dev/v1/payments/captures/cap_1e5f938"
+    },
+    {
+      "rel": "refund",
+      "href": "https://api.rbac-commerce.dev/v1/payments/captures/cap_1e5f938/refund"
+    }
+  ]
+}</pre>
+                </section>
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <footer class="page-footer">
+          <p>Looking for more? Explore the <a href="../guides/index.html">integration guides</a>.</p>
+        </footer>
+      </main>
+    </div>
+
+    <template id="curlTemplate">
+      curl -X {{METHOD}} "{{URL}}" \
+  -H "Content-Type: application/json"{{AUTH_HEADER}}{{BODY}}
+    </template>
+
+    <script>
+      const environmentSelect = document.getElementById('environmentSelect');
+      const baseUrlInput = document.getElementById('baseUrl');
+      const customUrlControl = document.getElementById('customUrlControl');
+      const authTokenInput = document.getElementById('authToken');
+      const template = document.getElementById('curlTemplate').innerHTML;
+
+      const endpoints = Array.from(document.querySelectorAll('.endpoint'));
+
+      function getBaseUrl() {
+        const selected = environmentSelect.value;
+        if (selected === 'custom') {
+          return baseUrlInput.value.replace(/\/$/, '');
         }
-      });
-    });
-
-    modules.forEach(module => {
-      const card = renderModule(module);
-      moduleCards.set(module.id, card);
-      const targetContainer = module.category === 'public' ? publicContainer : privateContainer;
-      targetContainer.appendChild(card);
-
-      const navItem = document.createElement('li');
-      navItem.dataset.moduleId = module.id;
-      const navLink = document.createElement('a');
-      navLink.href = `#${module.id}`;
-      navLink.textContent = module.name;
-      navItem.appendChild(navLink);
-      tocList.appendChild(navItem);
-      navEntries.set(module.id, navItem);
-    });
-
-    updateAllCurlSnippets();
-    updateCategoryEmptyStates();
-    document.getElementById('lastUpdated').textContent = new Date().toISOString().split('T')[0];
-
-    baseUrlInput.addEventListener('input', debounce(updateAllCurlSnippets, 150));
-    authTokenInput.addEventListener('input', debounce(updateAllCurlSnippets, 150));
-    searchInput.addEventListener('input', event => filterModules(event.target.value));
-
-    function renderModule(module) {
-      const article = document.createElement('article');
-      article.className = 'module-card';
-      article.id = module.id;
-      const searchTokens = [module.name, module.summary || '', module.keywords || ''].join(' ').toLowerCase();
-      article.dataset.searchTokens = searchTokens;
-
-      const header = document.createElement('header');
-      header.className = 'module-header';
-      const kicker = document.createElement('span');
-      kicker.className = 'module-kicker';
-      kicker.textContent = module.category === 'public' ? 'Public API' : 'Private API';
-      header.appendChild(kicker);
-
-      const title = document.createElement('h4');
-      title.textContent = module.name;
-      header.appendChild(title);
-
-      if (module.summary) {
-        const summary = document.createElement('p');
-        summary.textContent = module.summary;
-        header.appendChild(summary);
+        return selected.replace(/\/$/, '');
       }
 
-      article.appendChild(header);
+      function formatCurl(endpointEl) {
+        const method = endpointEl.dataset.method || 'GET';
+        const rawPath = endpointEl.dataset.path || '';
+        let path = rawPath;
+        const params = {};
+        endpointEl.querySelectorAll('[data-param]').forEach((input) => {
+          const value = input.value || input.placeholder || '';
+          params[input.dataset.param] = value;
+          path = path.replace(new RegExp(`{${input.dataset.param}}`, 'g'), encodeURIComponent(value));
+        });
 
-      const endpointsWrapper = document.createElement('div');
-      endpointsWrapper.className = 'endpoint-collection';
+        const url = `${getBaseUrl()}${path}`;
+        const authHeader = authTokenInput.value ? ` \\\n  -H "Authorization: Bearer ${authTokenInput.value}"` : '';
 
-      module.endpoints.forEach(endpoint => {
-        const panel = renderEndpoint(module, endpoint);
-        endpointsWrapper.appendChild(panel);
-      });
+        const payloadField = endpointEl.querySelector(`[data-payload="${endpointEl.id}"]`);
+        const body = payloadField && payloadField.value.trim()
+          ? ` \\\n  -d '${payloadField.value.replace(/'/g, "'\\''")}'`
+          : '';
 
-      article.appendChild(endpointsWrapper);
-
-      if (module.docLink) {
-        const footer = document.createElement('footer');
-        footer.className = 'module-footer';
-        const link = document.createElement('a');
-        link.href = module.docLink;
-        link.textContent = 'View full reference';
-        footer.appendChild(link);
-        article.appendChild(footer);
+        return template
+          .replace('{{METHOD}}', method)
+          .replace('{{URL}}', url)
+          .replace('{{AUTH_HEADER}}', authHeader)
+          .replace('{{BODY}}', body);
       }
 
-      return article;
-    }
-
-    function renderEndpoint(module, endpoint) {
-      const details = document.createElement('details');
-      details.className = 'endpoint-panel';
-      details.id = endpoint.id;
-      if (endpoint.open) {
-        details.open = true;
-      }
-      details.dataset.searchTokens = [endpoint.title, endpoint.description || '', endpoint.path].join(' ').toLowerCase();
-
-      const summary = document.createElement('summary');
-      summary.className = 'endpoint-summary';
-
-      const summaryMain = document.createElement('div');
-      summaryMain.className = 'endpoint-summary-main';
-
-      const methodBadge = document.createElement('span');
-      methodBadge.className = `method-badge method-${endpoint.method.toLowerCase()}`;
-      methodBadge.textContent = endpoint.method;
-      summaryMain.appendChild(methodBadge);
-
-      const summaryText = document.createElement('div');
-      summaryText.className = 'summary-text';
-      const title = document.createElement('h5');
-      title.textContent = endpoint.title;
-      const path = document.createElement('code');
-      path.textContent = endpoint.path;
-      summaryText.appendChild(title);
-      summaryText.appendChild(path);
-      if (endpoint.description) {
-        const desc = document.createElement('p');
-        desc.textContent = endpoint.description;
-        summaryText.appendChild(desc);
-      }
-      summaryMain.appendChild(summaryText);
-      summary.appendChild(summaryMain);
-
-      const summaryMeta = document.createElement('div');
-      summaryMeta.className = 'endpoint-summary-meta';
-      const accessChip = document.createElement('span');
-      accessChip.className = `chip ${endpoint.auth === 'bearer' ? 'chip-secure' : 'chip-open'}`;
-      accessChip.textContent = endpoint.auth === 'bearer' ? 'Requires bearer token' : 'No auth';
-      summaryMeta.appendChild(accessChip);
-      summary.appendChild(summaryMeta);
-
-      details.appendChild(summary);
-
-      const body = document.createElement('div');
-      body.className = 'endpoint-body';
-
-      if (endpoint.longDescription) {
-        const longCopy = document.createElement('p');
-        longCopy.className = 'endpoint-description';
-        longCopy.innerHTML = endpoint.longDescription;
-        body.appendChild(longCopy);
-      }
-
-      if (endpoint.params) {
-        const groups = groupParams(endpoint.params);
-        Object.entries(groups).forEach(([kind, params]) => {
-          const block = document.createElement('div');
-          block.className = 'param-block';
-          const heading = document.createElement('h6');
-          heading.textContent = kind;
-          block.appendChild(heading);
-          const table = document.createElement('table');
-          const thead = document.createElement('thead');
-          thead.innerHTML = '<tr><th>Name</th><th>Type</th><th>Required</th><th>Description</th></tr>';
-          table.appendChild(thead);
-          const tbody = document.createElement('tbody');
-          params.forEach(param => {
-            const row = document.createElement('tr');
-            row.innerHTML = `
-              <td><code>${escapeHtml(param.name)}</code></td>
-              <td>${escapeHtml(param.type || 'string')}</td>
-              <td>${param.required ? 'Yes' : 'No'}</td>
-              <td>${escapeHtml(param.description || '')}${param.default ? `<br /><span class="param-default">Default: ${escapeHtml(param.default)}</span>` : ''}</td>`;
-            tbody.appendChild(row);
+      function updateCurlBlocks() {
+        endpoints.forEach((endpointEl) => {
+          endpointEl.querySelectorAll('[data-template="curl"]').forEach((pre) => {
+            pre.textContent = formatCurl(endpointEl);
           });
-          table.appendChild(tbody);
-          block.appendChild(table);
-          body.appendChild(block);
         });
       }
 
-      if (endpoint.headers) {
-        const headersBlock = document.createElement('div');
-        headersBlock.className = 'param-block';
-        const heading = document.createElement('h6');
-        heading.textContent = 'Headers';
-        headersBlock.appendChild(heading);
-        const table = document.createElement('table');
-        const thead = document.createElement('thead');
-        thead.innerHTML = '<tr><th>Name</th><th>Value</th></tr>';
-        table.appendChild(thead);
-        const tbody = document.createElement('tbody');
-        endpoint.headers.forEach(header => {
-          const row = document.createElement('tr');
-          row.innerHTML = `
-            <td><code>${escapeHtml(header.name)}</code></td>
-            <td>${escapeHtml(header.value)}</td>`;
-          tbody.appendChild(row);
+      function runEndpoint(endpointId) {
+        const endpointEl = document.getElementById(endpointId);
+        if (!endpointEl) return;
+
+        const method = endpointEl.dataset.method || 'GET';
+        let path = endpointEl.dataset.path || '';
+        endpointEl.querySelectorAll('[data-param]').forEach((input) => {
+          const value = input.value || input.placeholder || '';
+          path = path.replace(new RegExp(`{${input.dataset.param}}`, 'g'), encodeURIComponent(value));
         });
-        table.appendChild(tbody);
-        headersBlock.appendChild(table);
-        body.appendChild(headersBlock);
-      }
+        const url = `${getBaseUrl()}${path}`;
 
-      let requestEditor = null;
-      if (endpoint.body) {
-        const editorBlock = document.createElement('div');
-        editorBlock.className = 'request-editor';
-        const label = document.createElement('label');
-        label.className = 'editor-label';
-        label.textContent = 'Request body';
-        requestEditor = document.createElement('textarea');
-        requestEditor.value = endpoint.body.trim();
-        requestEditor.spellcheck = false;
-        requestEditor.dataset.endpointId = endpoint.id;
-        requestEditor.addEventListener('input', () => updateCurlSnippet(endpoint.id));
-        label.appendChild(requestEditor);
-        editorBlock.appendChild(label);
-        body.appendChild(editorBlock);
-      }
-
-      const curlBlock = document.createElement('div');
-      curlBlock.className = 'curl-block';
-      const curlHeader = document.createElement('div');
-      curlHeader.className = 'curl-header';
-      curlHeader.innerHTML = '<span>cURL</span>';
-      curlBlock.appendChild(curlHeader);
-      const pre = document.createElement('pre');
-      const code = document.createElement('code');
-      code.dataset.endpointId = endpoint.id;
-      pre.appendChild(code);
-      curlBlock.appendChild(pre);
-      body.appendChild(curlBlock);
-
-      const toolbar = document.createElement('div');
-      toolbar.className = 'code-toolbar';
-      const feedback = document.createElement('span');
-      feedback.className = 'toolbar-feedback';
-
-      const copyButton = document.createElement('button');
-      copyButton.type = 'button';
-      copyButton.className = 'ghost-button';
-      copyButton.textContent = 'Copy cURL';
-      copyButton.addEventListener('click', async () => {
-        try {
-          await navigator.clipboard.writeText(code.textContent);
-          showFeedback(feedback, 'Copied');
-        } catch (error) {
-          showFeedback(feedback, 'Clipboard unavailable', true);
-        }
-      });
-      toolbar.appendChild(copyButton);
-
-      const runButton = document.createElement('button');
-      runButton.type = 'button';
-      runButton.className = 'ghost-button primary';
-      runButton.textContent = 'Run request';
-      runButton.addEventListener('click', () => executeEndpoint(endpoint.id));
-      toolbar.appendChild(runButton);
-      toolbar.appendChild(feedback);
-      body.appendChild(toolbar);
-
-      const responsePanel = document.createElement('div');
-      responsePanel.className = 'response-panel';
-      responsePanel.dataset.endpointId = endpoint.id;
-      body.appendChild(responsePanel);
-
-      if (endpoint.sampleResponse) {
-        const sampleDetails = document.createElement('details');
-        sampleDetails.className = 'response-sample';
-        const sampleSummary = document.createElement('summary');
-        sampleSummary.textContent = 'Sample response';
-        sampleDetails.appendChild(sampleSummary);
-        const samplePre = document.createElement('pre');
-        const sampleCode = document.createElement('code');
-        sampleCode.innerHTML = escapeHtml(endpoint.sampleResponse);
-        samplePre.appendChild(sampleCode);
-        sampleDetails.appendChild(samplePre);
-        body.appendChild(sampleDetails);
-      }
-
-      details.appendChild(body);
-
-      endpointRegistry.set(endpoint.id, {
-        endpoint,
-        module,
-        codeEl: code,
-        requestEditor,
-        responsePanel,
-        feedbackEl: feedback
-      });
-
-      return details;
-    }
-
-    function groupParams(params) {
-      return params.reduce((acc, param) => {
-        const label = param.in === 'path' ? 'Path parameters' : 'Query parameters';
-        if (!acc[label]) {
-          acc[label] = [];
-        }
-        acc[label].push(param);
-        return acc;
-      }, {});
-    }
-
-    function filterModules(term) {
-      const normalized = term.trim().toLowerCase();
-      moduleCards.forEach((card, moduleId) => {
-        const navItem = navEntries.get(moduleId);
-        const moduleMatch = !normalized || card.dataset.searchTokens.includes(normalized);
-        let endpointMatch = false;
-        const panels = Array.from(card.querySelectorAll('.endpoint-panel'));
-        panels.forEach(panel => {
-          const matches = !normalized || panel.dataset.searchTokens.includes(normalized);
-          panel.classList.toggle('is-filtered-out', !matches);
-          if (matches) {
-            endpointMatch = true;
-          }
-        });
-        const visibleEndpoints = panels.some(panel => !panel.classList.contains('is-filtered-out'));
-        const shouldShow = moduleMatch || endpointMatch || visibleEndpoints;
-        card.classList.toggle('is-hidden', !shouldShow);
-        if (navItem) {
-          navItem.classList.toggle('is-hidden', !shouldShow);
-        }
-      });
-      updateCategoryEmptyStates();
-    }
-
-    function updateCategoryEmptyStates() {
-      document.querySelectorAll('.category-section').forEach(section => {
-        const modules = Array.from(section.querySelectorAll('.module-card'));
-        const hasVisible = modules.some(module => !module.classList.contains('is-hidden'));
-        const emptyState = section.querySelector('.empty-state');
-        if (emptyState) {
-          emptyState.hidden = hasVisible;
-        }
-      });
-    }
-
-    function updateAllCurlSnippets() {
-      endpointRegistry.forEach((_, id) => updateCurlSnippet(id));
-    }
-
-    function updateCurlSnippet(endpointId) {
-      const entry = endpointRegistry.get(endpointId);
-      if (!entry) return;
-      const { endpoint, codeEl, requestEditor } = entry;
-      const token = authTokenInput.value.trim();
-      const body = requestEditor ? requestEditor.value.trim() : '';
-      const url = buildUrl(endpoint.path);
-      const lines = [`curl -X ${endpoint.method} "${url}"`];
-
-      const headers = endpoint.headers ? [...endpoint.headers] : [];
-      const hasContentTypeHeader = headers.some(header => header.name.toLowerCase() === 'content-type');
-      if (endpoint.auth === 'bearer') {
-        lines.push('  -H "Authorization: Bearer ' + (token || '<token>') + '"');
-      }
-      headers.forEach(header => {
-        lines.push('  -H "' + header.name + ': ' + header.value + '"');
-      });
-      if (!hasContentTypeHeader && body && endpoint.method !== 'GET') {
-        lines.push('  -H "Content-Type: application/json"');
-      }
-      if (body && endpoint.method !== 'GET') {
-        lines.push('  -d \'' + body.replace(/'/g, "'\\''") + '\'');
-      }
-      codeEl.textContent = lines.join(' \\\n');
-    }
-
-    async function executeEndpoint(endpointId) {
-      const entry = endpointRegistry.get(endpointId);
-      if (!entry) return;
-      const { endpoint, requestEditor, responsePanel, feedbackEl } = entry;
-      const token = authTokenInput.value.trim();
-      const url = buildUrl(endpoint.path);
-      const options = { method: endpoint.method, headers: {} };
-
-      const headers = endpoint.headers ? [...endpoint.headers] : [];
-      headers.forEach(header => {
-        options.headers[header.name] = header.value;
-      });
-
-      if (endpoint.auth === 'bearer') {
-        if (!token) {
-          showFeedback(feedbackEl, 'Token required', true);
-          responsePanel.innerHTML = '<p class="response-warning">Provide a bearer token above to execute this endpoint.</p>';
-          return;
-        }
-        options.headers['Authorization'] = `Bearer ${token}`;
-      }
-
-      if (requestEditor && endpoint.method !== 'GET') {
-        const raw = requestEditor.value.trim();
-        if (raw) {
+        let body;
+        const payloadField = endpointEl.querySelector(`[data-payload="${endpointId}"]`);
+        if (payloadField && payloadField.value.trim()) {
           try {
-            const parsed = JSON.parse(raw);
-            options.body = JSON.stringify(parsed);
-            if (!options.headers['Content-Type']) {
-              options.headers['Content-Type'] = 'application/json';
-            }
+            body = JSON.stringify(JSON.parse(payloadField.value));
           } catch (error) {
-            showFeedback(feedbackEl, 'Fix JSON body', true);
-            responsePanel.innerHTML = '<p class="response-warning">Request body must be valid JSON before executing.</p>';
-            return;
+            body = payloadField.value;
           }
         }
+
+        const headers = { 'Content-Type': 'application/json' };
+        if (authTokenInput.value) {
+          headers['Authorization'] = `Bearer ${authTokenInput.value}`;
+        }
+
+        const responseTarget = document.getElementById(`response-${endpointId}`);
+        responseTarget.textContent = 'Loading…';
+
+        fetch(url, {
+          method,
+          headers,
+          body: method === 'GET' || method === 'DELETE' ? undefined : body,
+        })
+          .then(async (response) => {
+            const contentType = response.headers.get('content-type') || '';
+            if (contentType.includes('application/json')) {
+              const data = await response.json();
+              return JSON.stringify(data, null, 2);
+            }
+            return response.text();
+          })
+          .then((text) => {
+            responseTarget.textContent = text || '(empty response)';
+          })
+          .catch((error) => {
+            responseTarget.textContent = `Request failed: ${error.message}`;
+          });
       }
 
-      responsePanel.innerHTML = '<p class="response-meta">Sending request…</p>';
-      try {
-        const response = await fetch(url, options);
-        const text = await response.text();
-        const pretty = tryFormatJson(text);
-        const metaClass = response.ok ? 'ok' : 'error';
-        responsePanel.innerHTML = `
-          <div class="response-meta ${metaClass}">HTTP ${response.status} ${response.statusText}</div>
-          <pre><code>${escapeHtml(pretty)}</code></pre>`;
-      } catch (error) {
-        responsePanel.innerHTML = `
-          <div class="response-meta error">Request failed</div>
-          <p class="response-warning">${escapeHtml(error.message)}</p>`;
-      }
-    }
+      environmentSelect.addEventListener('change', (event) => {
+        if (event.target.value === 'custom') {
+          customUrlControl.hidden = false;
+          baseUrlInput.focus();
+        } else {
+          customUrlControl.hidden = true;
+          if (baseUrlInput) {
+            baseUrlInput.value = event.target.value;
+          }
+        }
+        updateCurlBlocks();
+      });
 
-    function buildUrl(path) {
-      const base = normaliseBaseUrl();
-      if (/^https?:\/\//i.test(path)) {
-        return path;
-      }
-      return base.replace(/\/$/, '') + path;
-    }
+      baseUrlInput?.addEventListener('input', updateCurlBlocks);
+      authTokenInput.addEventListener('input', updateCurlBlocks);
 
-    function normaliseBaseUrl() {
-      const raw = baseUrlInput.value.trim();
-      const origin = window.location.origin === 'null' ? 'http://localhost' : window.location.origin;
-      if (!raw) {
-        return origin;
-      }
-      if (/^https?:\/\//i.test(raw)) {
-        return raw.replace(/\/$/, '');
-      }
-      const prefixed = raw.startsWith('/') ? raw : '/' + raw;
-      return origin.replace(/\/$/, '') + prefixed.replace(/\/$/, '');
-    }
+      endpoints.forEach((endpointEl) => {
+        endpointEl.querySelectorAll('[data-param]').forEach((input) => {
+          input.addEventListener('input', updateCurlBlocks);
+        });
+        const payloadField = endpointEl.querySelector(`[data-payload="${endpointEl.id}"]`);
+        if (payloadField) {
+          payloadField.addEventListener('input', updateCurlBlocks);
+        }
+      });
 
-    function tryFormatJson(text) {
-      if (!text) {
-        return '';
-      }
-      try {
-        return JSON.stringify(JSON.parse(text), null, 2);
-      } catch (error) {
-        return text;
-      }
-    }
+      document.querySelectorAll('.run-button, .try-button').forEach((button) => {
+        button.addEventListener('click', () => {
+          const endpointId = button.dataset.endpoint;
+          if (endpointId) {
+            runEndpoint(endpointId);
+          }
+        });
+      });
 
-    function escapeHtml(value) {
-      const text = value == null ? '' : String(value);
-      return text
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
-    }
+      document.querySelectorAll('[data-copy]').forEach((button) => {
+        button.addEventListener('click', () => {
+          const pre = button.closest('.panel').querySelector('.code-block');
+          if (!pre) return;
+          navigator.clipboard.writeText(pre.textContent).then(() => {
+            button.textContent = 'Copied!';
+            setTimeout(() => {
+              button.textContent = 'Copy';
+            }, 1500);
+          });
+        });
+      });
 
-    function showFeedback(el, message, isError = false) {
-      if (!el) return;
-      el.textContent = message;
-      el.classList.toggle('is-error', isError);
-      el.classList.add('is-visible');
-      setTimeout(() => {
-        el.classList.remove('is-visible');
-      }, 1800);
-    }
-
-    function debounce(fn, wait) {
-      let timeout;
-      return function (...args) {
-        clearTimeout(timeout);
-        timeout = setTimeout(() => fn.apply(this, args), wait);
-      };
-    }
-  </script>
-</body>
+      updateCurlBlocks();
+    </script>
+  </body>
 </html>
