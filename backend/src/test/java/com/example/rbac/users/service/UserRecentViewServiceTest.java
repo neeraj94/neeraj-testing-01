@@ -1,7 +1,9 @@
 package com.example.rbac.users.service;
 
+import com.example.rbac.products.model.DiscountType;
 import com.example.rbac.products.model.Product;
 import com.example.rbac.products.repository.ProductRepository;
+import com.example.rbac.users.dto.UserRecentViewDto;
 import com.example.rbac.users.model.User;
 import com.example.rbac.users.model.UserRecentView;
 import com.example.rbac.users.repository.UserRecentViewRepository;
@@ -12,6 +14,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -42,6 +45,58 @@ class UserRecentViewServiceTest {
     @BeforeEach
     void setUp() {
         service = new UserRecentViewService(recentViewRepository, productRepository);
+    }
+
+    @Test
+    void getRecentViewsForUserReturnsOrderedDtos() {
+        UserRecentView firstView = new UserRecentView();
+        Product firstProductRef = new Product();
+        firstProductRef.setId(10L);
+        firstView.setProduct(firstProductRef);
+        firstView.setViewedAt(Instant.parse("2024-01-02T10:15:30Z"));
+
+        UserRecentView secondView = new UserRecentView();
+        Product secondProductRef = new Product();
+        secondProductRef.setId(20L);
+        secondView.setProduct(secondProductRef);
+        secondView.setViewedAt(Instant.parse("2024-01-01T08:00:00Z"));
+
+        when(recentViewRepository.findTop20ByUserIdOrderByViewedAtDesc(1L))
+                .thenReturn(List.of(firstView, secondView));
+
+        Product firstProduct = new Product();
+        firstProduct.setId(10L);
+        firstProduct.setName("Sunrise Lamp");
+        firstProduct.setSlug("sunrise-lamp");
+        firstProduct.setSku("SUN-LAMP");
+        firstProduct.setUnitPrice(new BigDecimal("49.99"));
+
+        Product secondProduct = new Product();
+        secondProduct.setId(20L);
+        secondProduct.setName("Aurora Blanket");
+        secondProduct.setSlug("aurora-blanket");
+        secondProduct.setSku("AUR-BLANKET");
+        secondProduct.setUnitPrice(new BigDecimal("89.50"));
+        secondProduct.setDiscountType(DiscountType.PERCENTAGE);
+        secondProduct.setDiscountValue(new BigDecimal("10"));
+
+        when(productRepository.findByIdIn(List.of(10L, 20L)))
+                .thenReturn(List.of(firstProduct, secondProduct));
+
+        List<UserRecentViewDto> recentViews = service.getRecentViewsForUser(1L);
+
+        assertEquals(2, recentViews.size());
+        assertEquals(10L, recentViews.get(0).getProductId());
+        assertEquals("Sunrise Lamp", recentViews.get(0).getProductName());
+        assertEquals("sunrise-lamp", recentViews.get(0).getProductSlug());
+        assertEquals("SUN-LAMP", recentViews.get(0).getSku());
+        assertEquals(new BigDecimal("49.99"), recentViews.get(0).getUnitPrice());
+
+        assertEquals(20L, recentViews.get(1).getProductId());
+        assertEquals("Aurora Blanket", recentViews.get(1).getProductName());
+        assertEquals(new BigDecimal("89.50"), recentViews.get(1).getUnitPrice());
+        assertEquals(new BigDecimal("80.55"), recentViews.get(1).getFinalPrice());
+        assertTrue(recentViews.get(0).getLastViewedAt().isAfter(recentViews.get(1).getLastViewedAt()));
     }
 
     @Test

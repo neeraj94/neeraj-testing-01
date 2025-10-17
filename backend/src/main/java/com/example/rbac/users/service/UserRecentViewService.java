@@ -137,9 +137,30 @@ public class UserRecentViewService {
             throw new ApiException(HttpStatus.BAD_REQUEST, "User id is required");
         }
         List<UserRecentView> entries = recentViewRepository.findTop20ByUserIdOrderByViewedAtDesc(userId);
+        List<Long> productIds = entries.stream()
+                .map(UserRecentView::getProduct)
+                .filter(Objects::nonNull)
+                .map(Product::getId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+
+        if (productIds.isEmpty()) {
+            return List.of();
+        }
+
+        Map<Long, Product> productsById = productRepository.findByIdIn(productIds).stream()
+                .filter(Objects::nonNull)
+                .collect(Collectors.toMap(Product::getId, product -> product, (existing, replacement) -> existing));
+
         List<UserRecentViewDto> result = new ArrayList<>();
         for (UserRecentView entry : entries) {
-            Product product = entry.getProduct();
+            Product productRef = entry.getProduct();
+            Long productId = productRef != null ? productRef.getId() : null;
+            if (productId == null) {
+                continue;
+            }
+            Product product = productsById.get(productId);
             if (product == null) {
                 continue;
             }
