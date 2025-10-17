@@ -129,6 +129,12 @@ const OrderDetailPanel = ({ order, baseCurrency, onClose }: OrderDetailPanelProp
                       <span aria-hidden>↗</span>
                     </a>
                   ) : null}
+                  {line.variantLabel && (
+                    <p className="text-xs text-slate-500">Variant: {line.variantLabel}</p>
+                  )}
+                  {line.variantSku && (
+                    <p className="text-xs text-slate-500">SKU: {line.variantSku}</p>
+                  )}
                   <p className="text-xs text-slate-500">
                     Qty {line.quantity} × {formatCurrency(line.unitPrice ?? 0, currency)}
                   </p>
@@ -165,6 +171,19 @@ const OrderDetailPanel = ({ order, baseCurrency, onClose }: OrderDetailPanelProp
               <div className="flex items-center justify-between text-emerald-600">
                 <dt>Discount</dt>
                 <dd>-{formatCurrency(summary.discountTotal, currency)}</dd>
+              </div>
+            ) : null}
+            {summary.appliedCoupon ? (
+              <div className="rounded-lg border border-emerald-100 bg-emerald-50/60 px-3 py-2 text-xs text-emerald-700">
+                <p className="font-semibold">Coupon {summary.appliedCoupon.code}</p>
+                <p>
+                  {summary.appliedCoupon.discountType === 'PERCENTAGE'
+                    ? `${summary.appliedCoupon.discountValue}% off`
+                    : `${formatCurrency(summary.appliedCoupon.discountAmount ?? 0, currency)} off`}
+                </p>
+                {summary.appliedCoupon.description && (
+                  <p className="mt-1 text-[11px] text-emerald-600/80">{summary.appliedCoupon.description}</p>
+                )}
               </div>
             ) : null}
             <div className="flex items-center justify-between border-t border-slate-200 pt-2 text-base font-semibold text-slate-900">

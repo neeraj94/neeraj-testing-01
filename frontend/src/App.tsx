@@ -51,6 +51,7 @@ import CheckoutPage from './pages/CheckoutPage';
 import OrderConfirmationPage from './pages/OrderConfirmationPage';
 import AdminPaymentPage from './pages/AdminPaymentPage';
 import AdminOrdersPage from './pages/AdminOrdersPage';
+import AdminCartsPage from './pages/AdminCartsPage';
 
 const App = () => {
   const dispatch = useAppDispatch();
@@ -246,6 +247,9 @@ const App = () => {
           </Route>
           <Route element={<PermissionRoute required={['ORDER_MANAGE', 'CHECKOUT_MANAGE']} />}>
             <Route path="orders" element={<AdminOrdersPage />} />
+          </Route>
+          <Route element={<PermissionRoute required={['ORDER_MANAGE', 'CHECKOUT_MANAGE']} />}>
+            <Route path="carts" element={<AdminCartsPage />} />
           </Route>
           <Route
             element={

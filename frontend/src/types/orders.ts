@@ -10,6 +10,9 @@ export interface OrderListItem {
   summary: OrderSummary | null;
   createdAt: string;
   lines: OrderLine[];
+  paymentMethodKey?: string | null;
+  paymentMethodName?: string | null;
+  couponCode?: string | null;
 }
 
 export interface OrderDetail extends OrderListItem {
