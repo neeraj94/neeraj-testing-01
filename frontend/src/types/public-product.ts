@@ -124,10 +124,3 @@ export interface PublicProductRecommendation {
   originalPrice: number | null;
   finalPrice: number | null;
 }
-
-export interface PublicProductSuggestion {
-  id: number;
-  name: string;
-  slug: string;
-  thumbnailUrl?: string | null;
-}

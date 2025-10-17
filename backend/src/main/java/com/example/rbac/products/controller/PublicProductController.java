@@ -5,7 +5,6 @@ import com.example.rbac.products.dto.storefront.PublicProductAvailability;
 import com.example.rbac.products.dto.storefront.PublicProductDetailDto;
 import com.example.rbac.products.dto.storefront.PublicProductSearchCriteria;
 import com.example.rbac.products.dto.storefront.PublicProductSearchResponse;
-import com.example.rbac.products.dto.storefront.PublicProductSuggestionDto;
 import com.example.rbac.products.dto.storefront.PublicProductSort;
 import com.example.rbac.products.service.PublicProductService;
 import com.example.rbac.users.model.UserPrincipal;
@@ -64,11 +63,6 @@ public class PublicProductController {
         criteria.setAvailability(parseAvailability(availabilityParam));
         criteria.setSort(PublicProductSort.fromKey(sortParam));
         return publicProductService.searchProducts(criteria);
-    }
-
-    @GetMapping("/suggestions")
-    public List<PublicProductSuggestionDto> suggestProducts(@RequestParam("q") String query) {
-        return publicProductService.searchSuggestions(query);
     }
 
     @GetMapping("/{slug}")

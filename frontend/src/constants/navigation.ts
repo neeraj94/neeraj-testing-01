@@ -261,15 +261,6 @@ export const DEFAULT_NAVIGATION_MENU: NavigationNode[] = [
     permissions: [],
     children: [
       {
-        key: 'carts',
-        label: 'Carts',
-        icon: '🛒',
-        path: '/admin/carts',
-        group: false,
-        permissions: ['ORDER_MANAGE', 'CHECKOUT_MANAGE'],
-        children: []
-      },
-      {
         key: 'orders',
         label: 'Orders',
         icon: '📦',
