@@ -83,6 +83,16 @@ public class CheckoutService {
         return addressService.createAddress(userId, request);
     }
 
+    @Transactional
+    public CheckoutAddressDto updateAddress(Long userId, Long addressId, CheckoutAddressRequest request) {
+        return addressService.updateAddress(userId, addressId, request);
+    }
+
+    @Transactional
+    public CheckoutAddressDto updateAddressAsAdmin(Long userId, Long addressId, CheckoutAddressRequest request) {
+        return addressService.updateAddressAsAdmin(userId, addressId, request);
+    }
+
     @Transactional(readOnly = true)
     public CheckoutSummaryDto buildSummary(Long userId, CheckoutOrderRequest request) {
         CheckoutSummaryDto summary = new CheckoutSummaryDto();
@@ -326,6 +336,7 @@ public class CheckoutService {
         CheckoutOrderLineRequest line = new CheckoutOrderLineRequest();
         line.setProductId(item.getProduct() != null ? item.getProduct().getId() : null);
         line.setName(item.getProduct() != null ? item.getProduct().getName() : null);
+        line.setProductSlug(item.getProduct() != null ? item.getProduct().getSlug() : null);
         line.setQuantity(Optional.ofNullable(item.getQuantity()).orElse(0));
         line.setUnitPrice(Optional.ofNullable(item.getUnitPrice()).orElse(BigDecimal.ZERO));
         BigDecimal effectiveTaxRate = calculateEffectiveTaxRate(item);
