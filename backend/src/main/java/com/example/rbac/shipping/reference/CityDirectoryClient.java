@@ -43,7 +43,7 @@ public class CityDirectoryClient {
         }
         try {
             String responseBody = restClient.post()
-                    .uri("countries/state/cities")
+                    .uri("/countries/state/cities")
                     .contentType(MediaType.APPLICATION_JSON)
                     .accept(MediaType.APPLICATION_JSON)
                     .body(Map.of(
