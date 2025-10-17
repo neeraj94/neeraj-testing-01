@@ -85,7 +85,9 @@ const PermissionMatrix = ({
     );
   }
 
-  const visibleColumns = CAPABILITY_COLUMNS;
+  const visibleColumns = CAPABILITY_COLUMNS.filter((column) =>
+    groups.some((group) => Boolean(group.slots[column.slot]))
+  );
   const showExtras = groups.some((group) => group.extras.length > 0);
   const selectedSet = new Set(selected);
 
@@ -106,9 +108,7 @@ const PermissionMatrix = ({
               </th>
             ))}
             {showExtras && (
-              <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Additional
-              </th>
+              <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Other</th>
             )}
           </tr>
         </thead>
