@@ -387,6 +387,22 @@ public class SetupService {
                             List.of("SHIPPING_AREA_VIEW")
                     )
             )),
+            MenuDefinition.group("commerce", "Commerce", "💳", List.of(
+                    MenuDefinition.item(
+                            "orders",
+                            "Orders",
+                            "📦",
+                            "/admin/orders",
+                            List.of("ORDER_MANAGE", "CHECKOUT_MANAGE")
+                    ),
+                    MenuDefinition.item(
+                            "payments",
+                            "Payments",
+                            "💰",
+                            "/admin/payments",
+                            List.of("PAYMENT_MANAGE")
+                    )
+            )),
             MenuDefinition.item("gallery", "Gallery", "🖼️", "/admin/gallery", List.of("GALLERY_VIEW_ALL", "GALLERY_VIEW_OWN", "GALLERY_CREATE")),
             MenuDefinition.item("activity", "Activity", "📝", "/admin/activity", List.of("ACTIVITY_VIEW")),
             MenuDefinition.item("settings", "Settings", "⚙️", "/admin/settings", List.of("SETTINGS_VIEW")),

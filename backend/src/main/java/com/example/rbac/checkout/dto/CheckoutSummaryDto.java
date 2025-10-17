@@ -7,6 +7,7 @@ public class CheckoutSummaryDto {
 
     private List<CheckoutAddressDto> addresses = new ArrayList<>();
     private List<PaymentMethodDto> paymentMethods = new ArrayList<>();
+    private List<CheckoutCouponDto> coupons = new ArrayList<>();
     private OrderSummaryDto orderSummary;
 
     public List<CheckoutAddressDto> getAddresses() {
@@ -23,6 +24,14 @@ public class CheckoutSummaryDto {
 
     public void setPaymentMethods(List<PaymentMethodDto> paymentMethods) {
         this.paymentMethods = paymentMethods;
+    }
+
+    public List<CheckoutCouponDto> getCoupons() {
+        return coupons;
+    }
+
+    public void setCoupons(List<CheckoutCouponDto> coupons) {
+        this.coupons = coupons;
     }
 
     public OrderSummaryDto getOrderSummary() {
