@@ -22,13 +22,13 @@ public class OrderAdminController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAuthority('ORDER_MANAGE')")
+    @PreAuthorize("hasAnyAuthority('ORDER_MANAGE', 'CHECKOUT_MANAGE')")
     public List<OrderListItemDto> listOrders() {
         return checkoutService.listOrders();
     }
 
     @GetMapping("/{orderId}")
-    @PreAuthorize("hasAuthority('ORDER_MANAGE')")
+    @PreAuthorize("hasAnyAuthority('ORDER_MANAGE', 'CHECKOUT_MANAGE')")
     public OrderDetailDto getOrder(@PathVariable Long orderId) {
         return checkoutService.getOrderDetail(orderId);
     }

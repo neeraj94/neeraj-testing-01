@@ -77,6 +77,10 @@ const CheckoutPage = () => {
   };
   const [addressForm, setAddressForm] = useState(defaultAddressForm);
 
+  useEffect(() => {
+    dispatch(fetchCart());
+  }, [dispatch]);
+
   const countriesQuery = useQuery<CheckoutRegionOption[]>({
     queryKey: ['checkout', 'regions', 'countries'],
     queryFn: async () => {
@@ -112,11 +116,15 @@ const CheckoutPage = () => {
     queryFn: async () => {
       const { data } = await api.get<CheckoutSummary>('/checkout/summary');
       return data;
-    }
+    },
+    retry: false
   });
 
   const addresses = useMemo(
-    () => summaryQuery.data?.addresses ?? [],
+    () =>
+      (summaryQuery.data?.addresses ?? []).filter(
+        (address): address is CheckoutAddress => Boolean(address && address.id)
+      ),
     [summaryQuery.data?.addresses]
   );
   const paymentMethods = useMemo(
@@ -206,13 +214,13 @@ const CheckoutPage = () => {
 
     if (!shippingAddressId && sortedAddresses.length) {
       const preferredShipping = pickPreferredAddress(shippingTypeAddresses, sortedAddresses);
-      if (preferredShipping) {
+      if (preferredShipping?.id) {
         setShippingAddressId(preferredShipping.id);
       }
     }
     if (!billingAddressId && sortedAddresses.length) {
       const preferredBilling = pickPreferredAddress(billingTypeAddresses, sortedAddresses);
-      if (preferredBilling) {
+      if (preferredBilling?.id) {
         setBillingAddressId(preferredBilling.id);
       }
     }

@@ -242,7 +242,7 @@ const App = () => {
           <Route element={<PermissionRoute required={['PAYMENT_MANAGE']} />}>
             <Route path="payments" element={<AdminPaymentPage />} />
           </Route>
-          <Route element={<PermissionRoute required={['ORDER_MANAGE']} />}>
+          <Route element={<PermissionRoute required={['ORDER_MANAGE', 'CHECKOUT_MANAGE']} />}>
             <Route path="orders" element={<AdminOrdersPage />} />
           </Route>
           <Route
