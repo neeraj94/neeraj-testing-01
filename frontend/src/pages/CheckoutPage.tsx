@@ -231,7 +231,8 @@ const CheckoutPage = () => {
         name: item.productName,
         quantity: item.quantity,
         unitPrice: item.unitPrice,
-        taxRate: item.taxRate ?? undefined
+        taxRate: item.taxRate ?? undefined,
+        productSlug: item.productSlug ?? null
       })),
     [cart.items]
   );

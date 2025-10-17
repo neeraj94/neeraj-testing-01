@@ -116,8 +116,19 @@ const OrderDetailPanel = ({ order, baseCurrency, onClose }: OrderDetailPanelProp
           {lines.length ? (
             lines.map((line, index) => (
               <div key={`${order.id}-${line.productId ?? index}`} className="flex flex-wrap justify-between gap-4">
-                <div>
+                <div className="space-y-1">
                   <p className="text-sm font-semibold text-slate-900">{line.name ?? 'Product'}</p>
+                  {line.productSlug ? (
+                    <a
+                      href={`/product/${line.productSlug}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1 text-xs font-semibold text-primary transition hover:text-primary/80"
+                    >
+                      View product
+                      <span aria-hidden>↗</span>
+                    </a>
+                  ) : null}
                   <p className="text-xs text-slate-500">
                     Qty {line.quantity} × {formatCurrency(line.unitPrice ?? 0, currency)}
                   </p>

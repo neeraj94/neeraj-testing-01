@@ -336,6 +336,7 @@ public class CheckoutService {
         CheckoutOrderLineRequest line = new CheckoutOrderLineRequest();
         line.setProductId(item.getProduct() != null ? item.getProduct().getId() : null);
         line.setName(item.getProduct() != null ? item.getProduct().getName() : null);
+        line.setProductSlug(item.getProduct() != null ? item.getProduct().getSlug() : null);
         line.setQuantity(Optional.ofNullable(item.getQuantity()).orElse(0));
         line.setUnitPrice(Optional.ofNullable(item.getUnitPrice()).orElse(BigDecimal.ZERO));
         BigDecimal effectiveTaxRate = calculateEffectiveTaxRate(item);
