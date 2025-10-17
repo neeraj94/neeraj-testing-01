@@ -12,7 +12,13 @@ import SortableColumnHeader from '../components/SortableColumnHeader';
 import ExportMenu from '../components/ExportMenu';
 import { exportDataset, type ExportFormat } from '../utils/exporters';
 import { extractErrorMessage } from '../utils/errors';
-import { buildPermissionGroups, CAPABILITY_COLUMNS, type PermissionGroup } from '../utils/permissionGroups';
+import {
+  buildPermissionGroups,
+  CAPABILITY_COLUMNS,
+  PERMISSION_AUDIENCE_HEADERS,
+  PERMISSION_AUDIENCE_ORDER,
+  type PermissionGroup
+} from '../utils/permissionGroups';
 import { useAppSelector } from '../app/hooks';
 import type { PermissionKey } from '../types/auth';
 import { hasAnyPermission } from '../utils/permissions';
@@ -447,6 +453,16 @@ const UsersPage = () => {
   const permissionGroups = useMemo<PermissionGroup[]>(
     () => buildPermissionGroups(permissionsCatalog),
     [permissionsCatalog]
+  );
+
+  const permissionGroupsByAudience = useMemo(
+    () =>
+      PERMISSION_AUDIENCE_ORDER.map((audience) => ({
+        audience,
+        title: PERMISSION_AUDIENCE_HEADERS[audience],
+        groups: permissionGroups.filter((group) => group.category === audience)
+      })).filter((section) => section.groups.length > 0),
+    [permissionGroups]
   );
 
   const handleNavigateToProduct = useCallback(
@@ -1992,143 +2008,150 @@ const UsersPage = () => {
           Apply additional permissions to this user without altering the underlying role. Selecting “View (Global)” will
           automatically disable “View (Own)” for the same feature.
         </p>
-        <div className="mt-4 space-y-4">
-          {permissionGroups.map((group) => {
-            const slotEntries = Object.entries(group.slots);
-            const extras = group.extras;
-            return (
-              <div key={group.feature} className="rounded-lg border border-slate-200">
-                <div className="border-b border-slate-200 bg-slate-50 px-4 py-3">
-                  <h4 className="text-sm font-semibold text-slate-800">{group.feature}</h4>
-                </div>
-                <div className="grid gap-3 p-4 sm:grid-cols-2">
-                  {slotEntries.map(([slot, option]) => {
-                    if (!option) {
-                      return null;
-                    }
-                    const normalized = normalizePermissionKey(option.key);
-                    const checked = directPermissionSet.has(normalized);
-                    const disableOwn = /_VIEW_OWN$/i.test(normalized) &&
-                      directPermissionSet.has(normalized.replace(/_OWN$/i, '_GLOBAL'));
-                    const inherited = rolePermissionSet.has(normalized);
-                    const isRevoked = revokedPermissionSet.has(normalized);
-                    const isDisabled = !isEditable || disableOwn || inherited;
-                    const borderClasses = isRevoked
-                      ? 'border-rose-300 bg-rose-50 text-rose-600'
-                      : checked
-                      ? 'border-primary bg-primary/5 text-primary'
-                      : inherited
-                      ? 'border-slate-200 bg-slate-50 text-slate-500'
-                      : 'border-slate-200 text-slate-600';
-                    return (
-                      <label
-                        key={option.id}
-                        className={`flex items-start gap-3 rounded-lg border px-3 py-2 text-sm transition ${borderClasses} ${
-                          isEditable && !inherited ? 'hover:border-primary/60' : 'opacity-80'
-                        }`}
-                        >
-                        <input
-                          type="checkbox"
-                          className="mt-1 h-4 w-4"
-                          checked={checked}
-                          disabled={isDisabled}
-                          onChange={(event) => toggleDirectPermission(option.key, event.target.checked)}
-                          title={
-                            inherited
-                              ? 'Granted through assigned roles'
-                              : disableOwn
-                              ? 'View (Global) already selected for this feature.'
-                              : undefined
-                          }
-                        />
-                        <span>
-                          <span className="block font-semibold text-slate-800">{SLOT_LABELS[slot] ?? option.label}</span>
-                          <span className="text-xs uppercase tracking-wide text-slate-400">{option.key}</span>
-                          {inherited && (
-                            <span className="mt-1 inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-                              Inherited from role
-                            </span>
-                          )}
-                          {isRevoked && (
-                            <span className="mt-1 inline-flex items-center rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-rose-600">
-                              Revoked for this user
-                            </span>
-                          )}
-                          {inherited && (
-                            <label className="mt-2 inline-flex items-center gap-2 text-xs font-medium text-rose-600">
-                              <input
-                                type="checkbox"
-                                className="h-3.5 w-3.5"
-                                checked={isRevoked}
-                                onChange={(event) => toggleRevokedPermission(option.key, event.target.checked)}
-                                disabled={!isEditable}
-                              />
-                              Revoke for this user
-                            </label>
-                          )}
-                        </span>
-                      </label>
-                    );
-                  })}
-                  {extras.map((option) => {
-                    const normalized = normalizePermissionKey(option.key);
-                    const checked = directPermissionSet.has(normalized);
-                    const inherited = rolePermissionSet.has(normalized);
-                    const isRevoked = revokedPermissionSet.has(normalized);
-                    return (
-                      <label
-                        key={option.id}
-                        className={`flex items-start gap-3 rounded-lg border px-3 py-2 text-sm transition ${
-                          isRevoked
-                            ? 'border-rose-300 bg-rose-50 text-rose-600'
-                            : checked
-                            ? 'border-primary bg-primary/5 text-primary'
-                            : inherited
-                            ? 'border-slate-200 bg-slate-50 text-slate-500'
-                            : 'border-slate-200 text-slate-600'
-                        } ${isEditable && !inherited ? 'hover:border-primary/60' : 'opacity-80'}`}
-                      >
-                        <input
-                          type="checkbox"
-                          className="mt-1 h-4 w-4"
-                          checked={checked}
-                          disabled={!isEditable || inherited}
-                          onChange={(event) => toggleDirectPermission(option.key, event.target.checked)}
-                          title={inherited ? 'Granted through assigned roles' : undefined}
-                        />
-                        <span>
-                          <span className="block font-semibold text-slate-800">{option.label}</span>
-                          <span className="text-xs uppercase tracking-wide text-slate-400">{option.key}</span>
-                          {inherited && (
-                            <span className="mt-1 inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-                              Inherited from role
-                            </span>
-                          )}
-                          {isRevoked && (
-                            <span className="mt-1 inline-flex items-center rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-rose-600">
-                              Revoked for this user
-                            </span>
-                          )}
-                          {inherited && (
-                            <label className="mt-2 inline-flex items-center gap-2 text-xs font-medium text-rose-600">
-                              <input
-                                type="checkbox"
-                                className="h-3.5 w-3.5"
-                                checked={isRevoked}
-                                onChange={(event) => toggleRevokedPermission(option.key, event.target.checked)}
-                                disabled={!isEditable}
-                              />
-                              Revoke for this user
-                            </label>
-                          )}
-                        </span>
-                      </label>
-                    );
-                  })}
-                </div>
+        <div className="mt-4 space-y-6">
+          {permissionGroupsByAudience.map((section) => (
+            <div key={section.audience} className="space-y-4">
+              <div className="rounded-lg bg-slate-100 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-600">
+                {section.title}
               </div>
-            );
-          })}
+              {section.groups.map((group) => {
+                const slotEntries = Object.entries(group.slots);
+                const extras = group.extras;
+                return (
+                  <div key={group.feature} className="rounded-lg border border-slate-200">
+                    <div className="border-b border-slate-200 bg-slate-50 px-4 py-3">
+                      <h4 className="text-sm font-semibold text-slate-800">{group.feature}</h4>
+                    </div>
+                    <div className="grid gap-3 p-4 sm:grid-cols-2">
+                      {slotEntries.map(([slot, option]) => {
+                        if (!option) {
+                          return null;
+                        }
+                        const normalized = normalizePermissionKey(option.key);
+                        const checked = directPermissionSet.has(normalized);
+                        const disableOwn = /_VIEW_OWN$/i.test(normalized) &&
+                          directPermissionSet.has(normalized.replace(/_OWN$/i, '_GLOBAL'));
+                        const inherited = rolePermissionSet.has(normalized);
+                        const isRevoked = revokedPermissionSet.has(normalized);
+                        const isDisabled = !isEditable || disableOwn || inherited;
+                        const borderClasses = isRevoked
+                          ? 'border-rose-300 bg-rose-50 text-rose-600'
+                          : checked
+                          ? 'border-primary bg-primary/5 text-primary'
+                          : inherited
+                          ? 'border-slate-200 bg-slate-50 text-slate-500'
+                          : 'border-slate-200 text-slate-600';
+                        return (
+                          <label
+                            key={option.id}
+                            className={`flex items-start gap-3 rounded-lg border px-3 py-2 text-sm transition ${borderClasses} ${
+                              isEditable && !inherited ? 'hover:border-primary/60' : 'opacity-80'
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              className="mt-1 h-4 w-4"
+                              checked={checked}
+                              disabled={isDisabled}
+                              onChange={(event) => toggleDirectPermission(option.key, event.target.checked)}
+                              title={
+                                inherited
+                                  ? 'Granted through assigned roles'
+                                  : disableOwn
+                                  ? 'View (Global) already selected for this feature.'
+                                  : undefined
+                              }
+                            />
+                            <span>
+                              <span className="block font-semibold text-slate-800">{SLOT_LABELS[slot] ?? option.label}</span>
+                              <span className="text-xs uppercase tracking-wide text-slate-400">{option.key}</span>
+                              {inherited && (
+                                <span className="mt-1 inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                                  Inherited from role
+                                </span>
+                              )}
+                              {isRevoked && (
+                                <span className="mt-1 inline-flex items-center rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-rose-600">
+                                  Revoked for this user
+                                </span>
+                              )}
+                              {inherited && (
+                                <label className="mt-2 inline-flex items-center gap-2 text-xs font-medium text-rose-600">
+                                  <input
+                                    type="checkbox"
+                                    className="h-3.5 w-3.5"
+                                    checked={isRevoked}
+                                    onChange={(event) => toggleRevokedPermission(option.key, event.target.checked)}
+                                    disabled={!isEditable}
+                                  />
+                                  Revoke for this user
+                                </label>
+                              )}
+                            </span>
+                          </label>
+                        );
+                      })}
+                      {extras.map((option) => {
+                        const normalized = normalizePermissionKey(option.key);
+                        const checked = directPermissionSet.has(normalized);
+                        const inherited = rolePermissionSet.has(normalized);
+                        const isRevoked = revokedPermissionSet.has(normalized);
+                        return (
+                          <label
+                            key={option.id}
+                            className={`flex items-start gap-3 rounded-lg border px-3 py-2 text-sm transition ${
+                              isRevoked
+                                ? 'border-rose-300 bg-rose-50 text-rose-600'
+                                : checked
+                                ? 'border-primary bg-primary/5 text-primary'
+                                : inherited
+                                ? 'border-slate-200 bg-slate-50 text-slate-500'
+                                : 'border-slate-200 text-slate-600'
+                            } ${isEditable && !inherited ? 'hover:border-primary/60' : 'opacity-80'}`}
+                          >
+                            <input
+                              type="checkbox"
+                              className="mt-1 h-4 w-4"
+                              checked={checked}
+                              disabled={!isEditable || inherited}
+                              onChange={(event) => toggleDirectPermission(option.key, event.target.checked)}
+                              title={inherited ? 'Granted through assigned roles' : undefined}
+                            />
+                            <span>
+                              <span className="block font-semibold text-slate-800">{option.label}</span>
+                              <span className="text-xs uppercase tracking-wide text-slate-400">{option.key}</span>
+                              {inherited && (
+                                <span className="mt-1 inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                                  Inherited from role
+                                </span>
+                              )}
+                              {isRevoked && (
+                                <span className="mt-1 inline-flex items-center rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-rose-600">
+                                  Revoked for this user
+                                </span>
+                              )}
+                              {inherited && (
+                                <label className="mt-2 inline-flex items-center gap-2 text-xs font-medium text-rose-600">
+                                  <input
+                                    type="checkbox"
+                                    className="h-3.5 w-3.5"
+                                    checked={isRevoked}
+                                    onChange={(event) => toggleRevokedPermission(option.key, event.target.checked)}
+                                    disabled={!isEditable}
+                                  />
+                                  Revoke for this user
+                                </label>
+                              )}
+                            </span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ))}
         </div>
       </section>
       <section className="rounded-xl border border-slate-200 bg-slate-50 p-4">
