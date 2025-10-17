@@ -1069,7 +1069,7 @@ const CheckoutPage = () => {
                           <div className="space-y-1">
                             <ul className="space-y-1 text-left">
                               {orderSummary.taxLines.map((line) => (
-                                <li key={`${line.productId ?? 'item'}-${line.taxRate}`}">
+                                <li key={`${line.productId ?? 'item'}-${line.taxRate}`}>
                                   <span className="block font-medium text-slate-700">
                                     {line.productName ?? 'Item'}
                                   </span>
