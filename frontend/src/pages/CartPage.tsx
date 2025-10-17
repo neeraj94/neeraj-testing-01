@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../app/hooks';
+import { selectBaseCurrency } from '../features/settings/selectors';
 import {
   removeCartItem,
   updateCartItem,
@@ -11,6 +12,7 @@ import {
 } from '../features/cart/cartSlice';
 import type { CartItem } from '../types/cart';
 import { useToast } from '../components/ToastProvider';
+import { formatCurrency } from '../utils/currency';
 
 const CartPage = () => {
   const dispatch = useAppDispatch();
@@ -18,6 +20,8 @@ const CartPage = () => {
   const { notify } = useToast();
   const cart = useAppSelector(selectCart);
   const source = useAppSelector(selectCartSource);
+  const baseCurrency = useAppSelector(selectBaseCurrency);
+  const currencyCode = baseCurrency ?? 'USD';
   const isAuthenticatedCart = source === 'authenticated';
 
   const handleQuantityChange = useCallback(
@@ -161,7 +165,9 @@ const CartPage = () => {
                           {item.sku && <p className="text-xs text-slate-400">SKU: {item.sku}</p>}
                         </div>
                         <div className="text-right">
-                          <p className="text-lg font-semibold text-slate-900">${item.unitPrice.toFixed(2)}</p>
+                          <p className="text-lg font-semibold text-slate-900">
+                            {formatCurrency(item.unitPrice ?? 0, currencyCode)}
+                          </p>
                           <p className="text-xs text-slate-500">Per unit</p>
                         </div>
                       </div>
@@ -194,7 +200,10 @@ const CartPage = () => {
                       </div>
                       <div className="text-right">
                         <p className="text-lg font-semibold text-slate-900">
-                          ${(item.lineTotal ?? 0).toFixed(2)}
+                          {formatCurrency(
+                            item.lineTotal != null ? item.lineTotal : (item.unitPrice ?? 0) * item.quantity,
+                            currencyCode
+                          )}
                         </p>
                         {item.availableQuantity != null && (
                           <p className="text-xs text-slate-500">
@@ -224,7 +233,9 @@ const CartPage = () => {
                   </div>
                   <div className="flex items-center justify-between">
                     <dt>Subtotal</dt>
-                    <dd className="font-semibold text-slate-900">${cart.subtotal.toFixed(2)}</dd>
+                    <dd className="font-semibold text-slate-900">
+                      {formatCurrency(cart.subtotal ?? 0, currencyCode)}
+                    </dd>
                   </div>
                 </dl>
                 <button
