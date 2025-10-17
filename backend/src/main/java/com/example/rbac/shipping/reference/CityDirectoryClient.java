@@ -1,5 +1,6 @@
 package com.example.rbac.shipping.reference;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -21,11 +22,14 @@ public class CityDirectoryClient {
     private static final Logger LOGGER = LoggerFactory.getLogger(CityDirectoryClient.class);
 
     private final RestClient restClient;
+    private final ObjectMapper objectMapper;
     private final Map<String, List<String>> cache = new ConcurrentHashMap<>();
 
     public CityDirectoryClient(RestClient.Builder restClientBuilder,
+                               ObjectMapper objectMapper,
                                @Value("${app.integrations.city-directory.base-url:https://countriesnow.space/api/v0.1}") String baseUrl) {
         this.restClient = restClientBuilder.baseUrl(baseUrl).build();
+        this.objectMapper = objectMapper;
     }
 
     public List<String> fetchCities(String countryName, String stateName) {
@@ -38,7 +42,7 @@ public class CityDirectoryClient {
             return cached;
         }
         try {
-            CityDirectoryResponse response = restClient.post()
+            String responseBody = restClient.post()
                     .uri("/countries/state/cities")
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(Map.of(
@@ -46,7 +50,13 @@ public class CityDirectoryClient {
                             "state", stateName.trim()
                     ))
                     .retrieve()
-                    .body(CityDirectoryResponse.class);
+                    .body(String.class);
+
+            if (!StringUtils.hasText(responseBody)) {
+                return List.of();
+            }
+
+            CityDirectoryResponse response = objectMapper.readValue(responseBody, CityDirectoryResponse.class);
             if (response == null || response.isError() || CollectionUtils.isEmpty(response.getData())) {
                 return List.of();
             }
