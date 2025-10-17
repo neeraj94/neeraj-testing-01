@@ -9,6 +9,7 @@ import { addCartItem, addGuestItem } from '../features/cart/cartSlice';
 import { useToast } from '../components/ToastProvider';
 import { selectBaseCurrency } from '../features/settings/selectors';
 import { formatCurrency as formatCurrencyValue } from '../utils/currency';
+import StorefrontHeader from '../components/StorefrontHeader';
 import type {
   PublicProductDetail,
   PublicProductOffer,
@@ -20,13 +21,6 @@ import type {
   PublicProductVariantAttribute,
   PublicProductVariantAttributeValue
 } from '../types/public-product';
-
-const navLinks = [
-  { href: '/', label: 'Home' },
-  { href: '/categories', label: 'Categories' },
-  { href: '/brands', label: 'Brands' },
-  { href: '/blog', label: 'Blog' }
-];
 
 const formatDate = (value: string) => {
   const parsed = new Date(value);
@@ -294,24 +288,7 @@ const PublicProductPage = () => {
 
   return (
     <div className="min-h-screen bg-[#EEF2F7] text-slate-900">
-      <header className="border-b border-slate-200 bg-white/95 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-6 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
-          <Link to="/" className="text-2xl font-semibold tracking-tight text-slate-900">
-            ShopHub
-          </Link>
-          <nav className="flex flex-wrap items-center gap-3 text-sm text-slate-600">
-            {navLinks.map((link) => (
-              <Link
-                key={link.href}
-                to={link.href}
-                className="rounded-full px-4 py-2 transition hover:bg-slate-100 hover:text-slate-900"
-              >
-                {link.label}
-              </Link>
-            ))}
-          </nav>
-        </div>
-      </header>
+      <StorefrontHeader activeKey="products" />
 
       <main className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
         {productQuery.isLoading && (

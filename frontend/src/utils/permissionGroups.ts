@@ -1,15 +1,8 @@
 import type { Permission } from '../types/models';
 
-export type CapabilitySlot =
-  | 'viewOwn'
-  | 'viewGlobal'
-  | 'view'
-  | 'create'
-  | 'edit'
-  | 'delete'
-  | 'export'
-  | 'manage'
-  | 'assign';
+export type CapabilitySlot = 'viewOwn' | 'viewGlobal' | 'create' | 'edit' | 'delete' | 'export';
+
+export type PermissionAudience = 'admin' | 'public';
 
 export type PermissionOption = {
   id: number;
@@ -21,31 +14,86 @@ export type PermissionGroup = {
   feature: string;
   slots: Partial<Record<CapabilitySlot, PermissionOption>>;
   extras: PermissionOption[];
+  category: PermissionAudience;
 };
 
 export const CAPABILITY_COLUMNS: Array<{ slot: CapabilitySlot; label: string }> = [
   { slot: 'viewOwn', label: 'View (Own)' },
   { slot: 'viewGlobal', label: 'View (Global)' },
-  { slot: 'view', label: 'View' },
   { slot: 'create', label: 'Create' },
   { slot: 'edit', label: 'Edit' },
   { slot: 'delete', label: 'Delete' },
-  { slot: 'export', label: 'Export' },
-  { slot: 'manage', label: 'Manage' },
-  { slot: 'assign', label: 'Assign' }
+  { slot: 'export', label: 'Export' }
 ];
+
+export const PERMISSION_AUDIENCE_ORDER: PermissionAudience[] = ['admin', 'public'];
+
+export const PERMISSION_AUDIENCE_HEADERS: Record<PermissionAudience, string> = {
+  admin: 'Administrative Access',
+  public: 'Public Access'
+};
+
+const AUDIENCE_PREFIXES: Array<{
+  prefix: string;
+  audience: PermissionAudience;
+  displayPrefix?: string;
+}> = [
+  { prefix: 'CUSTOMER_', audience: 'public', displayPrefix: 'Public' },
+  { prefix: 'PUBLIC_', audience: 'public', displayPrefix: 'Public' }
+];
+
+const FEATURE_KEY_OVERRIDES: Record<string, string> = {
+  CART: 'CARTS',
+  CARTS: 'CARTS',
+  COUPON: 'COUPONS',
+  COUPONS: 'COUPONS',
+  ORDER: 'ORDERS',
+  ORDERS: 'ORDERS',
+  PAYMENT: 'PAYMENTS',
+  PAYMENTS: 'PAYMENTS',
+  CHECKOUT: 'CHECKOUT',
+  SETUP: 'SETUP',
+  SHIPPING_AREA: 'SHIPPING',
+  SHIPPING_LOCATION: 'SHIPPING',
+  SHIPPING: 'SHIPPING',
+  UPLOADED_FILE: 'UPLOADED_FILES',
+  UPLOADED_FILES: 'UPLOADED_FILES'
+};
+
+const FEATURE_LABEL_OVERRIDES: Record<string, string> = {
+  CARTS: 'Carts',
+  CHECKOUT: 'Checkout',
+  COUPONS: 'Coupons',
+  ORDERS: 'Orders',
+  PAYMENTS: 'Payments',
+  SETUP: 'Setup',
+  SHIPPING: 'Shipping',
+  UPLOADED_FILES: 'Uploaded Files'
+};
+
+const DEFAULT_MANAGE_SLOTS: CapabilitySlot[] = ['create', 'edit', 'delete'];
+
+const MANAGE_SLOT_OVERRIDES: Record<string, CapabilitySlot[]> = {
+  CARTS: ['create', 'edit', 'delete'],
+  CHECKOUT: ['viewGlobal', 'create', 'edit', 'delete'],
+  COUPONS: ['viewGlobal', 'create', 'edit', 'delete'],
+  ORDERS: ['viewGlobal', 'create', 'edit', 'delete'],
+  PAYMENTS: ['viewGlobal', 'create', 'edit', 'delete'],
+  SETUP: ['viewGlobal', 'create', 'edit', 'delete'],
+  SHIPPING: ['viewGlobal', 'create', 'edit', 'delete'],
+  UPLOADED_FILES: ['viewGlobal', 'create', 'edit', 'delete']
+};
 
 const CAPABILITY_PATTERNS: Array<{ slot: CapabilitySlot; regex: RegExp }> = [
   { slot: 'viewGlobal', regex: /_VIEW_GLOBAL$/i },
+  { slot: 'viewGlobal', regex: /_VIEW_ALL$/i },
+  { slot: 'viewGlobal', regex: /_VIEW$/i },
   { slot: 'viewOwn', regex: /_VIEW_OWN$/i },
-  { slot: 'view', regex: /_VIEW$/i },
   { slot: 'create', regex: /_CREATE$/i },
   { slot: 'edit', regex: /_EDIT$/i },
   { slot: 'edit', regex: /_UPDATE$/i },
   { slot: 'delete', regex: /_DELETE$/i },
-  { slot: 'export', regex: /_EXPORT$/i },
-  { slot: 'manage', regex: /_MANAGE$/i },
-  { slot: 'assign', regex: /_ASSIGN$/i }
+  { slot: 'export', regex: /_EXPORT$/i }
 ];
 
 const toTitleCase = (value: string) =>
@@ -68,10 +116,16 @@ const stripCapabilitySuffix = (key: string) => {
       return key.replace(pattern.regex, '');
     }
   }
+  if (/_MANAGE$/i.test(key)) {
+    return key.replace(/_MANAGE$/i, '');
+  }
+  if (/_ASSIGN$/i.test(key)) {
+    return key.replace(/_ASSIGN$/i, '');
+  }
   return key;
 };
 
-const parsePermissionLabel = (permission: Permission) => {
+const parsePermissionName = (permission: Permission) => {
   const name = permission.name?.trim() ?? '';
   const separators = [':', ' - ', ' – ', ' — ', '|'];
 
@@ -98,65 +152,125 @@ const parsePermissionLabel = (permission: Permission) => {
     return { feature: formatFeatureName(name), label: name };
   }
 
-  const baseKey = stripCapabilitySuffix(permission.key);
-  const feature = formatFeatureName(baseKey || permission.key);
-  const label = permission.name?.trim() ?? toTitleCase(permission.key.replace(/_/g, ' '));
-  return { feature, label };
+  return null;
+};
+
+const determineAudience = (keyUpper: string) => {
+  for (const entry of AUDIENCE_PREFIXES) {
+    if (keyUpper.startsWith(entry.prefix)) {
+      return {
+        audience: entry.audience,
+        baseKey: keyUpper.substring(entry.prefix.length),
+        displayPrefix: entry.displayPrefix
+      };
+    }
+  }
+  return { audience: 'admin' as PermissionAudience, baseKey: keyUpper, displayPrefix: undefined };
+};
+
+const assignSlot = (
+  group: PermissionGroup,
+  slot: CapabilitySlot,
+  option: PermissionOption
+) => {
+  const existing = group.slots[slot];
+  if (!existing) {
+    group.slots[slot] = option;
+    return true;
+  }
+  if (existing.id === option.id) {
+    return true;
+  }
+  return false;
+};
+
+const addExtraOption = (extras: PermissionOption[], option: PermissionOption) => {
+  if (extras.some((existing) => existing.id === option.id)) {
+    return extras;
+  }
+  return [...extras, option];
 };
 
 export const buildPermissionGroups = (permissions: Permission[]): PermissionGroup[] => {
-  const keySet = new Set(
-    permissions.map((permission) => (permission.key ?? '').toUpperCase())
-  );
-  const filtered = permissions.filter((permission) => {
-    const key = (permission.key ?? '').toUpperCase();
-    if (key.startsWith('CUSTOMER_')) {
-      const equivalent = `USER_${key.substring('CUSTOMER_'.length)}`;
-      if (keySet.has(equivalent)) {
-        return false;
-      }
-    }
-    return true;
-  });
   const map = new Map<string, PermissionGroup>();
 
-  filtered.forEach((permission) => {
-    const { feature, label } = parsePermissionLabel(permission);
-    const key = feature || 'General';
-    const existing = map.get(key);
-    const entry: PermissionGroup = existing ?? { feature: key, slots: {}, extras: [] };
-
-    let matchedSlot: CapabilitySlot | null = null;
-    for (const pattern of CAPABILITY_PATTERNS) {
-      if (pattern.regex.test(permission.key)) {
-        matchedSlot = pattern.slot;
-        break;
-      }
+  permissions.forEach((permission) => {
+    const keyUpper = (permission.key ?? '').toUpperCase();
+    if (!keyUpper) {
+      return;
     }
 
+    const audienceInfo = determineAudience(keyUpper);
+    const stripped = stripCapabilitySuffix(audienceInfo.baseKey);
+    const normalizedKey = FEATURE_KEY_OVERRIDES[stripped] ?? stripped;
+    const mapKey = `${audienceInfo.audience}:${normalizedKey}`;
+
+    let group = map.get(mapKey);
+
+    const defaultLabel = FEATURE_LABEL_OVERRIDES[normalizedKey] ?? formatFeatureName(normalizedKey || audienceInfo.baseKey);
+    const parsedName = parsePermissionName(permission);
+    let featureLabel = parsedName?.feature ?? defaultLabel;
+    if (audienceInfo.displayPrefix && !/^public\b/i.test(featureLabel)) {
+      featureLabel = `${audienceInfo.displayPrefix} ${featureLabel}`;
+    }
+
+    if (!group) {
+      group = { feature: featureLabel, slots: {}, extras: [], category: audienceInfo.audience };
+      map.set(mapKey, group);
+    } else if (!group.feature && featureLabel) {
+      group.feature = featureLabel;
+    }
+
+    const optionLabel = parsedName?.label ?? permission.name?.trim() ?? toTitleCase(permission.key.replace(/_/g, ' '));
     const option: PermissionOption = {
       id: permission.id,
       key: permission.key,
-      label: label || permission.name || permission.key
+      label: optionLabel
     };
 
-    if (matchedSlot) {
-      if (!entry.slots[matchedSlot]) {
-        entry.slots[matchedSlot] = option;
-      } else {
-        entry.extras.push(option);
+    const isManage = /_MANAGE$/i.test(keyUpper);
+    let matchedSlot: CapabilitySlot | null = null;
+
+    if (!isManage) {
+      for (const pattern of CAPABILITY_PATTERNS) {
+        if (pattern.regex.test(permission.key)) {
+          matchedSlot = pattern.slot;
+          break;
+        }
       }
-    } else {
-      entry.extras.push(option);
     }
 
-    map.set(key, entry);
+    if (isManage) {
+      const slots = MANAGE_SLOT_OVERRIDES[normalizedKey] ?? DEFAULT_MANAGE_SLOTS;
+      let assigned = false;
+      for (const slot of slots) {
+        if (assignSlot(group, slot, option)) {
+          assigned = true;
+        }
+      }
+      if (!assigned) {
+        group.extras = addExtraOption(group.extras, option);
+      }
+    } else if (matchedSlot) {
+      if (!assignSlot(group, matchedSlot, option)) {
+        group.extras = addExtraOption(group.extras, option);
+      }
+    } else {
+      group.extras = addExtraOption(group.extras, option);
+    }
   });
 
   return Array.from(map.values())
     .map((group) => ({
       ...group,
-      extras: group.extras.sort((a, b) => a.label.localeCompare(b.label))
+      extras: [...group.extras].sort((a, b) => a.label.localeCompare(b.label))
     }))
-    .sort((a, b) => a.feature.localeCompare(b.feature));
+    .sort((a, b) => {
+      const audienceComparison =
+        PERMISSION_AUDIENCE_ORDER.indexOf(a.category) - PERMISSION_AUDIENCE_ORDER.indexOf(b.category);
+      if (audienceComparison !== 0) {
+        return audienceComparison;
+      }
+      return a.feature.localeCompare(b.feature);
+    });
 };
