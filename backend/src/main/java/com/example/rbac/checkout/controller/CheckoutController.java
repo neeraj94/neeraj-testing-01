@@ -5,6 +5,7 @@ import com.example.rbac.checkout.dto.CheckoutAddressRequest;
 import com.example.rbac.checkout.dto.CheckoutOrderRequest;
 import com.example.rbac.checkout.dto.CheckoutOrderResponse;
 import com.example.rbac.checkout.dto.CheckoutSummaryDto;
+import com.example.rbac.checkout.dto.OrderDetailDto;
 import com.example.rbac.checkout.dto.OrderSummaryDto;
 import com.example.rbac.checkout.dto.PaymentMethodDto;
 import com.example.rbac.checkout.service.CheckoutService;
@@ -83,6 +84,13 @@ public class CheckoutController {
     public CheckoutOrderResponse placeOrder(@RequestBody CheckoutOrderRequest request) {
         Long userId = checkoutService.resolveCurrentUserId();
         return checkoutService.placeOrder(userId, request);
+    }
+
+    @GetMapping("/orders/{orderId}")
+    @PreAuthorize("isAuthenticated()")
+    public OrderDetailDto getOrder(@PathVariable Long orderId) {
+        Long userId = checkoutService.resolveCurrentUserId();
+        return checkoutService.getOrderDetailForUser(userId, orderId);
     }
 
     @GetMapping("/summary")

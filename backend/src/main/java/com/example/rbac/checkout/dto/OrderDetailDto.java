@@ -4,16 +4,19 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
-public class OrderListItemDto {
+public class OrderDetailDto {
 
     private Long id;
     private String orderNumber;
+    private String status;
+    private Instant createdAt;
     private Long customerId;
     private String customerName;
     private String customerEmail;
-    private String status;
+    private CheckoutAddressDto shippingAddress;
+    private CheckoutAddressDto billingAddress;
+    private PaymentMethodDto paymentMethod;
     private OrderSummaryDto summary;
-    private Instant createdAt;
     private List<OrderLineDto> lines = new ArrayList<>();
 
     public Long getId() {
@@ -30,6 +33,22 @@ public class OrderListItemDto {
 
     public void setOrderNumber(String orderNumber) {
         this.orderNumber = orderNumber;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(Instant createdAt) {
+        this.createdAt = createdAt;
     }
 
     public Long getCustomerId() {
@@ -56,12 +75,28 @@ public class OrderListItemDto {
         this.customerEmail = customerEmail;
     }
 
-    public String getStatus() {
-        return status;
+    public CheckoutAddressDto getShippingAddress() {
+        return shippingAddress;
     }
 
-    public void setStatus(String status) {
-        this.status = status;
+    public void setShippingAddress(CheckoutAddressDto shippingAddress) {
+        this.shippingAddress = shippingAddress;
+    }
+
+    public CheckoutAddressDto getBillingAddress() {
+        return billingAddress;
+    }
+
+    public void setBillingAddress(CheckoutAddressDto billingAddress) {
+        this.billingAddress = billingAddress;
+    }
+
+    public PaymentMethodDto getPaymentMethod() {
+        return paymentMethod;
+    }
+
+    public void setPaymentMethod(PaymentMethodDto paymentMethod) {
+        this.paymentMethod = paymentMethod;
     }
 
     public OrderSummaryDto getSummary() {
@@ -70,14 +105,6 @@ public class OrderListItemDto {
 
     public void setSummary(OrderSummaryDto summary) {
         this.summary = summary;
-    }
-
-    public Instant getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(Instant createdAt) {
-        this.createdAt = createdAt;
     }
 
     public List<OrderLineDto> getLines() {

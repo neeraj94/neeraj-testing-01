@@ -10,6 +10,7 @@ public class CheckoutOrderRequest {
     private boolean sameAsShipping;
     private String paymentMethodKey;
     private List<CheckoutOrderLineRequest> lines = new ArrayList<>();
+    private String couponCode;
 
     public Long getShippingAddressId() {
         return shippingAddressId;
@@ -49,5 +50,13 @@ public class CheckoutOrderRequest {
 
     public void setLines(List<CheckoutOrderLineRequest> lines) {
         this.lines = lines;
+    }
+
+    public String getCouponCode() {
+        return couponCode;
+    }
+
+    public void setCouponCode(String couponCode) {
+        this.couponCode = couponCode;
     }
 }
