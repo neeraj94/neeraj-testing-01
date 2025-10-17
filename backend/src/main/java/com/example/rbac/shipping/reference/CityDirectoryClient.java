@@ -52,6 +52,10 @@ public class CityDirectoryClient {
                     .retrieve()
                     .body(String.class);
 
+            if (isRedirectResponse(responseBody)) {
+                responseBody = fetchViaQueryEndpoint(countryName, stateName);
+            }
+
             if (!StringUtils.hasText(responseBody)) {
                 return List.of();
             }
@@ -76,6 +80,30 @@ public class CityDirectoryClient {
 
     private String buildCacheKey(String countryName, String stateName) {
         return countryName.trim().toLowerCase(Locale.ENGLISH) + "::" + stateName.trim().toLowerCase(Locale.ENGLISH);
+    }
+
+    private boolean isRedirectResponse(String responseBody) {
+        if (!StringUtils.hasText(responseBody)) {
+            return false;
+        }
+        String normalized = responseBody.trim().toLowerCase(Locale.ENGLISH);
+        return normalized.startsWith("moved permanently") && normalized.contains("redirecting to");
+    }
+
+    private String fetchViaQueryEndpoint(String countryName, String stateName) {
+        try {
+            return restClient.get()
+                    .uri(uriBuilder -> uriBuilder
+                            .path("/countries/state/cities/q")
+                            .queryParam("country", countryName.trim())
+                            .queryParam("state", stateName.trim())
+                            .build())
+                    .retrieve()
+                    .body(String.class);
+        } catch (Exception redirectEx) {
+            LOGGER.warn("Failed to follow city directory redirect for {}, {}: {}", countryName, stateName, redirectEx.getMessage());
+            return null;
+        }
     }
 
     private static final class CityDirectoryResponse {
