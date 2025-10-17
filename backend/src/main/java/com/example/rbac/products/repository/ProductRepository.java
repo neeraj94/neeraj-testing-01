@@ -27,6 +27,9 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
     List<Product> findByIdIn(List<Long> ids);
 
+    @EntityGraph(attributePaths = {"thumbnail"})
+    List<Product> findTop10ByNameContainingIgnoreCaseOrSkuContainingIgnoreCaseOrderByNameAsc(String name, String sku);
+
     boolean existsBySku(String sku);
 
     boolean existsBySkuIgnoreCase(String sku);

@@ -15,6 +15,9 @@ public class OrderListItemDto {
     private OrderSummaryDto summary;
     private Instant createdAt;
     private List<OrderLineDto> lines = new ArrayList<>();
+    private String paymentMethodKey;
+    private String paymentMethodName;
+    private String couponCode;
 
     public Long getId() {
         return id;
@@ -86,5 +89,29 @@ public class OrderListItemDto {
 
     public void setLines(List<OrderLineDto> lines) {
         this.lines = lines;
+    }
+
+    public String getPaymentMethodKey() {
+        return paymentMethodKey;
+    }
+
+    public void setPaymentMethodKey(String paymentMethodKey) {
+        this.paymentMethodKey = paymentMethodKey;
+    }
+
+    public String getPaymentMethodName() {
+        return paymentMethodName;
+    }
+
+    public void setPaymentMethodName(String paymentMethodName) {
+        this.paymentMethodName = paymentMethodName;
+    }
+
+    public String getCouponCode() {
+        return couponCode;
+    }
+
+    public void setCouponCode(String couponCode) {
+        this.couponCode = couponCode;
     }
 }

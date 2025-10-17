@@ -12,11 +12,13 @@ import com.example.rbac.checkout.dto.CheckoutOrderResponse;
 import com.example.rbac.checkout.dto.CheckoutSummaryDto;
 import com.example.rbac.checkout.dto.OrderDetailDto;
 import com.example.rbac.checkout.dto.OrderListItemDto;
+import com.example.rbac.checkout.dto.OrderSearchCriteria;
 import com.example.rbac.checkout.dto.OrderSummaryDto;
 import com.example.rbac.checkout.dto.OrderTaxLineDto;
 import com.example.rbac.checkout.dto.PaymentMethodDto;
 import com.example.rbac.checkout.dto.PaymentMethodSettingsRequest;
 import com.example.rbac.common.exception.ApiException;
+import com.example.rbac.common.pagination.PageResponse;
 import com.example.rbac.finance.taxrate.model.TaxRate;
 import com.example.rbac.finance.taxrate.model.TaxRateType;
 import com.example.rbac.shipping.dto.ShippingOptionDto;
@@ -180,8 +182,8 @@ public class CheckoutService {
     }
 
     @Transactional(readOnly = true)
-    public List<OrderListItemDto> listOrders() {
-        return orderService.listOrders();
+    public PageResponse<OrderListItemDto> listOrders(OrderSearchCriteria criteria) {
+        return PageResponse.from(orderService.searchOrders(criteria));
     }
 
     @Transactional(readOnly = true)
@@ -337,6 +339,17 @@ public class CheckoutService {
         line.setProductId(item.getProduct() != null ? item.getProduct().getId() : null);
         line.setName(item.getProduct() != null ? item.getProduct().getName() : null);
         line.setProductSlug(item.getProduct() != null ? item.getProduct().getSlug() : null);
+        line.setVariantId(item.getVariant() != null ? item.getVariant().getId() : null);
+        String variantLabel = item.getVariantLabel();
+        if (!StringUtils.hasText(variantLabel) && item.getVariant() != null) {
+            variantLabel = item.getVariant().getVariantKey();
+        }
+        line.setVariantLabel(variantLabel);
+        String variantSku = item.getVariant() != null ? item.getVariant().getSku() : null;
+        if (!StringUtils.hasText(variantSku) && item.getProduct() != null) {
+            variantSku = item.getProduct().getSku();
+        }
+        line.setVariantSku(variantSku);
         line.setQuantity(Optional.ofNullable(item.getQuantity()).orElse(0));
         line.setUnitPrice(Optional.ofNullable(item.getUnitPrice()).orElse(BigDecimal.ZERO));
         BigDecimal effectiveTaxRate = calculateEffectiveTaxRate(item);

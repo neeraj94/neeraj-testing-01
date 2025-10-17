@@ -1,21 +1,29 @@
 package com.example.rbac.checkout.service;
 
 import com.example.rbac.checkout.dto.CheckoutAddressDto;
+import com.example.rbac.checkout.dto.AppliedCouponDto;
 import com.example.rbac.checkout.dto.CheckoutOrderLineRequest;
 import com.example.rbac.checkout.dto.CheckoutOrderResponse;
 import com.example.rbac.checkout.dto.OrderDetailDto;
 import com.example.rbac.checkout.dto.OrderLineDto;
 import com.example.rbac.checkout.dto.OrderListItemDto;
+import com.example.rbac.checkout.dto.OrderSearchCriteria;
 import com.example.rbac.checkout.dto.OrderSummaryDto;
 import com.example.rbac.checkout.dto.PaymentMethodDto;
 import com.example.rbac.checkout.model.CheckoutOrder;
 import com.example.rbac.checkout.repository.CheckoutOrderRepository;
+import com.example.rbac.checkout.repository.CheckoutOrderSpecifications;
 import com.example.rbac.common.exception.ApiException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -65,6 +73,22 @@ public class OrderService {
         order.setBillingAddressJson(writeJson(copyAddress(billingAddress)));
         order.setPaymentMethodJson(writeJson(copyPaymentMethod(paymentMethod)));
         order.setLinesJson(writeJson(orderLines));
+        order.setGrandTotal(summary != null ? summary.getGrandTotal() : null);
+        order.setPaymentMethodKey(paymentMethod != null ? paymentMethod.getKey() : null);
+        AppliedCouponDto appliedCoupon = summary != null ? summary.getAppliedCoupon() : null;
+        if (appliedCoupon != null) {
+            order.setCouponCode(appliedCoupon.getCode());
+            order.setCouponType(appliedCoupon.getDiscountType() != null
+                    ? appliedCoupon.getDiscountType().name()
+                    : null);
+            order.setCouponDescription(appliedCoupon.getDescription());
+            order.setCouponDiscountAmount(appliedCoupon.getDiscountAmount());
+        } else {
+            order.setCouponCode(null);
+            order.setCouponType(null);
+            order.setCouponDescription(null);
+            order.setCouponDiscountAmount(null);
+        }
 
         CheckoutOrder saved = orderRepository.save(order);
         if (!StringUtils.hasText(saved.getOrderNumber()) && saved.getId() != null) {
@@ -75,16 +99,19 @@ public class OrderService {
     }
 
     @Transactional(readOnly = true)
-    public List<OrderListItemDto> listOrders() {
-        List<CheckoutOrder> orders = orderRepository.findAllByOrderByCreatedAtDesc();
-        if (CollectionUtils.isEmpty(orders)) {
-            return List.of();
-        }
-        List<OrderListItemDto> results = new ArrayList<>();
-        for (CheckoutOrder order : orders) {
-            results.add(toListItem(order));
-        }
-        return results;
+    @Transactional(readOnly = true)
+    public Page<OrderListItemDto> searchOrders(OrderSearchCriteria criteria) {
+        OrderSearchCriteria effectiveCriteria = criteria != null ? criteria : new OrderSearchCriteria();
+        Specification<CheckoutOrder> specification = Specification
+                .where(CheckoutOrderSpecifications.search(effectiveCriteria.getSearch()))
+                .and(CheckoutOrderSpecifications.hasStatus(effectiveCriteria.getStatus()))
+                .and(CheckoutOrderSpecifications.paymentMethodContains(effectiveCriteria.getPaymentMethod()))
+                .and(CheckoutOrderSpecifications.placedOnOrAfter(effectiveCriteria.getPlacedFrom()))
+                .and(CheckoutOrderSpecifications.placedOnOrBefore(effectiveCriteria.getPlacedTo()));
+        Pageable pageable = PageRequest.of(effectiveCriteria.getPage(), effectiveCriteria.getSize(),
+                resolveSort(effectiveCriteria.getSort(), effectiveCriteria.getDirection()));
+        Page<CheckoutOrder> page = orderRepository.findAll(specification, pageable);
+        return page.map(this::toListItem);
     }
 
     @Transactional(readOnly = true)
@@ -146,6 +173,12 @@ public class OrderService {
         dto.setCreatedAt(order.getCreatedAt());
         dto.setSummary(copySummary(readSummary(order.getSummaryJson())));
         dto.setLines(copyLines(readLines(order.getLinesJson())));
+        dto.setPaymentMethodKey(order.getPaymentMethodKey());
+        PaymentMethodDto paymentMethod = copyPaymentMethod(readPaymentMethod(order.getPaymentMethodJson()));
+        if (paymentMethod != null) {
+            dto.setPaymentMethodName(paymentMethod.getDisplayName());
+        }
+        dto.setCouponCode(order.getCouponCode());
         return dto;
     }
 
@@ -185,6 +218,9 @@ public class OrderService {
         dto.setProductId(line.getProductId());
         dto.setName(line.getName());
         dto.setProductSlug(line.getProductSlug());
+        dto.setVariantId(line.getVariantId());
+        dto.setVariantLabel(line.getVariantLabel());
+        dto.setVariantSku(line.getVariantSku());
         dto.setQuantity(line.getQuantity());
         BigDecimal unitPrice = line.getUnitPrice() != null ? line.getUnitPrice() : BigDecimal.ZERO;
         dto.setUnitPrice(unitPrice.setScale(2, RoundingMode.HALF_UP));
@@ -245,7 +281,7 @@ public class OrderService {
         copy.setDiscountTotal(summary.getDiscountTotal());
         copy.setShippingBreakdown(summary.getShippingBreakdown());
         copy.setTaxLines(summary.getTaxLines() != null ? new ArrayList<>(summary.getTaxLines()) : List.of());
-        copy.setAppliedCoupon(summary.getAppliedCoupon());
+        copy.setAppliedCoupon(copyCoupon(summary.getAppliedCoupon()));
         return copy;
     }
 
@@ -266,9 +302,41 @@ public class OrderService {
             copy.setUnitPrice(line.getUnitPrice());
             copy.setLineTotal(line.getLineTotal());
             copy.setTaxRate(line.getTaxRate());
+            copy.setVariantId(line.getVariantId());
+            copy.setVariantLabel(line.getVariantLabel());
+            copy.setVariantSku(line.getVariantSku());
             copies.add(copy);
         }
         return copies;
+    }
+
+    private AppliedCouponDto copyCoupon(AppliedCouponDto source) {
+        if (source == null) {
+            return null;
+        }
+        AppliedCouponDto copy = new AppliedCouponDto();
+        copy.setId(source.getId());
+        copy.setName(source.getName());
+        copy.setCode(source.getCode());
+        copy.setDiscountType(source.getDiscountType());
+        copy.setDiscountValue(source.getDiscountValue());
+        copy.setDiscountAmount(source.getDiscountAmount());
+        copy.setDescription(source.getDescription());
+        return copy;
+    }
+
+    private Sort resolveSort(String sortKey, String direction) {
+        Sort.Direction sortDirection = "asc".equalsIgnoreCase(direction) ? Sort.Direction.ASC : Sort.Direction.DESC;
+        if (!StringUtils.hasText(sortKey)) {
+            return Sort.by(sortDirection, "createdAt");
+        }
+        return switch (sortKey.toLowerCase()) {
+            case "oldest" -> Sort.by(Sort.Direction.ASC, "createdAt");
+            case "highest" -> Sort.by(Sort.Direction.DESC, "grandTotal", "createdAt");
+            case "lowest" -> Sort.by(Sort.Direction.ASC, "grandTotal", "createdAt");
+            case "status" -> Sort.by(sortDirection, "status", "createdAt");
+            default -> Sort.by(sortDirection, "createdAt");
+        };
     }
 
     private OrderSummaryDto readSummary(String json) {
