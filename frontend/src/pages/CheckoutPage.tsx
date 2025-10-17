@@ -393,8 +393,6 @@ const CheckoutPage = () => {
     }
   });
 
-  const isAddressMutationPending = createAddressMutation.isPending || updateAddressMutation.isPending;
-
   const updateAddressMutation = useMutation({
     mutationFn: async () => {
       if (!editingAddressId) {
@@ -412,6 +410,8 @@ const CheckoutPage = () => {
       notify({ type: 'error', message: extractErrorMessage(error, 'Unable to update address.') });
     }
   });
+
+  const isAddressMutationPending = createAddressMutation.isPending || updateAddressMutation.isPending;
 
   const placeOrderMutation = useMutation<CheckoutOrderResponse>({
     mutationFn: async () => {
