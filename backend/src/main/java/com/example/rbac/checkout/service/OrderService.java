@@ -1,5 +1,6 @@
 package com.example.rbac.checkout.service;
 
+import com.example.rbac.checkout.dto.AppliedCouponDto;
 import com.example.rbac.checkout.dto.CheckoutAddressDto;
 import com.example.rbac.checkout.dto.CheckoutOrderLineRequest;
 import com.example.rbac.checkout.dto.CheckoutOrderResponse;
@@ -185,6 +186,9 @@ public class OrderService {
         dto.setProductId(line.getProductId());
         dto.setName(line.getName());
         dto.setProductSlug(line.getProductSlug());
+        dto.setVariantId(line.getVariantId());
+        dto.setVariantSku(line.getVariantSku());
+        dto.setVariantLabel(line.getVariantLabel());
         dto.setQuantity(line.getQuantity());
         BigDecimal unitPrice = line.getUnitPrice() != null ? line.getUnitPrice() : BigDecimal.ZERO;
         dto.setUnitPrice(unitPrice.setScale(2, RoundingMode.HALF_UP));
@@ -245,7 +249,7 @@ public class OrderService {
         copy.setDiscountTotal(summary.getDiscountTotal());
         copy.setShippingBreakdown(summary.getShippingBreakdown());
         copy.setTaxLines(summary.getTaxLines() != null ? new ArrayList<>(summary.getTaxLines()) : List.of());
-        copy.setAppliedCoupon(summary.getAppliedCoupon());
+        copy.setAppliedCoupon(copyAppliedCoupon(summary.getAppliedCoupon()));
         return copy;
     }
 
@@ -262,6 +266,9 @@ public class OrderService {
             copy.setProductId(line.getProductId());
             copy.setName(line.getName());
             copy.setProductSlug(line.getProductSlug());
+            copy.setVariantId(line.getVariantId());
+            copy.setVariantSku(line.getVariantSku());
+            copy.setVariantLabel(line.getVariantLabel());
             copy.setQuantity(line.getQuantity());
             copy.setUnitPrice(line.getUnitPrice());
             copy.setLineTotal(line.getLineTotal());
@@ -269,6 +276,21 @@ public class OrderService {
             copies.add(copy);
         }
         return copies;
+    }
+
+    private AppliedCouponDto copyAppliedCoupon(AppliedCouponDto source) {
+        if (source == null) {
+            return null;
+        }
+        AppliedCouponDto copy = new AppliedCouponDto();
+        copy.setId(source.getId());
+        copy.setName(source.getName());
+        copy.setCode(source.getCode());
+        copy.setDiscountType(source.getDiscountType());
+        copy.setDiscountValue(source.getDiscountValue());
+        copy.setDiscountAmount(source.getDiscountAmount());
+        copy.setDescription(source.getDescription());
+        return copy;
     }
 
     private OrderSummaryDto readSummary(String json) {

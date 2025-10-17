@@ -257,7 +257,18 @@ const CheckoutPage = () => {
   const formatMaybeCurrency = (value?: number | null) =>
     value == null ? '—' : formatCurrency(value, currencyCode);
 
-  const describeCoupon = (coupon: { discountType: 'FLAT' | 'PERCENTAGE'; discountValue: number | null }) => {
+  const describeCoupon = (
+    coupon: {
+      discountType: 'FLAT' | 'PERCENTAGE';
+      discountValue: number | null;
+      description?: string | null;
+      shortDescription?: string | null;
+    }
+  ) => {
+    const customDescription = coupon.description ?? coupon.shortDescription;
+    if (customDescription && customDescription.trim().length) {
+      return customDescription;
+    }
     if (coupon.discountType === 'PERCENTAGE') {
       return `${coupon.discountValue ?? 0}% off`;
     }
