@@ -1,15 +1,6 @@
 import type { Permission } from '../types/models';
 
-export type CapabilitySlot =
-  | 'viewOwn'
-  | 'viewGlobal'
-  | 'view'
-  | 'create'
-  | 'edit'
-  | 'delete'
-  | 'export'
-  | 'manage'
-  | 'assign';
+export type CapabilitySlot = 'viewOwn' | 'viewGlobal' | 'create' | 'edit' | 'delete' | 'export';
 
 export type PermissionOption = {
   id: number;
@@ -26,26 +17,22 @@ export type PermissionGroup = {
 export const CAPABILITY_COLUMNS: Array<{ slot: CapabilitySlot; label: string }> = [
   { slot: 'viewOwn', label: 'View (Own)' },
   { slot: 'viewGlobal', label: 'View (Global)' },
-  { slot: 'view', label: 'View' },
   { slot: 'create', label: 'Create' },
   { slot: 'edit', label: 'Edit' },
   { slot: 'delete', label: 'Delete' },
-  { slot: 'export', label: 'Export' },
-  { slot: 'manage', label: 'Manage' },
-  { slot: 'assign', label: 'Assign' }
+  { slot: 'export', label: 'Export' }
 ];
 
 const CAPABILITY_PATTERNS: Array<{ slot: CapabilitySlot; regex: RegExp }> = [
   { slot: 'viewGlobal', regex: /_VIEW_GLOBAL$/i },
+  { slot: 'viewGlobal', regex: /_VIEW_ALL$/i },
+  { slot: 'viewGlobal', regex: /_VIEW$/i },
   { slot: 'viewOwn', regex: /_VIEW_OWN$/i },
-  { slot: 'view', regex: /_VIEW$/i },
   { slot: 'create', regex: /_CREATE$/i },
   { slot: 'edit', regex: /_EDIT$/i },
   { slot: 'edit', regex: /_UPDATE$/i },
   { slot: 'delete', regex: /_DELETE$/i },
-  { slot: 'export', regex: /_EXPORT$/i },
-  { slot: 'manage', regex: /_MANAGE$/i },
-  { slot: 'assign', regex: /_ASSIGN$/i }
+  { slot: 'export', regex: /_EXPORT$/i }
 ];
 
 const toTitleCase = (value: string) =>
@@ -67,6 +54,12 @@ const stripCapabilitySuffix = (key: string) => {
     if (pattern.regex.test(key)) {
       return key.replace(pattern.regex, '');
     }
+  }
+  if (/_MANAGE$/i.test(key)) {
+    return key.replace(/_MANAGE$/i, '');
+  }
+  if (/_ASSIGN$/i.test(key)) {
+    return key.replace(/_ASSIGN$/i, '');
   }
   return key;
 };
