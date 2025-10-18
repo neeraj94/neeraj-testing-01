@@ -14,7 +14,6 @@ import com.example.rbac.products.model.ProductReview;
 import com.example.rbac.products.model.ProductVariant;
 import com.example.rbac.products.model.ProductVariantMedia;
 import com.example.rbac.products.model.ProductVariantValue;
-import com.example.rbac.wedges.model.Wedge;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
@@ -36,7 +35,6 @@ public class PublicProductMapper {
     public PublicProductDetailDto toDetail(Product product,
                                            List<ProductReview> reviews,
                                            List<Coupon> coupons,
-                                           List<Wedge> wedges,
                                            List<Product> recentlyViewed) {
         PublicProductDetailDto dto = new PublicProductDetailDto();
         dto.setId(product.getId());
@@ -66,7 +64,6 @@ public class PublicProductMapper {
         dto.setInfoSections(mapInfoSections(product.getInfoSections()));
         dto.setReviewSummary(mapReviewSummary(reviews));
         dto.setReviews(mapReviews(reviews));
-        dto.setWedges(mapWedges(wedges));
         dto.setFrequentlyBought(mapRecommendations(product.getFrequentlyBoughtProducts()));
         dto.setRecentlyViewed(mapRecommendations(recentlyViewed));
         return dto;
@@ -389,23 +386,6 @@ public class PublicProductMapper {
         return review.getMedia().stream()
                 .map(this::mapMedia)
                 .filter(Objects::nonNull)
-                .collect(Collectors.toList());
-    }
-
-    private List<PublicProductWedgeDto> mapWedges(List<Wedge> wedges) {
-        if (wedges == null || wedges.isEmpty()) {
-            return List.of();
-        }
-        return wedges.stream()
-                .filter(Objects::nonNull)
-                .map(wedge -> {
-                    PublicProductWedgeDto dto = new PublicProductWedgeDto();
-                    dto.setId(wedge.getId());
-                    dto.setName(wedge.getName());
-                    dto.setIconUrl(wedge.getIconUrl());
-                    dto.setShortDescription(wedge.getShortDescription());
-                    return dto;
-                })
                 .collect(Collectors.toList());
     }
 

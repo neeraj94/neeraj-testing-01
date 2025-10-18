@@ -23,10 +23,13 @@ import java.math.RoundingMode;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -145,14 +148,13 @@ public class UserRecentViewService {
                 .distinct()
                 .collect(Collectors.toList());
 
-        if (productIds.isEmpty()) {
-            return List.of();
-        }
-
-        Map<Long, Product> productsById = productRepository.findByIdIn(productIds).stream()
+        Map<Long, Product> productsById = productIds.isEmpty()
+                ? Collections.emptyMap()
+                : productRepository.findByIdIn(productIds).stream()
                 .filter(Objects::nonNull)
                 .collect(Collectors.toMap(Product::getId, product -> product, (existing, replacement) -> existing));
 
+        Set<Long> emittedProductIds = new LinkedHashSet<>();
         List<UserRecentViewDto> result = new ArrayList<>();
         for (UserRecentView entry : entries) {
             Product productRef = entry.getProduct();
@@ -160,7 +162,10 @@ public class UserRecentViewService {
             if (productId == null) {
                 continue;
             }
-            Product product = productsById.get(productId);
+            if (!emittedProductIds.add(productId)) {
+                continue;
+            }
+            Product product = productsById.getOrDefault(productId, productRef);
             if (product == null) {
                 continue;
             }

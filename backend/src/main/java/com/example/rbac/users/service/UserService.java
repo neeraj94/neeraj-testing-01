@@ -253,6 +253,7 @@ public class UserService {
         return dto;
     }
 
+    @PreAuthorize("hasAuthority('CUSTOMER_PROFILE_MANAGE')")
     @Transactional
     public UserDto updateProfile(User currentUser, ProfileUpdateRequest request) {
         User user = userRepository.findDetailedById(currentUser.getId())

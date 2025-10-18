@@ -27,7 +27,6 @@ public class PublicProductDetailDto {
     private List<PublicProductSectionDto> infoSections;
     private PublicProductReviewSummaryDto reviewSummary;
     private List<PublicProductReviewDto> reviews;
-    private List<PublicProductWedgeDto> wedges;
     private List<PublicProductRecommendationDto> frequentlyBought;
     private List<PublicProductRecommendationDto> recentlyViewed;
 
@@ -199,13 +198,6 @@ public class PublicProductDetailDto {
         this.reviews = reviews;
     }
 
-    public List<PublicProductWedgeDto> getWedges() {
-        return wedges;
-    }
-
-    public void setWedges(List<PublicProductWedgeDto> wedges) {
-        this.wedges = wedges;
-    }
 
     public List<PublicProductRecommendationDto> getFrequentlyBought() {
         return frequentlyBought;

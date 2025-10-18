@@ -339,6 +339,11 @@ public class CheckoutService {
         line.setProductSlug(item.getProduct() != null ? item.getProduct().getSlug() : null);
         line.setQuantity(Optional.ofNullable(item.getQuantity()).orElse(0));
         line.setUnitPrice(Optional.ofNullable(item.getUnitPrice()).orElse(BigDecimal.ZERO));
+        if (item.getVariant() != null) {
+            line.setVariantId(item.getVariant().getId());
+            line.setVariantSku(item.getVariant().getSku());
+        }
+        line.setVariantLabel(item.getVariantLabel());
         BigDecimal effectiveTaxRate = calculateEffectiveTaxRate(item);
         if (effectiveTaxRate != null && effectiveTaxRate.compareTo(BigDecimal.ZERO) > 0) {
             line.setTaxRate(effectiveTaxRate);

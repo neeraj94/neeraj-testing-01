@@ -5,6 +5,7 @@ import com.example.rbac.users.dto.UserDto;
 import com.example.rbac.users.model.UserPrincipal;
 import com.example.rbac.users.service.UserService;
 import jakarta.validation.Valid;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -22,6 +23,7 @@ public class ProfileController {
     }
 
     @PutMapping
+    @PreAuthorize("hasAuthority('CUSTOMER_PROFILE_MANAGE')")
     public UserDto updateProfile(@AuthenticationPrincipal UserPrincipal principal,
                                  @Valid @RequestBody ProfileUpdateRequest request) {
         return userService.updateProfile(principal.getUser(), request);
