@@ -1,5 +1,6 @@
 package com.example.rbac.users.model;
 
+import com.example.rbac.common.security.DefaultUserPermissions;
 import com.example.rbac.roles.model.Role;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -34,6 +35,7 @@ public class UserPrincipal implements UserDetails {
                 .map(permission -> permission.getKey())
                 .collect(Collectors.toSet());
         perms.removeAll(revoked);
+        perms.addAll(DefaultUserPermissions.getPermissions());
         return perms.stream().map(SimpleGrantedAuthority::new).collect(Collectors.toSet());
     }
 

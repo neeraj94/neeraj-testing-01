@@ -12,23 +12,16 @@ import com.example.rbac.products.model.ProductReview;
 import com.example.rbac.products.repository.ProductRepository;
 import com.example.rbac.products.repository.ProductReviewRepository;
 import com.example.rbac.products.repository.PublicProductSearchRepository;
-import com.example.rbac.wedges.model.Wedge;
-import com.example.rbac.wedges.repository.WedgeRepository;
 import com.example.rbac.users.model.User;
 import com.example.rbac.users.model.UserPrincipal;
 import com.example.rbac.users.service.UserRecentViewService;
 import org.hibernate.Hibernate;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.sql.SQLException;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -39,12 +32,9 @@ import java.util.stream.Stream;
 @Service
 public class PublicProductService {
 
-    private static final Logger log = LoggerFactory.getLogger(PublicProductService.class);
-
     private final ProductRepository productRepository;
     private final ProductReviewRepository productReviewRepository;
     private final CouponRepository couponRepository;
-    private final WedgeRepository wedgeRepository;
     private final PublicProductMapper publicProductMapper;
     private final UserRecentViewService userRecentViewService;
     private final PublicProductSearchRepository publicProductSearchRepository;
@@ -52,14 +42,12 @@ public class PublicProductService {
     public PublicProductService(ProductRepository productRepository,
                                 ProductReviewRepository productReviewRepository,
                                 CouponRepository couponRepository,
-                                WedgeRepository wedgeRepository,
                                 PublicProductMapper publicProductMapper,
                                 UserRecentViewService userRecentViewService,
                                 PublicProductSearchRepository publicProductSearchRepository) {
         this.productRepository = productRepository;
         this.productReviewRepository = productReviewRepository;
         this.couponRepository = couponRepository;
-        this.wedgeRepository = wedgeRepository;
         this.publicProductMapper = publicProductMapper;
         this.userRecentViewService = userRecentViewService;
         this.publicProductSearchRepository = publicProductSearchRepository;
@@ -88,37 +76,8 @@ public class PublicProductService {
                 ? List.of()
                 : couponRepository.findActiveCategoryCoupons(categoryIds, now);
         List<Coupon> coupons = mergeCoupons(productCoupons, categoryCoupons);
-        List<Wedge> wedges = fetchWedgesSafely();
         List<Product> recentProducts = resolveRecentlyViewedProducts(principal, guestRecentProductIds, product);
-        return publicProductMapper.toDetail(product, reviews, coupons, wedges, recentProducts);
-    }
-
-    private List<Wedge> fetchWedgesSafely() {
-        try {
-            return wedgeRepository.findByCategory_NameIgnoreCaseOrderByNameAsc("Product Description Wedges");
-        } catch (DataAccessException ex) {
-            if (isMissingWedgeTable(ex)) {
-                log.warn("Wedge lookup skipped because the wedges table is missing. Returning an empty list until migrations run.");
-                return Collections.emptyList();
-            }
-            throw ex;
-        }
-    }
-
-    private boolean isMissingWedgeTable(Throwable ex) {
-        Throwable cursor = ex;
-        while (cursor != null) {
-            if (cursor instanceof SQLException sqlException) {
-                String message = sqlException.getMessage();
-                String state = sqlException.getSQLState();
-                if ((state != null && state.equalsIgnoreCase("42S02"))
-                        || (message != null && message.toLowerCase().contains("doesn't exist"))) {
-                    return true;
-                }
-            }
-            cursor = cursor.getCause();
-        }
-        return false;
+        return publicProductMapper.toDetail(product, reviews, coupons, recentProducts);
     }
 
     private void initializeAssociations(Product product) {

@@ -500,27 +500,6 @@ const PublicProductPage = () => {
                     </div>
                   </div>
 
-                  {product.wedges.length > 0 && (
-                    <div className="rounded-[24px] border border-slate-100 bg-white p-6 shadow-sm">
-                      <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Product highlights</h2>
-                      <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                        {product.wedges.map((wedge) => (
-                          <div
-                            key={wedge.id}
-                            className="flex items-start gap-3 rounded-2xl border border-slate-100 bg-slate-50/60 p-4"
-                          >
-                            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-xl text-emerald-600">
-                              {wedge.iconUrl ? '✨' : '⭐'}
-                            </div>
-                            <div>
-                              <p className="text-sm font-semibold text-slate-800">{wedge.name}</p>
-                              {wedge.shortDescription && <p className="mt-1 text-sm text-slate-600">{wedge.shortDescription}</p>}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
                 </div>
               </div>
             </section>

@@ -32,7 +32,8 @@ public class FlywayRepairConfig {
 
     private static final String[] DEPRECATED_MIGRATION_PATTERNS = {
         "classpath*:db/migration/V14__gallery_max_file_size.sql",
-        "classpath*:db/migration/V48__checkout_permissions.sql"
+        "classpath*:db/migration/V48__checkout_permissions.sql",
+        "classpath*:db/migration/V51__cart_permissions_and_remove_wedges.sql"
     };
     private static final Logger LOGGER = LoggerFactory.getLogger(FlywayRepairConfig.class);
     private static final String[][] DEPRECATED_SCHEMA_HISTORY_ENTRIES = {

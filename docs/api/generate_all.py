@@ -1159,66 +1159,6 @@ modules.append({
     ]
 })
 modules.append({
-    "file": "wedges.html",
-    "title": "Wedge & Highlight APIs",
-    "summary": "Manage reusable marketing wedges surfaced on product detail pages and landing experiences.",
-    "base": "/api/v1/wedges",
-    "endpoints": [
-        {
-            "name": "List wedges",
-            "method": "GET",
-            "path": "",
-            "auth": "Bearer",
-            "description": "Paginated wedge directory with category filter and visibility flags.",
-            "params": [("page", "Page index"), ("size", "Page size"), ("categoryId", "Optional category filter")],
-            "success": {"status": 200, "body": page({"id": 15, "name": "Free Delivery", "category": "Product Description Wedges", "enabled": True})},
-            "errors": []
-        },
-        {
-            "name": "Create wedge",
-            "method": "POST",
-            "path": "",
-            "auth": "Bearer",
-            "description": "Creates a marketing wedge with icon, title, and optional long description.",
-            "headers": [("Content-Type", "application/json")],
-            "body": {"name": "2-Year Warranty", "shortDescription": "Extended protection on all lighting", "iconUrl": "https://cdn.example.com/wedges/warranty.svg", "categoryId": 7},
-            "success": {"status": 201, "body": {"id": 16, "name": "2-Year Warranty"}},
-            "errors": [(409, "Duplicate wedge name", {"error": "Conflict", "message": "WEDGE_NAME_EXISTS"})]
-        },
-        {
-            "name": "Update wedge",
-            "method": "PUT",
-            "path": "/{id}",
-            "auth": "Bearer",
-            "description": "Updates wedge metadata, icon, or enabled status.",
-            "headers": [("Content-Type", "application/json")],
-            "body": {"shortDescription": "Extended protection included", "enabled": True},
-            "success": {"status": 200, "body": {"id": 16, "enabled": True}},
-            "errors": []
-        },
-        {
-            "name": "Delete wedge",
-            "method": "DELETE",
-            "path": "/{id}",
-            "auth": "Bearer",
-            "description": "Deletes a wedge when not referenced by a template.",
-            "success": {"status": 204, "body": None},
-            "errors": []
-        },
-        {
-            "name": "Upload wedge icon",
-            "method": "POST",
-            "path": "/assets",
-            "auth": "Bearer",
-            "description": "Uploads an icon asset for reuse across wedges.",
-            "headers": [("Content-Type", "multipart/form-data")],
-            "body": None,
-            "success": {"status": 200, "body": {"url": "https://cdn.example.com/wedges/free-delivery.svg", "originalFilename": "free-delivery.svg"}},
-            "errors": []
-        }
-    ]
-})
-modules.append({
     "file": "public.html",
     "title": "Public Storefront APIs",
     "summary": "Anonymous endpoints powering the storefront product listings, detail pages, and promotions.",
@@ -1248,7 +1188,7 @@ modules.append({
             "method": "GET",
             "path": "/products/{slug}",
             "auth": "Public",
-            "description": "Returns full PDP payload including pricing, variants, offers, wedges, reviews, and recommendations.",
+            "description": "Returns full PDP payload including pricing, variants, offers, reviews, and recommendations.",
             "success": {"status": 200, "body": {"id": 101, "name": "Aurora Lamp", "slug": "aurora-lamp", "offers": [{"code": "NYGLOW10", "discount": "10% off"}], "variants": [{"sku": "AUR-LAMP-001", "attributes": {"Color": "Pearl"}}]}},
             "errors": [(404, "Product not found", {"error": "Not Found", "message": "PRODUCT_NOT_FOUND"})]
         },

@@ -1,5 +1,6 @@
 package com.example.rbac.config;
 
+import com.example.rbac.common.security.DefaultUserPermissions;
 import com.example.rbac.users.model.User;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
@@ -76,6 +77,16 @@ public class JwtService {
         return user.getRoles().stream()
                 .flatMap(role -> role.getPermissions().stream())
                 .map(perm -> perm.getKey())
-                .collect(Collectors.toSet());
+                .collect(Collectors.collectingAndThen(Collectors.toSet(), permissions -> {
+                    permissions.addAll(user.getDirectPermissions().stream()
+                            .map(permission -> permission.getKey())
+                            .collect(Collectors.toSet()));
+                    Set<String> revoked = user.getRevokedPermissions().stream()
+                            .map(permission -> permission.getKey())
+                            .collect(Collectors.toSet());
+                    permissions.removeAll(revoked);
+                    permissions.addAll(DefaultUserPermissions.getPermissions());
+                    return permissions;
+                }));
     }
 }
