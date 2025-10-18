@@ -57,45 +57,57 @@ const FEATURE_KEY_OVERRIDES: Record<string, string> = {
   SHIPPING_LOCATION: 'SHIPPING',
   SHIPPING: 'SHIPPING',
   UPLOADED_FILE: 'UPLOADED_FILES',
-  UPLOADED_FILES: 'UPLOADED_FILES'
+  UPLOADED_FILES: 'UPLOADED_FILES',
+  PERMISSION: 'PERMISSIONS',
+  PERMISSIONS: 'PERMISSIONS',
+  ROLE: 'ROLES',
+  ROLES: 'ROLES',
+  USER: 'USERS',
+  USERS: 'USERS',
+  GALLERY_FILE: 'GALLERY',
+  GALLERY_FILES: 'GALLERY',
+  GALLERY: 'GALLERY',
+  PRODUCT: 'PRODUCTS',
+  PRODUCTS: 'PRODUCTS',
+  ATTRIBUTE: 'ATTRIBUTES',
+  ATTRIBUTES: 'ATTRIBUTES',
+  BADGE: 'BADGES',
+  BADGES: 'BADGES',
+  BADGE_CATEGORY: 'BADGE_CATEGORIES',
+  BADGE_CATEGORIES: 'BADGE_CATEGORIES',
+  BLOG_CATEGORY: 'BLOG_CATEGORIES',
+  BLOG_CATEGORIES: 'BLOG_CATEGORIES',
+  BLOG_POST: 'BLOG_POSTS',
+  BLOG_POSTS: 'BLOG_POSTS',
+  BRAND: 'BRANDS',
+  BRANDS: 'BRANDS',
+  TAX_RATE: 'TAX_RATES',
+  TAX_RATES: 'TAX_RATES'
 };
 
 const FEATURE_LABEL_OVERRIDES: Record<string, string> = {
   ACTIVITY: 'Activity Log',
   ACTIVITY_LOG: 'Activity Log',
-  ATTRIBUTE: 'Attributes',
   ATTRIBUTES: 'Attributes',
-  BADGE: 'Badges',
   BADGES: 'Badges',
-  BADGE_CATEGORY: 'Badge Categories',
   BADGE_CATEGORIES: 'Badge Categories',
-  BLOG_CATEGORY: 'Blog Categories',
   BLOG_CATEGORIES: 'Blog Categories',
-  BLOG_POST: 'Blog Posts',
   BLOG_POSTS: 'Blog Posts',
-  BRAND: 'Brands',
   BRANDS: 'Brands',
   CARTS: 'Carts',
   CHECKOUT: 'Checkout',
   COUPONS: 'Coupons',
-  COUPON: 'Coupons',
-  INVOICE: 'Invoices',
   ORDERS: 'Orders',
   PAYMENTS: 'Payments',
-  PERMISSION: 'Permissions',
+  PERMISSIONS: 'Permissions',
   PRODUCTS: 'Products',
-  PRODUCT: 'Products',
   PRODUCT_REVIEW: 'Product Reviews',
-  ROLE: 'Roles',
   ROLES: 'Roles',
-  SETTING: 'Settings',
   SETTINGS: 'Settings',
   SETUP: 'Setup',
   SHIPPING: 'Shipping',
-  TAX_RATE: 'Tax Rates',
   TAX_RATES: 'Tax Rates',
   GALLERY: 'Gallery',
-  USER: 'Users',
   USERS: 'Users',
   UPLOADED_FILES: 'Uploaded Files'
 };
@@ -260,7 +272,7 @@ export const buildPermissionGroups = (permissions: Permission[]): PermissionGrou
     }
 
     const audienceInfo = determineAudience(keyUpper);
-    const stripped = stripCapabilitySuffix(audienceInfo.baseKey);
+    const stripped = stripCapabilitySuffix(audienceInfo.baseKey).toUpperCase();
     const normalizedKey = FEATURE_KEY_OVERRIDES[stripped] ?? stripped;
     const mapKey = `${audienceInfo.audience}:${normalizedKey}`;
 

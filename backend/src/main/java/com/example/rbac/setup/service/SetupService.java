@@ -249,15 +249,6 @@ public class SetupService {
 
     private static final List<MenuDefinition> DEFAULT_MENU = List.of(
             MenuDefinition.item("dashboard", "Dashboard", "🏠", "/admin/dashboard", List.of()),
-            MenuDefinition.group("sales", "Sales", "⚡", List.of(
-                    MenuDefinition.item(
-                            "invoices",
-                            "Invoices",
-                            "📄",
-                            "/admin/invoices",
-                            List.of("INVOICE_VIEW", "INVOICE_VIEW_GLOBAL", "INVOICE_VIEW_OWN", "INVOICE_CREATE", "INVOICE_UPDATE", "INVOICE_DELETE")
-                    )
-            )),
             MenuDefinition.group("finance", "Finance", "💰", List.of(
                     MenuDefinition.item(
                             "taxRates",

@@ -202,35 +202,6 @@
           }
         }
       ]
-    },
-    {
-      "name": "Invoices",
-      "item": [
-        {
-          "name": "List Invoices",
-          "request": {
-            "method": "GET",
-            "url": "{{baseUrl}}/invoices"
-          }
-        },
-        {
-          "name": "Create Invoice",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": "{{baseUrl}}/invoices",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"customerId\": 1,\n  \"number\": \"INV-2001\",\n  \"issueDate\": \"2024-03-01\",\n  \"dueDate\": \"2024-03-15\",\n  \"status\": \"DRAFT\",\n  \"taxRate\": 10,\n  \"items\": [\n    {\n      \"description\": \"Consulting\",\n      \"qty\": 5,\n      \"unitPrice\": 200\n    }\n  ]\n}"
-            }
-          }
-        }
-      ]
     }
   ],
   "event": [

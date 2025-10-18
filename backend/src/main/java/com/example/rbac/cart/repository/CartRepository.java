@@ -5,6 +5,8 @@ import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.data.jpa.repository.QueryHints;
+import jakarta.persistence.QueryHint;
 
 import java.util.List;
 import java.util.Optional;
@@ -17,18 +19,15 @@ public interface CartRepository extends JpaRepository<Cart, Long>, CartRepositor
     @EntityGraph(attributePaths = {"items", "items.product", "items.product.taxRates", "items.product.galleryImages", "items.variant", "items.variant.media"})
     Optional<Cart> findById(Long id);
 
-    @EntityGraph(attributePaths = {
-            "user",
-            "items",
-            "items.product",
-            "items.product.taxRates",
-            "items.product.thumbnail",
-            "items.product.galleryImages",
-            "items.product.galleryImages.media",
-            "items.variant",
-            "items.variant.media",
-            "items.variant.media.media"
-    })
-    @Query("select distinct c from Cart c where c.id in :ids")
+    @QueryHints(@QueryHint(name = org.hibernate.annotations.QueryHints.PASS_DISTINCT_THROUGH, value = "false"))
+    @Query("select distinct c from Cart c " +
+            "left join fetch c.user " +
+            "left join fetch c.items i " +
+            "left join fetch i.product p " +
+            "left join fetch p.taxRates " +
+            "left join fetch p.galleryImages gi " +
+            "left join fetch i.variant v " +
+            "left join fetch v.media vm " +
+            "where c.id in :ids")
     List<Cart> findDetailedByIds(@Param("ids") List<Long> ids);
 }

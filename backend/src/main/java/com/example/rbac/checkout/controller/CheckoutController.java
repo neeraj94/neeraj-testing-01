@@ -34,7 +34,7 @@ public class CheckoutController {
     }
 
     @GetMapping("/addresses")
-    @PreAuthorize("hasAuthority('CUSTOMER_CHECKOUT')")
+    @PreAuthorize("hasAuthority('CUSTOMER_ADDRESS_MANAGE')")
     public List<CheckoutAddressDto> listAddresses() {
         Long userId = checkoutService.resolveCurrentUserId();
         return checkoutService.listAddresses(userId);
@@ -42,14 +42,14 @@ public class CheckoutController {
 
     @PostMapping("/addresses")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAuthority('CUSTOMER_CHECKOUT')")
+    @PreAuthorize("hasAuthority('CUSTOMER_ADDRESS_MANAGE')")
     public CheckoutAddressDto createAddress(@RequestBody CheckoutAddressRequest request) {
         Long userId = checkoutService.resolveCurrentUserId();
         return checkoutService.createAddress(userId, request);
     }
 
     @PutMapping("/addresses/{id}")
-    @PreAuthorize("hasAuthority('CUSTOMER_CHECKOUT')")
+    @PreAuthorize("hasAuthority('CUSTOMER_ADDRESS_MANAGE')")
     public CheckoutAddressDto updateAddress(@PathVariable("id") Long addressId,
                                             @RequestBody CheckoutAddressRequest request) {
         Long userId = checkoutService.resolveCurrentUserId();

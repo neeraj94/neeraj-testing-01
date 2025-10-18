@@ -7,7 +7,6 @@ import DashboardPage from './pages/DashboardPage';
 import UsersPage from './pages/UsersPage';
 import RolesPage from './pages/RolesPage';
 import PermissionsPage from './pages/PermissionsPage';
-import InvoicesPage from './pages/InvoicesPage';
 import ProfilePage from './pages/ProfilePage';
 import ForbiddenPage from './pages/ForbiddenPage';
 import NotFoundPage from './pages/NotFoundPage';
@@ -188,22 +187,6 @@ const App = () => {
           </Route>
           <Route element={<PermissionRoute required={['PERMISSION_VIEW']} />}>
             <Route path="permissions" element={<PermissionsPage />} />
-          </Route>
-          <Route
-            element={
-              <PermissionRoute
-                required={[
-                  'INVOICE_VIEW',
-                  'INVOICE_VIEW_GLOBAL',
-                  'INVOICE_VIEW_OWN',
-                  'INVOICE_CREATE',
-                  'INVOICE_UPDATE',
-                  'INVOICE_DELETE'
-                ]}
-              />
-            }
-          >
-            <Route path="invoices" element={<InvoicesPage />} />
           </Route>
           <Route element={<PermissionRoute required={['BLOG_CATEGORY_VIEW']} />}>
             <Route path="blog/categories" element={<BlogCategoriesPage />} />
