@@ -23,6 +23,27 @@ export interface Cart {
   updatedAt?: string | null;
 }
 
+export interface AdminCartSummary {
+  cartId: number;
+  userId: number;
+  userName: string;
+  userEmail: string;
+  subtotal: number;
+  totalQuantity: number;
+  updatedAt?: string | null;
+  items: CartItem[];
+}
+
+export interface AdminAddCartItemPayload {
+  productId: number;
+  variantId?: number | null;
+  quantity: number;
+}
+
+export interface AdminUpdateCartItemPayload {
+  quantity: number;
+}
+
 export interface GuestCartLine {
   productId: number;
   productName: string;

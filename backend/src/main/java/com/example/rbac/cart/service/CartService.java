@@ -2,7 +2,10 @@ package com.example.rbac.cart.service;
 
 import com.example.rbac.activity.service.ActivityRecorder;
 import com.example.rbac.cart.dto.AddCartItemRequest;
+import com.example.rbac.cart.dto.AdminCartSummaryDto;
 import com.example.rbac.cart.dto.CartDto;
+import com.example.rbac.cart.dto.CartSortOption;
+import com.example.rbac.cart.dto.CartSummaryRow;
 import com.example.rbac.cart.dto.GuestCartLineRequest;
 import com.example.rbac.cart.dto.MergeCartRequest;
 import com.example.rbac.cart.dto.UpdateCartItemRequest;
@@ -11,6 +14,7 @@ import com.example.rbac.cart.model.Cart;
 import com.example.rbac.cart.model.CartItem;
 import com.example.rbac.cart.repository.CartRepository;
 import com.example.rbac.common.exception.ApiException;
+import com.example.rbac.common.pagination.PageResponse;
 import com.example.rbac.products.model.DiscountType;
 import com.example.rbac.products.model.Product;
 import com.example.rbac.products.model.ProductVariant;
@@ -18,6 +22,10 @@ import com.example.rbac.products.repository.ProductRepository;
 import com.example.rbac.users.model.User;
 import com.example.rbac.users.model.UserPrincipal;
 import com.example.rbac.users.repository.UserRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
@@ -28,9 +36,13 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 public class CartService {
@@ -51,6 +63,60 @@ public class CartService {
         this.userRepository = userRepository;
         this.cartMapper = cartMapper;
         this.activityRecorder = activityRecorder;
+    }
+
+    @Transactional(readOnly = true)
+    @PreAuthorize("hasAuthority('CART_VIEW_GLOBAL')")
+    public PageResponse<AdminCartSummaryDto> listAdminCarts(int page, int size, String search, String sort) {
+        int safePage = Math.max(page, 0);
+        int safeSize = Math.max(1, Math.min(size, 100));
+        Pageable pageable = PageRequest.of(safePage, safeSize);
+        CartSortOption sortOption = CartSortOption.fromString(sort);
+        String pattern = (search == null || search.isBlank()) ? null : "%" + search.trim().toLowerCase() + "%";
+
+        Page<CartSummaryRow> summaryPage = cartRepository.searchActiveCartSummaries(pattern, sortOption, pageable);
+        List<Long> cartIds = summaryPage.getContent().stream()
+                .map(CartSummaryRow::cartId)
+                .filter(Objects::nonNull)
+                .toList();
+
+        java.util.Map<Long, Cart> detailedCarts;
+        if (cartIds.isEmpty()) {
+            detailedCarts = Collections.emptyMap();
+        } else {
+            List<Cart> carts = cartRepository.findDetailedByIds(cartIds);
+            detailedCarts = carts.stream()
+                    .filter(cart -> cart.getId() != null)
+                    .collect(Collectors.toMap(Cart::getId, Function.identity(), (left, right) -> left, HashMap::new));
+        }
+
+        List<AdminCartSummaryDto> summaries = new ArrayList<>();
+        for (CartSummaryRow row : summaryPage.getContent()) {
+            AdminCartSummaryDto summary = new AdminCartSummaryDto();
+            summary.setCartId(row.cartId());
+            summary.setUserId(row.userId());
+            summary.setUserName(row.userName());
+            summary.setUserEmail(row.userEmail());
+            summary.setUpdatedAt(row.updatedAt());
+            summary.setSubtotal(row.subtotal());
+            summary.setTotalQuantity(row.quantity());
+
+            Cart detailed = detailedCarts.get(row.cartId());
+            if (detailed != null) {
+                CartDto cartDto = cartMapper.toDto(detailed);
+                summary.setItems(cartDto.getItems());
+                if (cartDto.getTotalQuantity() != null && cartDto.getTotalQuantity() > summary.getTotalQuantity()) {
+                    summary.setTotalQuantity(cartDto.getTotalQuantity());
+                }
+                if (cartDto.getSubtotal() != null && cartDto.getSubtotal().compareTo(summary.getSubtotal()) > 0) {
+                    summary.setSubtotal(cartDto.getSubtotal());
+                }
+            }
+            summaries.add(summary);
+        }
+
+        Page<AdminCartSummaryDto> mappedPage = new PageImpl<>(summaries, pageable, summaryPage.getTotalElements());
+        return PageResponse.from(mappedPage);
     }
 
     @Transactional(readOnly = true)

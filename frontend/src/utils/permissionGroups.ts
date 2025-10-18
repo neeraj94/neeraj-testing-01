@@ -38,8 +38,8 @@ const AUDIENCE_PREFIXES: Array<{
   audience: PermissionAudience;
   displayPrefix?: string;
 }> = [
-  { prefix: 'CUSTOMER_', audience: 'public', displayPrefix: 'Public' },
-  { prefix: 'PUBLIC_', audience: 'public', displayPrefix: 'Public' }
+  { prefix: 'CUSTOMER_', audience: 'public' },
+  { prefix: 'PUBLIC_', audience: 'public' }
 ];
 
 const FEATURE_KEY_OVERRIDES: Record<string, string> = {
@@ -61,15 +61,74 @@ const FEATURE_KEY_OVERRIDES: Record<string, string> = {
 };
 
 const FEATURE_LABEL_OVERRIDES: Record<string, string> = {
+  ACTIVITY: 'Activity Log',
+  ACTIVITY_LOG: 'Activity Log',
+  ATTRIBUTE: 'Attributes',
+  ATTRIBUTES: 'Attributes',
+  BADGE: 'Badges',
+  BADGES: 'Badges',
+  BADGE_CATEGORY: 'Badge Categories',
+  BADGE_CATEGORIES: 'Badge Categories',
+  BLOG_CATEGORY: 'Blog Categories',
+  BLOG_CATEGORIES: 'Blog Categories',
+  BLOG_POST: 'Blog Posts',
+  BLOG_POSTS: 'Blog Posts',
+  BRAND: 'Brands',
+  BRANDS: 'Brands',
   CARTS: 'Carts',
   CHECKOUT: 'Checkout',
   COUPONS: 'Coupons',
+  COUPON: 'Coupons',
+  INVOICE: 'Invoices',
   ORDERS: 'Orders',
   PAYMENTS: 'Payments',
+  PERMISSION: 'Permissions',
+  PRODUCTS: 'Products',
+  PRODUCT: 'Products',
+  PRODUCT_REVIEW: 'Product Reviews',
+  ROLE: 'Roles',
+  ROLES: 'Roles',
+  SETTING: 'Settings',
+  SETTINGS: 'Settings',
   SETUP: 'Setup',
   SHIPPING: 'Shipping',
+  TAX_RATE: 'Tax Rates',
+  TAX_RATES: 'Tax Rates',
+  GALLERY: 'Gallery',
+  USER: 'Users',
+  USERS: 'Users',
   UPLOADED_FILES: 'Uploaded Files'
 };
+
+const ADMIN_FEATURE_ORDER = [
+  'Activity Log',
+  'Attributes',
+  'Badge Categories',
+  'Badges',
+  'Blog Categories',
+  'Blog Posts',
+  'Brands',
+  'Carts',
+  'Categories',
+  'Coupons',
+  'Orders',
+  'Payments',
+  'Permissions',
+  'Product Reviews',
+  'Products',
+  'Roles',
+  'Settings',
+  'Setup',
+  'Shipping',
+  'Tax Rates',
+  'Users',
+  'Gallery',
+  'Uploaded Files'
+] as const;
+
+const ADMIN_FEATURE_PRIORITY = new Map<string, number>(
+  ADMIN_FEATURE_ORDER.map((feature, index) => [feature.toLowerCase(), index])
+);
 
 const DEFAULT_MANAGE_SLOTS: CapabilitySlot[] = ['create', 'edit', 'delete'];
 
@@ -271,6 +330,23 @@ export const buildPermissionGroups = (permissions: Permission[]): PermissionGrou
       if (audienceComparison !== 0) {
         return audienceComparison;
       }
+
+      if (a.category === 'admin' && b.category === 'admin') {
+        const aPriority = ADMIN_FEATURE_PRIORITY.get(a.feature.toLowerCase());
+        const bPriority = ADMIN_FEATURE_PRIORITY.get(b.feature.toLowerCase());
+        if (aPriority != null || bPriority != null) {
+          if (aPriority == null) {
+            return 1;
+          }
+          if (bPriority == null) {
+            return -1;
+          }
+          if (aPriority !== bPriority) {
+            return aPriority - bPriority;
+          }
+        }
+      }
+
       return a.feature.localeCompare(b.feature);
     });
 };
