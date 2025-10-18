@@ -169,7 +169,7 @@ public class PublicProductSearchRepository {
             case PRICE_DESC -> " ORDER BY " + TAXED_PRICE_SQL + " DESC, p.name ASC";
             case HIGHEST_RATED -> " ORDER BY COALESCE(review_stats.average_rating, 0) DESC, p.name ASC";
             case MOST_POPULAR -> " ORDER BY COALESCE(review_stats.review_count, 0) DESC, p.name ASC";
-            case NEWEST -> default -> " ORDER BY p.created_at DESC";
+            case NEWEST ->  " ORDER BY p.created_at DESC";
         };
     }
 

@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Settings APIs</title>
+    <title>Wedge Asset APIs</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body class="page">
@@ -11,9 +11,9 @@
       <aside class="docs__nav sidebar" aria-label="API navigation">
         <div class="sidebar__brand">
           <div class="sidebar__badge">RBAC Commerce</div>
-          <h1>Settings APIs</h1>
-          <p>Endpoints implemented by the Settings controller.</p>
-          <p class="sidebar__hint">Base path: <code>/api/v1/settings</code></p>
+          <h1>Wedge Asset APIs</h1>
+          <p>Endpoints implemented by the Wedge Asset controller.</p>
+          <p class="sidebar__hint">Base path: <code>/api/v1/wedges/assets</code></p>
         </div>
         <div class="sidebar__controls">
           <label class="control">
@@ -37,23 +37,23 @@
         <nav class="sidebar__nav" aria-label="Endpoints">
           <h2>Endpoints</h2>
           <ul class="sidebar__tree" role="tree">
-            <li role="treeitem"><a href="#get-root" data-endpoint-link="get-root"><span class="sidebar__method">GET</span>Get Settings</a></li><li role="treeitem"><a href="#patch-root" data-endpoint-link="patch-root"><span class="sidebar__method">PATCH</span>Update Settings</a></li><li role="treeitem"><a href="#get-theme" data-endpoint-link="get-theme"><span class="sidebar__method">GET</span>Get Theme</a></li>
+            <li role="treeitem"><a href="#post-root" data-endpoint-link="post-root"><span class="sidebar__method">POST</span>Upload</a></li><li role="treeitem"><a href="#get-key---" data-endpoint-link="get-key---"><span class="sidebar__method">GET</span>Serve</a></li>
           </ul>
         </nav>
       </aside>
       <main class="docs__content content" id="docsContent" tabindex="-1">
         <header class="hero">
-          <h2>Settings APIs</h2>
-          <p>Endpoints implemented by the Settings controller.</p>
+          <h2>Wedge Asset APIs</h2>
+          <p>Endpoints implemented by the Wedge Asset controller.</p>
           <p><strong>Selected base URL:</strong> <span data-base-display>https://sandbox.api.rbac-commerce.dev</span></p>
         </header>
-        <article class="endpoint" id="get-root" data-endpoint-id="get-root" data-method="GET" data-base-path="/api/v1/settings" data-path="" data-auth="Bearer" data-body='null'>
+        <article class="endpoint" id="post-root" data-endpoint-id="post-root" data-method="POST" data-base-path="/api/v1/wedges/assets" data-path="" data-auth="Bearer" data-headers='[[&quot;Content-Type&quot;, &quot;multipart/form-data&quot;]]' data-body='&quot;file=&lt;value&gt;&quot;'>
   <div class="endpoint__header">
     <div class="endpoint__title">
-      <span class="http-badge http-badge--get">GET</span>
+      <span class="http-badge http-badge--post">POST</span>
       <div>
-        <h3>Get Settings</h3>
-        <p><code>/api/v1/settings</code></p>
+        <h3>Upload</h3>
+        <p><code>/api/v1/wedges/assets</code></p>
       </div>
     </div>
     <span class="auth-badge auth-badge--protected">Protected</span>
@@ -62,105 +62,29 @@
     <div class="endpoint__body">
       <section class="endpoint__section">
         <h4>Summary</h4>
-        <p>Get Settings handler in SettingsController for GET / requests.</p>
+        <p>Upload handler in WedgeAssetController for POST / requests.</p>
       </section>
       <section class="endpoint__section"><h4>Authentication</h4><p>Provide an <code>Authorization: Bearer &lt;token&gt;</code> header.</p></section>
-      
-      
-      <section class="endpoint__section"><h4>Request body</h4><p>No body required.</p></section>
       <section class="endpoint__section">
-        <h4>Success response</h4>
-        <p class="status success">HTTP 200</p>
-        <p>No body returned.</p>
-      </section>
-      <section class="endpoint__section">
-        <h4>Error scenarios</h4>
-        <p>No specific error payloads documented.</p>
-      </section>
-    </div>
-    <div class="endpoint__panels">
-      <section class="panel">
-        <header class="panel__header">
-          <h4>cURL samples</h4>
-          <span class="panel__format">Interpolates current environment</span>
-        </header>
-        <div class="code-samples" data-endpoint="get-root">
-          <div class="code-samples__tabs" role="tablist">
-            <button type="button" class="code-samples__tab is-active" role="tab" id="get-root-bash-tab" aria-selected="true" data-tab-target="get-root-bash">bash/zsh</button>
-            <button type="button" class="code-samples__tab" role="tab" id="get-root-powershell-tab" aria-selected="false" data-tab-target="get-root-powershell">PowerShell/CMD</button>
-          </div>
-          <pre id="get-root-bash" class="code-block" role="tabpanel" aria-labelledby="get-root-bash-tab" data-template="curl-bash" data-endpoint="get-root"></pre>
-          <pre id="get-root-powershell" class="code-block is-hidden" role="tabpanel" aria-labelledby="get-root-powershell-tab" data-template="curl-powershell" data-endpoint="get-root" hidden></pre>
-          <div class="panel__actions">
-            <button type="button" class="copy-button" data-copy>Copy</button>
-          </div>
-        </div>
-      </section>
-      <section class="panel panel--try">
-        <header class="panel__header">
-          <h4>Try it</h4>
-          <span class="panel__format">Send a real request with your environment</span>
-        </header>
-        <form class="try-form" data-try-form>
-          <label class="field">
-            <span class="field__label">Request URL</span>
-            <input type="url" spellcheck="false" data-try-url required />
-            <span class="field__hint">Update path parameters before sending.</span>
-          </label>
-          <label class="field">
-            <span class="field__label">Headers</span>
-            <textarea rows="3" spellcheck="false" data-try-headers></textarea>
-            <span class="field__hint">One header per line (<code>Name: Value</code>).</span>
-          </label>
-          <label class="field" data-try-body-wrapper>
-            <span class="field__label">Body</span>
-            <textarea rows="8" spellcheck="false" data-try-body></textarea>
-            <span class="field__hint">JSON payload; leave blank to omit.</span>
-          </label>
-          <button type="submit" class="button" data-try-submit>Send GET</button>
-        </form>
-        <div class="try-response" data-try-response hidden>
-          <div class="try-response__meta">
-            <span data-try-status>Waiting…</span>
-            <span data-try-duration></span>
-          </div>
-          <pre class="try-response__body" data-try-output></pre>
-        </div>
-      </section>
-    </div>
-  </div>
-</article>
-<article class="endpoint" id="patch-root" data-endpoint-id="patch-root" data-method="PATCH" data-base-path="/api/v1/settings" data-path="" data-auth="Bearer" data-headers='[[&quot;Content-Type&quot;, &quot;application/json&quot;]]' data-body='&quot;{}&quot;'>
-  <div class="endpoint__header">
-    <div class="endpoint__title">
-      <span class="http-badge http-badge--patch">PATCH</span>
-      <div>
-        <h3>Update Settings</h3>
-        <p><code>/api/v1/settings</code></p>
-      </div>
-    </div>
-    <span class="auth-badge auth-badge--protected">Protected</span>
-  </div>
-  <div class="endpoint__layout">
-    <div class="endpoint__body">
-      <section class="endpoint__section">
-        <h4>Summary</h4>
-        <p>Update Settings handler in SettingsController for PATCH / requests.</p>
-      </section>
-      <section class="endpoint__section"><h4>Authentication</h4><p>Provide an <code>Authorization: Bearer &lt;token&gt;</code> header.</p></section>
-      
+  <h4>Parameters</h4>
+  <table>
+    <thead><tr><th>Name</th><th>Description</th></tr></thead>
+    <tbody><tr><td>file</td><td>Form field</td></tr></tbody>
+  </table>
+</section>
+
       <section class="endpoint__section">
   <h4>Headers</h4>
   <table>
     <thead><tr><th>Name</th><th>Value</th></tr></thead>
-    <tbody><tr><td>Content-Type</td><td>application/json</td></tr></tbody>
+    <tbody><tr><td>Content-Type</td><td>multipart/form-data</td></tr></tbody>
   </table>
 </section>
 
-      <section class="endpoint__section"><h4>Request body</h4><pre>{}</pre></section>
+      <section class="endpoint__section"><h4>Request body</h4><pre>file=&lt;value&gt;</pre></section>
       <section class="endpoint__section">
         <h4>Success response</h4>
-        <p class="status success">HTTP 200</p>
+        <p class="status success">HTTP 201</p>
         <p>No body returned.</p>
       </section>
       <section class="endpoint__section">
@@ -174,13 +98,13 @@
           <h4>cURL samples</h4>
           <span class="panel__format">Interpolates current environment</span>
         </header>
-        <div class="code-samples" data-endpoint="patch-root">
+        <div class="code-samples" data-endpoint="post-root">
           <div class="code-samples__tabs" role="tablist">
-            <button type="button" class="code-samples__tab is-active" role="tab" id="patch-root-bash-tab" aria-selected="true" data-tab-target="patch-root-bash">bash/zsh</button>
-            <button type="button" class="code-samples__tab" role="tab" id="patch-root-powershell-tab" aria-selected="false" data-tab-target="patch-root-powershell">PowerShell/CMD</button>
+            <button type="button" class="code-samples__tab is-active" role="tab" id="post-root-bash-tab" aria-selected="true" data-tab-target="post-root-bash">bash/zsh</button>
+            <button type="button" class="code-samples__tab" role="tab" id="post-root-powershell-tab" aria-selected="false" data-tab-target="post-root-powershell">PowerShell/CMD</button>
           </div>
-          <pre id="patch-root-bash" class="code-block" role="tabpanel" aria-labelledby="patch-root-bash-tab" data-template="curl-bash" data-endpoint="patch-root"></pre>
-          <pre id="patch-root-powershell" class="code-block is-hidden" role="tabpanel" aria-labelledby="patch-root-powershell-tab" data-template="curl-powershell" data-endpoint="patch-root" hidden></pre>
+          <pre id="post-root-bash" class="code-block" role="tabpanel" aria-labelledby="post-root-bash-tab" data-template="curl-bash" data-endpoint="post-root"></pre>
+          <pre id="post-root-powershell" class="code-block is-hidden" role="tabpanel" aria-labelledby="post-root-powershell-tab" data-template="curl-powershell" data-endpoint="post-root" hidden></pre>
           <div class="panel__actions">
             <button type="button" class="copy-button" data-copy>Copy</button>
           </div>
@@ -207,7 +131,7 @@
             <textarea rows="8" spellcheck="false" data-try-body></textarea>
             <span class="field__hint">JSON payload; leave blank to omit.</span>
           </label>
-          <button type="submit" class="button" data-try-submit>Send PATCH</button>
+          <button type="submit" class="button" data-try-submit>Send POST</button>
         </form>
         <div class="try-response" data-try-response hidden>
           <div class="try-response__meta">
@@ -220,13 +144,13 @@
     </div>
   </div>
 </article>
-<article class="endpoint" id="get-theme" data-endpoint-id="get-theme" data-method="GET" data-base-path="/api/v1/settings" data-path="/theme" data-auth="Public" data-body='null'>
+<article class="endpoint" id="get-key---" data-endpoint-id="get-key---" data-method="GET" data-base-path="/api/v1/wedges/assets" data-path="/{key:.+}" data-auth="Public" data-body='null'>
   <div class="endpoint__header">
     <div class="endpoint__title">
       <span class="http-badge http-badge--get">GET</span>
       <div>
-        <h3>Get Theme</h3>
-        <p><code>/api/v1/settings/theme</code></p>
+        <h3>Serve</h3>
+        <p><code>/api/v1/wedges/assets/{key:.+}</code></p>
       </div>
     </div>
     <span class="auth-badge auth-badge--public">Public</span>
@@ -235,10 +159,17 @@
     <div class="endpoint__body">
       <section class="endpoint__section">
         <h4>Summary</h4>
-        <p>Get Theme handler in SettingsController for GET /theme requests.</p>
+        <p>Serve handler in WedgeAssetController for GET /{key:.+} requests.</p>
       </section>
       <section class="endpoint__section"><h4>Authentication</h4><p>No authentication required.</p></section>
-      
+      <section class="endpoint__section">
+  <h4>Parameters</h4>
+  <table>
+    <thead><tr><th>Name</th><th>Description</th></tr></thead>
+    <tbody><tr><td>key</td><td>Path parameter</td></tr></tbody>
+  </table>
+</section>
+
       
       <section class="endpoint__section"><h4>Request body</h4><p>No body required.</p></section>
       <section class="endpoint__section">
@@ -257,13 +188,13 @@
           <h4>cURL samples</h4>
           <span class="panel__format">Interpolates current environment</span>
         </header>
-        <div class="code-samples" data-endpoint="get-theme">
+        <div class="code-samples" data-endpoint="get-key---">
           <div class="code-samples__tabs" role="tablist">
-            <button type="button" class="code-samples__tab is-active" role="tab" id="get-theme-bash-tab" aria-selected="true" data-tab-target="get-theme-bash">bash/zsh</button>
-            <button type="button" class="code-samples__tab" role="tab" id="get-theme-powershell-tab" aria-selected="false" data-tab-target="get-theme-powershell">PowerShell/CMD</button>
+            <button type="button" class="code-samples__tab is-active" role="tab" id="get-key----bash-tab" aria-selected="true" data-tab-target="get-key----bash">bash/zsh</button>
+            <button type="button" class="code-samples__tab" role="tab" id="get-key----powershell-tab" aria-selected="false" data-tab-target="get-key----powershell">PowerShell/CMD</button>
           </div>
-          <pre id="get-theme-bash" class="code-block" role="tabpanel" aria-labelledby="get-theme-bash-tab" data-template="curl-bash" data-endpoint="get-theme"></pre>
-          <pre id="get-theme-powershell" class="code-block is-hidden" role="tabpanel" aria-labelledby="get-theme-powershell-tab" data-template="curl-powershell" data-endpoint="get-theme" hidden></pre>
+          <pre id="get-key----bash" class="code-block" role="tabpanel" aria-labelledby="get-key----bash-tab" data-template="curl-bash" data-endpoint="get-key---"></pre>
+          <pre id="get-key----powershell" class="code-block is-hidden" role="tabpanel" aria-labelledby="get-key----powershell-tab" data-template="curl-powershell" data-endpoint="get-key---" hidden></pre>
           <div class="panel__actions">
             <button type="button" class="copy-button" data-copy>Copy</button>
           </div>
