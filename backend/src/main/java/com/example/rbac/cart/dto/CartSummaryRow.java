@@ -10,7 +10,7 @@ public record CartSummaryRow(
         String userName,
         String userEmail,
         Instant updatedAt,
-        Double totalValue,
+        BigDecimal totalValue,
         Long totalQuantity
 ) {
 
@@ -18,7 +18,7 @@ public record CartSummaryRow(
         if (totalValue == null) {
             return BigDecimal.ZERO;
         }
-        return BigDecimal.valueOf(totalValue).setScale(2, RoundingMode.HALF_UP);
+        return totalValue.setScale(2, RoundingMode.HALF_UP);
     }
 
     public int quantity() {
