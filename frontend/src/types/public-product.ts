@@ -22,7 +22,6 @@ export interface PublicProductDetail {
   infoSections: PublicProductSection[];
   reviewSummary: PublicProductReviewSummary;
   reviews: PublicProductReview[];
-  wedges: PublicProductWedge[];
   frequentlyBought: PublicProductRecommendation[];
   recentlyViewed: PublicProductRecommendation[];
 }
@@ -107,13 +106,6 @@ export interface PublicProductReview {
   reviewedAt: string;
   reviewerAvatar?: ProductMediaAsset | null;
   media: ProductMediaAsset[];
-}
-
-export interface PublicProductWedge {
-  id: number;
-  name: string;
-  iconUrl?: string | null;
-  shortDescription?: string | null;
 }
 
 export interface PublicProductRecommendation {
