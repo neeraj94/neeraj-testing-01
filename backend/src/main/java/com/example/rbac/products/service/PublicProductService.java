@@ -118,7 +118,7 @@ public class PublicProductService {
                                                         Product currentProduct) {
         User viewer = principal != null ? principal.getUser() : null;
         List<Product> recentProducts;
-        if (viewer != null && viewer.getId() != null) {
+        if (viewer != null && viewer.getId() != null && hasAuthority(principal, "CUSTOMER_RECENTLY_VIEWED")) {
             userRecentViewService.synchronizeGuestRecentViews(viewer, guestRecentProductIds, currentProduct.getId());
             userRecentViewService.recordView(viewer, currentProduct);
             recentProducts = userRecentViewService.findRecentProductsForUser(viewer.getId(), currentProduct.getId());
@@ -128,6 +128,14 @@ public class PublicProductService {
         }
         recentProducts.forEach(this::initializeRecommendationAssociations);
         return recentProducts;
+    }
+
+    private boolean hasAuthority(UserPrincipal principal, String authority) {
+        if (principal == null || authority == null) {
+            return false;
+        }
+        return principal.getAuthorities().stream()
+                .anyMatch(granted -> authority.equalsIgnoreCase(granted.getAuthority()));
     }
 
     private void initializeRecommendationAssociations(Product product) {

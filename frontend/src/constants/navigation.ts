@@ -11,32 +11,6 @@ export const DEFAULT_NAVIGATION_MENU: NavigationNode[] = [
     children: []
   },
   {
-    key: 'sales',
-    label: 'Sales',
-    icon: '⚡',
-    path: undefined,
-    group: true,
-    permissions: [],
-    children: [
-      {
-        key: 'invoices',
-        label: 'Invoices',
-        icon: '📄',
-        path: '/admin/invoices',
-        group: false,
-        permissions: [
-          'INVOICE_VIEW',
-          'INVOICE_VIEW_GLOBAL',
-          'INVOICE_VIEW_OWN',
-          'INVOICE_CREATE',
-          'INVOICE_UPDATE',
-          'INVOICE_DELETE'
-        ],
-        children: []
-      }
-    ]
-  },
-  {
     key: 'finance',
     label: 'Finance',
     icon: '💰',
@@ -275,7 +249,7 @@ export const DEFAULT_NAVIGATION_MENU: NavigationNode[] = [
         icon: '🛒',
         path: '/admin/carts',
         group: false,
-        permissions: ['CART_VIEW_GLOBAL'],
+        permissions: ['USER_VIEW_GLOBAL'],
         children: []
       },
       {
