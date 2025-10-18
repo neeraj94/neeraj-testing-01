@@ -19,7 +19,7 @@ public interface CartRepository extends JpaRepository<Cart, Long>, CartRepositor
     @EntityGraph(attributePaths = {"items", "items.product", "items.product.taxRates", "items.product.galleryImages", "items.variant", "items.variant.media"})
     Optional<Cart> findById(Long id);
 
-    @QueryHints(@QueryHint(name = org.hibernate.annotations.QueryHints.PASS_DISTINCT_THROUGH, value = "false"))
+    @QueryHints(@QueryHint(name = "hibernate.query.passDistinctThrough", value = "false"))
     @Query("select distinct c from Cart c " +
             "left join fetch c.user " +
             "left join fetch c.items i " +
