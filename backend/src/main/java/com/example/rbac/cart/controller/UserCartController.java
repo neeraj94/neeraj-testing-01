@@ -5,11 +5,11 @@ import com.example.rbac.cart.dto.CartDto;
 import com.example.rbac.cart.dto.UpdateCartItemRequest;
 import com.example.rbac.cart.service.CartService;
 import jakarta.validation.Valid;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -29,6 +29,11 @@ public class UserCartController {
         return cartService.getCartForUser(userId);
     }
 
+    @PostMapping
+    public CartDto createUserCart(@PathVariable("userId") Long userId) {
+        return cartService.createCartForUser(userId);
+    }
+
     @PostMapping("/items")
     public CartDto addItemToUserCart(@PathVariable("userId") Long userId,
                                      @Valid @RequestBody AddCartItemRequest request) {
@@ -46,5 +51,10 @@ public class UserCartController {
     public CartDto removeUserCartItem(@PathVariable("userId") Long userId,
                                       @PathVariable("itemId") Long itemId) {
         return cartService.removeItemForUser(userId, itemId);
+    }
+
+    @DeleteMapping
+    public CartDto clearUserCart(@PathVariable("userId") Long userId) {
+        return cartService.clearCartForUser(userId);
     }
 }

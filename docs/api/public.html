@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Public Storefront APIs</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="page">
+    <div class="docs">
+      <aside class="docs__nav sidebar" aria-label="API navigation">
+        <div class="sidebar__brand">
+          <div class="sidebar__badge">RBAC Commerce</div>
+          <h1>Public Storefront APIs</h1>
+          <p>Anonymous endpoints powering the storefront product listings, detail pages, and promotions.</p>
+          <p class="sidebar__hint">Base path: <code>/api/v1/public</code></p>
+        </div>
+        <div class="sidebar__controls">
+          <label class="control">
+            <span class="control__label">Environment</span>
+            <select id="environmentSelect">
+              <option value="https://sandbox.api.rbac-commerce.dev">Sandbox</option>
+              <option value="https://staging.api.rbac-commerce.dev">Staging</option>
+              <option value="https://api.rbac-commerce.dev">Production</option>
+              <option value="custom">Custom…</option>
+            </select>
+          </label>
+          <label class="control" id="customUrlControl" hidden>
+            <span class="control__label">Custom base URL</span>
+            <input id="baseUrl" type="url" spellcheck="false" value="https://sandbox.api.rbac-commerce.dev" />
+          </label>
+          <label class="control">
+            <span class="control__label">Bearer token</span>
+            <input id="authToken" type="text" spellcheck="false" placeholder="Optional token for private endpoints" />
+          </label>
+        </div>
+        <nav class="sidebar__nav" aria-label="Endpoints">
+          <h2>Endpoints</h2>
+          <ul class="sidebar__tree" role="tree">
+            <li role="treeitem"><a href="#get-home" data-endpoint-link="get-home"><span class="sidebar__method">GET</span>Homepage content blocks</a></li><li role="treeitem"><a href="#get-products" data-endpoint-link="get-products"><span class="sidebar__method">GET</span>List public products</a></li><li role="treeitem"><a href="#get-products-slug" data-endpoint-link="get-products-slug"><span class="sidebar__method">GET</span>Get product by slug</a></li><li role="treeitem"><a href="#get-categories" data-endpoint-link="get-categories"><span class="sidebar__method">GET</span>List public categories</a></li><li role="treeitem"><a href="#get-coupons" data-endpoint-link="get-coupons"><span class="sidebar__method">GET</span>Active coupons</a></li><li role="treeitem"><a href="#get-recently-viewed" data-endpoint-link="get-recently-viewed"><span class="sidebar__method">GET</span>Recently viewed products</a></li>
+          </ul>
+        </nav>
+      </aside>
+      <main class="docs__content content" id="docsContent" tabindex="-1">
+        <header class="hero">
+          <h2>Public Storefront APIs</h2>
+          <p>Anonymous endpoints powering the storefront product listings, detail pages, and promotions.</p>
+          <p><strong>Selected base URL:</strong> <span data-base-display>https://sandbox.api.rbac-commerce.dev</span></p>
+        </header>
+        <article class="endpoint" id="get-home" data-endpoint-id="get-home" data-method="GET" data-base-path="/api/v1/public" data-path="/home" data-auth="Public">
+  <div class="endpoint__header">
+    <div class="endpoint__title">
+      <span class="http-badge http-badge--get">GET</span>
+      <div>
+        <h3>Homepage content blocks</h3>
+        <p><code>/api/v1/public/home</code></p>
+      </div>
+    </div>
+  </div>
+  <div class="endpoint__layout">
+    <div class="endpoint__body">
+      <section class="endpoint__section">
+        <h4>Summary</h4>
+        <p>Returns hero banners, featured categories, and spotlight collections for the storefront landing page.</p>
+      </section>
+      
+      
+      
+      <section class="endpoint__section">
+        <h4>Success response</h4>
+        <p class="status success">HTTP 200</p>
+        <pre>{
+  &quot;hero&quot;: {
+    &quot;title&quot;: &quot;Glow up your space&quot;,
+    &quot;cta&quot;: &quot;Shop lighting&quot;
+  },
+  &quot;featuredCategories&quot;: [
+    {
+      &quot;name&quot;: &quot;Lighting&quot;,
+      &quot;slug&quot;: &quot;lighting&quot;
+    }
+  ]
+}</pre>
+      </section>
+      <section class="endpoint__section">
+        <h4>Error scenarios</h4>
+        <p>No specific error payloads documented.</p>
+      </section>
+    </div>
+    <div class="endpoint__panels">
+      <section class="panel">
+        <header class="panel__header">
+          <h4>cURL samples</h4>
+          <span class="panel__format">Interpolates current environment</span>
+        </header>
+        <div class="code-samples" data-endpoint="get-home">
+          <div class="code-samples__tabs" role="tablist">
+            <button type="button" class="code-samples__tab is-active" role="tab" id="get-home-bash-tab" aria-selected="true" data-tab-target="get-home-bash">bash/zsh</button>
+            <button type="button" class="code-samples__tab" role="tab" id="get-home-powershell-tab" aria-selected="false" data-tab-target="get-home-powershell">PowerShell/CMD</button>
+          </div>
+          <pre id="get-home-bash" class="code-block" role="tabpanel" aria-labelledby="get-home-bash-tab" data-template="curl-bash" data-endpoint="get-home"></pre>
+          <pre id="get-home-powershell" class="code-block is-hidden" role="tabpanel" aria-labelledby="get-home-powershell-tab" data-template="curl-powershell" data-endpoint="get-home" hidden></pre>
+          <div class="panel__actions">
+            <button type="button" class="copy-button" data-copy>Copy</button>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+</article>
+<article class="endpoint" id="get-products" data-endpoint-id="get-products" data-method="GET" data-base-path="/api/v1/public" data-path="/products" data-auth="Public">
+  <div class="endpoint__header">
+    <div class="endpoint__title">
+      <span class="http-badge http-badge--get">GET</span>
+      <div>
+        <h3>List public products</h3>
+        <p><code>/api/v1/public/products</code></p>
+      </div>
+    </div>
+  </div>
+  <div class="endpoint__layout">
+    <div class="endpoint__body">
+      <section class="endpoint__section">
+        <h4>Summary</h4>
+        <p>Searchable storefront catalogue with pagination, sorting, and filter facets.</p>
+      </section>
+      <section class="endpoint__section">
+  <h4>Parameters</h4>
+  <table>
+    <thead><tr><th>Name</th><th>Description</th></tr></thead>
+    <tbody><tr><td>page</td><td>Page index</td></tr><tr><td>size</td><td>Page size</td></tr><tr><td>search</td><td>Name or SKU</td></tr><tr><td>category</td><td>Category slug</td></tr><tr><td>sort</td><td>price, -price, newest</td></tr></tbody>
+  </table>
+</section>
+
+      
+      
+      <section class="endpoint__section">
+        <h4>Success response</h4>
+        <p class="status success">HTTP 200</p>
+        <pre>{
+  &quot;content&quot;: [
+    {
+      &quot;id&quot;: 101,
+      &quot;name&quot;: &quot;Aurora Lamp&quot;,
+      &quot;slug&quot;: &quot;aurora-lamp&quot;,
+      &quot;price&quot;: 129.0,
+      &quot;thumbnail&quot;: &quot;https://cdn.example.com/products/aurora/primary.jpg&quot;
+    }
+  ],
+  &quot;page&quot;: 0,
+  &quot;size&quot;: 20,
+  &quot;totalElements&quot;: 1,
+  &quot;totalPages&quot;: 1,
+  &quot;last&quot;: true
+}</pre>
+      </section>
+      <section class="endpoint__section">
+        <h4>Error scenarios</h4>
+        <p>No specific error payloads documented.</p>
+      </section>
+    </div>
+    <div class="endpoint__panels">
+      <section class="panel">
+        <header class="panel__header">
+          <h4>cURL samples</h4>
+          <span class="panel__format">Interpolates current environment</span>
+        </header>
+        <div class="code-samples" data-endpoint="get-products">
+          <div class="code-samples__tabs" role="tablist">
+            <button type="button" class="code-samples__tab is-active" role="tab" id="get-products-bash-tab" aria-selected="true" data-tab-target="get-products-bash">bash/zsh</button>
+            <button type="button" class="code-samples__tab" role="tab" id="get-products-powershell-tab" aria-selected="false" data-tab-target="get-products-powershell">PowerShell/CMD</button>
+          </div>
+          <pre id="get-products-bash" class="code-block" role="tabpanel" aria-labelledby="get-products-bash-tab" data-template="curl-bash" data-endpoint="get-products"></pre>
+          <pre id="get-products-powershell" class="code-block is-hidden" role="tabpanel" aria-labelledby="get-products-powershell-tab" data-template="curl-powershell" data-endpoint="get-products" hidden></pre>
+          <div class="panel__actions">
+            <button type="button" class="copy-button" data-copy>Copy</button>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+</article>
+<article class="endpoint" id="get-products-slug" data-endpoint-id="get-products-slug" data-method="GET" data-base-path="/api/v1/public" data-path="/products/{slug}" data-auth="Public">
+  <div class="endpoint__header">
+    <div class="endpoint__title">
+      <span class="http-badge http-badge--get">GET</span>
+      <div>
+        <h3>Get product by slug</h3>
+        <p><code>/api/v1/public/products/{slug}</code></p>
+      </div>
+    </div>
+  </div>
+  <div class="endpoint__layout">
+    <div class="endpoint__body">
+      <section class="endpoint__section">
+        <h4>Summary</h4>
+        <p>Returns full PDP payload including pricing, variants, offers, reviews, and recommendations.</p>
+      </section>
+      
+      
+      
+      <section class="endpoint__section">
+        <h4>Success response</h4>
+        <p class="status success">HTTP 200</p>
+        <pre>{
+  &quot;id&quot;: 101,
+  &quot;name&quot;: &quot;Aurora Lamp&quot;,
+  &quot;slug&quot;: &quot;aurora-lamp&quot;,
+  &quot;offers&quot;: [
+    {
+      &quot;code&quot;: &quot;NYGLOW10&quot;,
+      &quot;discount&quot;: &quot;10% off&quot;
+    }
+  ],
+  &quot;variants&quot;: [
+    {
+      &quot;sku&quot;: &quot;AUR-LAMP-001&quot;,
+      &quot;attributes&quot;: {
+        &quot;Color&quot;: &quot;Pearl&quot;
+      }
+    }
+  ]
+}</pre>
+      </section>
+      <section class="endpoint__section">
+        <h4>Error scenarios</h4>
+        <table>
+  <thead><tr><th>Status</th><th>Description</th><th>Example</th></tr></thead>
+  <tbody><tr><td class='status client'>HTTP 404</td><td>Product not found</td><td><pre>{
+  &quot;error&quot;: &quot;Not Found&quot;,
+  &quot;message&quot;: &quot;PRODUCT_NOT_FOUND&quot;
+}</pre></td></tr></tbody>
+</table>
+
+      </section>
+    </div>
+    <div class="endpoint__panels">
+      <section class="panel">
+        <header class="panel__header">
+          <h4>cURL samples</h4>
+          <span class="panel__format">Interpolates current environment</span>
+        </header>
+        <div class="code-samples" data-endpoint="get-products-slug">
+          <div class="code-samples__tabs" role="tablist">
+            <button type="button" class="code-samples__tab is-active" role="tab" id="get-products-slug-bash-tab" aria-selected="true" data-tab-target="get-products-slug-bash">bash/zsh</button>
+            <button type="button" class="code-samples__tab" role="tab" id="get-products-slug-powershell-tab" aria-selected="false" data-tab-target="get-products-slug-powershell">PowerShell/CMD</button>
+          </div>
+          <pre id="get-products-slug-bash" class="code-block" role="tabpanel" aria-labelledby="get-products-slug-bash-tab" data-template="curl-bash" data-endpoint="get-products-slug"></pre>
+          <pre id="get-products-slug-powershell" class="code-block is-hidden" role="tabpanel" aria-labelledby="get-products-slug-powershell-tab" data-template="curl-powershell" data-endpoint="get-products-slug" hidden></pre>
+          <div class="panel__actions">
+            <button type="button" class="copy-button" data-copy>Copy</button>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+</article>
+<article class="endpoint" id="get-categories" data-endpoint-id="get-categories" data-method="GET" data-base-path="/api/v1/public" data-path="/categories" data-auth="Public">
+  <div class="endpoint__header">
+    <div class="endpoint__title">
+      <span class="http-badge http-badge--get">GET</span>
+      <div>
+        <h3>List public categories</h3>
+        <p><code>/api/v1/public/categories</code></p>
+      </div>
+    </div>
+  </div>
+  <div class="endpoint__layout">
+    <div class="endpoint__body">
+      <section class="endpoint__section">
+        <h4>Summary</h4>
+        <p>Returns visible storefront categories including hero imagery.</p>
+      </section>
+      
+      
+      
+      <section class="endpoint__section">
+        <h4>Success response</h4>
+        <p class="status success">HTTP 200</p>
+        <pre>[
+  {
+    &quot;name&quot;: &quot;Lighting&quot;,
+    &quot;slug&quot;: &quot;lighting&quot;,
+    &quot;image&quot;: &quot;https://cdn.example.com/categories/lighting/hero.jpg&quot;
+  }
+]</pre>
+      </section>
+      <section class="endpoint__section">
+        <h4>Error scenarios</h4>
+        <p>No specific error payloads documented.</p>
+      </section>
+    </div>
+    <div class="endpoint__panels">
+      <section class="panel">
+        <header class="panel__header">
+          <h4>cURL samples</h4>
+          <span class="panel__format">Interpolates current environment</span>
+        </header>
+        <div class="code-samples" data-endpoint="get-categories">
+          <div class="code-samples__tabs" role="tablist">
+            <button type="button" class="code-samples__tab is-active" role="tab" id="get-categories-bash-tab" aria-selected="true" data-tab-target="get-categories-bash">bash/zsh</button>
+            <button type="button" class="code-samples__tab" role="tab" id="get-categories-powershell-tab" aria-selected="false" data-tab-target="get-categories-powershell">PowerShell/CMD</button>
+          </div>
+          <pre id="get-categories-bash" class="code-block" role="tabpanel" aria-labelledby="get-categories-bash-tab" data-template="curl-bash" data-endpoint="get-categories"></pre>
+          <pre id="get-categories-powershell" class="code-block is-hidden" role="tabpanel" aria-labelledby="get-categories-powershell-tab" data-template="curl-powershell" data-endpoint="get-categories" hidden></pre>
+          <div class="panel__actions">
+            <button type="button" class="copy-button" data-copy>Copy</button>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+</article>
+<article class="endpoint" id="get-coupons" data-endpoint-id="get-coupons" data-method="GET" data-base-path="/api/v1/public" data-path="/coupons" data-auth="Public">
+  <div class="endpoint__header">
+    <div class="endpoint__title">
+      <span class="http-badge http-badge--get">GET</span>
+      <div>
+        <h3>Active coupons</h3>
+        <p><code>/api/v1/public/coupons</code></p>
+      </div>
+    </div>
+  </div>
+  <div class="endpoint__layout">
+    <div class="endpoint__body">
+      <section class="endpoint__section">
+        <h4>Summary</h4>
+        <p>Lists active coupons with display copy and eligible product/category references.</p>
+      </section>
+      <section class="endpoint__section">
+  <h4>Parameters</h4>
+  <table>
+    <thead><tr><th>Name</th><th>Description</th></tr></thead>
+    <tbody><tr><td>productId</td><td>Optional product id to filter</td></tr><tr><td>categoryId</td><td>Optional category id</td></tr></tbody>
+  </table>
+</section>
+
+      
+      
+      <section class="endpoint__section">
+        <h4>Success response</h4>
+        <p class="status success">HTTP 200</p>
+        <pre>{
+  &quot;content&quot;: [
+    {
+      &quot;name&quot;: &quot;Glow Intro&quot;,
+      &quot;code&quot;: &quot;GLOW5&quot;,
+      &quot;type&quot;: &quot;CART&quot;,
+      &quot;description&quot;: &quot;Save $5 on orders over $50&quot;
+    }
+  ],
+  &quot;page&quot;: 0,
+  &quot;size&quot;: 20,
+  &quot;totalElements&quot;: 1,
+  &quot;totalPages&quot;: 1,
+  &quot;last&quot;: true
+}</pre>
+      </section>
+      <section class="endpoint__section">
+        <h4>Error scenarios</h4>
+        <p>No specific error payloads documented.</p>
+      </section>
+    </div>
+    <div class="endpoint__panels">
+      <section class="panel">
+        <header class="panel__header">
+          <h4>cURL samples</h4>
+          <span class="panel__format">Interpolates current environment</span>
+        </header>
+        <div class="code-samples" data-endpoint="get-coupons">
+          <div class="code-samples__tabs" role="tablist">
+            <button type="button" class="code-samples__tab is-active" role="tab" id="get-coupons-bash-tab" aria-selected="true" data-tab-target="get-coupons-bash">bash/zsh</button>
+            <button type="button" class="code-samples__tab" role="tab" id="get-coupons-powershell-tab" aria-selected="false" data-tab-target="get-coupons-powershell">PowerShell/CMD</button>
+          </div>
+          <pre id="get-coupons-bash" class="code-block" role="tabpanel" aria-labelledby="get-coupons-bash-tab" data-template="curl-bash" data-endpoint="get-coupons"></pre>
+          <pre id="get-coupons-powershell" class="code-block is-hidden" role="tabpanel" aria-labelledby="get-coupons-powershell-tab" data-template="curl-powershell" data-endpoint="get-coupons" hidden></pre>
+          <div class="panel__actions">
+            <button type="button" class="copy-button" data-copy>Copy</button>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+</article>
+<article class="endpoint" id="get-recently-viewed" data-endpoint-id="get-recently-viewed" data-method="GET" data-base-path="/api/v1/public" data-path="/recently-viewed" data-auth="Public">
+  <div class="endpoint__header">
+    <div class="endpoint__title">
+      <span class="http-badge http-badge--get">GET</span>
+      <div>
+        <h3>Recently viewed products</h3>
+        <p><code>/api/v1/public/recently-viewed</code></p>
+      </div>
+    </div>
+  </div>
+  <div class="endpoint__layout">
+    <div class="endpoint__body">
+      <section class="endpoint__section">
+        <h4>Summary</h4>
+        <p>Returns the last viewed products for the current session or authenticated customer.</p>
+      </section>
+      
+      
+      
+      <section class="endpoint__section">
+        <h4>Success response</h4>
+        <p class="status success">HTTP 200</p>
+        <pre>[
+  {
+    &quot;id&quot;: 101,
+    &quot;name&quot;: &quot;Aurora Lamp&quot;,
+    &quot;slug&quot;: &quot;aurora-lamp&quot;,
+    &quot;lastViewedAt&quot;: &quot;2025-10-15T19:55:00Z&quot;
+  }
+]</pre>
+      </section>
+      <section class="endpoint__section">
+        <h4>Error scenarios</h4>
+        <p>No specific error payloads documented.</p>
+      </section>
+    </div>
+    <div class="endpoint__panels">
+      <section class="panel">
+        <header class="panel__header">
+          <h4>cURL samples</h4>
+          <span class="panel__format">Interpolates current environment</span>
+        </header>
+        <div class="code-samples" data-endpoint="get-recently-viewed">
+          <div class="code-samples__tabs" role="tablist">
+            <button type="button" class="code-samples__tab is-active" role="tab" id="get-recently-viewed-bash-tab" aria-selected="true" data-tab-target="get-recently-viewed-bash">bash/zsh</button>
+            <button type="button" class="code-samples__tab" role="tab" id="get-recently-viewed-powershell-tab" aria-selected="false" data-tab-target="get-recently-viewed-powershell">PowerShell/CMD</button>
+          </div>
+          <pre id="get-recently-viewed-bash" class="code-block" role="tabpanel" aria-labelledby="get-recently-viewed-bash-tab" data-template="curl-bash" data-endpoint="get-recently-viewed"></pre>
+          <pre id="get-recently-viewed-powershell" class="code-block is-hidden" role="tabpanel" aria-labelledby="get-recently-viewed-powershell-tab" data-template="curl-powershell" data-endpoint="get-recently-viewed" hidden></pre>
+          <div class="panel__actions">
+            <button type="button" class="copy-button" data-copy>Copy</button>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+</article>
+
+      </main>
+    </div>
+    <footer class="docs__footer">
+      <a href="index.html">Back to index</a>
+    </footer>
+    <script src="app.js" defer></script>
+  </body>
+</html>
