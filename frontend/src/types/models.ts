@@ -71,28 +71,6 @@ export interface Customer {
   profileImageUrl?: string | null;
 }
 
-export interface InvoiceItem {
-  id: number;
-  description: string;
-  qty: number;
-  unitPrice: number;
-  lineTotal: number;
-}
-
-export interface Invoice {
-  id: number;
-  customerId: number;
-  customerName: string;
-  number: string;
-  issueDate: string;
-  dueDate: string;
-  status: 'DRAFT' | 'SENT' | 'PAID';
-  subtotal: number;
-  tax: number;
-  total: number;
-  items: InvoiceItem[];
-}
-
 export interface ActivityLogEntry {
   id: number;
   occurredAt: string;

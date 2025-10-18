@@ -6,12 +6,12 @@ This project is a full-stack Role-Based Access Control dashboard featuring a Spr
 
 - **Authentication**: Email/password with BCrypt hashing, JWT access/refresh tokens, logout and token refresh flows.
 - **RBAC**: Users may have multiple roles; roles are composed of permissions. API endpoints enforce permissions via `@PreAuthorize`.
-- **Domain Modules**: CRUD for users, roles, permissions, customers, invoices (with items and totals), catalog assets (brands, categories, attributes), and profile management.
+- **Domain Modules**: CRUD for users, roles, permissions, customers, carts, catalog assets (brands, categories, attributes), and profile management.
 - **Catalog Products**: End-to-end product workspace under **Catalog → Products** covering rich descriptions, brand pickers with logos, hierarchical category selection, multi-tax assignment, gallery/thumbnail uploads, PDF specs, SEO meta data, and attribute-driven variant matrices.
 - **Dynamic Dashboard**: Frontend tabs render based on effective permissions. React Query keeps data fresh, Redux Toolkit stores auth state, and Tailwind provides styling.
 - **Database Migrations**: Flyway manages schema and seed data for MySQL, including demo users and sample business data.
-- **Data Exports**: Users with the new export permissions can download filtered table views (Users, Roles, Permissions, Invoices,
-  Customers) to Excel, CSV, PDF, or a print-friendly layout directly from the UI.
+- **Data Exports**: Users with the new export permissions can download filtered table views (Users, Roles, Permissions, Customers)
+  to Excel, CSV, PDF, or a print-friendly layout directly from the UI.
 - **Settings Workspace**: Permission-gated settings hub covers general, finance, integrations, and miscellaneous categories and
   supports live theme customization (primary color updates apply instantly across the dashboard).
 - **Documentation**: OpenAPI docs available at `/swagger-ui.html` after running the backend.
@@ -71,9 +71,9 @@ SUPER_ADMIN and ADMIN roles; assign them to additional roles to unlock the catal
 
 2. Configure the API base URL via the `VITE_API_BASE_URL` environment variable if your backend runs on a different host/port.
 
-3. Grant the relevant export permissions (`USERS_EXPORT`, `ROLES_EXPORT`, `PERMISSIONS_EXPORT`, `INVOICES_EXPORT`,
-   `CUSTOMERS_EXPORT`) to roles or individual users to surface the Export dropdown beside each module's "New" button. The
-   seeded **SUPER_ADMIN** role already includes the full set.
+3. Grant the relevant export permissions (`USERS_EXPORT`, `ROLES_EXPORT`, `PERMISSIONS_EXPORT`, `CUSTOMERS_EXPORT`) to roles or
+   individual users to surface the Export dropdown beside each module's "New" button. The seeded **SUPER_ADMIN** role already
+   includes the full set.
 
 ## Testing
 
