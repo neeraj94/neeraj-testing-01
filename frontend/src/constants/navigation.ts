@@ -249,7 +249,7 @@ export const DEFAULT_NAVIGATION_MENU: NavigationNode[] = [
         icon: '🛒',
         path: '/admin/carts',
         group: false,
-        permissions: ['CART_VIEW_GLOBAL'],
+        permissions: ['USER_VIEW_GLOBAL'],
         children: []
       },
       {

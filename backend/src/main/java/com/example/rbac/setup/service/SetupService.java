@@ -384,7 +384,7 @@ public class SetupService {
                             "Carts",
                             "🛒",
                             "/admin/carts",
-                            List.of("CART_VIEW_GLOBAL", "CART_CREATE", "CART_EDIT", "CART_DELETE", "CART_EXPORT")
+                            List.of("USER_VIEW_GLOBAL")
                     ),
                     MenuDefinition.item(
                             "orders",

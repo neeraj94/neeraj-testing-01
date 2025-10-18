@@ -12,7 +12,6 @@ public final class DefaultUserPermissions {
         LinkedHashSet<String> defaults = new LinkedHashSet<>();
         defaults.add("CUSTOMER_PROFILE_MANAGE");
         defaults.add("CUSTOMER_ADDRESS_MANAGE");
-        defaults.add("CUSTOMER_CART_MANAGE");
         defaults.add("CUSTOMER_CHECKOUT");
         defaults.add("CUSTOMER_RECENTLY_VIEWED");
         DEFAULT_PERMISSIONS = Collections.unmodifiableSet(defaults);

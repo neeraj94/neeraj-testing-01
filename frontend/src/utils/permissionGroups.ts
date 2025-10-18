@@ -43,8 +43,6 @@ const AUDIENCE_PREFIXES: Array<{
 ];
 
 const FEATURE_KEY_OVERRIDES: Record<string, string> = {
-  CART: 'CARTS',
-  CARTS: 'CARTS',
   COUPON: 'COUPONS',
   COUPONS: 'COUPONS',
   ORDER: 'ORDERS',
@@ -94,7 +92,6 @@ const FEATURE_LABEL_OVERRIDES: Record<string, string> = {
   BLOG_CATEGORIES: 'Blog Categories',
   BLOG_POSTS: 'Blog Posts',
   BRANDS: 'Brands',
-  CARTS: 'Carts',
   CHECKOUT: 'Checkout',
   COUPONS: 'Coupons',
   ORDERS: 'Orders',
@@ -120,7 +117,6 @@ const ADMIN_FEATURE_ORDER = [
   'Blog Categories',
   'Blog Posts',
   'Brands',
-  'Carts',
   'Categories',
   'Coupons',
   'Orders',
@@ -145,7 +141,6 @@ const ADMIN_FEATURE_PRIORITY = new Map<string, number>(
 const DEFAULT_MANAGE_SLOTS: CapabilitySlot[] = ['create', 'edit', 'delete'];
 
 const MANAGE_SLOT_OVERRIDES: Record<string, CapabilitySlot[]> = {
-  CARTS: ['create', 'edit', 'delete'],
   CHECKOUT: ['viewGlobal', 'create', 'edit', 'delete'],
   COUPONS: ['viewGlobal', 'create', 'edit', 'delete'],
   ORDERS: ['viewGlobal', 'create', 'edit', 'delete'],

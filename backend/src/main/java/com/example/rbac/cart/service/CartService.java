@@ -66,7 +66,7 @@ public class CartService {
     }
 
     @Transactional(readOnly = true)
-    @PreAuthorize("hasAuthority('CART_VIEW_GLOBAL')")
+    @PreAuthorize("hasAuthority('USER_VIEW_GLOBAL')")
     public PageResponse<AdminCartSummaryDto> listAdminCarts(int page, int size, String search, String sort) {
         int safePage = Math.max(page, 0);
         int safeSize = Math.max(1, Math.min(size, 100));
@@ -120,7 +120,6 @@ public class CartService {
     }
 
     @Transactional(readOnly = true)
-    @PreAuthorize("hasAuthority('CUSTOMER_CART_MANAGE')")
     public CartDto getCurrentCart(UserPrincipal principal) {
         User user = resolveUser(principal);
         Optional<Cart> existing = cartRepository.findByUserId(user.getId());
@@ -128,7 +127,6 @@ public class CartService {
     }
 
     @Transactional
-    @PreAuthorize("hasAuthority('CUSTOMER_CART_MANAGE')")
     public CartDto addItem(AddCartItemRequest request, UserPrincipal principal) {
         User user = resolveUser(principal);
         Cart cart = getOrCreateCart(user);
@@ -158,7 +156,6 @@ public class CartService {
     }
 
     @Transactional
-    @PreAuthorize("hasAuthority('CUSTOMER_CART_MANAGE')")
     public CartDto updateItem(Long itemId, UpdateCartItemRequest request, UserPrincipal principal) {
         User user = resolveUser(principal);
         Cart cart = getExistingCart(user.getId());
@@ -178,7 +175,6 @@ public class CartService {
     }
 
     @Transactional
-    @PreAuthorize("hasAuthority('CUSTOMER_CART_MANAGE')")
     public CartDto removeItem(Long itemId, UserPrincipal principal) {
         User user = resolveUser(principal);
         Cart cart = getExistingCart(user.getId());
@@ -192,7 +188,6 @@ public class CartService {
     }
 
     @Transactional
-    @PreAuthorize("hasAuthority('CUSTOMER_CART_MANAGE')")
     public CartDto mergeGuestCart(MergeCartRequest request, UserPrincipal principal) {
         User user = resolveUser(principal);
         Cart cart = getOrCreateCart(user);
@@ -229,7 +224,7 @@ public class CartService {
     }
 
     @Transactional(readOnly = true)
-    @PreAuthorize("hasAuthority('CART_VIEW_GLOBAL')")
+    @PreAuthorize("hasAuthority('USER_VIEW_GLOBAL')")
     public CartDto getCartForUser(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "User not found"));
@@ -238,7 +233,7 @@ public class CartService {
     }
 
     @Transactional
-    @PreAuthorize("hasAuthority('CART_CREATE')")
+    @PreAuthorize("hasAuthority('USER_VIEW_GLOBAL') and hasAuthority('USER_CREATE')")
     public CartDto createCartForUser(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "User not found"));
@@ -256,7 +251,7 @@ public class CartService {
     }
 
     @Transactional
-    @PreAuthorize("hasAuthority('CART_EDIT')")
+    @PreAuthorize("hasAuthority('USER_VIEW_GLOBAL') and hasAuthority('USER_UPDATE')")
     public CartDto addItemForUser(Long userId, AddCartItemRequest request) {
         Cart cart = getExistingCart(userId);
         Product product = productRepository.findById(request.getProductId())
@@ -288,7 +283,7 @@ public class CartService {
     }
 
     @Transactional
-    @PreAuthorize("hasAuthority('CART_EDIT')")
+    @PreAuthorize("hasAuthority('USER_VIEW_GLOBAL') and hasAuthority('USER_UPDATE')")
     public CartDto updateItemForUser(Long userId, Long itemId, UpdateCartItemRequest request) {
         Cart cart = getExistingCart(userId);
         CartItem item = cart.getItems().stream()
@@ -310,7 +305,7 @@ public class CartService {
     }
 
     @Transactional
-    @PreAuthorize("hasAuthority('CART_DELETE')")
+    @PreAuthorize("hasAuthority('USER_VIEW_GLOBAL') and hasAuthority('USER_DELETE')")
     public CartDto removeItemForUser(Long userId, Long itemId) {
         Cart cart = getExistingCart(userId);
         boolean removed = cart.getItems().removeIf(existing -> Objects.equals(existing.getId(), itemId));
@@ -326,7 +321,7 @@ public class CartService {
     }
 
     @Transactional
-    @PreAuthorize("hasAuthority('CART_DELETE')")
+    @PreAuthorize("hasAuthority('USER_VIEW_GLOBAL') and hasAuthority('USER_DELETE')")
     public CartDto clearCartForUser(Long userId) {
         Cart cart = getExistingCart(userId);
         cart.getItems().clear();
