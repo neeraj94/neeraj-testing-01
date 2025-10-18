@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Gallery APIs</title>
+    <title>Checkout APIs</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body class="page">
@@ -11,9 +11,9 @@
       <aside class="docs__nav sidebar" aria-label="API navigation">
         <div class="sidebar__brand">
           <div class="sidebar__badge">RBAC Commerce</div>
-          <h1>Gallery APIs</h1>
-          <p>Endpoints implemented by the Gallery controller.</p>
-          <p class="sidebar__hint">Base path: <code>/api/v1/gallery</code></p>
+          <h1>Checkout APIs</h1>
+          <p>Endpoints implemented by the Checkout controller.</p>
+          <p class="sidebar__hint">Base path: <code>/api/v1/checkout</code></p>
         </div>
         <div class="sidebar__controls">
           <label class="control">
@@ -37,23 +37,23 @@
         <nav class="sidebar__nav" aria-label="Endpoints">
           <h2>Endpoints</h2>
           <ul class="sidebar__tree" role="tree">
-            <li role="treeitem"><a href="#get-files" data-endpoint-link="get-files"><span class="sidebar__method">GET</span>List Files</a></li><li role="treeitem"><a href="#get-settings" data-endpoint-link="get-settings"><span class="sidebar__method">GET</span>Get Settings</a></li><li role="treeitem"><a href="#post-files" data-endpoint-link="post-files"><span class="sidebar__method">POST</span>Upload Files</a></li><li role="treeitem"><a href="#patch-files-id" data-endpoint-link="patch-files-id"><span class="sidebar__method">PATCH</span>Update File</a></li><li role="treeitem"><a href="#delete-files-id" data-endpoint-link="delete-files-id"><span class="sidebar__method">DELETE</span>Delete File</a></li><li role="treeitem"><a href="#post-files-bulk-delete" data-endpoint-link="post-files-bulk-delete"><span class="sidebar__method">POST</span>Bulk Delete</a></li><li role="treeitem"><a href="#get-files-id-content" data-endpoint-link="get-files-id-content"><span class="sidebar__method">GET</span>Download File</a></li><li role="treeitem"><a href="#get-folders" data-endpoint-link="get-folders"><span class="sidebar__method">GET</span>List Folders</a></li><li role="treeitem"><a href="#post-folders" data-endpoint-link="post-folders"><span class="sidebar__method">POST</span>Create Folder</a></li><li role="treeitem"><a href="#patch-folders-id" data-endpoint-link="patch-folders-id"><span class="sidebar__method">PATCH</span>Rename Folder</a></li><li role="treeitem"><a href="#delete-folders-id" data-endpoint-link="delete-folders-id"><span class="sidebar__method">DELETE</span>Delete Folder</a></li>
+            <li role="treeitem"><a href="#get-addresses" data-endpoint-link="get-addresses"><span class="sidebar__method">GET</span>List Addresses</a></li><li role="treeitem"><a href="#post-addresses" data-endpoint-link="post-addresses"><span class="sidebar__method">POST</span>Create Address</a></li><li role="treeitem"><a href="#put-addresses-id" data-endpoint-link="put-addresses-id"><span class="sidebar__method">PUT</span>Update Address</a></li><li role="treeitem"><a href="#get-payment-methods" data-endpoint-link="get-payment-methods"><span class="sidebar__method">GET</span>List Payment Methods</a></li><li role="treeitem"><a href="#get-regions-countries" data-endpoint-link="get-regions-countries"><span class="sidebar__method">GET</span>List Countries For Checkout</a></li><li role="treeitem"><a href="#get-regions-countries-countryId-states" data-endpoint-link="get-regions-countries-countryId-states"><span class="sidebar__method">GET</span>List States For Checkout</a></li><li role="treeitem"><a href="#get-regions-states-stateId-cities" data-endpoint-link="get-regions-states-stateId-cities"><span class="sidebar__method">GET</span>List Cities For Checkout</a></li><li role="treeitem"><a href="#post-summary" data-endpoint-link="post-summary"><span class="sidebar__method">POST</span>Preview Order</a></li><li role="treeitem"><a href="#post-orders" data-endpoint-link="post-orders"><span class="sidebar__method">POST</span>Place Order</a></li><li role="treeitem"><a href="#get-orders-orderId" data-endpoint-link="get-orders-orderId"><span class="sidebar__method">GET</span>Get Order</a></li><li role="treeitem"><a href="#get-summary" data-endpoint-link="get-summary"><span class="sidebar__method">GET</span>Full Summary</a></li>
           </ul>
         </nav>
       </aside>
       <main class="docs__content content" id="docsContent" tabindex="-1">
         <header class="hero">
-          <h2>Gallery APIs</h2>
-          <p>Endpoints implemented by the Gallery controller.</p>
+          <h2>Checkout APIs</h2>
+          <p>Endpoints implemented by the Checkout controller.</p>
           <p><strong>Selected base URL:</strong> <span data-base-display>https://sandbox.api.rbac-commerce.dev</span></p>
         </header>
-        <article class="endpoint" id="get-files" data-endpoint-id="get-files" data-method="GET" data-base-path="/api/v1/gallery" data-path="/files" data-auth="Bearer" data-body='null'>
+        <article class="endpoint" id="get-addresses" data-endpoint-id="get-addresses" data-method="GET" data-base-path="/api/v1/checkout" data-path="/addresses" data-auth="Bearer" data-body='null'>
   <div class="endpoint__header">
     <div class="endpoint__title">
       <span class="http-badge http-badge--get">GET</span>
       <div>
-        <h3>List Files</h3>
-        <p><code>/api/v1/gallery/files</code></p>
+        <h3>List Addresses</h3>
+        <p><code>/api/v1/checkout/addresses</code></p>
       </div>
     </div>
     <span class="auth-badge auth-badge--protected">Protected</span>
@@ -62,17 +62,10 @@
     <div class="endpoint__body">
       <section class="endpoint__section">
         <h4>Summary</h4>
-        <p>List Files handler in GalleryController for GET /files requests.</p>
+        <p>List Addresses handler in CheckoutController for GET /addresses requests.</p>
       </section>
       <section class="endpoint__section"><h4>Authentication</h4><p>Provide an <code>Authorization: Bearer &lt;token&gt;</code> header.</p></section>
-      <section class="endpoint__section">
-  <h4>Parameters</h4>
-  <table>
-    <thead><tr><th>Name</th><th>Description</th></tr></thead>
-    <tbody><tr><td>page</td><td>Query parameter</td></tr><tr><td>size</td><td>Query parameter</td></tr><tr><td>sort</td><td>Query parameter (optional)</td></tr><tr><td>direction</td><td>Query parameter (optional)</td></tr><tr><td>folderId</td><td>Query parameter (optional)</td></tr><tr><td>ownerId</td><td>Query parameter (optional)</td></tr><tr><td>uploaderId</td><td>Query parameter (optional)</td></tr><tr><td>uploader</td><td>Query parameter (optional)</td></tr><tr><td>search</td><td>Query parameter (optional)</td></tr></tbody>
-  </table>
-</section>
-
+      
       
       <section class="endpoint__section"><h4>Request body</h4><p>No body required.</p></section>
       <section class="endpoint__section">
@@ -91,13 +84,13 @@
           <h4>cURL samples</h4>
           <span class="panel__format">Interpolates current environment</span>
         </header>
-        <div class="code-samples" data-endpoint="get-files">
+        <div class="code-samples" data-endpoint="get-addresses">
           <div class="code-samples__tabs" role="tablist">
-            <button type="button" class="code-samples__tab is-active" role="tab" id="get-files-bash-tab" aria-selected="true" data-tab-target="get-files-bash">bash/zsh</button>
-            <button type="button" class="code-samples__tab" role="tab" id="get-files-powershell-tab" aria-selected="false" data-tab-target="get-files-powershell">PowerShell/CMD</button>
+            <button type="button" class="code-samples__tab is-active" role="tab" id="get-addresses-bash-tab" aria-selected="true" data-tab-target="get-addresses-bash">bash/zsh</button>
+            <button type="button" class="code-samples__tab" role="tab" id="get-addresses-powershell-tab" aria-selected="false" data-tab-target="get-addresses-powershell">PowerShell/CMD</button>
           </div>
-          <pre id="get-files-bash" class="code-block" role="tabpanel" aria-labelledby="get-files-bash-tab" data-template="curl-bash" data-endpoint="get-files"></pre>
-          <pre id="get-files-powershell" class="code-block is-hidden" role="tabpanel" aria-labelledby="get-files-powershell-tab" data-template="curl-powershell" data-endpoint="get-files" hidden></pre>
+          <pre id="get-addresses-bash" class="code-block" role="tabpanel" aria-labelledby="get-addresses-bash-tab" data-template="curl-bash" data-endpoint="get-addresses"></pre>
+          <pre id="get-addresses-powershell" class="code-block is-hidden" role="tabpanel" aria-labelledby="get-addresses-powershell-tab" data-template="curl-powershell" data-endpoint="get-addresses" hidden></pre>
           <div class="panel__actions">
             <button type="button" class="copy-button" data-copy>Copy</button>
           </div>
@@ -137,96 +130,13 @@
     </div>
   </div>
 </article>
-<article class="endpoint" id="get-settings" data-endpoint-id="get-settings" data-method="GET" data-base-path="/api/v1/gallery" data-path="/settings" data-auth="Bearer" data-body='null'>
-  <div class="endpoint__header">
-    <div class="endpoint__title">
-      <span class="http-badge http-badge--get">GET</span>
-      <div>
-        <h3>Get Settings</h3>
-        <p><code>/api/v1/gallery/settings</code></p>
-      </div>
-    </div>
-    <span class="auth-badge auth-badge--protected">Protected</span>
-  </div>
-  <div class="endpoint__layout">
-    <div class="endpoint__body">
-      <section class="endpoint__section">
-        <h4>Summary</h4>
-        <p>Get Settings handler in GalleryController for GET /settings requests.</p>
-      </section>
-      <section class="endpoint__section"><h4>Authentication</h4><p>Provide an <code>Authorization: Bearer &lt;token&gt;</code> header.</p></section>
-      
-      
-      <section class="endpoint__section"><h4>Request body</h4><p>No body required.</p></section>
-      <section class="endpoint__section">
-        <h4>Success response</h4>
-        <p class="status success">HTTP 200</p>
-        <p>No body returned.</p>
-      </section>
-      <section class="endpoint__section">
-        <h4>Error scenarios</h4>
-        <p>No specific error payloads documented.</p>
-      </section>
-    </div>
-    <div class="endpoint__panels">
-      <section class="panel">
-        <header class="panel__header">
-          <h4>cURL samples</h4>
-          <span class="panel__format">Interpolates current environment</span>
-        </header>
-        <div class="code-samples" data-endpoint="get-settings">
-          <div class="code-samples__tabs" role="tablist">
-            <button type="button" class="code-samples__tab is-active" role="tab" id="get-settings-bash-tab" aria-selected="true" data-tab-target="get-settings-bash">bash/zsh</button>
-            <button type="button" class="code-samples__tab" role="tab" id="get-settings-powershell-tab" aria-selected="false" data-tab-target="get-settings-powershell">PowerShell/CMD</button>
-          </div>
-          <pre id="get-settings-bash" class="code-block" role="tabpanel" aria-labelledby="get-settings-bash-tab" data-template="curl-bash" data-endpoint="get-settings"></pre>
-          <pre id="get-settings-powershell" class="code-block is-hidden" role="tabpanel" aria-labelledby="get-settings-powershell-tab" data-template="curl-powershell" data-endpoint="get-settings" hidden></pre>
-          <div class="panel__actions">
-            <button type="button" class="copy-button" data-copy>Copy</button>
-          </div>
-        </div>
-      </section>
-      <section class="panel panel--try">
-        <header class="panel__header">
-          <h4>Try it</h4>
-          <span class="panel__format">Send a real request with your environment</span>
-        </header>
-        <form class="try-form" data-try-form>
-          <label class="field">
-            <span class="field__label">Request URL</span>
-            <input type="url" spellcheck="false" data-try-url required />
-            <span class="field__hint">Update path parameters before sending.</span>
-          </label>
-          <label class="field">
-            <span class="field__label">Headers</span>
-            <textarea rows="3" spellcheck="false" data-try-headers></textarea>
-            <span class="field__hint">One header per line (<code>Name: Value</code>).</span>
-          </label>
-          <label class="field" data-try-body-wrapper>
-            <span class="field__label">Body</span>
-            <textarea rows="8" spellcheck="false" data-try-body></textarea>
-            <span class="field__hint">JSON payload; leave blank to omit.</span>
-          </label>
-          <button type="submit" class="button" data-try-submit>Send GET</button>
-        </form>
-        <div class="try-response" data-try-response hidden>
-          <div class="try-response__meta">
-            <span data-try-status>Waiting…</span>
-            <span data-try-duration></span>
-          </div>
-          <pre class="try-response__body" data-try-output></pre>
-        </div>
-      </section>
-    </div>
-  </div>
-</article>
-<article class="endpoint" id="post-files" data-endpoint-id="post-files" data-method="POST" data-base-path="/api/v1/gallery" data-path="/files" data-auth="Bearer" data-headers='[[&quot;Content-Type&quot;, &quot;multipart/form-data&quot;]]' data-body='&quot;files=&lt;value&gt;&quot;'>
+<article class="endpoint" id="post-addresses" data-endpoint-id="post-addresses" data-method="POST" data-base-path="/api/v1/checkout" data-path="/addresses" data-auth="Bearer" data-headers='[[&quot;Content-Type&quot;, &quot;application/json&quot;]]' data-body='&quot;{}&quot;'>
   <div class="endpoint__header">
     <div class="endpoint__title">
       <span class="http-badge http-badge--post">POST</span>
       <div>
-        <h3>Upload Files</h3>
-        <p><code>/api/v1/gallery/files</code></p>
+        <h3>Create Address</h3>
+        <p><code>/api/v1/checkout/addresses</code></p>
       </div>
     </div>
     <span class="auth-badge auth-badge--protected">Protected</span>
@@ -235,26 +145,19 @@
     <div class="endpoint__body">
       <section class="endpoint__section">
         <h4>Summary</h4>
-        <p>Upload Files handler in GalleryController for POST /files requests.</p>
+        <p>Create Address handler in CheckoutController for POST /addresses requests.</p>
       </section>
       <section class="endpoint__section"><h4>Authentication</h4><p>Provide an <code>Authorization: Bearer &lt;token&gt;</code> header.</p></section>
-      <section class="endpoint__section">
-  <h4>Parameters</h4>
-  <table>
-    <thead><tr><th>Name</th><th>Description</th></tr></thead>
-    <tbody><tr><td>folderId</td><td>Query parameter (optional)</td></tr><tr><td>files</td><td>Form field</td></tr></tbody>
-  </table>
-</section>
-
+      
       <section class="endpoint__section">
   <h4>Headers</h4>
   <table>
     <thead><tr><th>Name</th><th>Value</th></tr></thead>
-    <tbody><tr><td>Content-Type</td><td>multipart/form-data</td></tr></tbody>
+    <tbody><tr><td>Content-Type</td><td>application/json</td></tr></tbody>
   </table>
 </section>
 
-      <section class="endpoint__section"><h4>Request body</h4><pre>files=&lt;value&gt;</pre></section>
+      <section class="endpoint__section"><h4>Request body</h4><pre>{}</pre></section>
       <section class="endpoint__section">
         <h4>Success response</h4>
         <p class="status success">HTTP 201</p>
@@ -271,13 +174,13 @@
           <h4>cURL samples</h4>
           <span class="panel__format">Interpolates current environment</span>
         </header>
-        <div class="code-samples" data-endpoint="post-files">
+        <div class="code-samples" data-endpoint="post-addresses">
           <div class="code-samples__tabs" role="tablist">
-            <button type="button" class="code-samples__tab is-active" role="tab" id="post-files-bash-tab" aria-selected="true" data-tab-target="post-files-bash">bash/zsh</button>
-            <button type="button" class="code-samples__tab" role="tab" id="post-files-powershell-tab" aria-selected="false" data-tab-target="post-files-powershell">PowerShell/CMD</button>
+            <button type="button" class="code-samples__tab is-active" role="tab" id="post-addresses-bash-tab" aria-selected="true" data-tab-target="post-addresses-bash">bash/zsh</button>
+            <button type="button" class="code-samples__tab" role="tab" id="post-addresses-powershell-tab" aria-selected="false" data-tab-target="post-addresses-powershell">PowerShell/CMD</button>
           </div>
-          <pre id="post-files-bash" class="code-block" role="tabpanel" aria-labelledby="post-files-bash-tab" data-template="curl-bash" data-endpoint="post-files"></pre>
-          <pre id="post-files-powershell" class="code-block is-hidden" role="tabpanel" aria-labelledby="post-files-powershell-tab" data-template="curl-powershell" data-endpoint="post-files" hidden></pre>
+          <pre id="post-addresses-bash" class="code-block" role="tabpanel" aria-labelledby="post-addresses-bash-tab" data-template="curl-bash" data-endpoint="post-addresses"></pre>
+          <pre id="post-addresses-powershell" class="code-block is-hidden" role="tabpanel" aria-labelledby="post-addresses-powershell-tab" data-template="curl-powershell" data-endpoint="post-addresses" hidden></pre>
           <div class="panel__actions">
             <button type="button" class="copy-button" data-copy>Copy</button>
           </div>
@@ -317,13 +220,13 @@
     </div>
   </div>
 </article>
-<article class="endpoint" id="patch-files-id" data-endpoint-id="patch-files-id" data-method="PATCH" data-base-path="/api/v1/gallery" data-path="/files/{id}" data-auth="Bearer" data-headers='[[&quot;Content-Type&quot;, &quot;application/json&quot;]]' data-body='&quot;{}&quot;'>
+<article class="endpoint" id="put-addresses-id" data-endpoint-id="put-addresses-id" data-method="PUT" data-base-path="/api/v1/checkout" data-path="/addresses/{id}" data-auth="Bearer" data-headers='[[&quot;Content-Type&quot;, &quot;application/json&quot;]]' data-body='&quot;{}&quot;'>
   <div class="endpoint__header">
     <div class="endpoint__title">
-      <span class="http-badge http-badge--patch">PATCH</span>
+      <span class="http-badge http-badge--put">PUT</span>
       <div>
-        <h3>Update File</h3>
-        <p><code>/api/v1/gallery/files/{id}</code></p>
+        <h3>Update Address</h3>
+        <p><code>/api/v1/checkout/addresses/{id}</code></p>
       </div>
     </div>
     <span class="auth-badge auth-badge--protected">Protected</span>
@@ -332,7 +235,7 @@
     <div class="endpoint__body">
       <section class="endpoint__section">
         <h4>Summary</h4>
-        <p>Update File handler in GalleryController for PATCH /files/{id} requests.</p>
+        <p>Update Address handler in CheckoutController for PUT /addresses/{id} requests.</p>
       </section>
       <section class="endpoint__section"><h4>Authentication</h4><p>Provide an <code>Authorization: Bearer &lt;token&gt;</code> header.</p></section>
       <section class="endpoint__section">
@@ -368,13 +271,13 @@
           <h4>cURL samples</h4>
           <span class="panel__format">Interpolates current environment</span>
         </header>
-        <div class="code-samples" data-endpoint="patch-files-id">
+        <div class="code-samples" data-endpoint="put-addresses-id">
           <div class="code-samples__tabs" role="tablist">
-            <button type="button" class="code-samples__tab is-active" role="tab" id="patch-files-id-bash-tab" aria-selected="true" data-tab-target="patch-files-id-bash">bash/zsh</button>
-            <button type="button" class="code-samples__tab" role="tab" id="patch-files-id-powershell-tab" aria-selected="false" data-tab-target="patch-files-id-powershell">PowerShell/CMD</button>
+            <button type="button" class="code-samples__tab is-active" role="tab" id="put-addresses-id-bash-tab" aria-selected="true" data-tab-target="put-addresses-id-bash">bash/zsh</button>
+            <button type="button" class="code-samples__tab" role="tab" id="put-addresses-id-powershell-tab" aria-selected="false" data-tab-target="put-addresses-id-powershell">PowerShell/CMD</button>
           </div>
-          <pre id="patch-files-id-bash" class="code-block" role="tabpanel" aria-labelledby="patch-files-id-bash-tab" data-template="curl-bash" data-endpoint="patch-files-id"></pre>
-          <pre id="patch-files-id-powershell" class="code-block is-hidden" role="tabpanel" aria-labelledby="patch-files-id-powershell-tab" data-template="curl-powershell" data-endpoint="patch-files-id" hidden></pre>
+          <pre id="put-addresses-id-bash" class="code-block" role="tabpanel" aria-labelledby="put-addresses-id-bash-tab" data-template="curl-bash" data-endpoint="put-addresses-id"></pre>
+          <pre id="put-addresses-id-powershell" class="code-block is-hidden" role="tabpanel" aria-labelledby="put-addresses-id-powershell-tab" data-template="curl-powershell" data-endpoint="put-addresses-id" hidden></pre>
           <div class="panel__actions">
             <button type="button" class="copy-button" data-copy>Copy</button>
           </div>
@@ -401,7 +304,7 @@
             <textarea rows="8" spellcheck="false" data-try-body></textarea>
             <span class="field__hint">JSON payload; leave blank to omit.</span>
           </label>
-          <button type="submit" class="button" data-try-submit>Send PATCH</button>
+          <button type="submit" class="button" data-try-submit>Send PUT</button>
         </form>
         <div class="try-response" data-try-response hidden>
           <div class="try-response__meta">
@@ -414,193 +317,13 @@
     </div>
   </div>
 </article>
-<article class="endpoint" id="delete-files-id" data-endpoint-id="delete-files-id" data-method="DELETE" data-base-path="/api/v1/gallery" data-path="/files/{id}" data-auth="Bearer" data-body='null'>
-  <div class="endpoint__header">
-    <div class="endpoint__title">
-      <span class="http-badge http-badge--delete">DELETE</span>
-      <div>
-        <h3>Delete File</h3>
-        <p><code>/api/v1/gallery/files/{id}</code></p>
-      </div>
-    </div>
-    <span class="auth-badge auth-badge--protected">Protected</span>
-  </div>
-  <div class="endpoint__layout">
-    <div class="endpoint__body">
-      <section class="endpoint__section">
-        <h4>Summary</h4>
-        <p>Delete File handler in GalleryController for DELETE /files/{id} requests.</p>
-      </section>
-      <section class="endpoint__section"><h4>Authentication</h4><p>Provide an <code>Authorization: Bearer &lt;token&gt;</code> header.</p></section>
-      <section class="endpoint__section">
-  <h4>Parameters</h4>
-  <table>
-    <thead><tr><th>Name</th><th>Description</th></tr></thead>
-    <tbody><tr><td>id</td><td>Path parameter</td></tr></tbody>
-  </table>
-</section>
-
-      
-      <section class="endpoint__section"><h4>Request body</h4><p>No body required.</p></section>
-      <section class="endpoint__section">
-        <h4>Success response</h4>
-        <p class="status success">HTTP 204</p>
-        <p>No body returned.</p>
-      </section>
-      <section class="endpoint__section">
-        <h4>Error scenarios</h4>
-        <p>No specific error payloads documented.</p>
-      </section>
-    </div>
-    <div class="endpoint__panels">
-      <section class="panel">
-        <header class="panel__header">
-          <h4>cURL samples</h4>
-          <span class="panel__format">Interpolates current environment</span>
-        </header>
-        <div class="code-samples" data-endpoint="delete-files-id">
-          <div class="code-samples__tabs" role="tablist">
-            <button type="button" class="code-samples__tab is-active" role="tab" id="delete-files-id-bash-tab" aria-selected="true" data-tab-target="delete-files-id-bash">bash/zsh</button>
-            <button type="button" class="code-samples__tab" role="tab" id="delete-files-id-powershell-tab" aria-selected="false" data-tab-target="delete-files-id-powershell">PowerShell/CMD</button>
-          </div>
-          <pre id="delete-files-id-bash" class="code-block" role="tabpanel" aria-labelledby="delete-files-id-bash-tab" data-template="curl-bash" data-endpoint="delete-files-id"></pre>
-          <pre id="delete-files-id-powershell" class="code-block is-hidden" role="tabpanel" aria-labelledby="delete-files-id-powershell-tab" data-template="curl-powershell" data-endpoint="delete-files-id" hidden></pre>
-          <div class="panel__actions">
-            <button type="button" class="copy-button" data-copy>Copy</button>
-          </div>
-        </div>
-      </section>
-      <section class="panel panel--try">
-        <header class="panel__header">
-          <h4>Try it</h4>
-          <span class="panel__format">Send a real request with your environment</span>
-        </header>
-        <form class="try-form" data-try-form>
-          <label class="field">
-            <span class="field__label">Request URL</span>
-            <input type="url" spellcheck="false" data-try-url required />
-            <span class="field__hint">Update path parameters before sending.</span>
-          </label>
-          <label class="field">
-            <span class="field__label">Headers</span>
-            <textarea rows="3" spellcheck="false" data-try-headers></textarea>
-            <span class="field__hint">One header per line (<code>Name: Value</code>).</span>
-          </label>
-          <label class="field" data-try-body-wrapper>
-            <span class="field__label">Body</span>
-            <textarea rows="8" spellcheck="false" data-try-body></textarea>
-            <span class="field__hint">JSON payload; leave blank to omit.</span>
-          </label>
-          <button type="submit" class="button" data-try-submit>Send DELETE</button>
-        </form>
-        <div class="try-response" data-try-response hidden>
-          <div class="try-response__meta">
-            <span data-try-status>Waiting…</span>
-            <span data-try-duration></span>
-          </div>
-          <pre class="try-response__body" data-try-output></pre>
-        </div>
-      </section>
-    </div>
-  </div>
-</article>
-<article class="endpoint" id="post-files-bulk-delete" data-endpoint-id="post-files-bulk-delete" data-method="POST" data-base-path="/api/v1/gallery" data-path="/files/bulk-delete" data-auth="Bearer" data-headers='[[&quot;Content-Type&quot;, &quot;application/json&quot;]]' data-body='&quot;{}&quot;'>
-  <div class="endpoint__header">
-    <div class="endpoint__title">
-      <span class="http-badge http-badge--post">POST</span>
-      <div>
-        <h3>Bulk Delete</h3>
-        <p><code>/api/v1/gallery/files/bulk-delete</code></p>
-      </div>
-    </div>
-    <span class="auth-badge auth-badge--protected">Protected</span>
-  </div>
-  <div class="endpoint__layout">
-    <div class="endpoint__body">
-      <section class="endpoint__section">
-        <h4>Summary</h4>
-        <p>Bulk Delete handler in GalleryController for POST /files/bulk-delete requests.</p>
-      </section>
-      <section class="endpoint__section"><h4>Authentication</h4><p>Provide an <code>Authorization: Bearer &lt;token&gt;</code> header.</p></section>
-      
-      <section class="endpoint__section">
-  <h4>Headers</h4>
-  <table>
-    <thead><tr><th>Name</th><th>Value</th></tr></thead>
-    <tbody><tr><td>Content-Type</td><td>application/json</td></tr></tbody>
-  </table>
-</section>
-
-      <section class="endpoint__section"><h4>Request body</h4><pre>{}</pre></section>
-      <section class="endpoint__section">
-        <h4>Success response</h4>
-        <p class="status success">HTTP 201</p>
-        <p>No body returned.</p>
-      </section>
-      <section class="endpoint__section">
-        <h4>Error scenarios</h4>
-        <p>No specific error payloads documented.</p>
-      </section>
-    </div>
-    <div class="endpoint__panels">
-      <section class="panel">
-        <header class="panel__header">
-          <h4>cURL samples</h4>
-          <span class="panel__format">Interpolates current environment</span>
-        </header>
-        <div class="code-samples" data-endpoint="post-files-bulk-delete">
-          <div class="code-samples__tabs" role="tablist">
-            <button type="button" class="code-samples__tab is-active" role="tab" id="post-files-bulk-delete-bash-tab" aria-selected="true" data-tab-target="post-files-bulk-delete-bash">bash/zsh</button>
-            <button type="button" class="code-samples__tab" role="tab" id="post-files-bulk-delete-powershell-tab" aria-selected="false" data-tab-target="post-files-bulk-delete-powershell">PowerShell/CMD</button>
-          </div>
-          <pre id="post-files-bulk-delete-bash" class="code-block" role="tabpanel" aria-labelledby="post-files-bulk-delete-bash-tab" data-template="curl-bash" data-endpoint="post-files-bulk-delete"></pre>
-          <pre id="post-files-bulk-delete-powershell" class="code-block is-hidden" role="tabpanel" aria-labelledby="post-files-bulk-delete-powershell-tab" data-template="curl-powershell" data-endpoint="post-files-bulk-delete" hidden></pre>
-          <div class="panel__actions">
-            <button type="button" class="copy-button" data-copy>Copy</button>
-          </div>
-        </div>
-      </section>
-      <section class="panel panel--try">
-        <header class="panel__header">
-          <h4>Try it</h4>
-          <span class="panel__format">Send a real request with your environment</span>
-        </header>
-        <form class="try-form" data-try-form>
-          <label class="field">
-            <span class="field__label">Request URL</span>
-            <input type="url" spellcheck="false" data-try-url required />
-            <span class="field__hint">Update path parameters before sending.</span>
-          </label>
-          <label class="field">
-            <span class="field__label">Headers</span>
-            <textarea rows="3" spellcheck="false" data-try-headers></textarea>
-            <span class="field__hint">One header per line (<code>Name: Value</code>).</span>
-          </label>
-          <label class="field" data-try-body-wrapper>
-            <span class="field__label">Body</span>
-            <textarea rows="8" spellcheck="false" data-try-body></textarea>
-            <span class="field__hint">JSON payload; leave blank to omit.</span>
-          </label>
-          <button type="submit" class="button" data-try-submit>Send POST</button>
-        </form>
-        <div class="try-response" data-try-response hidden>
-          <div class="try-response__meta">
-            <span data-try-status>Waiting…</span>
-            <span data-try-duration></span>
-          </div>
-          <pre class="try-response__body" data-try-output></pre>
-        </div>
-      </section>
-    </div>
-  </div>
-</article>
-<article class="endpoint" id="get-files-id-content" data-endpoint-id="get-files-id-content" data-method="GET" data-base-path="/api/v1/gallery" data-path="/files/{id}/content" data-auth="Bearer" data-body='null'>
+<article class="endpoint" id="get-payment-methods" data-endpoint-id="get-payment-methods" data-method="GET" data-base-path="/api/v1/checkout" data-path="/payment-methods" data-auth="Bearer" data-body='null'>
   <div class="endpoint__header">
     <div class="endpoint__title">
       <span class="http-badge http-badge--get">GET</span>
       <div>
-        <h3>Download File</h3>
-        <p><code>/api/v1/gallery/files/{id}/content</code></p>
+        <h3>List Payment Methods</h3>
+        <p><code>/api/v1/checkout/payment-methods</code></p>
       </div>
     </div>
     <span class="auth-badge auth-badge--protected">Protected</span>
@@ -609,17 +332,10 @@
     <div class="endpoint__body">
       <section class="endpoint__section">
         <h4>Summary</h4>
-        <p>Download File handler in GalleryController for GET /files/{id}/content requests.</p>
+        <p>List Payment Methods handler in CheckoutController for GET /payment-methods requests.</p>
       </section>
       <section class="endpoint__section"><h4>Authentication</h4><p>Provide an <code>Authorization: Bearer &lt;token&gt;</code> header.</p></section>
-      <section class="endpoint__section">
-  <h4>Parameters</h4>
-  <table>
-    <thead><tr><th>Name</th><th>Description</th></tr></thead>
-    <tbody><tr><td>id</td><td>Path parameter</td></tr></tbody>
-  </table>
-</section>
-
+      
       
       <section class="endpoint__section"><h4>Request body</h4><p>No body required.</p></section>
       <section class="endpoint__section">
@@ -638,13 +354,13 @@
           <h4>cURL samples</h4>
           <span class="panel__format">Interpolates current environment</span>
         </header>
-        <div class="code-samples" data-endpoint="get-files-id-content">
+        <div class="code-samples" data-endpoint="get-payment-methods">
           <div class="code-samples__tabs" role="tablist">
-            <button type="button" class="code-samples__tab is-active" role="tab" id="get-files-id-content-bash-tab" aria-selected="true" data-tab-target="get-files-id-content-bash">bash/zsh</button>
-            <button type="button" class="code-samples__tab" role="tab" id="get-files-id-content-powershell-tab" aria-selected="false" data-tab-target="get-files-id-content-powershell">PowerShell/CMD</button>
+            <button type="button" class="code-samples__tab is-active" role="tab" id="get-payment-methods-bash-tab" aria-selected="true" data-tab-target="get-payment-methods-bash">bash/zsh</button>
+            <button type="button" class="code-samples__tab" role="tab" id="get-payment-methods-powershell-tab" aria-selected="false" data-tab-target="get-payment-methods-powershell">PowerShell/CMD</button>
           </div>
-          <pre id="get-files-id-content-bash" class="code-block" role="tabpanel" aria-labelledby="get-files-id-content-bash-tab" data-template="curl-bash" data-endpoint="get-files-id-content"></pre>
-          <pre id="get-files-id-content-powershell" class="code-block is-hidden" role="tabpanel" aria-labelledby="get-files-id-content-powershell-tab" data-template="curl-powershell" data-endpoint="get-files-id-content" hidden></pre>
+          <pre id="get-payment-methods-bash" class="code-block" role="tabpanel" aria-labelledby="get-payment-methods-bash-tab" data-template="curl-bash" data-endpoint="get-payment-methods"></pre>
+          <pre id="get-payment-methods-powershell" class="code-block is-hidden" role="tabpanel" aria-labelledby="get-payment-methods-powershell-tab" data-template="curl-powershell" data-endpoint="get-payment-methods" hidden></pre>
           <div class="panel__actions">
             <button type="button" class="copy-button" data-copy>Copy</button>
           </div>
@@ -684,13 +400,13 @@
     </div>
   </div>
 </article>
-<article class="endpoint" id="get-folders" data-endpoint-id="get-folders" data-method="GET" data-base-path="/api/v1/gallery" data-path="/folders" data-auth="Bearer" data-body='null'>
+<article class="endpoint" id="get-regions-countries" data-endpoint-id="get-regions-countries" data-method="GET" data-base-path="/api/v1/checkout" data-path="/regions/countries" data-auth="Bearer" data-body='null'>
   <div class="endpoint__header">
     <div class="endpoint__title">
       <span class="http-badge http-badge--get">GET</span>
       <div>
-        <h3>List Folders</h3>
-        <p><code>/api/v1/gallery/folders</code></p>
+        <h3>List Countries For Checkout</h3>
+        <p><code>/api/v1/checkout/regions/countries</code></p>
       </div>
     </div>
     <span class="auth-badge auth-badge--protected">Protected</span>
@@ -699,7 +415,7 @@
     <div class="endpoint__body">
       <section class="endpoint__section">
         <h4>Summary</h4>
-        <p>List Folders handler in GalleryController for GET /folders requests.</p>
+        <p>List Countries For Checkout handler in CheckoutController for GET /regions/countries requests.</p>
       </section>
       <section class="endpoint__section"><h4>Authentication</h4><p>Provide an <code>Authorization: Bearer &lt;token&gt;</code> header.</p></section>
       
@@ -721,13 +437,13 @@
           <h4>cURL samples</h4>
           <span class="panel__format">Interpolates current environment</span>
         </header>
-        <div class="code-samples" data-endpoint="get-folders">
+        <div class="code-samples" data-endpoint="get-regions-countries">
           <div class="code-samples__tabs" role="tablist">
-            <button type="button" class="code-samples__tab is-active" role="tab" id="get-folders-bash-tab" aria-selected="true" data-tab-target="get-folders-bash">bash/zsh</button>
-            <button type="button" class="code-samples__tab" role="tab" id="get-folders-powershell-tab" aria-selected="false" data-tab-target="get-folders-powershell">PowerShell/CMD</button>
+            <button type="button" class="code-samples__tab is-active" role="tab" id="get-regions-countries-bash-tab" aria-selected="true" data-tab-target="get-regions-countries-bash">bash/zsh</button>
+            <button type="button" class="code-samples__tab" role="tab" id="get-regions-countries-powershell-tab" aria-selected="false" data-tab-target="get-regions-countries-powershell">PowerShell/CMD</button>
           </div>
-          <pre id="get-folders-bash" class="code-block" role="tabpanel" aria-labelledby="get-folders-bash-tab" data-template="curl-bash" data-endpoint="get-folders"></pre>
-          <pre id="get-folders-powershell" class="code-block is-hidden" role="tabpanel" aria-labelledby="get-folders-powershell-tab" data-template="curl-powershell" data-endpoint="get-folders" hidden></pre>
+          <pre id="get-regions-countries-bash" class="code-block" role="tabpanel" aria-labelledby="get-regions-countries-bash-tab" data-template="curl-bash" data-endpoint="get-regions-countries"></pre>
+          <pre id="get-regions-countries-powershell" class="code-block is-hidden" role="tabpanel" aria-labelledby="get-regions-countries-powershell-tab" data-template="curl-powershell" data-endpoint="get-regions-countries" hidden></pre>
           <div class="panel__actions">
             <button type="button" class="copy-button" data-copy>Copy</button>
           </div>
@@ -767,13 +483,13 @@
     </div>
   </div>
 </article>
-<article class="endpoint" id="post-folders" data-endpoint-id="post-folders" data-method="POST" data-base-path="/api/v1/gallery" data-path="/folders" data-auth="Bearer" data-headers='[[&quot;Content-Type&quot;, &quot;application/json&quot;]]' data-body='&quot;{}&quot;'>
+<article class="endpoint" id="get-regions-countries-countryId-states" data-endpoint-id="get-regions-countries-countryId-states" data-method="GET" data-base-path="/api/v1/checkout" data-path="/regions/countries/{countryId}/states" data-auth="Bearer" data-body='null'>
   <div class="endpoint__header">
     <div class="endpoint__title">
-      <span class="http-badge http-badge--post">POST</span>
+      <span class="http-badge http-badge--get">GET</span>
       <div>
-        <h3>Create Folder</h3>
-        <p><code>/api/v1/gallery/folders</code></p>
+        <h3>List States For Checkout</h3>
+        <p><code>/api/v1/checkout/regions/countries/{countryId}/states</code></p>
       </div>
     </div>
     <span class="auth-badge auth-badge--protected">Protected</span>
@@ -782,7 +498,187 @@
     <div class="endpoint__body">
       <section class="endpoint__section">
         <h4>Summary</h4>
-        <p>Create Folder handler in GalleryController for POST /folders requests.</p>
+        <p>List States For Checkout handler in CheckoutController for GET /regions/countries/{countryId}/states requests.</p>
+      </section>
+      <section class="endpoint__section"><h4>Authentication</h4><p>Provide an <code>Authorization: Bearer &lt;token&gt;</code> header.</p></section>
+      <section class="endpoint__section">
+  <h4>Parameters</h4>
+  <table>
+    <thead><tr><th>Name</th><th>Description</th></tr></thead>
+    <tbody><tr><td>countryId</td><td>Path parameter</td></tr></tbody>
+  </table>
+</section>
+
+      
+      <section class="endpoint__section"><h4>Request body</h4><p>No body required.</p></section>
+      <section class="endpoint__section">
+        <h4>Success response</h4>
+        <p class="status success">HTTP 200</p>
+        <p>No body returned.</p>
+      </section>
+      <section class="endpoint__section">
+        <h4>Error scenarios</h4>
+        <p>No specific error payloads documented.</p>
+      </section>
+    </div>
+    <div class="endpoint__panels">
+      <section class="panel">
+        <header class="panel__header">
+          <h4>cURL samples</h4>
+          <span class="panel__format">Interpolates current environment</span>
+        </header>
+        <div class="code-samples" data-endpoint="get-regions-countries-countryId-states">
+          <div class="code-samples__tabs" role="tablist">
+            <button type="button" class="code-samples__tab is-active" role="tab" id="get-regions-countries-countryId-states-bash-tab" aria-selected="true" data-tab-target="get-regions-countries-countryId-states-bash">bash/zsh</button>
+            <button type="button" class="code-samples__tab" role="tab" id="get-regions-countries-countryId-states-powershell-tab" aria-selected="false" data-tab-target="get-regions-countries-countryId-states-powershell">PowerShell/CMD</button>
+          </div>
+          <pre id="get-regions-countries-countryId-states-bash" class="code-block" role="tabpanel" aria-labelledby="get-regions-countries-countryId-states-bash-tab" data-template="curl-bash" data-endpoint="get-regions-countries-countryId-states"></pre>
+          <pre id="get-regions-countries-countryId-states-powershell" class="code-block is-hidden" role="tabpanel" aria-labelledby="get-regions-countries-countryId-states-powershell-tab" data-template="curl-powershell" data-endpoint="get-regions-countries-countryId-states" hidden></pre>
+          <div class="panel__actions">
+            <button type="button" class="copy-button" data-copy>Copy</button>
+          </div>
+        </div>
+      </section>
+      <section class="panel panel--try">
+        <header class="panel__header">
+          <h4>Try it</h4>
+          <span class="panel__format">Send a real request with your environment</span>
+        </header>
+        <form class="try-form" data-try-form>
+          <label class="field">
+            <span class="field__label">Request URL</span>
+            <input type="url" spellcheck="false" data-try-url required />
+            <span class="field__hint">Update path parameters before sending.</span>
+          </label>
+          <label class="field">
+            <span class="field__label">Headers</span>
+            <textarea rows="3" spellcheck="false" data-try-headers></textarea>
+            <span class="field__hint">One header per line (<code>Name: Value</code>).</span>
+          </label>
+          <label class="field" data-try-body-wrapper>
+            <span class="field__label">Body</span>
+            <textarea rows="8" spellcheck="false" data-try-body></textarea>
+            <span class="field__hint">JSON payload; leave blank to omit.</span>
+          </label>
+          <button type="submit" class="button" data-try-submit>Send GET</button>
+        </form>
+        <div class="try-response" data-try-response hidden>
+          <div class="try-response__meta">
+            <span data-try-status>Waiting…</span>
+            <span data-try-duration></span>
+          </div>
+          <pre class="try-response__body" data-try-output></pre>
+        </div>
+      </section>
+    </div>
+  </div>
+</article>
+<article class="endpoint" id="get-regions-states-stateId-cities" data-endpoint-id="get-regions-states-stateId-cities" data-method="GET" data-base-path="/api/v1/checkout" data-path="/regions/states/{stateId}/cities" data-auth="Bearer" data-body='null'>
+  <div class="endpoint__header">
+    <div class="endpoint__title">
+      <span class="http-badge http-badge--get">GET</span>
+      <div>
+        <h3>List Cities For Checkout</h3>
+        <p><code>/api/v1/checkout/regions/states/{stateId}/cities</code></p>
+      </div>
+    </div>
+    <span class="auth-badge auth-badge--protected">Protected</span>
+  </div>
+  <div class="endpoint__layout">
+    <div class="endpoint__body">
+      <section class="endpoint__section">
+        <h4>Summary</h4>
+        <p>List Cities For Checkout handler in CheckoutController for GET /regions/states/{stateId}/cities requests.</p>
+      </section>
+      <section class="endpoint__section"><h4>Authentication</h4><p>Provide an <code>Authorization: Bearer &lt;token&gt;</code> header.</p></section>
+      <section class="endpoint__section">
+  <h4>Parameters</h4>
+  <table>
+    <thead><tr><th>Name</th><th>Description</th></tr></thead>
+    <tbody><tr><td>stateId</td><td>Path parameter</td></tr></tbody>
+  </table>
+</section>
+
+      
+      <section class="endpoint__section"><h4>Request body</h4><p>No body required.</p></section>
+      <section class="endpoint__section">
+        <h4>Success response</h4>
+        <p class="status success">HTTP 200</p>
+        <p>No body returned.</p>
+      </section>
+      <section class="endpoint__section">
+        <h4>Error scenarios</h4>
+        <p>No specific error payloads documented.</p>
+      </section>
+    </div>
+    <div class="endpoint__panels">
+      <section class="panel">
+        <header class="panel__header">
+          <h4>cURL samples</h4>
+          <span class="panel__format">Interpolates current environment</span>
+        </header>
+        <div class="code-samples" data-endpoint="get-regions-states-stateId-cities">
+          <div class="code-samples__tabs" role="tablist">
+            <button type="button" class="code-samples__tab is-active" role="tab" id="get-regions-states-stateId-cities-bash-tab" aria-selected="true" data-tab-target="get-regions-states-stateId-cities-bash">bash/zsh</button>
+            <button type="button" class="code-samples__tab" role="tab" id="get-regions-states-stateId-cities-powershell-tab" aria-selected="false" data-tab-target="get-regions-states-stateId-cities-powershell">PowerShell/CMD</button>
+          </div>
+          <pre id="get-regions-states-stateId-cities-bash" class="code-block" role="tabpanel" aria-labelledby="get-regions-states-stateId-cities-bash-tab" data-template="curl-bash" data-endpoint="get-regions-states-stateId-cities"></pre>
+          <pre id="get-regions-states-stateId-cities-powershell" class="code-block is-hidden" role="tabpanel" aria-labelledby="get-regions-states-stateId-cities-powershell-tab" data-template="curl-powershell" data-endpoint="get-regions-states-stateId-cities" hidden></pre>
+          <div class="panel__actions">
+            <button type="button" class="copy-button" data-copy>Copy</button>
+          </div>
+        </div>
+      </section>
+      <section class="panel panel--try">
+        <header class="panel__header">
+          <h4>Try it</h4>
+          <span class="panel__format">Send a real request with your environment</span>
+        </header>
+        <form class="try-form" data-try-form>
+          <label class="field">
+            <span class="field__label">Request URL</span>
+            <input type="url" spellcheck="false" data-try-url required />
+            <span class="field__hint">Update path parameters before sending.</span>
+          </label>
+          <label class="field">
+            <span class="field__label">Headers</span>
+            <textarea rows="3" spellcheck="false" data-try-headers></textarea>
+            <span class="field__hint">One header per line (<code>Name: Value</code>).</span>
+          </label>
+          <label class="field" data-try-body-wrapper>
+            <span class="field__label">Body</span>
+            <textarea rows="8" spellcheck="false" data-try-body></textarea>
+            <span class="field__hint">JSON payload; leave blank to omit.</span>
+          </label>
+          <button type="submit" class="button" data-try-submit>Send GET</button>
+        </form>
+        <div class="try-response" data-try-response hidden>
+          <div class="try-response__meta">
+            <span data-try-status>Waiting…</span>
+            <span data-try-duration></span>
+          </div>
+          <pre class="try-response__body" data-try-output></pre>
+        </div>
+      </section>
+    </div>
+  </div>
+</article>
+<article class="endpoint" id="post-summary" data-endpoint-id="post-summary" data-method="POST" data-base-path="/api/v1/checkout" data-path="/summary" data-auth="Bearer" data-headers='[[&quot;Content-Type&quot;, &quot;application/json&quot;]]' data-body='&quot;{}&quot;'>
+  <div class="endpoint__header">
+    <div class="endpoint__title">
+      <span class="http-badge http-badge--post">POST</span>
+      <div>
+        <h3>Preview Order</h3>
+        <p><code>/api/v1/checkout/summary</code></p>
+      </div>
+    </div>
+    <span class="auth-badge auth-badge--protected">Protected</span>
+  </div>
+  <div class="endpoint__layout">
+    <div class="endpoint__body">
+      <section class="endpoint__section">
+        <h4>Summary</h4>
+        <p>Preview Order handler in CheckoutController for POST /summary requests.</p>
       </section>
       <section class="endpoint__section"><h4>Authentication</h4><p>Provide an <code>Authorization: Bearer &lt;token&gt;</code> header.</p></section>
       
@@ -811,13 +707,13 @@
           <h4>cURL samples</h4>
           <span class="panel__format">Interpolates current environment</span>
         </header>
-        <div class="code-samples" data-endpoint="post-folders">
+        <div class="code-samples" data-endpoint="post-summary">
           <div class="code-samples__tabs" role="tablist">
-            <button type="button" class="code-samples__tab is-active" role="tab" id="post-folders-bash-tab" aria-selected="true" data-tab-target="post-folders-bash">bash/zsh</button>
-            <button type="button" class="code-samples__tab" role="tab" id="post-folders-powershell-tab" aria-selected="false" data-tab-target="post-folders-powershell">PowerShell/CMD</button>
+            <button type="button" class="code-samples__tab is-active" role="tab" id="post-summary-bash-tab" aria-selected="true" data-tab-target="post-summary-bash">bash/zsh</button>
+            <button type="button" class="code-samples__tab" role="tab" id="post-summary-powershell-tab" aria-selected="false" data-tab-target="post-summary-powershell">PowerShell/CMD</button>
           </div>
-          <pre id="post-folders-bash" class="code-block" role="tabpanel" aria-labelledby="post-folders-bash-tab" data-template="curl-bash" data-endpoint="post-folders"></pre>
-          <pre id="post-folders-powershell" class="code-block is-hidden" role="tabpanel" aria-labelledby="post-folders-powershell-tab" data-template="curl-powershell" data-endpoint="post-folders" hidden></pre>
+          <pre id="post-summary-bash" class="code-block" role="tabpanel" aria-labelledby="post-summary-bash-tab" data-template="curl-bash" data-endpoint="post-summary"></pre>
+          <pre id="post-summary-powershell" class="code-block is-hidden" role="tabpanel" aria-labelledby="post-summary-powershell-tab" data-template="curl-powershell" data-endpoint="post-summary" hidden></pre>
           <div class="panel__actions">
             <button type="button" class="copy-button" data-copy>Copy</button>
           </div>
@@ -857,13 +753,13 @@
     </div>
   </div>
 </article>
-<article class="endpoint" id="patch-folders-id" data-endpoint-id="patch-folders-id" data-method="PATCH" data-base-path="/api/v1/gallery" data-path="/folders/{id}" data-auth="Bearer" data-headers='[[&quot;Content-Type&quot;, &quot;application/json&quot;]]' data-body='&quot;{}&quot;'>
+<article class="endpoint" id="post-orders" data-endpoint-id="post-orders" data-method="POST" data-base-path="/api/v1/checkout" data-path="/orders" data-auth="Bearer" data-headers='[[&quot;Content-Type&quot;, &quot;application/json&quot;]]' data-body='&quot;{}&quot;'>
   <div class="endpoint__header">
     <div class="endpoint__title">
-      <span class="http-badge http-badge--patch">PATCH</span>
+      <span class="http-badge http-badge--post">POST</span>
       <div>
-        <h3>Rename Folder</h3>
-        <p><code>/api/v1/gallery/folders/{id}</code></p>
+        <h3>Place Order</h3>
+        <p><code>/api/v1/checkout/orders</code></p>
       </div>
     </div>
     <span class="auth-badge auth-badge--protected">Protected</span>
@@ -872,17 +768,10 @@
     <div class="endpoint__body">
       <section class="endpoint__section">
         <h4>Summary</h4>
-        <p>Rename Folder handler in GalleryController for PATCH /folders/{id} requests.</p>
+        <p>Place Order handler in CheckoutController for POST /orders requests.</p>
       </section>
       <section class="endpoint__section"><h4>Authentication</h4><p>Provide an <code>Authorization: Bearer &lt;token&gt;</code> header.</p></section>
-      <section class="endpoint__section">
-  <h4>Parameters</h4>
-  <table>
-    <thead><tr><th>Name</th><th>Description</th></tr></thead>
-    <tbody><tr><td>id</td><td>Path parameter</td></tr></tbody>
-  </table>
-</section>
-
+      
       <section class="endpoint__section">
   <h4>Headers</h4>
   <table>
@@ -892,6 +781,96 @@
 </section>
 
       <section class="endpoint__section"><h4>Request body</h4><pre>{}</pre></section>
+      <section class="endpoint__section">
+        <h4>Success response</h4>
+        <p class="status success">HTTP 201</p>
+        <p>No body returned.</p>
+      </section>
+      <section class="endpoint__section">
+        <h4>Error scenarios</h4>
+        <p>No specific error payloads documented.</p>
+      </section>
+    </div>
+    <div class="endpoint__panels">
+      <section class="panel">
+        <header class="panel__header">
+          <h4>cURL samples</h4>
+          <span class="panel__format">Interpolates current environment</span>
+        </header>
+        <div class="code-samples" data-endpoint="post-orders">
+          <div class="code-samples__tabs" role="tablist">
+            <button type="button" class="code-samples__tab is-active" role="tab" id="post-orders-bash-tab" aria-selected="true" data-tab-target="post-orders-bash">bash/zsh</button>
+            <button type="button" class="code-samples__tab" role="tab" id="post-orders-powershell-tab" aria-selected="false" data-tab-target="post-orders-powershell">PowerShell/CMD</button>
+          </div>
+          <pre id="post-orders-bash" class="code-block" role="tabpanel" aria-labelledby="post-orders-bash-tab" data-template="curl-bash" data-endpoint="post-orders"></pre>
+          <pre id="post-orders-powershell" class="code-block is-hidden" role="tabpanel" aria-labelledby="post-orders-powershell-tab" data-template="curl-powershell" data-endpoint="post-orders" hidden></pre>
+          <div class="panel__actions">
+            <button type="button" class="copy-button" data-copy>Copy</button>
+          </div>
+        </div>
+      </section>
+      <section class="panel panel--try">
+        <header class="panel__header">
+          <h4>Try it</h4>
+          <span class="panel__format">Send a real request with your environment</span>
+        </header>
+        <form class="try-form" data-try-form>
+          <label class="field">
+            <span class="field__label">Request URL</span>
+            <input type="url" spellcheck="false" data-try-url required />
+            <span class="field__hint">Update path parameters before sending.</span>
+          </label>
+          <label class="field">
+            <span class="field__label">Headers</span>
+            <textarea rows="3" spellcheck="false" data-try-headers></textarea>
+            <span class="field__hint">One header per line (<code>Name: Value</code>).</span>
+          </label>
+          <label class="field" data-try-body-wrapper>
+            <span class="field__label">Body</span>
+            <textarea rows="8" spellcheck="false" data-try-body></textarea>
+            <span class="field__hint">JSON payload; leave blank to omit.</span>
+          </label>
+          <button type="submit" class="button" data-try-submit>Send POST</button>
+        </form>
+        <div class="try-response" data-try-response hidden>
+          <div class="try-response__meta">
+            <span data-try-status>Waiting…</span>
+            <span data-try-duration></span>
+          </div>
+          <pre class="try-response__body" data-try-output></pre>
+        </div>
+      </section>
+    </div>
+  </div>
+</article>
+<article class="endpoint" id="get-orders-orderId" data-endpoint-id="get-orders-orderId" data-method="GET" data-base-path="/api/v1/checkout" data-path="/orders/{orderId}" data-auth="Bearer" data-body='null'>
+  <div class="endpoint__header">
+    <div class="endpoint__title">
+      <span class="http-badge http-badge--get">GET</span>
+      <div>
+        <h3>Get Order</h3>
+        <p><code>/api/v1/checkout/orders/{orderId}</code></p>
+      </div>
+    </div>
+    <span class="auth-badge auth-badge--protected">Protected</span>
+  </div>
+  <div class="endpoint__layout">
+    <div class="endpoint__body">
+      <section class="endpoint__section">
+        <h4>Summary</h4>
+        <p>Get Order handler in CheckoutController for GET /orders/{orderId} requests.</p>
+      </section>
+      <section class="endpoint__section"><h4>Authentication</h4><p>Provide an <code>Authorization: Bearer &lt;token&gt;</code> header.</p></section>
+      <section class="endpoint__section">
+  <h4>Parameters</h4>
+  <table>
+    <thead><tr><th>Name</th><th>Description</th></tr></thead>
+    <tbody><tr><td>orderId</td><td>Path parameter</td></tr></tbody>
+  </table>
+</section>
+
+      
+      <section class="endpoint__section"><h4>Request body</h4><p>No body required.</p></section>
       <section class="endpoint__section">
         <h4>Success response</h4>
         <p class="status success">HTTP 200</p>
@@ -908,13 +887,13 @@
           <h4>cURL samples</h4>
           <span class="panel__format">Interpolates current environment</span>
         </header>
-        <div class="code-samples" data-endpoint="patch-folders-id">
+        <div class="code-samples" data-endpoint="get-orders-orderId">
           <div class="code-samples__tabs" role="tablist">
-            <button type="button" class="code-samples__tab is-active" role="tab" id="patch-folders-id-bash-tab" aria-selected="true" data-tab-target="patch-folders-id-bash">bash/zsh</button>
-            <button type="button" class="code-samples__tab" role="tab" id="patch-folders-id-powershell-tab" aria-selected="false" data-tab-target="patch-folders-id-powershell">PowerShell/CMD</button>
+            <button type="button" class="code-samples__tab is-active" role="tab" id="get-orders-orderId-bash-tab" aria-selected="true" data-tab-target="get-orders-orderId-bash">bash/zsh</button>
+            <button type="button" class="code-samples__tab" role="tab" id="get-orders-orderId-powershell-tab" aria-selected="false" data-tab-target="get-orders-orderId-powershell">PowerShell/CMD</button>
           </div>
-          <pre id="patch-folders-id-bash" class="code-block" role="tabpanel" aria-labelledby="patch-folders-id-bash-tab" data-template="curl-bash" data-endpoint="patch-folders-id"></pre>
-          <pre id="patch-folders-id-powershell" class="code-block is-hidden" role="tabpanel" aria-labelledby="patch-folders-id-powershell-tab" data-template="curl-powershell" data-endpoint="patch-folders-id" hidden></pre>
+          <pre id="get-orders-orderId-bash" class="code-block" role="tabpanel" aria-labelledby="get-orders-orderId-bash-tab" data-template="curl-bash" data-endpoint="get-orders-orderId"></pre>
+          <pre id="get-orders-orderId-powershell" class="code-block is-hidden" role="tabpanel" aria-labelledby="get-orders-orderId-powershell-tab" data-template="curl-powershell" data-endpoint="get-orders-orderId" hidden></pre>
           <div class="panel__actions">
             <button type="button" class="copy-button" data-copy>Copy</button>
           </div>
@@ -941,7 +920,7 @@
             <textarea rows="8" spellcheck="false" data-try-body></textarea>
             <span class="field__hint">JSON payload; leave blank to omit.</span>
           </label>
-          <button type="submit" class="button" data-try-submit>Send PATCH</button>
+          <button type="submit" class="button" data-try-submit>Send GET</button>
         </form>
         <div class="try-response" data-try-response hidden>
           <div class="try-response__meta">
@@ -954,13 +933,13 @@
     </div>
   </div>
 </article>
-<article class="endpoint" id="delete-folders-id" data-endpoint-id="delete-folders-id" data-method="DELETE" data-base-path="/api/v1/gallery" data-path="/folders/{id}" data-auth="Bearer" data-body='null'>
+<article class="endpoint" id="get-summary" data-endpoint-id="get-summary" data-method="GET" data-base-path="/api/v1/checkout" data-path="/summary" data-auth="Bearer" data-body='null'>
   <div class="endpoint__header">
     <div class="endpoint__title">
-      <span class="http-badge http-badge--delete">DELETE</span>
+      <span class="http-badge http-badge--get">GET</span>
       <div>
-        <h3>Delete Folder</h3>
-        <p><code>/api/v1/gallery/folders/{id}</code></p>
+        <h3>Full Summary</h3>
+        <p><code>/api/v1/checkout/summary</code></p>
       </div>
     </div>
     <span class="auth-badge auth-badge--protected">Protected</span>
@@ -969,22 +948,15 @@
     <div class="endpoint__body">
       <section class="endpoint__section">
         <h4>Summary</h4>
-        <p>Delete Folder handler in GalleryController for DELETE /folders/{id} requests.</p>
+        <p>Full Summary handler in CheckoutController for GET /summary requests.</p>
       </section>
       <section class="endpoint__section"><h4>Authentication</h4><p>Provide an <code>Authorization: Bearer &lt;token&gt;</code> header.</p></section>
-      <section class="endpoint__section">
-  <h4>Parameters</h4>
-  <table>
-    <thead><tr><th>Name</th><th>Description</th></tr></thead>
-    <tbody><tr><td>id</td><td>Path parameter</td></tr></tbody>
-  </table>
-</section>
-
+      
       
       <section class="endpoint__section"><h4>Request body</h4><p>No body required.</p></section>
       <section class="endpoint__section">
         <h4>Success response</h4>
-        <p class="status success">HTTP 204</p>
+        <p class="status success">HTTP 200</p>
         <p>No body returned.</p>
       </section>
       <section class="endpoint__section">
@@ -998,13 +970,13 @@
           <h4>cURL samples</h4>
           <span class="panel__format">Interpolates current environment</span>
         </header>
-        <div class="code-samples" data-endpoint="delete-folders-id">
+        <div class="code-samples" data-endpoint="get-summary">
           <div class="code-samples__tabs" role="tablist">
-            <button type="button" class="code-samples__tab is-active" role="tab" id="delete-folders-id-bash-tab" aria-selected="true" data-tab-target="delete-folders-id-bash">bash/zsh</button>
-            <button type="button" class="code-samples__tab" role="tab" id="delete-folders-id-powershell-tab" aria-selected="false" data-tab-target="delete-folders-id-powershell">PowerShell/CMD</button>
+            <button type="button" class="code-samples__tab is-active" role="tab" id="get-summary-bash-tab" aria-selected="true" data-tab-target="get-summary-bash">bash/zsh</button>
+            <button type="button" class="code-samples__tab" role="tab" id="get-summary-powershell-tab" aria-selected="false" data-tab-target="get-summary-powershell">PowerShell/CMD</button>
           </div>
-          <pre id="delete-folders-id-bash" class="code-block" role="tabpanel" aria-labelledby="delete-folders-id-bash-tab" data-template="curl-bash" data-endpoint="delete-folders-id"></pre>
-          <pre id="delete-folders-id-powershell" class="code-block is-hidden" role="tabpanel" aria-labelledby="delete-folders-id-powershell-tab" data-template="curl-powershell" data-endpoint="delete-folders-id" hidden></pre>
+          <pre id="get-summary-bash" class="code-block" role="tabpanel" aria-labelledby="get-summary-bash-tab" data-template="curl-bash" data-endpoint="get-summary"></pre>
+          <pre id="get-summary-powershell" class="code-block is-hidden" role="tabpanel" aria-labelledby="get-summary-powershell-tab" data-template="curl-powershell" data-endpoint="get-summary" hidden></pre>
           <div class="panel__actions">
             <button type="button" class="copy-button" data-copy>Copy</button>
           </div>
@@ -1031,7 +1003,7 @@
             <textarea rows="8" spellcheck="false" data-try-body></textarea>
             <span class="field__hint">JSON payload; leave blank to omit.</span>
           </label>
-          <button type="submit" class="button" data-try-submit>Send DELETE</button>
+          <button type="submit" class="button" data-try-submit>Send GET</button>
         </form>
         <div class="try-response" data-try-response hidden>
           <div class="try-response__meta">
