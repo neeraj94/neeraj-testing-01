@@ -73,7 +73,21 @@ public class CheckoutCouponService {
         dto.setDiscountType(coupon.getDiscountType());
         dto.setDiscountValue(coupon.getDiscountValue());
         dto.setDiscountAmount(discountAmount);
+        dto.setDescription(resolveDescription(coupon));
         return dto;
+    }
+
+    private String resolveDescription(Coupon coupon) {
+        if (coupon == null) {
+            return null;
+        }
+        if (StringUtils.hasText(coupon.getLongDescription())) {
+            return coupon.getLongDescription();
+        }
+        if (StringUtils.hasText(coupon.getShortDescription())) {
+            return coupon.getShortDescription();
+        }
+        return null;
     }
 
     private boolean isAccessibleToUser(Coupon coupon, Long userId) {

@@ -1,5 +1,6 @@
 package com.example.rbac.cart.service;
 
+import com.example.rbac.activity.service.ActivityRecorder;
 import com.example.rbac.cart.dto.AddCartItemRequest;
 import com.example.rbac.cart.dto.CartDto;
 import com.example.rbac.cart.dto.GuestCartLineRequest;
@@ -38,19 +39,22 @@ public class CartService {
     private final ProductRepository productRepository;
     private final UserRepository userRepository;
     private final CartMapper cartMapper;
+    private final ActivityRecorder activityRecorder;
 
     public CartService(CartRepository cartRepository,
                        ProductRepository productRepository,
                        UserRepository userRepository,
-                       CartMapper cartMapper) {
+                       CartMapper cartMapper,
+                       ActivityRecorder activityRecorder) {
         this.cartRepository = cartRepository;
         this.productRepository = productRepository;
         this.userRepository = userRepository;
         this.cartMapper = cartMapper;
+        this.activityRecorder = activityRecorder;
     }
 
     @Transactional(readOnly = true)
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('CUSTOMER_CART_MANAGE')")
     public CartDto getCurrentCart(UserPrincipal principal) {
         User user = resolveUser(principal);
         Optional<Cart> existing = cartRepository.findByUserId(user.getId());
@@ -58,7 +62,7 @@ public class CartService {
     }
 
     @Transactional
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('CUSTOMER_CART_MANAGE')")
     public CartDto addItem(AddCartItemRequest request, UserPrincipal principal) {
         User user = resolveUser(principal);
         Cart cart = getOrCreateCart(user);
@@ -88,7 +92,7 @@ public class CartService {
     }
 
     @Transactional
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('CUSTOMER_CART_MANAGE')")
     public CartDto updateItem(Long itemId, UpdateCartItemRequest request, UserPrincipal principal) {
         User user = resolveUser(principal);
         Cart cart = getExistingCart(user.getId());
@@ -108,7 +112,7 @@ public class CartService {
     }
 
     @Transactional
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('CUSTOMER_CART_MANAGE')")
     public CartDto removeItem(Long itemId, UserPrincipal principal) {
         User user = resolveUser(principal);
         Cart cart = getExistingCart(user.getId());
@@ -122,7 +126,7 @@ public class CartService {
     }
 
     @Transactional
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('CUSTOMER_CART_MANAGE')")
     public CartDto mergeGuestCart(MergeCartRequest request, UserPrincipal principal) {
         User user = resolveUser(principal);
         Cart cart = getOrCreateCart(user);
@@ -159,7 +163,7 @@ public class CartService {
     }
 
     @Transactional(readOnly = true)
-    @PreAuthorize("hasAnyAuthority('USER_VIEW','USER_VIEW_GLOBAL','USER_VIEW_OWN')")
+    @PreAuthorize("hasAuthority('CART_VIEW_GLOBAL')")
     public CartDto getCartForUser(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "User not found"));
@@ -168,11 +172,27 @@ public class CartService {
     }
 
     @Transactional
-    @PreAuthorize("hasAnyAuthority('USER_UPDATE','USER_UPDATE_GLOBAL')")
-    public CartDto addItemForUser(Long userId, AddCartItemRequest request) {
+    @PreAuthorize("hasAuthority('CART_CREATE')")
+    public CartDto createCartForUser(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "User not found"));
-        Cart cart = getOrCreateCart(user);
+        Optional<Cart> existing = cartRepository.findByUserId(user.getId());
+        if (existing.isPresent()) {
+            throw new ApiException(HttpStatus.CONFLICT, "Cart already exists for user");
+        }
+        Cart created = new Cart();
+        created.setUser(user);
+        created.setItems(new ArrayList<>());
+        Cart saved = cartRepository.save(created);
+        activityRecorder.record("Carts", "CREATE", "Created cart for user " + user.getEmail(), "SUCCESS",
+                buildContext(saved, user));
+        return cartMapper.toDto(saved);
+    }
+
+    @Transactional
+    @PreAuthorize("hasAuthority('CART_EDIT')")
+    public CartDto addItemForUser(Long userId, AddCartItemRequest request) {
+        Cart cart = getExistingCart(userId);
         Product product = productRepository.findById(request.getProductId())
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Product not found"));
         ProductVariant variant = resolveVariant(product, request.getVariantId());
@@ -193,13 +213,16 @@ public class CartService {
         item.setQuantity(newQuantity);
         item.setUnitPrice(calculateUnitPrice(product, variant));
         item.setVariantLabel(variant != null ? variant.getVariantKey() : null);
-        cartRepository.save(cart);
+        Cart saved = cartRepository.save(cart);
         cartRepository.flush();
-        return cartMapper.toDto(cart);
+        activityRecorder.record("Carts", "ADD_ITEM",
+                "Added item to cart for userId " + userId,
+                "SUCCESS", buildContext(saved, saved.getUser()));
+        return cartMapper.toDto(saved);
     }
 
     @Transactional
-    @PreAuthorize("hasAnyAuthority('USER_UPDATE','USER_UPDATE_GLOBAL')")
+    @PreAuthorize("hasAuthority('CART_EDIT')")
     public CartDto updateItemForUser(Long userId, Long itemId, UpdateCartItemRequest request) {
         Cart cart = getExistingCart(userId);
         CartItem item = cart.getItems().stream()
@@ -212,27 +235,46 @@ public class CartService {
         enforceQuantityBounds(product, variant, quantity);
         item.setQuantity(quantity);
         item.setUnitPrice(calculateUnitPrice(product, variant));
-        cartRepository.save(cart);
+        Cart saved = cartRepository.save(cart);
         cartRepository.flush();
-        return cartMapper.toDto(cart);
+        activityRecorder.record("Carts", "UPDATE_ITEM",
+                "Updated cart item for userId " + userId,
+                "SUCCESS", buildContext(saved, saved.getUser()));
+        return cartMapper.toDto(saved);
     }
 
     @Transactional
-    @PreAuthorize("hasAnyAuthority('USER_UPDATE','USER_UPDATE_GLOBAL')")
+    @PreAuthorize("hasAuthority('CART_DELETE')")
     public CartDto removeItemForUser(Long userId, Long itemId) {
         Cart cart = getExistingCart(userId);
         boolean removed = cart.getItems().removeIf(existing -> Objects.equals(existing.getId(), itemId));
         if (!removed) {
             throw new ApiException(HttpStatus.NOT_FOUND, "Cart item not found");
         }
-        cartRepository.save(cart);
+        Cart saved = cartRepository.save(cart);
         cartRepository.flush();
-        return cartMapper.toDto(cart);
+        activityRecorder.record("Carts", "REMOVE_ITEM",
+                "Removed cart item for userId " + userId,
+                "SUCCESS", buildContext(saved, saved.getUser()));
+        return cartMapper.toDto(saved);
+    }
+
+    @Transactional
+    @PreAuthorize("hasAuthority('CART_DELETE')")
+    public CartDto clearCartForUser(Long userId) {
+        Cart cart = getExistingCart(userId);
+        cart.getItems().clear();
+        Cart saved = cartRepository.save(cart);
+        cartRepository.flush();
+        activityRecorder.record("Carts", "CLEAR",
+                "Cleared cart for userId " + userId,
+                "SUCCESS", buildContext(saved, saved.getUser()));
+        return cartMapper.toDto(saved);
     }
 
     private Cart getExistingCart(Long userId) {
         return cartRepository.findByUserId(userId)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Cart is empty"));
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Cart not found for user"));
     }
 
     private Cart getOrCreateCart(User user) {
@@ -340,5 +382,18 @@ public class CartService {
 
     private CartDto emptyCartDto() {
         return new CartDto();
+    }
+
+    private java.util.Map<String, Object> buildContext(Cart cart, User user) {
+        java.util.HashMap<String, Object> context = new java.util.HashMap<>();
+        if (cart != null && cart.getId() != null) {
+            context.put("cartId", cart.getId());
+        }
+        if (user != null) {
+            context.put("userId", user.getId());
+            context.put("userEmail", user.getEmail());
+        }
+        context.put("itemCount", cart != null && cart.getItems() != null ? cart.getItems().size() : 0);
+        return context;
     }
 }
