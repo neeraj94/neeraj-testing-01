@@ -11,6 +11,7 @@ import {
   PERMISSION_AUDIENCE_HEADERS,
   PERMISSION_AUDIENCE_ORDER,
   type PermissionGroup,
+  type PermissionOption,
   buildPermissionGroups
 } from '../utils/permissionGroups';
 import SortableColumnHeader from '../components/SortableColumnHeader';
@@ -137,10 +138,18 @@ const PermissionMatrix = ({
                 const viewGlobalId = group.slots.viewGlobal?.id;
                 const viewOwnId = group.slots.viewOwn?.id;
                 const viewGlobalSelected = viewGlobalId ? selectedSet.has(viewGlobalId) : false;
+                const isPublicSection = section.audience === 'public';
 
                 return (
                   <tr key={`${section.audience}-${group.feature}`}>
-                    <td className="whitespace-nowrap px-6 py-4 text-sm font-semibold text-slate-800">{group.feature}</td>
+                    <td className="whitespace-nowrap px-6 py-4 text-sm font-semibold text-slate-800">
+                      {group.feature}
+                      {isPublicSection && (
+                        <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium uppercase tracking-wide text-slate-500">
+                          Default
+                        </span>
+                      )}
+                    </td>
                     {visibleColumns.map((column) => {
                       const option = group.slots[column.slot];
                       if (!option) {
@@ -151,8 +160,9 @@ const PermissionMatrix = ({
                         );
                       }
 
-                      const checked = selectedSet.has(option.id);
+                      const checked = isPublicSection ? true : selectedSet.has(option.id);
                       const disableOwn = column.slot === 'viewOwn' && viewGlobalSelected;
+                      const disabled = isPublicSection || disableOwn;
 
                       return (
                         <td key={column.slot} className="px-6 py-4 text-center">
@@ -161,15 +171,18 @@ const PermissionMatrix = ({
                               type="checkbox"
                               className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary disabled:cursor-not-allowed"
                               checked={checked}
-                              disabled={disableOwn}
-                              onChange={(event) =>
+                              disabled={disabled}
+                              onChange={(event) => {
+                                if (isPublicSection) {
+                                  return;
+                                }
                                 onToggle(option.id, event.target.checked, {
                                   deselect:
                                     event.target.checked && column.slot === 'viewGlobal' && viewOwnId
                                       ? [viewOwnId]
                                       : undefined
-                                })
-                              }
+                                });
+                              }}
                             />
                             <span className="sr-only">{`${group.feature} – ${column.label}`}</span>
                           </label>
@@ -181,7 +194,7 @@ const PermissionMatrix = ({
                         {group.extras.length ? (
                           <div className="space-y-2">
                             {group.extras.map((option) => {
-                              const checked = selectedSet.has(option.id);
+                              const checked = isPublicSection ? true : selectedSet.has(option.id);
                               return (
                                 <label
                                   key={option.id}
@@ -189,9 +202,15 @@ const PermissionMatrix = ({
                                 >
                                   <input
                                     type="checkbox"
-                                    className="mt-1 h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary"
+                                    className="mt-1 h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary disabled:cursor-not-allowed"
                                     checked={checked}
-                                    onChange={(event) => onToggle(option.id, event.target.checked)}
+                                    disabled={isPublicSection}
+                                    onChange={(event) => {
+                                      if (isPublicSection) {
+                                        return;
+                                      }
+                                      onToggle(option.id, event.target.checked);
+                                    }}
                                   />
                                   <span className="text-sm text-slate-600">
                                     <span className="block font-medium text-slate-700">{option.label}</span>
@@ -213,6 +232,56 @@ const PermissionMatrix = ({
           ))}
         </tbody>
       </table>
+    </div>
+  );
+};
+
+const DefaultPermissionSection = ({ groups }: { groups: PermissionGroup[] }) => {
+  if (!groups.length) {
+    return (
+      <div className="px-6 py-6 text-sm text-slate-500">All default user permissions are currently hidden.</div>
+    );
+  }
+
+  return (
+    <div className="space-y-4 px-6 py-6">
+      {groups.map((group) => {
+        const slotOptions = Object.values(group.slots).filter(Boolean) as PermissionOption[];
+        const extras = group.extras ?? [];
+        const allOptions = [...slotOptions, ...extras];
+
+        return (
+          <div key={group.feature} className="space-y-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h4 className="text-sm font-semibold text-slate-800">{group.feature}</h4>
+                <p className="text-xs text-slate-500">
+                  These capabilities are always granted to authenticated customers and cannot be disabled.
+                </p>
+              </div>
+              <span className="inline-flex items-center rounded-full bg-slate-200 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-600">
+                Default
+              </span>
+            </div>
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {allOptions.map((option) => (
+                <div
+                  key={option.id}
+                  className="flex items-start gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-sm"
+                >
+                  <span className="mt-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                    ✓
+                  </span>
+                  <div className="text-sm text-slate-600">
+                    <span className="block font-medium text-slate-800">{option.label}</span>
+                    <span className="text-xs uppercase tracking-wide text-slate-400">{option.key}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 };
@@ -328,6 +397,14 @@ const RolesPage = () => {
   });
 
   const permissionGroups = useMemo(() => buildPermissionGroups(permissions), [permissions]);
+  const adminPermissionGroups = useMemo(
+    () => permissionGroups.filter((group) => group.category === 'admin'),
+    [permissionGroups]
+  );
+  const defaultPermissionGroups = useMemo(
+    () => permissionGroups.filter((group) => group.category === 'public'),
+    [permissionGroups]
+  );
   const permissionLookup = useMemo(() => {
     const lookup = new Map<string, Permission>();
     permissions.forEach((permission) => lookup.set(permission.key, permission));
@@ -1001,16 +1078,29 @@ const RolesPage = () => {
               </div>
             </div>
 
-            <div className="rounded-2xl border border-slate-200">
-              <div className="border-b border-slate-200 px-6 py-4">
-                <h3 className="text-base font-semibold text-slate-800">Permission catalogue</h3>
-                <p className="text-sm text-slate-500">Select the features and capabilities that this role should unlock.</p>
-              </div>
-              <PermissionMatrix
-                groups={permissionGroups}
-                selected={rolePermissions}
-                onToggle={(id, checked, options) => togglePermission(id, checked, setRolePermissions, options)}
-              />
+            <div className="space-y-6">
+              <section className="rounded-2xl border border-slate-200">
+                <div className="border-b border-slate-200 px-6 py-4">
+                  <h3 className="text-base font-semibold text-slate-800">Admin &amp; system permissions</h3>
+                  <p className="text-sm text-slate-500">
+                    Select the administrative features and management capabilities that this role should unlock.
+                  </p>
+                </div>
+                <PermissionMatrix
+                  groups={adminPermissionGroups}
+                  selected={rolePermissions}
+                  onToggle={(id, checked, options) => togglePermission(id, checked, setRolePermissions, options)}
+                />
+              </section>
+              <section className="rounded-2xl border border-slate-200">
+                <div className="border-b border-slate-200 px-6 py-4">
+                  <h3 className="text-base font-semibold text-slate-800">Default user permissions</h3>
+                  <p className="text-sm text-slate-500">
+                    These capabilities are automatically assigned to every authenticated user and cannot be revoked.
+                  </p>
+                </div>
+                <DefaultPermissionSection groups={defaultPermissionGroups} />
+              </section>
             </div>
           </div>
         </form>
@@ -1072,16 +1162,27 @@ const RolesPage = () => {
               </div>
             </div>
 
-            <div className="rounded-2xl border border-slate-200">
-              <div className="border-b border-slate-200 px-6 py-4">
-                <h4 className="text-base font-semibold text-slate-800">Permissions</h4>
-                <p className="text-sm text-slate-500">Adjust the capabilities granted to this role.</p>
-              </div>
-              <PermissionMatrix
-                groups={permissionGroups}
-                selected={editingPermissions}
-                onToggle={(id, checked, options) => togglePermission(id, checked, setEditingPermissions, options)}
-              />
+            <div className="space-y-6">
+              <section className="rounded-2xl border border-slate-200">
+                <div className="border-b border-slate-200 px-6 py-4">
+                  <h4 className="text-base font-semibold text-slate-800">Admin &amp; system permissions</h4>
+                  <p className="text-sm text-slate-500">Update the administrative capabilities granted to this role.</p>
+                </div>
+                <PermissionMatrix
+                  groups={adminPermissionGroups}
+                  selected={editingPermissions}
+                  onToggle={(id, checked, options) => togglePermission(id, checked, setEditingPermissions, options)}
+                />
+              </section>
+              <section className="rounded-2xl border border-slate-200">
+                <div className="border-b border-slate-200 px-6 py-4">
+                  <h4 className="text-base font-semibold text-slate-800">Default user permissions</h4>
+                  <p className="text-sm text-slate-500">
+                    These default capabilities remain active for every customer and cannot be modified per role.
+                  </p>
+                </div>
+                <DefaultPermissionSection groups={defaultPermissionGroups} />
+              </section>
             </div>
           </div>
         </form>

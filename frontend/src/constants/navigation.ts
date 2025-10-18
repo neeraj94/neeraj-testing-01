@@ -270,6 +270,15 @@ export const DEFAULT_NAVIGATION_MENU: NavigationNode[] = [
         children: []
       },
       {
+        key: 'carts',
+        label: 'Carts',
+        icon: '🛒',
+        path: '/admin/carts',
+        group: false,
+        permissions: ['CART_VIEW_GLOBAL'],
+        children: []
+      },
+      {
         key: 'payments',
         label: 'Payments',
         icon: '💰',

@@ -12,7 +12,6 @@ public enum UploadedFileModule {
     BADGE_CATEGORY_ICON("Badge category", "Icon"),
     BLOG_BANNER_IMAGE("Blog", "Banner image"),
     BLOG_META_IMAGE("Blog", "Meta image"),
-    WEDGE_ICON("Wedge", "Icon"),
     PRODUCT_GALLERY_IMAGE("Product", "Gallery image"),
     PRODUCT_THUMBNAIL("Product", "Thumbnail"),
     PRODUCT_META_IMAGE("Product", "Meta image"),

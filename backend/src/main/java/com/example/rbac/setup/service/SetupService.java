@@ -389,6 +389,13 @@ public class SetupService {
             )),
             MenuDefinition.group("commerce", "Commerce", "💳", List.of(
                     MenuDefinition.item(
+                            "carts",
+                            "Carts",
+                            "🛒",
+                            "/admin/carts",
+                            List.of("CART_VIEW_GLOBAL", "CART_CREATE", "CART_EDIT", "CART_DELETE", "CART_EXPORT")
+                    ),
+                    MenuDefinition.item(
                             "orders",
                             "Orders",
                             "📦",
