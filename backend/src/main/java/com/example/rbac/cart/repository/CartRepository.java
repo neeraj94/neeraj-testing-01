@@ -29,8 +29,6 @@ public interface CartRepository extends JpaRepository<Cart, Long>, CartRepositor
             "items.variant.media",
             "items.variant.media.media"
     })
-    @Query("select distinct c from Cart c left join fetch c.items i left join fetch i.product p " +
-            "left join fetch p.thumbnail pt left join fetch p.galleryImages gi left join fetch gi.media gim " +
-            "left join fetch i.variant v left join fetch v.media vm left join fetch vm.media vmm where c.id in :ids")
+    @Query("select distinct c from Cart c where c.id in :ids")
     List<Cart> findDetailedByIds(@Param("ids") List<Long> ids);
 }
