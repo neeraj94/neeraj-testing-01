@@ -21,7 +21,7 @@ modules.append({
     "file": "auth.html",
     "title": "Authentication APIs",
     "summary": "Token issuance, refresh, logout, and verification flows used by the dashboard and storefront.",
-    "base": "/api/v1/auth",
+    "base": "/api/publicapi/auth",
     "endpoints": [
         {
             "name": "Sign up",
@@ -161,7 +161,7 @@ modules.append({
     "file": "users.html",
     "title": "User Management APIs",
     "summary": "CRUD, status controls, role assignment, and profile updates for internal and customer accounts.",
-    "base": "/api/v1",
+    "base": "/api/admin",
     "endpoints": [
         {
             "name": "List users",
@@ -299,7 +299,7 @@ modules.append({
     "file": "roles.html",
     "title": "Role APIs",
     "summary": "Manage reusable role definitions and bind permissions for RBAC.",
-    "base": "/api/v1/roles",
+    "base": "/api/admin/roles",
     "endpoints": [
         {
             "name": "List roles",
@@ -377,7 +377,7 @@ modules.append({
     "file": "permissions.html",
     "title": "Permission APIs",
     "summary": "CRUD over fine-grained permissions powering RBAC overrides.",
-    "base": "/api/v1/permissions",
+    "base": "/api/admin/permissions",
     "endpoints": [
         {
             "name": "List permissions",
@@ -426,7 +426,7 @@ modules.append({
     "file": "products.html",
     "title": "Product & Asset APIs",
     "summary": "Administrative product CRUD, variant authoring, and media asset uploads.",
-    "base": "/api/v1",
+    "base": "/api/admin",
     "endpoints": [
         {
             "name": "List products",
@@ -504,7 +504,7 @@ modules.append({
     "file": "reviews.html",
     "title": "Product Review APIs",
     "summary": "Moderate customer reviews, toggle visibility, and inject staff replies.",
-    "base": "/api/v1/product-reviews",
+    "base": "/api/admin/product-reviews",
     "endpoints": [
         {
             "name": "List reviews",
@@ -562,7 +562,7 @@ modules.append({
     "file": "categories.html",
     "title": "Categories & Brands APIs",
     "summary": "Manage taxonomy trees, category media, and brand registries for the storefront.",
-    "base": "/api/v1",
+    "base": "/api/admin",
     "endpoints": [
         {
             "name": "List categories",
@@ -691,7 +691,7 @@ modules.append({
     "file": "coupons.html",
     "title": "Coupon Management APIs",
     "summary": "Create, update, and reference discount coupons with product/category targeting.",
-    "base": "/api/v1/coupons",
+    "base": "/api/admin/coupons",
     "endpoints": [
         {
             "name": "List coupons",
@@ -779,7 +779,7 @@ modules.append({
     "file": "gallery.html",
     "title": "Media Gallery APIs",
     "summary": "Centralised asset library supporting upload, metadata, and folder management.",
-    "base": "/api/v1/gallery",
+    "base": "/api/admin/gallery",
     "endpoints": [
         {
             "name": "List files",
@@ -897,7 +897,7 @@ modules.append({
     "file": "settings.html",
     "title": "Platform Settings APIs",
     "summary": "Storefront configuration, email settings, and template management.",
-    "base": "/api/v1/settings",
+    "base": "/api/admin/settings",
     "endpoints": [
         {
             "name": "Get settings",
@@ -982,7 +982,7 @@ modules.append({
     "file": "shipping.html",
     "title": "Shipping & Logistics APIs",
     "summary": "Manage shippable regions, granular rate cards, and delivery rules.",
-    "base": "/api/v1/shipping",
+    "base": "/api/admin/shipping",
     "endpoints": [
         {
             "name": "List countries",
@@ -1162,7 +1162,7 @@ modules.append({
     "file": "public.html",
     "title": "Public Storefront APIs",
     "summary": "Anonymous endpoints powering the storefront product listings, detail pages, and promotions.",
-    "base": "/api/v1/public",
+    "base": "/api/publicapi",
     "endpoints": [
         {
             "name": "Homepage content blocks",
