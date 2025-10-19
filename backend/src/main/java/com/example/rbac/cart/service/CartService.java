@@ -188,6 +188,23 @@ public class CartService {
     }
 
     @Transactional
+    public CartDto clearCart(UserPrincipal principal) {
+        User user = resolveUser(principal);
+        Optional<Cart> existing = cartRepository.findByUserId(user.getId());
+        if (existing.isEmpty()) {
+            return emptyCartDto();
+        }
+        Cart cart = existing.get();
+        if (cart.getItems().isEmpty()) {
+            return cartMapper.toDto(cart);
+        }
+        cart.getItems().clear();
+        cartRepository.save(cart);
+        cartRepository.flush();
+        return cartMapper.toDto(cart);
+    }
+
+    @Transactional
     public CartDto mergeGuestCart(MergeCartRequest request, UserPrincipal principal) {
         User user = resolveUser(principal);
         Cart cart = getOrCreateCart(user);

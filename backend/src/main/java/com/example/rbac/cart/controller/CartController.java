@@ -51,6 +51,11 @@ public class CartController {
         return cartService.removeItem(itemId, principal);
     }
 
+    @DeleteMapping
+    public CartDto clearCart(@AuthenticationPrincipal UserPrincipal principal) {
+        return cartService.clearCart(principal);
+    }
+
     @PostMapping("/merge")
     public CartDto merge(@Valid @RequestBody MergeCartRequest request,
                          @AuthenticationPrincipal UserPrincipal principal) {

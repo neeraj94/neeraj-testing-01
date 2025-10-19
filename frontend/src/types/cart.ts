@@ -34,13 +34,13 @@ export interface AdminCartSummary {
   items: CartItem[];
 }
 
-export interface AdminAddCartItemPayload {
+export interface AddCartItemPayload {
   productId: number;
   variantId?: number | null;
   quantity: number;
 }
 
-export interface AdminUpdateCartItemPayload {
+export interface UpdateCartItemPayload {
   quantity: number;
 }
 
