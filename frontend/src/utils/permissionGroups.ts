@@ -333,12 +333,19 @@ export const buildPermissionGroups = (permissions: Permission[]): PermissionGrou
       }
     }
 
+    const isUserManagementViewGlobal = normalizedKey === 'USER_MANAGEMENT' && matchedSlot === 'viewGlobal';
+
+    if (isUserManagementViewGlobal && keyUpper === 'USER_VIEW_GLOBAL') {
+      group.slots.viewGlobal = option;
+      return;
+    }
+
     if (isManage) {
       if (!assignSlot(group, 'manage', option)) {
         group.extras = addExtraOption(group.extras, option);
       }
     } else if (matchedSlot) {
-      if (!assignSlot(group, matchedSlot, option)) {
+      if (!assignSlot(group, matchedSlot, option) && !isUserManagementViewGlobal) {
         group.extras = addExtraOption(group.extras, option);
       }
     } else {

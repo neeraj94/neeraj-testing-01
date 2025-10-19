@@ -84,7 +84,7 @@ public class CartService {
         if (cartIds.isEmpty()) {
             detailedCarts = Collections.emptyMap();
         } else {
-            List<Cart> carts = cartRepository.findDetailedByIds(cartIds);
+            List<Cart> carts = cartRepository.findByIdIn(cartIds);
             detailedCarts = carts.stream()
                     .filter(cart -> cart.getId() != null)
                     .collect(Collectors.toMap(Cart::getId, Function.identity(), (left, right) -> left, HashMap::new));

@@ -34,14 +34,14 @@ public class UserAddressAdminController {
 
     @PostMapping("/{userId}/addresses")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAuthority('USER_CREATE')")
+    @PreAuthorize("hasAuthority('USER_VIEW_GLOBAL') and hasAuthority('USER_CREATE')")
     public CheckoutAddressDto createAddress(@PathVariable Long userId,
                                             @RequestBody CheckoutAddressRequest request) {
         return checkoutService.createAddress(userId, request);
     }
 
     @PutMapping("/{userId}/addresses/{addressId}")
-    @PreAuthorize("hasAuthority('USER_UPDATE')")
+    @PreAuthorize("hasAuthority('USER_VIEW_GLOBAL') and hasAuthority('USER_UPDATE')")
     public CheckoutAddressDto updateAddress(@PathVariable Long userId,
                                             @PathVariable Long addressId,
                                             @RequestBody CheckoutAddressRequest request) {

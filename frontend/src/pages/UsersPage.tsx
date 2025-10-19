@@ -411,6 +411,18 @@ const UsersPage = () => {
     () => hasAnyPermission(grantedPermissions as PermissionKey[], ['USERS_EXPORT']),
     [grantedPermissions]
   );
+  const canModifyUserAddresses = useMemo(
+    () => hasAnyPermission(grantedPermissions as PermissionKey[], ['USER_CREATE', 'USER_UPDATE']),
+    [grantedPermissions]
+  );
+  const canAddUserCartItems = useMemo(
+    () => hasAnyPermission(grantedPermissions as PermissionKey[], ['USER_UPDATE']),
+    [grantedPermissions]
+  );
+  const canRemoveUserCartItems = useMemo(
+    () => hasAnyPermission(grantedPermissions as PermissionKey[], ['USER_DELETE']),
+    [grantedPermissions]
+  );
 
   useEffect(() => {
     setPage(0);
@@ -772,6 +784,9 @@ const UsersPage = () => {
       if (!selectedUserId) {
         throw new Error('Select a user before adding an address.');
       }
+      if (!canModifyUserAddresses) {
+        throw new Error('You do not have permission to add addresses.');
+      }
       const payload = buildAddressPayload();
       const { data } = await api.post<CheckoutAddress>(
         `/admin/users/${selectedUserId}/addresses`,
@@ -795,6 +810,9 @@ const UsersPage = () => {
     mutationFn: async () => {
       if (!selectedUserId || editingAddressId == null) {
         throw new Error('Select an address before updating it.');
+      }
+      if (!canModifyUserAddresses) {
+        throw new Error('You do not have permission to update addresses.');
       }
       const payload = buildAddressPayload();
       const { data } = await api.put<CheckoutAddress>(
@@ -841,6 +859,19 @@ const UsersPage = () => {
       setIsCartAddOpen(false);
     }
   }, [activeTab]);
+
+  useEffect(() => {
+    if (!canModifyUserAddresses) {
+      setAddressFormOpen(false);
+      setEditingAddressId(null);
+    }
+  }, [canModifyUserAddresses]);
+
+  useEffect(() => {
+    if (!canAddUserCartItems) {
+      setIsCartAddOpen(false);
+    }
+  }, [canAddUserCartItems]);
 
   useEffect(() => {
     if (!isCartAddOpen) {
@@ -1147,6 +1178,9 @@ const UsersPage = () => {
       if (!selectedUserId) {
         throw new Error('No user selected');
       }
+      if (!canAddUserCartItems) {
+        throw new Error('You do not have permission to modify cart items.');
+      }
       const { data } = await api.post<Cart>(`/users/${selectedUserId}/cart/items`, {
         productId,
         variantId: variantId ?? undefined,
@@ -1176,6 +1210,9 @@ const UsersPage = () => {
       if (!selectedUserId) {
         throw new Error('No user selected');
       }
+      if (!canAddUserCartItems) {
+        throw new Error('You do not have permission to update cart items.');
+      }
       const { data } = await api.patch<Cart>(`/users/${selectedUserId}/cart/items/${itemId}`, { quantity });
       return data;
     },
@@ -1204,6 +1241,9 @@ const UsersPage = () => {
     mutationFn: async (itemId: number) => {
       if (!selectedUserId) {
         throw new Error('No user selected');
+      }
+      if (!canRemoveUserCartItems) {
+        throw new Error('You do not have permission to remove cart items.');
       }
       const { data } = await api.delete<Cart>(`/users/${selectedUserId}/cart/items/${itemId}`);
       return data;
@@ -2247,6 +2287,7 @@ const UsersPage = () => {
     }
 
     const addressList = addressesQuery.data ?? [];
+    const canModifyAddresses = canModifyUserAddresses;
     const countryOptions = addressCountriesQuery.data ?? [];
     const stateOptions = addressStatesQuery.data ?? [];
     const cityOptions = addressCitiesQuery.data ?? [];
@@ -2263,6 +2304,10 @@ const UsersPage = () => {
 
     const handleSubmitAddress = (event: FormEvent) => {
       event.preventDefault();
+      if (!canModifyAddresses) {
+        notify({ type: 'error', message: 'You do not have permission to modify addresses.' });
+        return;
+      }
       if (isAddressSubmitting) {
         return;
       }
@@ -2274,6 +2319,10 @@ const UsersPage = () => {
     };
 
     const handleToggleForm = () => {
+      if (!canModifyAddresses) {
+        notify({ type: 'error', message: 'You do not have permission to modify addresses.' });
+        return;
+      }
       if (addressFormOpen) {
         setAddressFormOpen(false);
         setAddressForm(createEmptyAddressForm());
@@ -2286,6 +2335,10 @@ const UsersPage = () => {
     };
 
     const handleEditAddress = (address: CheckoutAddress) => {
+      if (!canModifyAddresses) {
+        notify({ type: 'error', message: 'You do not have permission to modify addresses.' });
+        return;
+      }
       setAddressForm({
         type: address.type,
         countryId: address.countryId != null ? String(address.countryId) : '',
@@ -2309,8 +2362,19 @@ const UsersPage = () => {
           <div>
             <h3 className="text-sm font-semibold text-slate-800">Saved addresses</h3>
             <p className="text-xs text-slate-500">Manage shipping and billing locations for this customer.</p>
+            {!canModifyAddresses && (
+              <p className="mt-1 text-xs text-slate-500">
+                You can review saved addresses but do not have permission to add or edit them.
+              </p>
+            )}
           </div>
-          <Button variant="ghost" className="px-3 py-1 text-xs" onClick={handleToggleForm}>
+          <Button
+            variant="ghost"
+            className="px-3 py-1 text-xs"
+            onClick={handleToggleForm}
+            disabled={!canModifyAddresses}
+            title={!canModifyAddresses ? 'You do not have permission to manage addresses.' : undefined}
+          >
             {addressFormOpen ? (editingAddressId ? 'Cancel edit' : 'Cancel') : 'Add address'}
           </Button>
         </div>
@@ -2542,9 +2606,10 @@ const UsersPage = () => {
                   <button
                     type="button"
                     onClick={() => handleEditAddress(address)}
-                    disabled={isAddressSubmitting}
+                    disabled={isAddressSubmitting || !canModifyAddresses}
                     className="rounded-full border border-slate-200 p-2 text-slate-500 transition hover:border-primary/40 hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
                     aria-label={`Edit address for ${address.fullName}`}
+                    title={!canModifyAddresses ? 'You do not have permission to edit addresses.' : undefined}
                   >
                     <PencilIcon />
                   </button>
@@ -2604,6 +2669,7 @@ const UsersPage = () => {
     }
 
     const cart = cartQuery.data ?? { items: [], totalQuantity: 0, subtotal: 0 };
+    const canModifyCart = canAddUserCartItems || canRemoveUserCartItems;
     const items = [...(cart.items ?? [])].sort((a, b) => {
       const firstId = a.id ?? 0;
       const secondId = b.id ?? 0;
@@ -2629,6 +2695,10 @@ const UsersPage = () => {
     };
 
     const handleSubmitQuantity = (item: Cart['items'][number]) => {
+      if (!canAddUserCartItems) {
+        notify({ type: 'error', message: 'You do not have permission to update cart items.' });
+        return;
+      }
       if (!item.id) {
         notify({ type: 'error', message: 'Unable to update this cart line. Refresh and try again.' });
         return;
@@ -2646,6 +2716,10 @@ const UsersPage = () => {
     };
 
     const handleRemoveItem = async (item: Cart['items'][number]) => {
+      if (!canRemoveUserCartItems) {
+        notify({ type: 'error', message: 'You do not have permission to remove cart items.' });
+        return;
+      }
       if (!item.id) {
         notify({ type: 'error', message: 'Unable to remove this cart line. Refresh and try again.' });
         return;
@@ -2671,6 +2745,10 @@ const UsersPage = () => {
       null;
 
     const handleAddCartItemForUser = () => {
+      if (!canAddUserCartItems) {
+        notify({ type: 'error', message: 'You do not have permission to add cart items.' });
+        return;
+      }
       if (!selectedProductDetail || !cartSelectedProductId) {
         notify({ type: 'error', message: 'Select a product before adding it to the cart.' });
         return;
@@ -2705,7 +2783,8 @@ const UsersPage = () => {
       addCartItemMutation.isPending ||
       !selectedProductDetail ||
       (selectedProductDetail?.variants.length ? !cartSelectedVariantId : false) ||
-      (selectedVariantAvailability != null && selectedVariantAvailability <= 0);
+      (selectedVariantAvailability != null && selectedVariantAvailability <= 0) ||
+      !canAddUserCartItems;
 
     return (
       <div className="space-y-6">
@@ -2728,18 +2807,25 @@ const UsersPage = () => {
                   <div className="text-lg font-semibold text-slate-800">{formatMoney(cart.subtotal)}</div>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={() => setIsCartAddOpen((open) => !open)}
-                className="inline-flex items-center justify-center rounded-lg border border-primary/30 bg-primary/10 px-4 py-2 text-sm font-semibold text-primary shadow-sm transition hover:bg-primary/20"
-              >
-                {isCartAddOpen ? 'Close add panel' : 'Add product'}
-              </button>
+              {canAddUserCartItems ? (
+                <button
+                  type="button"
+                  onClick={() => setIsCartAddOpen((open) => !open)}
+                  className="inline-flex items-center justify-center rounded-lg border border-primary/30 bg-primary/10 px-4 py-2 text-sm font-semibold text-primary shadow-sm transition hover:bg-primary/20"
+                >
+                  {isCartAddOpen ? 'Close add panel' : 'Add product'}
+                </button>
+              ) : null}
             </div>
+            {!canModifyCart && (
+              <p className="mt-3 text-xs text-slate-500">
+                You can review the cart contents but do not have permission to adjust them.
+              </p>
+            )}
           </div>
         </section>
 
-        {isCartAddOpen && (
+        {isCartAddOpen && canAddUserCartItems && (
           <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="flex flex-col gap-6 lg:flex-row">
               <div className="lg:w-1/2">
@@ -2882,6 +2968,7 @@ const UsersPage = () => {
                           onClick={handleAddCartItemForUser}
                           disabled={disableAddButton}
                           className="w-full rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-60"
+                          title={!canAddUserCartItems ? 'You do not have permission to add cart items.' : undefined}
                         >
                           {addCartItemMutation.isPending ? 'Adding…' : 'Add to cart'}
                         </button>
@@ -2905,8 +2992,9 @@ const UsersPage = () => {
           <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
             <h3 className="text-sm font-semibold text-slate-800">No cart items yet</h3>
             <p className="mt-2 text-sm text-slate-500">
-              This customer has not added any products to their cart. Use the “Add product” button above to seed their cart or
-              guide them through the checkout journey.
+              {canAddUserCartItems
+                ? 'This customer has not added any products to their cart. Use the “Add product” button above to seed their cart or guide them through the checkout journey.'
+                : 'This customer has not added any products to their cart yet.'}
             </p>
           </section>
         ) : (
@@ -2997,24 +3085,26 @@ const UsersPage = () => {
                         <td className="px-4 py-4 text-sm font-semibold text-slate-900">{formatMoney(item.lineTotal)}</td>
                         <td className="px-4 py-4">
                           {itemId != null ? (
-                            <div className="flex flex-wrap justify-end gap-2">
-                              <button
-                                type="button"
-                                onClick={() => handleSubmitQuantity(item)}
-                                disabled={!quantityChanged || updatingItemId === itemId}
-                                className="inline-flex items-center justify-center rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-primary/40 hover:text-primary disabled:cursor-not-allowed disabled:opacity-60"
-                              >
-                                {updatingItemId === itemId ? 'Saving…' : 'Update'}
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => void handleRemoveItem(item)}
-                                disabled={removingItemId === itemId}
-                                className="inline-flex items-center justify-center rounded-lg border border-rose-200 px-3 py-1.5 text-xs font-semibold text-rose-600 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
-                              >
-                                {removingItemId === itemId ? 'Removing…' : 'Remove'}
-                              </button>
-                            </div>
+                          <div className="flex flex-wrap justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleSubmitQuantity(item)}
+                              disabled={!canAddUserCartItems || !quantityChanged || updatingItemId === itemId}
+                              className="inline-flex items-center justify-center rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-primary/40 hover:text-primary disabled:cursor-not-allowed disabled:opacity-60"
+                              title={!canAddUserCartItems ? 'You do not have permission to update cart items.' : undefined}
+                            >
+                              {updatingItemId === itemId ? 'Saving…' : 'Update'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => void handleRemoveItem(item)}
+                              disabled={!canRemoveUserCartItems || removingItemId === itemId}
+                              className="inline-flex items-center justify-center rounded-lg border border-rose-200 px-3 py-1.5 text-xs font-semibold text-rose-600 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
+                              title={!canRemoveUserCartItems ? 'You do not have permission to remove cart items.' : undefined}
+                            >
+                              {removingItemId === itemId ? 'Removing…' : 'Remove'}
+                            </button>
+                          </div>
                           ) : (
                             <span className="text-xs text-slate-400">Pending sync…</span>
                           )}
