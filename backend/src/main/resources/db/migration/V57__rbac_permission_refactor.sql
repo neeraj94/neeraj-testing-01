@@ -56,23 +56,29 @@ WHERE NOT EXISTS (SELECT 1 FROM permissions WHERE code = 'SHIPPING_MANAGE');
 
 -- Grant new shipping permissions to roles that previously had any shipping capability
 INSERT INTO role_permissions (role_id, permission_id)
-SELECT DISTINCT rp.role_id, viewPerm.id
-FROM role_permissions rp
-JOIN permissions oldPerm ON oldPerm.id = rp.permission_id AND oldPerm.code IN ('SHIPPING_AREA_VIEW')
-JOIN permissions viewPerm ON viewPerm.code = 'SHIPPING_VIEW'
+SELECT candidate.role_id, candidate.permission_id
+FROM (
+    SELECT DISTINCT rp.role_id AS role_id, viewPerm.id AS permission_id
+    FROM role_permissions rp
+    JOIN permissions oldPerm ON oldPerm.id = rp.permission_id AND oldPerm.code IN ('SHIPPING_AREA_VIEW')
+    JOIN permissions viewPerm ON viewPerm.code = 'SHIPPING_VIEW'
+) candidate
 LEFT JOIN role_permissions existing
-  ON existing.role_id = rp.role_id AND existing.permission_id = viewPerm.id
+  ON existing.role_id = candidate.role_id AND existing.permission_id = candidate.permission_id
 WHERE existing.role_id IS NULL;
 
 INSERT INTO role_permissions (role_id, permission_id)
-SELECT DISTINCT rp.role_id, managePerm.id
-FROM role_permissions rp
-JOIN permissions oldPerm ON oldPerm.id = rp.permission_id AND oldPerm.code IN (
-    'SHIPPING_AREA_CREATE', 'SHIPPING_AREA_UPDATE', 'SHIPPING_AREA_DELETE', 'SHIPPING_LOCATION_MANAGE'
-)
-JOIN permissions managePerm ON managePerm.code = 'SHIPPING_MANAGE'
+SELECT candidate.role_id, candidate.permission_id
+FROM (
+    SELECT DISTINCT rp.role_id AS role_id, managePerm.id AS permission_id
+    FROM role_permissions rp
+    JOIN permissions oldPerm ON oldPerm.id = rp.permission_id AND oldPerm.code IN (
+        'SHIPPING_AREA_CREATE', 'SHIPPING_AREA_UPDATE', 'SHIPPING_AREA_DELETE', 'SHIPPING_LOCATION_MANAGE'
+    )
+    JOIN permissions managePerm ON managePerm.code = 'SHIPPING_MANAGE'
+) candidate
 LEFT JOIN role_permissions existing
-  ON existing.role_id = rp.role_id AND existing.permission_id = managePerm.id
+  ON existing.role_id = candidate.role_id AND existing.permission_id = candidate.permission_id
 WHERE existing.role_id IS NULL;
 
 -- Remove legacy shipping permissions
