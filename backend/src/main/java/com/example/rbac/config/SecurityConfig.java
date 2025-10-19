@@ -85,7 +85,7 @@ public class SecurityConfig {
                     auth
                         .requestMatchers(HttpMethod.GET, "/api/v1/uploaded-files/**").hasAnyAuthority("UPLOADED_FILE_VIEW", "UPLOADED_FILE_MANAGE", "COUPON_VIEW_GLOBAL", "COUPON_CREATE", "COUPON_UPDATE")
                         .requestMatchers(HttpMethod.GET, "/api/v1/tax-rates/**").hasAuthority("TAX_RATE_VIEW")
-                        .requestMatchers(HttpMethod.GET, "/api/v1/shipping/countries/**", "/api/v1/shipping/states/**", "/api/v1/shipping/cities/**").hasAnyAuthority("SHIPPING_VIEW", "SHIPPING_MANAGE", "CHECKOUT_MANAGE")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/shipping/countries/**", "/api/v1/shipping/states/**", "/api/v1/shipping/cities/**").hasAnyAuthority("SHIPPING_VIEW", "SHIPPING_MANAGE")
                         .requestMatchers(HttpMethod.POST, "/api/v1/shipping/countries/**", "/api/v1/shipping/states/**", "/api/v1/shipping/cities/**").hasAuthority("SHIPPING_MANAGE")
                         .requestMatchers(HttpMethod.PUT, "/api/v1/shipping/countries/**", "/api/v1/shipping/states/**", "/api/v1/shipping/cities/**").hasAuthority("SHIPPING_MANAGE")
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/shipping/countries/**", "/api/v1/shipping/states/**", "/api/v1/shipping/cities/**").hasAuthority("SHIPPING_MANAGE")

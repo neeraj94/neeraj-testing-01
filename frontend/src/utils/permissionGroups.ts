@@ -120,6 +120,11 @@ const FEATURE_LABEL_OVERRIDES: Record<string, string> = {
   UPLOADED_FILES: 'Uploaded Files'
 };
 
+const KEY_SLOT_OVERRIDES: Record<string, CapabilitySlot> = {
+  USER_VIEW: 'viewOwn',
+  USER_VIEW_OWN: 'viewOwn'
+};
+
 const ADMIN_FEATURE_ORDER = [
   'Activity Log',
   'Attributes',
@@ -159,10 +164,10 @@ const SYSTEM_FEATURE_KEYS = new Set([
 ]);
 
 const CAPABILITY_PATTERNS: Array<{ slot: CapabilitySlot; regex: RegExp }> = [
+  { slot: 'viewOwn', regex: /_VIEW_OWN$/i },
   { slot: 'viewGlobal', regex: /_VIEW_GLOBAL$/i },
   { slot: 'viewGlobal', regex: /_VIEW_ALL$/i },
   { slot: 'viewGlobal', regex: /_VIEW$/i },
-  { slot: 'viewOwn', regex: /_VIEW_OWN$/i },
   { slot: 'create', regex: /_CREATE$/i },
   { slot: 'edit', regex: /_EDIT$/i },
   { slot: 'edit', regex: /_UPDATE$/i },
@@ -275,6 +280,9 @@ export const buildPermissionGroups = (permissions: Permission[]): PermissionGrou
     }
 
     const audienceInfo = determineAudience(keyUpper);
+    if (audienceInfo.audience === 'admin' && keyUpper.startsWith('CHECKOUT_')) {
+      return;
+    }
     const stripped = stripCapabilitySuffix(audienceInfo.baseKey).toUpperCase();
     const normalizedKey = FEATURE_KEY_OVERRIDES[stripped] ?? stripped;
     const category: PermissionAudience =
@@ -309,11 +317,18 @@ export const buildPermissionGroups = (permissions: Permission[]): PermissionGrou
     const isManage = /_MANAGE$/i.test(keyUpper);
     let matchedSlot: CapabilitySlot | null = null;
 
+    const overrideSlot = KEY_SLOT_OVERRIDES[keyUpper];
+    if (overrideSlot) {
+      matchedSlot = overrideSlot;
+    }
+
     if (!isManage) {
       for (const pattern of CAPABILITY_PATTERNS) {
         if (pattern.regex.test(permission.key)) {
-          matchedSlot = pattern.slot;
-          break;
+          matchedSlot = matchedSlot ?? pattern.slot;
+          if (matchedSlot === pattern.slot) {
+            break;
+          }
         }
       }
     }

@@ -116,7 +116,7 @@ public class ShippingLocationController {
     }
 
     @GetMapping("/rates/quote")
-    @PreAuthorize("hasAnyAuthority('SHIPPING_VIEW', 'SHIPPING_MANAGE', 'CHECKOUT_MANAGE')")
+    @PreAuthorize("hasAnyAuthority('SHIPPING_VIEW', 'SHIPPING_MANAGE')")
     public ShippingRateQuoteDto quoteShippingRate(@RequestParam(name = "countryId", required = false) Long countryId,
                                                   @RequestParam(name = "stateId", required = false) Long stateId,
                                                   @RequestParam(name = "cityId", required = false) Long cityId) {
