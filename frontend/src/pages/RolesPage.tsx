@@ -14,6 +14,7 @@ import {
   type PermissionOption,
   buildPermissionGroups
 } from '../utils/permissionGroups';
+import type { PublicEndpoint } from '../types/system';
 import SortableColumnHeader from '../components/SortableColumnHeader';
 import { useAppSelector } from '../app/hooks';
 import { hasAnyPermission } from '../utils/permissions';
@@ -236,27 +237,107 @@ const PermissionMatrix = ({
   );
 };
 
-const DefaultPermissionSection = ({ groups }: { groups: PermissionGroup[] }) => {
+const DEFAULT_CAPABILITY_DESCRIPTIONS: Record<string, { title: string; description: string }> = {
+  CUSTOMER_PROFILE_MANAGE: {
+    title: 'Self Profile Management',
+    description: 'Update personal information, account credentials, and profile imagery without admin intervention.'
+  },
+  CUSTOMER_ADDRESS_MANAGE: {
+    title: 'Self Address Management',
+    description: 'Add, edit, and remove saved addresses that are used during checkout and order fulfillment.'
+  },
+  CUSTOMER_CHECKOUT: {
+    title: 'Self Checkout & Orders',
+    description:
+      'Manage items in their own cart, place new orders, and complete checkout flows for personal purchases only.'
+  },
+  CUSTOMER_RECENTLY_VIEWED: {
+    title: 'Recently Viewed Products',
+    description: 'Maintain a private browsing history so customers can quickly revisit products they explored earlier.'
+  }
+};
+
+const DefaultPermissionSection = ({
+  groups,
+  publicEndpoints
+}: {
+  groups: PermissionGroup[];
+  publicEndpoints: PublicEndpoint[];
+}) => {
+  const capabilityMap = new Map<string, { title: string; description: string }>();
+
+  groups.forEach((group) => {
+    const slotOptions = Object.values(group.slots).filter(Boolean) as PermissionOption[];
+    const extras = group.extras ?? [];
+    [...slotOptions, ...extras].forEach((option) => {
+      const key = option.key.toUpperCase();
+      if (capabilityMap.has(key)) {
+        return;
+      }
+      const details = DEFAULT_CAPABILITY_DESCRIPTIONS[key];
+      capabilityMap.set(
+        key,
+        details ?? {
+          title: option.label,
+          description: 'Granted automatically to every registered customer.'
+        }
+      );
+    });
+  });
+
+  const capabilityEntries = Array.from(capabilityMap.values()).sort((a, b) => a.title.localeCompare(b.title));
+  const sortedPublicEndpoints = [...publicEndpoints].sort((a, b) => {
+    const methodCompare = a.method.localeCompare(b.method, undefined, { sensitivity: 'base' });
+    if (methodCompare !== 0) {
+      return methodCompare;
+    }
+    return a.pattern.localeCompare(b.pattern);
+  });
+
   const infoBlock = (
-    <div className="space-y-3 text-sm text-slate-500">
-      <p>The following default user permissions are active for every customer and cannot be modified per role:</p>
-      <ul className="list-disc space-y-1 pl-5">
-        <li>Profile management (view and update)</li>
-        <li>Address management</li>
-        <li>Cart management</li>
-        <li>Checkout access</li>
-        <li>Recently viewed products</li>
-      </ul>
-      <div className="space-y-1">
-        <p>Public Endpoints:</p>
-        <ul className="list-disc space-y-1 pl-5">
-          <li>Login / Logout</li>
-          <li>Registration</li>
-          <li>Forgot / Reset password</li>
-          <li>Product listing and details view</li>
-          <li>Category listing</li>
-          <li>Public event pages (if applicable)</li>
-        </ul>
+    <div className="space-y-4 text-sm text-slate-500">
+      <div>
+        <p className="font-medium text-slate-700">Default customer capabilities</p>
+        <p>Every registered customer automatically receives the following abilities. They cannot be revoked per role:</p>
+        {capabilityEntries.length ? (
+          <ul className="mt-3 space-y-2 pl-5">
+            {capabilityEntries.map((entry) => (
+              <li key={entry.title} className="list-disc">
+                <span className="font-medium text-slate-700">{entry.title}:</span> {entry.description}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-3 text-xs text-slate-400">No default user capabilities are configured.</p>
+        )}
+      </div>
+      <div>
+        <p className="font-medium text-slate-700">Public endpoints</p>
+        <p>These routes are available without authentication and should remain accessible to all visitors:</p>
+        <div className="mt-3 overflow-hidden rounded-lg border border-slate-200">
+          {sortedPublicEndpoints.length ? (
+            <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
+              <thead className="bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                <tr>
+                  <th className="px-4 py-2">Method</th>
+                  <th className="px-4 py-2">Path</th>
+                  <th className="px-4 py-2">Description</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200 bg-white">
+                {sortedPublicEndpoints.map((endpoint) => (
+                  <tr key={`${endpoint.method}-${endpoint.pattern}`}>
+                    <td className="px-4 py-2 font-mono text-xs uppercase tracking-wide text-slate-500">{endpoint.method}</td>
+                    <td className="px-4 py-2 font-mono text-xs text-slate-700">{endpoint.pattern}</td>
+                    <td className="px-4 py-2 text-slate-600">{endpoint.description}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <div className="bg-white px-4 py-3 text-xs text-slate-400">No public endpoints published.</div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -416,15 +497,30 @@ const RolesPage = () => {
     }
   });
 
+  const { data: defaultPermissions = [] } = useQuery<Permission[]>({
+    queryKey: ['permissions', 'defaults'],
+    queryFn: async () => {
+      const { data } = await api.get<Permission[]>('/permissions/defaults');
+      return data;
+    }
+  });
+
   const permissionGroups = useMemo(() => buildPermissionGroups(permissions), [permissions]);
   const adminPermissionGroups = useMemo(
-    () => permissionGroups.filter((group) => group.category === 'admin'),
+    () => permissionGroups.filter((group) => group.category === 'admin' || group.category === 'system'),
     [permissionGroups]
   );
   const defaultPermissionGroups = useMemo(
-    () => permissionGroups.filter((group) => group.category === 'public'),
-    [permissionGroups]
+    () => buildPermissionGroups(defaultPermissions).filter((group) => group.category === 'public'),
+    [defaultPermissions]
   );
+  const { data: publicEndpoints = [] } = useQuery<PublicEndpoint[]>({
+    queryKey: ['system', 'public-endpoints'],
+    queryFn: async () => {
+      const { data } = await api.get<PublicEndpoint[]>('/system/public-endpoints');
+      return data;
+    }
+  });
   const permissionLookup = useMemo(() => {
     const lookup = new Map<string, Permission>();
     permissions.forEach((permission) => lookup.set(permission.key, permission));
@@ -1116,7 +1212,10 @@ const RolesPage = () => {
                 <div className="border-b border-slate-200 px-6 py-4">
                   <h3 className="text-base font-semibold text-slate-800">Default user permissions</h3>
                 </div>
-                <DefaultPermissionSection groups={defaultPermissionGroups} />
+                <DefaultPermissionSection
+                  groups={defaultPermissionGroups}
+                  publicEndpoints={publicEndpoints}
+                />
               </section>
             </div>
           </div>
@@ -1195,7 +1294,10 @@ const RolesPage = () => {
                 <div className="border-b border-slate-200 px-6 py-4">
                   <h4 className="text-base font-semibold text-slate-800">Default user permissions</h4>
                 </div>
-                <DefaultPermissionSection groups={defaultPermissionGroups} />
+                <DefaultPermissionSection
+                  groups={defaultPermissionGroups}
+                  publicEndpoints={publicEndpoints}
+                />
               </section>
             </div>
           </div>
