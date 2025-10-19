@@ -273,14 +273,28 @@ public class CartService {
     @Transactional
     @PreAuthorize("hasAuthority('USER_VIEW_GLOBAL') and (hasAuthority('USER_CREATE') or hasAuthority('USER_UPDATE'))")
     public CartDto addItemForUser(Long userId, AddCartItemRequest request) {
-        Cart cart = getExistingCart(userId);
+        boolean hasCreatePermission = hasAuthority("USER_CREATE");
+        boolean hasUpdatePermission = hasAuthority("USER_UPDATE");
+
+        Cart cart = cartRepository.findByUserId(userId).orElse(null);
+        boolean cartCreated = false;
+        if (cart == null) {
+            if (!hasCreatePermission) {
+                throw new ApiException(HttpStatus.FORBIDDEN, "Create permission is required to add new cart items.");
+            }
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "User not found"));
+            cart = new Cart();
+            cart.setUser(user);
+            cart.setItems(new ArrayList<>());
+            cartCreated = true;
+        }
+
         Product product = productRepository.findById(request.getProductId())
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Product not found"));
         ProductVariant variant = resolveVariant(product, request.getVariantId());
         int quantity = Optional.ofNullable(request.getQuantity()).orElse(1);
         CartItem item = findExistingItem(cart, product, variant);
-        boolean hasCreatePermission = hasAuthority("USER_CREATE");
-        boolean hasUpdatePermission = hasAuthority("USER_UPDATE");
 
         if (item == null && !hasCreatePermission) {
             throw new ApiException(HttpStatus.FORBIDDEN, "Create permission is required to add new cart items.");
@@ -305,9 +319,21 @@ public class CartService {
         item.setVariantLabel(variant != null ? variant.getVariantKey() : null);
         Cart saved = cartRepository.save(cart);
         cartRepository.flush();
+
+        User cartUser = saved.getUser();
+        String userLabel = cartUser != null && cartUser.getEmail() != null
+                ? cartUser.getEmail()
+                : "#" + userId;
+
+        if (cartCreated) {
+            activityRecorder.record("Carts", "CREATE",
+                    "Created cart for user " + userLabel,
+                    "SUCCESS", buildContext(saved, cartUser));
+        }
+
         activityRecorder.record("Carts", "ADD_ITEM",
-                "Added item to cart for userId " + userId,
-                "SUCCESS", buildContext(saved, saved.getUser()));
+                "Added item to cart for user " + userLabel,
+                "SUCCESS", buildContext(saved, cartUser));
         return cartMapper.toDto(saved);
     }
 

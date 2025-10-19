@@ -415,16 +415,20 @@ const UsersPage = () => {
     () => hasAnyPermission(grantedPermissions as PermissionKey[], ['USERS_EXPORT']),
     [grantedPermissions]
   );
-  const canModifyUserAddresses = useMemo(
-    () =>
-      canViewAllUsers &&
-      hasAnyPermission(grantedPermissions as PermissionKey[], ['USER_CREATE', 'USER_UPDATE']),
+  const canCreateUserAddresses = useMemo(
+    () => canViewAllUsers && hasAnyPermission(grantedPermissions as PermissionKey[], ['USER_CREATE']),
     [canViewAllUsers, grantedPermissions]
   );
-  const canAddUserCartItems = useMemo(
-    () =>
-      canViewAllUsers &&
-      hasAnyPermission(grantedPermissions as PermissionKey[], ['USER_CREATE', 'USER_UPDATE']),
+  const canEditUserAddresses = useMemo(
+    () => canViewAllUsers && hasAnyPermission(grantedPermissions as PermissionKey[], ['USER_UPDATE']),
+    [canViewAllUsers, grantedPermissions]
+  );
+  const canCreateUserCartItems = useMemo(
+    () => canViewAllUsers && hasAnyPermission(grantedPermissions as PermissionKey[], ['USER_CREATE']),
+    [canViewAllUsers, grantedPermissions]
+  );
+  const canEditUserCartItems = useMemo(
+    () => canViewAllUsers && hasAnyPermission(grantedPermissions as PermissionKey[], ['USER_UPDATE']),
     [canViewAllUsers, grantedPermissions]
   );
   const canRemoveUserCartItems = useMemo(
@@ -432,6 +436,8 @@ const UsersPage = () => {
       canViewAllUsers && hasAnyPermission(grantedPermissions as PermissionKey[], ['USER_DELETE']),
     [canViewAllUsers, grantedPermissions]
   );
+  const canManageUserAddresses = canCreateUserAddresses || canEditUserAddresses;
+  const canModifyUserCartItems = canCreateUserCartItems || canEditUserCartItems;
 
   useEffect(() => {
     setPage(0);
@@ -692,9 +698,11 @@ const UsersPage = () => {
   });
 
   const recentViewsQuery = useQuery<UserRecentProduct[]>({
-    queryKey: ['users', selectedUserId, 'recent-views'],
+    queryKey: ['admin', 'users', selectedUserId, 'recent-views'],
     queryFn: async () => {
-      const { data } = await api.get<UserRecentProduct[]>(`/users/${selectedUserId}/recent-views`);
+      const { data } = await api.get<UserRecentProduct[]>(
+        `/admin/users/${selectedUserId}/recent-views`
+      );
       return data;
     },
     enabled: panelMode === 'detail' && activeTab === 'recent' && selectedUserId != null
@@ -793,7 +801,7 @@ const UsersPage = () => {
       if (!selectedUserId) {
         throw new Error('Select a user before adding an address.');
       }
-      if (!canModifyUserAddresses) {
+      if (!canCreateUserAddresses) {
         throw new Error('You do not have permission to add addresses.');
       }
       const payload = buildAddressPayload();
@@ -826,7 +834,7 @@ const UsersPage = () => {
       if (!selectedUserId || editingAddressId == null) {
         throw new Error('Select an address before updating it.');
       }
-      if (!canModifyUserAddresses) {
+      if (!canEditUserAddresses) {
         throw new Error('You do not have permission to update addresses.');
       }
       const payload = buildAddressPayload();
@@ -881,17 +889,17 @@ const UsersPage = () => {
   }, [activeTab]);
 
   useEffect(() => {
-    if (!canModifyUserAddresses) {
+    if (!canManageUserAddresses) {
       setAddressFormOpen(false);
       setEditingAddressId(null);
     }
-  }, [canModifyUserAddresses]);
+  }, [canManageUserAddresses]);
 
   useEffect(() => {
-    if (!canAddUserCartItems) {
+    if (!canCreateUserCartItems) {
       setIsCartAddOpen(false);
     }
-  }, [canAddUserCartItems]);
+  }, [canCreateUserCartItems]);
 
   useEffect(() => {
     if (!isCartAddOpen) {
@@ -1198,7 +1206,7 @@ const UsersPage = () => {
       if (!selectedUserId) {
         throw new Error('No user selected');
       }
-      if (!canAddUserCartItems) {
+      if (!canCreateUserCartItems) {
         throw new Error('You do not have permission to modify cart items.');
       }
       const { data } = await api.post<Cart>(`/users/${selectedUserId}/cart/items`, {
@@ -1230,7 +1238,7 @@ const UsersPage = () => {
       if (!selectedUserId) {
         throw new Error('No user selected');
       }
-      if (!canAddUserCartItems) {
+      if (!canEditUserCartItems) {
         throw new Error('You do not have permission to update cart items.');
       }
       const { data } = await api.patch<Cart>(`/users/${selectedUserId}/cart/items/${itemId}`, { quantity });
@@ -2307,7 +2315,9 @@ const UsersPage = () => {
     }
 
     const addressList = addressesQuery.data ?? [];
-    const canModifyAddresses = canModifyUserAddresses;
+    const canCreateAddresses = canCreateUserAddresses;
+    const canEditAddresses = canEditUserAddresses;
+    const canManageAddresses = canManageUserAddresses;
     const countryOptions = addressCountriesQuery.data ?? [];
     const stateOptions = addressStatesQuery.data ?? [];
     const cityOptions = addressCitiesQuery.data ?? [];
@@ -2332,8 +2342,16 @@ const UsersPage = () => {
         return;
       }
       if (editingAddressId != null) {
+        if (!canEditAddresses) {
+          notify({ type: 'error', message: 'You do not have permission to update addresses.' });
+          return;
+        }
         updateAddressMutation.mutate();
       } else {
+        if (!canCreateAddresses) {
+          notify({ type: 'error', message: 'You do not have permission to add addresses.' });
+          return;
+        }
         createAddressMutation.mutate();
       }
     };
@@ -2348,6 +2366,10 @@ const UsersPage = () => {
         setAddressForm(createEmptyAddressForm());
         setEditingAddressId(null);
       } else {
+        if (!canCreateAddresses) {
+          notify({ type: 'error', message: 'You do not have permission to add addresses.' });
+          return;
+        }
         setEditingAddressId(null);
         setAddressForm(createEmptyAddressForm('SHIPPING'));
         setAddressFormOpen(true);
@@ -2355,8 +2377,8 @@ const UsersPage = () => {
     };
 
     const handleEditAddress = (address: CheckoutAddress) => {
-      if (!canModifyAddresses) {
-        notify({ type: 'error', message: 'You do not have permission to modify addresses.' });
+      if (!canEditAddresses) {
+        notify({ type: 'error', message: 'You do not have permission to edit addresses.' });
         return;
       }
       setAddressForm({
@@ -2382,7 +2404,7 @@ const UsersPage = () => {
           <div>
             <h3 className="text-sm font-semibold text-slate-800">Saved addresses</h3>
             <p className="text-xs text-slate-500">Manage shipping and billing locations for this customer.</p>
-            {!canModifyAddresses && (
+            {!canManageAddresses && (
               <p className="mt-1 text-xs text-slate-500">
                 You can review saved addresses but do not have permission to add or edit them.
               </p>
@@ -2392,8 +2414,8 @@ const UsersPage = () => {
             variant="ghost"
             className="px-3 py-1 text-xs"
             onClick={handleToggleForm}
-            disabled={!canModifyAddresses}
-            title={!canModifyAddresses ? 'You do not have permission to manage addresses.' : undefined}
+            disabled={!addressFormOpen && !canCreateAddresses}
+            title={!addressFormOpen && !canCreateAddresses ? 'You do not have permission to add addresses.' : undefined}
           >
             {addressFormOpen ? (editingAddressId ? 'Cancel edit' : 'Cancel') : 'Add address'}
           </Button>
@@ -2626,10 +2648,10 @@ const UsersPage = () => {
                   <button
                     type="button"
                     onClick={() => handleEditAddress(address)}
-                    disabled={isAddressSubmitting || !canModifyAddresses}
+                    disabled={isAddressSubmitting || !canEditAddresses}
                     className="rounded-full border border-slate-200 p-2 text-slate-500 transition hover:border-primary/40 hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
                     aria-label={`Edit address for ${address.fullName}`}
-                    title={!canModifyAddresses ? 'You do not have permission to edit addresses.' : undefined}
+                    title={!canEditAddresses ? 'You do not have permission to edit addresses.' : undefined}
                   >
                     <PencilIcon />
                   </button>
@@ -2689,7 +2711,7 @@ const UsersPage = () => {
     }
 
     const cart = cartQuery.data ?? { items: [], totalQuantity: 0, subtotal: 0 };
-    const canModifyCart = canAddUserCartItems || canRemoveUserCartItems;
+    const canModifyCart = canModifyUserCartItems || canRemoveUserCartItems;
     const items = [...(cart.items ?? [])].sort((a, b) => {
       const firstId = a.id ?? 0;
       const secondId = b.id ?? 0;
@@ -2715,7 +2737,7 @@ const UsersPage = () => {
     };
 
     const handleSubmitQuantity = (item: Cart['items'][number]) => {
-      if (!canAddUserCartItems) {
+      if (!canEditUserCartItems) {
         notify({ type: 'error', message: 'You do not have permission to update cart items.' });
         return;
       }
@@ -2765,7 +2787,7 @@ const UsersPage = () => {
       null;
 
     const handleAddCartItemForUser = () => {
-      if (!canAddUserCartItems) {
+      if (!canCreateUserCartItems) {
         notify({ type: 'error', message: 'You do not have permission to add cart items.' });
         return;
       }
@@ -2804,7 +2826,7 @@ const UsersPage = () => {
       !selectedProductDetail ||
       (selectedProductDetail?.variants.length ? !cartSelectedVariantId : false) ||
       (selectedVariantAvailability != null && selectedVariantAvailability <= 0) ||
-      !canAddUserCartItems;
+      !canCreateUserCartItems;
 
     return (
       <div className="space-y-6">
@@ -2827,7 +2849,7 @@ const UsersPage = () => {
                   <div className="text-lg font-semibold text-slate-800">{formatMoney(cart.subtotal)}</div>
                 </div>
               </div>
-              {canAddUserCartItems ? (
+              {canCreateUserCartItems ? (
                 <button
                   type="button"
                   onClick={() => setIsCartAddOpen((open) => !open)}
@@ -2845,7 +2867,7 @@ const UsersPage = () => {
           </div>
         </section>
 
-        {isCartAddOpen && canAddUserCartItems && (
+        {isCartAddOpen && canCreateUserCartItems && (
           <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="flex flex-col gap-6 lg:flex-row">
               <div className="lg:w-1/2">
@@ -2988,7 +3010,7 @@ const UsersPage = () => {
                           onClick={handleAddCartItemForUser}
                           disabled={disableAddButton}
                           className="w-full rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-60"
-                          title={!canAddUserCartItems ? 'You do not have permission to add cart items.' : undefined}
+                          title={!canCreateUserCartItems ? 'You do not have permission to add cart items.' : undefined}
                         >
                           {addCartItemMutation.isPending ? 'Adding…' : 'Add to cart'}
                         </button>
@@ -3012,7 +3034,7 @@ const UsersPage = () => {
           <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
             <h3 className="text-sm font-semibold text-slate-800">No cart items yet</h3>
             <p className="mt-2 text-sm text-slate-500">
-              {canAddUserCartItems
+              {canCreateUserCartItems
                 ? 'This customer has not added any products to their cart. Use the “Add product” button above to seed their cart or guide them through the checkout journey.'
                 : 'This customer has not added any products to their cart yet.'}
             </p>
@@ -3109,9 +3131,9 @@ const UsersPage = () => {
                             <button
                               type="button"
                               onClick={() => handleSubmitQuantity(item)}
-                              disabled={!canAddUserCartItems || !quantityChanged || updatingItemId === itemId}
+                              disabled={!canEditUserCartItems || !quantityChanged || updatingItemId === itemId}
                               className="inline-flex items-center justify-center rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-primary/40 hover:text-primary disabled:cursor-not-allowed disabled:opacity-60"
-                              title={!canAddUserCartItems ? 'You do not have permission to update cart items.' : undefined}
+                              title={!canEditUserCartItems ? 'You do not have permission to update cart items.' : undefined}
                             >
                               {updatingItemId === itemId ? 'Saving…' : 'Update'}
                             </button>
