@@ -75,7 +75,7 @@ public class CheckoutAddressService {
         } else {
             address.setDefaultAddress(false);
         }
-        CheckoutAddress saved = addressRepository.save(address);
+        CheckoutAddress saved = addressRepository.saveAndFlush(address);
         return toDto(saved);
     }
 
@@ -110,7 +110,7 @@ public class CheckoutAddressService {
             address.setDefaultAddress(true);
         }
 
-        CheckoutAddress saved = addressRepository.save(address);
+        CheckoutAddress saved = addressRepository.saveAndFlush(address);
 
         if (!saved.isDefaultAddress()) {
             ensureDefaultExists(userId, saved.getType());

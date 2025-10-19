@@ -22,7 +22,7 @@ public class CouponController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAuthority('COUPON_MANAGE')")
+    @PreAuthorize("hasAuthority('COUPON_VIEW_GLOBAL')")
     public PageResponse<CouponSummaryDto> list(@RequestParam(name = "page", defaultValue = "0") int page,
                                                @RequestParam(name = "size", defaultValue = "20") int size,
                                                @RequestParam(name = "type", required = false) CouponType type,
@@ -33,45 +33,45 @@ public class CouponController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAuthority('COUPON_MANAGE')")
+    @PreAuthorize("hasAuthority('COUPON_VIEW_GLOBAL')")
     public CouponDetailDto get(@PathVariable("id") Long id) {
         return couponService.get(id);
     }
 
     @PostMapping
-    @PreAuthorize("hasAuthority('COUPON_MANAGE')")
+    @PreAuthorize("hasAuthority('COUPON_CREATE')")
     public CouponDetailDto create(@Valid @RequestBody CouponRequest request) {
         return couponService.create(request);
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAuthority('COUPON_MANAGE')")
+    @PreAuthorize("hasAuthority('COUPON_UPDATE')")
     public CouponDetailDto update(@PathVariable("id") Long id, @Valid @RequestBody CouponRequest request) {
         return couponService.update(id, request);
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAuthority('COUPON_MANAGE')")
+    @PreAuthorize("hasAuthority('COUPON_DELETE')")
     public void delete(@PathVariable("id") Long id) {
         couponService.delete(id);
     }
 
     @GetMapping("/reference/products")
-    @PreAuthorize("hasAuthority('COUPON_MANAGE')")
+    @PreAuthorize("hasAuthority('COUPON_VIEW_GLOBAL')")
     public List<CouponProductDto> productOptions(@RequestParam(name = "search", required = false) String search,
                                                  @RequestParam(name = "size", defaultValue = "25") int size) {
         return couponService.findProductOptions(search, size);
     }
 
     @GetMapping("/reference/categories")
-    @PreAuthorize("hasAuthority('COUPON_MANAGE')")
+    @PreAuthorize("hasAuthority('COUPON_VIEW_GLOBAL')")
     public List<CouponCategoryDto> categoryOptions(@RequestParam(name = "search", required = false) String search,
                                                    @RequestParam(name = "size", defaultValue = "25") int size) {
         return couponService.findCategoryOptions(search, size);
     }
 
     @GetMapping("/reference/users")
-    @PreAuthorize("hasAuthority('COUPON_MANAGE')")
+    @PreAuthorize("hasAuthority('COUPON_VIEW_GLOBAL')")
     public List<CouponUserDto> userOptions(@RequestParam(name = "search", required = false) String search,
                                            @RequestParam(name = "size", defaultValue = "25") int size) {
         return couponService.findUserOptions(search, size);

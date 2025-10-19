@@ -28,6 +28,9 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
@@ -84,7 +87,7 @@ public class CartService {
         if (cartIds.isEmpty()) {
             detailedCarts = Collections.emptyMap();
         } else {
-            List<Cart> carts = cartRepository.findDetailedByIds(cartIds);
+            List<Cart> carts = cartRepository.findByIdIn(cartIds);
             detailedCarts = carts.stream()
                     .filter(cart -> cart.getId() != null)
                     .collect(Collectors.toMap(Cart::getId, Function.identity(), (left, right) -> left, HashMap::new));
@@ -268,14 +271,37 @@ public class CartService {
     }
 
     @Transactional
-    @PreAuthorize("hasAuthority('USER_VIEW_GLOBAL') and hasAuthority('USER_UPDATE')")
+    @PreAuthorize("hasAuthority('USER_VIEW_GLOBAL') and (hasAuthority('USER_CREATE') or hasAuthority('USER_UPDATE'))")
     public CartDto addItemForUser(Long userId, AddCartItemRequest request) {
-        Cart cart = getExistingCart(userId);
+        boolean hasCreatePermission = hasAuthority("USER_CREATE");
+        boolean hasUpdatePermission = hasAuthority("USER_UPDATE");
+
+        Cart cart = cartRepository.findByUserId(userId).orElse(null);
+        boolean cartCreated = false;
+        if (cart == null) {
+            if (!hasCreatePermission) {
+                throw new ApiException(HttpStatus.FORBIDDEN, "Create permission is required to add new cart items.");
+            }
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "User not found"));
+            cart = new Cart();
+            cart.setUser(user);
+            cart.setItems(new ArrayList<>());
+            cartCreated = true;
+        }
+
         Product product = productRepository.findById(request.getProductId())
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Product not found"));
         ProductVariant variant = resolveVariant(product, request.getVariantId());
         int quantity = Optional.ofNullable(request.getQuantity()).orElse(1);
         CartItem item = findExistingItem(cart, product, variant);
+
+        if (item == null && !hasCreatePermission) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "Create permission is required to add new cart items.");
+        }
+        if (item != null && !hasUpdatePermission) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "Edit permission is required to modify existing cart items.");
+        }
         int newQuantity = quantity;
         if (item != null && item.getQuantity() != null) {
             newQuantity = item.getQuantity() + quantity;
@@ -293,9 +319,21 @@ public class CartService {
         item.setVariantLabel(variant != null ? variant.getVariantKey() : null);
         Cart saved = cartRepository.save(cart);
         cartRepository.flush();
+
+        User cartUser = saved.getUser();
+        String userLabel = cartUser != null && cartUser.getEmail() != null
+                ? cartUser.getEmail()
+                : "#" + userId;
+
+        if (cartCreated) {
+            activityRecorder.record("Carts", "CREATE",
+                    "Created cart for user " + userLabel,
+                    "SUCCESS", buildContext(saved, cartUser));
+        }
+
         activityRecorder.record("Carts", "ADD_ITEM",
-                "Added item to cart for userId " + userId,
-                "SUCCESS", buildContext(saved, saved.getUser()));
+                "Added item to cart for user " + userLabel,
+                "SUCCESS", buildContext(saved, cartUser));
         return cartMapper.toDto(saved);
     }
 
@@ -377,6 +415,19 @@ public class CartService {
             }
         }
         return null;
+    }
+
+    private boolean hasAuthority(String authority) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null) {
+            return false;
+        }
+        for (GrantedAuthority grantedAuthority : authentication.getAuthorities()) {
+            if (authority.equals(grantedAuthority.getAuthority())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void enforceQuantityBounds(Product product, ProductVariant variant, int quantity) {

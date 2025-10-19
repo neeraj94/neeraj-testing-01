@@ -353,8 +353,10 @@ const AllCartsPanel = ({ permissions }: AllCartsPanelProps) => {
   const queryClient = useQueryClient();
 
   const hasUserViewGlobal = useMemo(() => hasAnyPermission(permissions, ['USER_VIEW_GLOBAL']), [permissions]);
+  const canCreateAllCarts = hasUserViewGlobal && hasAnyPermission(permissions, ['USER_CREATE']);
   const canUpdateAllCarts = hasUserViewGlobal && hasAnyPermission(permissions, ['USER_UPDATE']);
   const canDeleteAllCarts = hasUserViewGlobal && hasAnyPermission(permissions, ['USER_DELETE']);
+  const canManageAllCarts = canCreateAllCarts || canUpdateAllCarts || canDeleteAllCarts;
 
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(10);
@@ -510,10 +512,10 @@ const AllCartsPanel = ({ permissions }: AllCartsPanelProps) => {
 
   const handleAddItem = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!canUpdateAllCarts) {
+    if (!canCreateAllCarts) {
       notify({
         title: 'Insufficient permissions',
-        message: 'User edit access is required to add items to carts.',
+        message: 'User create access is required to add items to carts.',
         type: 'error'
       });
       return;
@@ -628,9 +630,9 @@ const AllCartsPanel = ({ permissions }: AllCartsPanelProps) => {
           <p className="text-sm text-slate-500">
             Monitor customer carts, adjust quantities, and keep storefront sessions in sync with administrative updates.
           </p>
-          {!canUpdateAllCarts && !canDeleteAllCarts && (
+          {!canManageAllCarts && (
             <p className="text-xs text-amber-600">
-              You currently have read-only access. Grant User edit/delete permissions to modify other customers&apos; carts.
+              You currently have read-only access. Grant User create/edit/delete permissions to modify other customers&apos; carts.
             </p>
           )}
         </div>
@@ -842,7 +844,7 @@ const AllCartsPanel = ({ permissions }: AllCartsPanelProps) => {
                       type="number"
                       min={1}
                       required
-                      disabled={isMutating || !canUpdateAllCarts}
+                      disabled={isMutating || !canCreateAllCarts}
                       className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                     />
                   </label>
@@ -852,7 +854,7 @@ const AllCartsPanel = ({ permissions }: AllCartsPanelProps) => {
                       name="variantId"
                       type="number"
                       min={1}
-                      disabled={isMutating || !canUpdateAllCarts}
+                      disabled={isMutating || !canCreateAllCarts}
                       className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                     />
                   </label>
@@ -864,13 +866,13 @@ const AllCartsPanel = ({ permissions }: AllCartsPanelProps) => {
                       min={1}
                       defaultValue={1}
                       required
-                      disabled={isMutating || !canUpdateAllCarts}
+                      disabled={isMutating || !canCreateAllCarts}
                       className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                     />
                   </label>
                 </div>
                 <div className="flex justify-end">
-                  <Button type="submit" disabled={isMutating || !canUpdateAllCarts} className="px-3 py-1.5 text-xs font-semibold">
+                  <Button type="submit" disabled={isMutating || !canCreateAllCarts} className="px-3 py-1.5 text-xs font-semibold">
                     Add to cart
                   </Button>
                 </div>

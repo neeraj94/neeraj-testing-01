@@ -169,8 +169,20 @@ const CouponsPage = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isDetailModalOpen, closeDetailModal]);
 
-  const canManageCoupons = useMemo(
-    () => hasAnyPermission(permissions as PermissionKey[], ['COUPON_MANAGE']),
+  const canViewCoupons = useMemo(
+    () => hasAnyPermission(permissions as PermissionKey[], ['COUPON_VIEW_GLOBAL']),
+    [permissions]
+  );
+  const canCreateCoupons = useMemo(
+    () => hasAnyPermission(permissions as PermissionKey[], ['COUPON_CREATE']),
+    [permissions]
+  );
+  const canUpdateCoupons = useMemo(
+    () => hasAnyPermission(permissions as PermissionKey[], ['COUPON_UPDATE']),
+    [permissions]
+  );
+  const canDeleteCoupons = useMemo(
+    () => hasAnyPermission(permissions as PermissionKey[], ['COUPON_DELETE']),
     [permissions]
   );
 
@@ -403,6 +415,9 @@ const CouponsPage = () => {
   });
 
   const openCreateForm = () => {
+    if (!canCreateCoupons) {
+      return;
+    }
     setForm(defaultFormState());
     setFormError(null);
     setEditingId(null);
@@ -418,6 +433,9 @@ const CouponsPage = () => {
   };
 
   const openEditForm = (id: number) => {
+    if (!canUpdateCoupons) {
+      return;
+    }
     setForm(defaultFormState());
     setFormError(null);
     setEditingId(id);
@@ -448,6 +466,9 @@ const CouponsPage = () => {
   };
 
   const handleDelete = async (coupon: CouponSummary) => {
+    if (!canDeleteCoupons) {
+      return;
+    }
     const confirmed = await confirm({
       title: 'Delete coupon',
       description: `Are you sure you want to delete ${coupon.code}? This action cannot be undone.`,
@@ -646,7 +667,7 @@ const CouponsPage = () => {
           </select>
         </div>
       </div>
-      {canManageCoupons && (
+      {canCreateCoupons && (
         <button
           type="button"
           onClick={openCreateForm}
@@ -695,28 +716,29 @@ const CouponsPage = () => {
             <button
               type="button"
               onClick={() => openDetailModal(coupon.id)}
-              className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100"
+              disabled={!canViewCoupons}
+              className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
             >
               View details
             </button>
-            {canManageCoupons && (
-              <>
-                <button
-                  type="button"
-                  onClick={() => openEditForm(coupon.id)}
-                  className="rounded-lg border border-primary/30 px-3 py-1.5 text-sm font-semibold text-primary hover:bg-primary/10"
-                >
-                  Edit
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleDelete(coupon)}
-                  className="rounded-lg border border-rose-200 px-3 py-1.5 text-sm font-medium text-rose-600 hover:bg-rose-50"
-                  disabled={deleteMutation.isPending && deleteMutation.variables === coupon.id}
-                >
-                  Delete
-                </button>
-              </>
+            {canUpdateCoupons && (
+              <button
+                type="button"
+                onClick={() => openEditForm(coupon.id)}
+                className="rounded-lg border border-primary/30 px-3 py-1.5 text-sm font-semibold text-primary hover:bg-primary/10"
+              >
+                Edit
+              </button>
+            )}
+            {canDeleteCoupons && (
+              <button
+                type="button"
+                onClick={() => handleDelete(coupon)}
+                className="rounded-lg border border-rose-200 px-3 py-1.5 text-sm font-medium text-rose-600 hover:bg-rose-50"
+                disabled={deleteMutation.isPending && deleteMutation.variables === coupon.id}
+              >
+                Delete
+              </button>
             )}
           </div>
         </div>
@@ -1503,7 +1525,7 @@ const CouponsPage = () => {
               <p className="mt-1 text-sm text-slate-500">
                 Kickstart your first promotion by creating a coupon. Use filters to locate coupons quickly.
               </p>
-              {canManageCoupons && (
+              {canCreateCoupons && (
                 <button
                   type="button"
                   onClick={openCreateForm}
