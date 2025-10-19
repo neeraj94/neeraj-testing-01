@@ -28,9 +28,9 @@ public class CartRepositoryImpl implements CartRepositoryCustom {
                 .append("SUM(i.unitPrice * i.quantity), SUM(i.quantity)) ")
                 .append("from Cart c ")
                 .append("join c.user u ")
-                .append("join c.items i ")
+                .append("left join c.items i ")
                 .append("left join i.product p ")
-                .append("where i.quantity > 0 ");
+                .append("where 1 = 1 ");
 
         if (searchPattern != null) {
             selectBuilder.append("and (lower(u.fullName) like :pattern ")
@@ -53,9 +53,9 @@ public class CartRepositoryImpl implements CartRepositoryCustom {
         countBuilder.append("select count(distinct c.id) ")
                 .append("from Cart c ")
                 .append("join c.user u ")
-                .append("join c.items i ")
+                .append("left join c.items i ")
                 .append("left join i.product p ")
-                .append("where i.quantity > 0 ");
+                .append("where 1 = 1 ");
 
         if (searchPattern != null) {
             countBuilder.append("and (lower(u.fullName) like :pattern ")

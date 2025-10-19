@@ -562,7 +562,7 @@ const AllCartsPanel = ({ permissions }: AllCartsPanelProps) => {
       return (
         <tr>
           <td colSpan={6} className="px-6 py-6 text-center text-sm text-slate-500">
-            No carts with active items were found.
+            No carts found.
           </td>
         </tr>
       );
