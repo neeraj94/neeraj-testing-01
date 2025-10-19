@@ -56,7 +56,7 @@ WHERE NOT EXISTS (SELECT 1 FROM permissions WHERE code = 'SHIPPING_MANAGE');
 
 -- Grant new shipping permissions to roles that previously had any shipping capability
 INSERT INTO role_permissions (role_id, permission_id)
-SELECT rp.role_id, viewPerm.id
+SELECT DISTINCT rp.role_id, viewPerm.id
 FROM role_permissions rp
 JOIN permissions oldPerm ON oldPerm.id = rp.permission_id AND oldPerm.code IN ('SHIPPING_AREA_VIEW')
 JOIN permissions viewPerm ON viewPerm.code = 'SHIPPING_VIEW'
@@ -65,7 +65,7 @@ LEFT JOIN role_permissions existing
 WHERE existing.role_id IS NULL;
 
 INSERT INTO role_permissions (role_id, permission_id)
-SELECT rp.role_id, managePerm.id
+SELECT DISTINCT rp.role_id, managePerm.id
 FROM role_permissions rp
 JOIN permissions oldPerm ON oldPerm.id = rp.permission_id AND oldPerm.code IN (
     'SHIPPING_AREA_CREATE', 'SHIPPING_AREA_UPDATE', 'SHIPPING_AREA_DELETE', 'SHIPPING_LOCATION_MANAGE'
