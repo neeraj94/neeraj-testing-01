@@ -19,7 +19,7 @@ public class ShippingAreaRateController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAuthority('SHIPPING_AREA_VIEW')")
+    @PreAuthorize("hasAnyAuthority('SHIPPING_VIEW', 'SHIPPING_MANAGE')")
     public PageResponse<ShippingAreaRateDto> list(@RequestParam(defaultValue = "0") int page,
                                                   @RequestParam(defaultValue = "10") int size,
                                                   @RequestParam(required = false) String search) {
@@ -27,27 +27,27 @@ public class ShippingAreaRateController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAuthority('SHIPPING_AREA_VIEW')")
+    @PreAuthorize("hasAnyAuthority('SHIPPING_VIEW', 'SHIPPING_MANAGE')")
     public ShippingAreaRateDto get(@PathVariable Long id) {
         return shippingAreaRateService.get(id);
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAuthority('SHIPPING_AREA_CREATE')")
+    @PreAuthorize("hasAuthority('SHIPPING_MANAGE')")
     public ShippingAreaRateDto create(@RequestBody ShippingAreaRateRequest request) {
         return shippingAreaRateService.create(request);
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAuthority('SHIPPING_AREA_UPDATE')")
+    @PreAuthorize("hasAuthority('SHIPPING_MANAGE')")
     public ShippingAreaRateDto update(@PathVariable Long id, @RequestBody ShippingAreaRateRequest request) {
         return shippingAreaRateService.update(id, request);
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PreAuthorize("hasAuthority('SHIPPING_AREA_DELETE')")
+    @PreAuthorize("hasAuthority('SHIPPING_MANAGE')")
     public void delete(@PathVariable Long id) {
         shippingAreaRateService.delete(id);
     }
