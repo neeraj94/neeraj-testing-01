@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Auth APIs</title>
+    <title>Authentication APIs</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body class="page">
@@ -11,9 +11,9 @@
       <aside class="docs__nav sidebar" aria-label="API navigation">
         <div class="sidebar__brand">
           <div class="sidebar__badge">RBAC Commerce</div>
-          <h1>Auth APIs</h1>
-          <p>Endpoints implemented by the Auth controller.</p>
-          <p class="sidebar__hint">Base path: <code>/api/v1/auth</code></p>
+          <h1>Authentication APIs</h1>
+          <p>Token issuance, refresh, logout, and verification flows used by the dashboard and storefront.</p>
+          <p class="sidebar__hint">Base path: <code>/api/publicapi/auth</code></p>
         </div>
         <div class="sidebar__controls">
           <label class="control">
@@ -37,23 +37,23 @@
         <nav class="sidebar__nav" aria-label="Endpoints">
           <h2>Endpoints</h2>
           <ul class="sidebar__tree" role="tree">
-            <li role="treeitem"><a href="#post-signup" data-endpoint-link="post-signup"><span class="sidebar__method">POST</span>Signup</a></li><li role="treeitem"><a href="#post-login" data-endpoint-link="post-login"><span class="sidebar__method">POST</span>Login</a></li><li role="treeitem"><a href="#post-refresh" data-endpoint-link="post-refresh"><span class="sidebar__method">POST</span>Refresh</a></li><li role="treeitem"><a href="#post-logout" data-endpoint-link="post-logout"><span class="sidebar__method">POST</span>Logout</a></li><li role="treeitem"><a href="#get-me" data-endpoint-link="get-me"><span class="sidebar__method">GET</span>Me</a></li><li role="treeitem"><a href="#post-verify" data-endpoint-link="post-verify"><span class="sidebar__method">POST</span>Verify</a></li><li role="treeitem"><a href="#get-verify" data-endpoint-link="get-verify"><span class="sidebar__method">GET</span>Verify</a></li>
+            <li role="treeitem"><a href="#post-signup" data-endpoint-link="post-signup"><span class="sidebar__method">POST</span>Sign up</a></li><li role="treeitem"><a href="#post-login" data-endpoint-link="post-login"><span class="sidebar__method">POST</span>Login</a></li><li role="treeitem"><a href="#post-refresh" data-endpoint-link="post-refresh"><span class="sidebar__method">POST</span>Refresh token</a></li><li role="treeitem"><a href="#post-logout" data-endpoint-link="post-logout"><span class="sidebar__method">POST</span>Logout</a></li><li role="treeitem"><a href="#get-me" data-endpoint-link="get-me"><span class="sidebar__method">GET</span>Current user</a></li><li role="treeitem"><a href="#post-verify" data-endpoint-link="post-verify"><span class="sidebar__method">POST</span>Verify email (body)</a></li><li role="treeitem"><a href="#get-verify" data-endpoint-link="get-verify"><span class="sidebar__method">GET</span>Verify email (link)</a></li>
           </ul>
         </nav>
       </aside>
       <main class="docs__content content" id="docsContent" tabindex="-1">
         <header class="hero">
-          <h2>Auth APIs</h2>
-          <p>Endpoints implemented by the Auth controller.</p>
+          <h2>Authentication APIs</h2>
+          <p>Token issuance, refresh, logout, and verification flows used by the dashboard and storefront.</p>
           <p><strong>Selected base URL:</strong> <span data-base-display>https://sandbox.api.rbac-commerce.dev</span></p>
         </header>
-        <article class="endpoint" id="post-signup" data-endpoint-id="post-signup" data-method="POST" data-base-path="/api/v1/auth" data-path="/signup" data-auth="Public" data-headers='[[&quot;Content-Type&quot;, &quot;application/json&quot;]]' data-body='&quot;{}&quot;'>
+        <article class="endpoint" id="post-signup" data-endpoint-id="post-signup" data-method="POST" data-base-path="/api/publicapi/auth" data-path="/signup" data-auth="Public" data-headers='[[&quot;Content-Type&quot;, &quot;application/json&quot;], [&quot;Accept&quot;, &quot;application/json&quot;]]' data-body='{&quot;email&quot;: &quot;alex@example.com&quot;, &quot;password&quot;: &quot;P@ssw0rd!&quot;, &quot;firstName&quot;: &quot;Alex&quot;, &quot;lastName&quot;: &quot;Doe&quot;, &quot;role&quot;: &quot;CUSTOMER&quot;}'>
   <div class="endpoint__header">
     <div class="endpoint__title">
       <span class="http-badge http-badge--post">POST</span>
       <div>
-        <h3>Signup</h3>
-        <p><code>/api/v1/auth/signup</code></p>
+        <h3>Sign up</h3>
+        <p><code>/api/publicapi/auth/signup</code></p>
       </div>
     </div>
     <span class="auth-badge auth-badge--public">Public</span>
@@ -62,7 +62,7 @@
     <div class="endpoint__body">
       <section class="endpoint__section">
         <h4>Summary</h4>
-        <p>Signup handler in AuthController for POST /signup requests.</p>
+        <p>Registers a new dashboard operator or storefront customer depending on the supplied role.</p>
       </section>
       <section class="endpoint__section"><h4>Authentication</h4><p>No authentication required.</p></section>
       
@@ -70,19 +70,48 @@
   <h4>Headers</h4>
   <table>
     <thead><tr><th>Name</th><th>Value</th></tr></thead>
-    <tbody><tr><td>Content-Type</td><td>application/json</td></tr></tbody>
+    <tbody><tr><td>Content-Type</td><td>application/json</td></tr><tr><td>Accept</td><td>application/json</td></tr></tbody>
   </table>
 </section>
 
-      <section class="endpoint__section"><h4>Request body</h4><pre>{}</pre></section>
+      <section class="endpoint__section"><h4>Request body</h4><pre>{
+  &quot;email&quot;: &quot;alex@example.com&quot;,
+  &quot;password&quot;: &quot;P@ssw0rd!&quot;,
+  &quot;firstName&quot;: &quot;Alex&quot;,
+  &quot;lastName&quot;: &quot;Doe&quot;,
+  &quot;role&quot;: &quot;CUSTOMER&quot;
+}</pre></section>
       <section class="endpoint__section">
         <h4>Success response</h4>
         <p class="status success">HTTP 201</p>
-        <p>No body returned.</p>
+        <pre>{
+  &quot;token&quot;: &quot;eyJhbGciOi...&quot;,
+  &quot;refreshToken&quot;: &quot;c9f7b...&quot;,
+  &quot;expiresIn&quot;: 3600,
+  &quot;user&quot;: {
+    &quot;id&quot;: 58,
+    &quot;email&quot;: &quot;alex@example.com&quot;,
+    &quot;firstName&quot;: &quot;Alex&quot;,
+    &quot;lastName&quot;: &quot;Doe&quot;,
+    &quot;roles&quot;: [
+      &quot;CUSTOMER&quot;
+    ]
+  }
+}</pre>
       </section>
       <section class="endpoint__section">
         <h4>Error scenarios</h4>
-        <p>No specific error payloads documented.</p>
+        <table>
+  <thead><tr><th>Status</th><th>Description</th><th>Example</th></tr></thead>
+  <tbody><tr><td class='status client'>HTTP 409</td><td>Email already registered</td><td><pre>{
+  &quot;error&quot;: &quot;Conflict&quot;,
+  &quot;message&quot;: &quot;EMAIL_IN_USE&quot;
+}</pre></td></tr><tr><td class='status client'>HTTP 400</td><td>Validation failed</td><td><pre>{
+  &quot;error&quot;: &quot;Bad Request&quot;,
+  &quot;message&quot;: &quot;Password must be at least 8 characters&quot;
+}</pre></td></tr></tbody>
+</table>
+
       </section>
     </div>
     <div class="endpoint__panels">
@@ -137,13 +166,13 @@
     </div>
   </div>
 </article>
-<article class="endpoint" id="post-login" data-endpoint-id="post-login" data-method="POST" data-base-path="/api/v1/auth" data-path="/login" data-auth="Public" data-headers='[[&quot;Content-Type&quot;, &quot;application/json&quot;]]' data-body='&quot;{}&quot;'>
+<article class="endpoint" id="post-login" data-endpoint-id="post-login" data-method="POST" data-base-path="/api/publicapi/auth" data-path="/login" data-auth="Public" data-headers='[[&quot;Content-Type&quot;, &quot;application/json&quot;]]' data-body='{&quot;email&quot;: &quot;alex@example.com&quot;, &quot;password&quot;: &quot;P@ssw0rd!&quot;}'>
   <div class="endpoint__header">
     <div class="endpoint__title">
       <span class="http-badge http-badge--post">POST</span>
       <div>
         <h3>Login</h3>
-        <p><code>/api/v1/auth/login</code></p>
+        <p><code>/api/publicapi/auth/login</code></p>
       </div>
     </div>
     <span class="auth-badge auth-badge--public">Public</span>
@@ -152,7 +181,7 @@
     <div class="endpoint__body">
       <section class="endpoint__section">
         <h4>Summary</h4>
-        <p>Login handler in AuthController for POST /login requests.</p>
+        <p>Authenticates an existing user and returns a JWT access token and refresh token.</p>
       </section>
       <section class="endpoint__section"><h4>Authentication</h4><p>No authentication required.</p></section>
       
@@ -164,15 +193,35 @@
   </table>
 </section>
 
-      <section class="endpoint__section"><h4>Request body</h4><pre>{}</pre></section>
+      <section class="endpoint__section"><h4>Request body</h4><pre>{
+  &quot;email&quot;: &quot;alex@example.com&quot;,
+  &quot;password&quot;: &quot;P@ssw0rd!&quot;
+}</pre></section>
       <section class="endpoint__section">
         <h4>Success response</h4>
-        <p class="status success">HTTP 201</p>
-        <p>No body returned.</p>
+        <p class="status success">HTTP 200</p>
+        <pre>{
+  &quot;token&quot;: &quot;eyJhbGciOi...&quot;,
+  &quot;refreshToken&quot;: &quot;c9f7b...&quot;,
+  &quot;expiresIn&quot;: 3600,
+  &quot;user&quot;: {
+    &quot;id&quot;: 58,
+    &quot;email&quot;: &quot;alex@example.com&quot;,
+    &quot;firstName&quot;: &quot;Alex&quot;,
+    &quot;lastName&quot;: &quot;Doe&quot;
+  }
+}</pre>
       </section>
       <section class="endpoint__section">
         <h4>Error scenarios</h4>
-        <p>No specific error payloads documented.</p>
+        <table>
+  <thead><tr><th>Status</th><th>Description</th><th>Example</th></tr></thead>
+  <tbody><tr><td class='status client'>HTTP 401</td><td>Invalid credentials</td><td><pre>{
+  &quot;error&quot;: &quot;Unauthorized&quot;,
+  &quot;message&quot;: &quot;INVALID_CREDENTIALS&quot;
+}</pre></td></tr></tbody>
+</table>
+
       </section>
     </div>
     <div class="endpoint__panels">
@@ -227,13 +276,13 @@
     </div>
   </div>
 </article>
-<article class="endpoint" id="post-refresh" data-endpoint-id="post-refresh" data-method="POST" data-base-path="/api/v1/auth" data-path="/refresh" data-auth="Public" data-headers='[[&quot;Content-Type&quot;, &quot;application/json&quot;]]' data-body='&quot;{}&quot;'>
+<article class="endpoint" id="post-refresh" data-endpoint-id="post-refresh" data-method="POST" data-base-path="/api/publicapi/auth" data-path="/refresh" data-auth="Public" data-headers='[[&quot;Content-Type&quot;, &quot;application/json&quot;]]' data-body='{&quot;refreshToken&quot;: &quot;c9f7b...&quot;}'>
   <div class="endpoint__header">
     <div class="endpoint__title">
       <span class="http-badge http-badge--post">POST</span>
       <div>
-        <h3>Refresh</h3>
-        <p><code>/api/v1/auth/refresh</code></p>
+        <h3>Refresh token</h3>
+        <p><code>/api/publicapi/auth/refresh</code></p>
       </div>
     </div>
     <span class="auth-badge auth-badge--public">Public</span>
@@ -242,7 +291,7 @@
     <div class="endpoint__body">
       <section class="endpoint__section">
         <h4>Summary</h4>
-        <p>Refresh handler in AuthController for POST /refresh requests.</p>
+        <p>Issues a new access token using a valid refresh token.</p>
       </section>
       <section class="endpoint__section"><h4>Authentication</h4><p>No authentication required.</p></section>
       
@@ -254,15 +303,28 @@
   </table>
 </section>
 
-      <section class="endpoint__section"><h4>Request body</h4><pre>{}</pre></section>
+      <section class="endpoint__section"><h4>Request body</h4><pre>{
+  &quot;refreshToken&quot;: &quot;c9f7b...&quot;
+}</pre></section>
       <section class="endpoint__section">
         <h4>Success response</h4>
-        <p class="status success">HTTP 201</p>
-        <p>No body returned.</p>
+        <p class="status success">HTTP 200</p>
+        <pre>{
+  &quot;token&quot;: &quot;eyJhbGciOi...&quot;,
+  &quot;refreshToken&quot;: &quot;a8d4...&quot;,
+  &quot;expiresIn&quot;: 3600
+}</pre>
       </section>
       <section class="endpoint__section">
         <h4>Error scenarios</h4>
-        <p>No specific error payloads documented.</p>
+        <table>
+  <thead><tr><th>Status</th><th>Description</th><th>Example</th></tr></thead>
+  <tbody><tr><td class='status client'>HTTP 401</td><td>Refresh token expired</td><td><pre>{
+  &quot;error&quot;: &quot;Unauthorized&quot;,
+  &quot;message&quot;: &quot;REFRESH_TOKEN_EXPIRED&quot;
+}</pre></td></tr></tbody>
+</table>
+
       </section>
     </div>
     <div class="endpoint__panels">
@@ -317,13 +379,13 @@
     </div>
   </div>
 </article>
-<article class="endpoint" id="post-logout" data-endpoint-id="post-logout" data-method="POST" data-base-path="/api/v1/auth" data-path="/logout" data-auth="Public" data-headers='[[&quot;Content-Type&quot;, &quot;application/json&quot;]]' data-body='&quot;{}&quot;'>
+<article class="endpoint" id="post-logout" data-endpoint-id="post-logout" data-method="POST" data-base-path="/api/publicapi/auth" data-path="/logout" data-auth="Public" data-headers='[[&quot;Content-Type&quot;, &quot;application/json&quot;]]' data-body='{&quot;refreshToken&quot;: &quot;c9f7b...&quot;}'>
   <div class="endpoint__header">
     <div class="endpoint__title">
       <span class="http-badge http-badge--post">POST</span>
       <div>
         <h3>Logout</h3>
-        <p><code>/api/v1/auth/logout</code></p>
+        <p><code>/api/publicapi/auth/logout</code></p>
       </div>
     </div>
     <span class="auth-badge auth-badge--public">Public</span>
@@ -332,7 +394,7 @@
     <div class="endpoint__body">
       <section class="endpoint__section">
         <h4>Summary</h4>
-        <p>Logout handler in AuthController for POST /logout requests.</p>
+        <p>Revokes the supplied refresh token immediately.</p>
       </section>
       <section class="endpoint__section"><h4>Authentication</h4><p>No authentication required.</p></section>
       
@@ -344,15 +406,24 @@
   </table>
 </section>
 
-      <section class="endpoint__section"><h4>Request body</h4><pre>{}</pre></section>
+      <section class="endpoint__section"><h4>Request body</h4><pre>{
+  &quot;refreshToken&quot;: &quot;c9f7b...&quot;
+}</pre></section>
       <section class="endpoint__section">
         <h4>Success response</h4>
-        <p class="status success">HTTP 201</p>
+        <p class="status success">HTTP 204</p>
         <p>No body returned.</p>
       </section>
       <section class="endpoint__section">
         <h4>Error scenarios</h4>
-        <p>No specific error payloads documented.</p>
+        <table>
+  <thead><tr><th>Status</th><th>Description</th><th>Example</th></tr></thead>
+  <tbody><tr><td class='status client'>HTTP 400</td><td>Unknown refresh token</td><td><pre>{
+  &quot;error&quot;: &quot;Bad Request&quot;,
+  &quot;message&quot;: &quot;REFRESH_TOKEN_NOT_FOUND&quot;
+}</pre></td></tr></tbody>
+</table>
+
       </section>
     </div>
     <div class="endpoint__panels">
@@ -407,35 +478,62 @@
     </div>
   </div>
 </article>
-<article class="endpoint" id="get-me" data-endpoint-id="get-me" data-method="GET" data-base-path="/api/v1/auth" data-path="/me" data-auth="Public" data-body='null'>
+<article class="endpoint" id="get-me" data-endpoint-id="get-me" data-method="GET" data-base-path="/api/publicapi/auth" data-path="/me" data-auth="Bearer" data-headers='[[&quot;Authorization&quot;, &quot;Bearer &lt;token&gt;&quot;]]'>
   <div class="endpoint__header">
     <div class="endpoint__title">
       <span class="http-badge http-badge--get">GET</span>
       <div>
-        <h3>Me</h3>
-        <p><code>/api/v1/auth/me</code></p>
+        <h3>Current user</h3>
+        <p><code>/api/publicapi/auth/me</code></p>
       </div>
     </div>
-    <span class="auth-badge auth-badge--public">Public</span>
+    <span class="auth-badge auth-badge--protected">Protected</span>
   </div>
   <div class="endpoint__layout">
     <div class="endpoint__body">
       <section class="endpoint__section">
         <h4>Summary</h4>
-        <p>Me handler in AuthController for GET /me requests.</p>
+        <p>Returns the profile of the authenticated principal.</p>
       </section>
-      <section class="endpoint__section"><h4>Authentication</h4><p>No authentication required.</p></section>
+      <section class="endpoint__section"><h4>Authentication</h4><p>Provide an <code>Authorization: Bearer &lt;token&gt;</code> header.</p></section>
       
+      <section class="endpoint__section">
+  <h4>Headers</h4>
+  <table>
+    <thead><tr><th>Name</th><th>Value</th></tr></thead>
+    <tbody><tr><td>Authorization</td><td>Bearer &lt;token&gt;</td></tr></tbody>
+  </table>
+</section>
+
       
-      <section class="endpoint__section"><h4>Request body</h4><p>No body required.</p></section>
       <section class="endpoint__section">
         <h4>Success response</h4>
         <p class="status success">HTTP 200</p>
-        <p>No body returned.</p>
+        <pre>{
+  &quot;id&quot;: 12,
+  &quot;email&quot;: &quot;ops@example.com&quot;,
+  &quot;firstName&quot;: &quot;Operations&quot;,
+  &quot;lastName&quot;: &quot;Lead&quot;,
+  &quot;roles&quot;: [
+    &quot;ADMIN&quot;
+  ],
+  &quot;permissions&quot;: [
+    &quot;PRODUCT_VIEW&quot;,
+    &quot;USER_VIEW_GLOBAL&quot;
+  ],
+  &quot;status&quot;: &quot;ACTIVE&quot;
+}</pre>
       </section>
       <section class="endpoint__section">
         <h4>Error scenarios</h4>
-        <p>No specific error payloads documented.</p>
+        <table>
+  <thead><tr><th>Status</th><th>Description</th><th>Example</th></tr></thead>
+  <tbody><tr><td class='status client'>HTTP 401</td><td>Missing token</td><td><pre>{
+  &quot;error&quot;: &quot;Unauthorized&quot;,
+  &quot;message&quot;: &quot;TOKEN_REQUIRED&quot;
+}</pre></td></tr></tbody>
+</table>
+
       </section>
     </div>
     <div class="endpoint__panels">
@@ -490,13 +588,13 @@
     </div>
   </div>
 </article>
-<article class="endpoint" id="post-verify" data-endpoint-id="post-verify" data-method="POST" data-base-path="/api/v1/auth" data-path="/verify" data-auth="Public" data-headers='[[&quot;Content-Type&quot;, &quot;application/json&quot;]]' data-body='&quot;{}&quot;'>
+<article class="endpoint" id="post-verify" data-endpoint-id="post-verify" data-method="POST" data-base-path="/api/publicapi/auth" data-path="/verify" data-auth="Public" data-headers='[[&quot;Content-Type&quot;, &quot;application/json&quot;]]' data-body='{&quot;token&quot;: &quot;VeR1Fy-123&quot;}'>
   <div class="endpoint__header">
     <div class="endpoint__title">
       <span class="http-badge http-badge--post">POST</span>
       <div>
-        <h3>Verify</h3>
-        <p><code>/api/v1/auth/verify</code></p>
+        <h3>Verify email (body)</h3>
+        <p><code>/api/publicapi/auth/verify</code></p>
       </div>
     </div>
     <span class="auth-badge auth-badge--public">Public</span>
@@ -505,7 +603,7 @@
     <div class="endpoint__body">
       <section class="endpoint__section">
         <h4>Summary</h4>
-        <p>Verify handler in AuthController for POST /verify requests.</p>
+        <p>Confirms an email verification token when posted from the dashboard.</p>
       </section>
       <section class="endpoint__section"><h4>Authentication</h4><p>No authentication required.</p></section>
       
@@ -517,15 +615,27 @@
   </table>
 </section>
 
-      <section class="endpoint__section"><h4>Request body</h4><pre>{}</pre></section>
+      <section class="endpoint__section"><h4>Request body</h4><pre>{
+  &quot;token&quot;: &quot;VeR1Fy-123&quot;
+}</pre></section>
       <section class="endpoint__section">
         <h4>Success response</h4>
-        <p class="status success">HTTP 201</p>
-        <p>No body returned.</p>
+        <p class="status success">HTTP 200</p>
+        <pre>{
+  &quot;verified&quot;: true,
+  &quot;email&quot;: &quot;alex@example.com&quot;
+}</pre>
       </section>
       <section class="endpoint__section">
         <h4>Error scenarios</h4>
-        <p>No specific error payloads documented.</p>
+        <table>
+  <thead><tr><th>Status</th><th>Description</th><th>Example</th></tr></thead>
+  <tbody><tr><td class='status client'>HTTP 410</td><td>Expired token</td><td><pre>{
+  &quot;error&quot;: &quot;Gone&quot;,
+  &quot;message&quot;: &quot;VERIFICATION_TOKEN_EXPIRED&quot;
+}</pre></td></tr></tbody>
+</table>
+
       </section>
     </div>
     <div class="endpoint__panels">
@@ -580,13 +690,13 @@
     </div>
   </div>
 </article>
-<article class="endpoint" id="get-verify" data-endpoint-id="get-verify" data-method="GET" data-base-path="/api/v1/auth" data-path="/verify" data-auth="Public" data-body='null'>
+<article class="endpoint" id="get-verify" data-endpoint-id="get-verify" data-method="GET" data-base-path="/api/publicapi/auth" data-path="/verify" data-auth="Public">
   <div class="endpoint__header">
     <div class="endpoint__title">
       <span class="http-badge http-badge--get">GET</span>
       <div>
-        <h3>Verify</h3>
-        <p><code>/api/v1/auth/verify</code></p>
+        <h3>Verify email (link)</h3>
+        <p><code>/api/publicapi/auth/verify</code></p>
       </div>
     </div>
     <span class="auth-badge auth-badge--public">Public</span>
@@ -595,27 +705,37 @@
     <div class="endpoint__body">
       <section class="endpoint__section">
         <h4>Summary</h4>
-        <p>Verify handler in AuthController for GET /verify requests.</p>
+        <p>Browser friendly verification endpoint. Accepts a &quot;token&quot; query string parameter.</p>
       </section>
       <section class="endpoint__section"><h4>Authentication</h4><p>No authentication required.</p></section>
       <section class="endpoint__section">
   <h4>Parameters</h4>
   <table>
     <thead><tr><th>Name</th><th>Description</th></tr></thead>
-    <tbody><tr><td>token</td><td>Query parameter</td></tr></tbody>
+    <tbody><tr><td>token</td><td>Verification token returned in the email link</td></tr></tbody>
   </table>
 </section>
 
       
-      <section class="endpoint__section"><h4>Request body</h4><p>No body required.</p></section>
+      
       <section class="endpoint__section">
         <h4>Success response</h4>
         <p class="status success">HTTP 200</p>
-        <p>No body returned.</p>
+        <pre>{
+  &quot;verified&quot;: true,
+  &quot;email&quot;: &quot;alex@example.com&quot;
+}</pre>
       </section>
       <section class="endpoint__section">
         <h4>Error scenarios</h4>
-        <p>No specific error payloads documented.</p>
+        <table>
+  <thead><tr><th>Status</th><th>Description</th><th>Example</th></tr></thead>
+  <tbody><tr><td class='status client'>HTTP 400</td><td>Missing token</td><td><pre>{
+  &quot;error&quot;: &quot;Bad Request&quot;,
+  &quot;message&quot;: &quot;TOKEN_REQUIRED&quot;
+}</pre></td></tr></tbody>
+</table>
+
       </section>
     </div>
     <div class="endpoint__panels">
