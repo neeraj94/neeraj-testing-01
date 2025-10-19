@@ -43,14 +43,7 @@ export const DEFAULT_NAVIGATION_MENU: NavigationNode[] = [
         icon: '👥',
         path: '/admin/users',
         group: false,
-        permissions: [
-          'USER_VIEW',
-          'USER_VIEW_GLOBAL',
-          'USER_VIEW_OWN',
-          'USER_CREATE',
-          'USER_UPDATE',
-          'USER_DELETE'
-        ],
+        permissions: ['USER_VIEW_GLOBAL'],
         children: []
       },
       {
@@ -188,7 +181,7 @@ export const DEFAULT_NAVIGATION_MENU: NavigationNode[] = [
         icon: '🎟️',
         path: '/admin/catalog/coupons',
         group: false,
-        permissions: ['COUPON_MANAGE'],
+        permissions: ['COUPON_VIEW_GLOBAL', 'COUPON_CREATE', 'COUPON_UPDATE', 'COUPON_DELETE'],
         children: []
       },
       {
@@ -221,7 +214,7 @@ export const DEFAULT_NAVIGATION_MENU: NavigationNode[] = [
         icon: '🗺️',
         path: '/admin/shipping',
         group: false,
-        permissions: ['SHIPPING_AREA_VIEW'],
+        permissions: ['SHIPPING_VIEW'],
         children: []
       }
     ]
@@ -240,7 +233,7 @@ export const DEFAULT_NAVIGATION_MENU: NavigationNode[] = [
         icon: '📦',
         path: '/admin/orders',
         group: false,
-        permissions: ['ORDER_MANAGE', 'CHECKOUT_MANAGE'],
+        permissions: ['USER_VIEW_GLOBAL'],
         children: []
       },
       {
@@ -249,7 +242,7 @@ export const DEFAULT_NAVIGATION_MENU: NavigationNode[] = [
         icon: '🛒',
         path: '/admin/carts',
         group: false,
-        permissions: [],
+        permissions: ['USER_VIEW_GLOBAL'],
         children: []
       },
       {
@@ -258,7 +251,7 @@ export const DEFAULT_NAVIGATION_MENU: NavigationNode[] = [
         icon: '💰',
         path: '/admin/payments',
         group: false,
-        permissions: ['PAYMENT_MANAGE'],
+        permissions: ['PAYMENT_VIEW', 'PAYMENT_MANAGE'],
         children: []
       }
     ]

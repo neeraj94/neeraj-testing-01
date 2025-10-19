@@ -38,7 +38,7 @@ public class UserCartController {
     }
 
     @PostMapping("/items")
-    @PreAuthorize("hasAuthority('USER_VIEW_GLOBAL') and hasAuthority('USER_UPDATE')")
+    @PreAuthorize("hasAuthority('USER_VIEW_GLOBAL') and (hasAuthority('USER_CREATE') or hasAuthority('USER_UPDATE'))")
     public CartDto addItemToUserCart(@PathVariable("userId") Long userId,
                                      @Valid @RequestBody AddCartItemRequest request) {
         return cartService.addItemForUser(userId, request);
