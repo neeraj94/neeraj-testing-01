@@ -155,7 +155,60 @@ const Layout = () => {
         })
         .filter((node): node is NavigationNode => node !== null);
 
-    return filterNodes(navItems);
+    const filtered = filterNodes(navItems);
+
+    const defaultCommerce = DEFAULT_NAVIGATION_MENU.find((node) => node.key === 'commerce');
+    const defaultCart = defaultCommerce?.children?.find((child) => child.key === 'carts');
+    if (!defaultCart) {
+      return filtered;
+    }
+
+    const cloneCartNode = (): NavigationNode => ({
+      ...defaultCart,
+      permissions: [...(defaultCart.permissions ?? [])],
+      children: defaultCart.children?.map((grandchild) => ({ ...grandchild })) ?? []
+    });
+
+    const ensureCartChild = (children: NavigationNode[] | undefined) => {
+      const existing = children ?? [];
+      if (existing.some((child) => child.key === 'carts')) {
+        return existing;
+      }
+      return [
+        cloneCartNode(),
+        ...existing
+      ];
+    };
+
+    let commerceFound = false;
+    const supplemented = filtered.map((node) => {
+      if (node.key !== 'commerce' || !node.group) {
+        return node;
+      }
+      commerceFound = true;
+      return {
+        ...node,
+        children: ensureCartChild(node.children)
+      };
+    });
+
+    if (commerceFound) {
+      return supplemented;
+    }
+
+    const cartOnlyCommerce = defaultCommerce
+      ? {
+          ...defaultCommerce,
+          permissions: [...(defaultCommerce.permissions ?? [])],
+          children: ensureCartChild([])
+        }
+      : null;
+
+    if (!cartOnlyCommerce) {
+      return supplemented;
+    }
+
+    return [...supplemented, cartOnlyCommerce];
   }, [navItems, permissions]);
 
   const navigation = useMemo<SidebarItem[]>(() => {
