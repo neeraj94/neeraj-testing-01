@@ -416,29 +416,28 @@ const UsersPage = () => {
     [grantedPermissions]
   );
   const canCreateUserAddresses = useMemo(
-    () => canViewAllUsers && hasAnyPermission(grantedPermissions as PermissionKey[], ['USER_CREATE']),
-    [canViewAllUsers, grantedPermissions]
+    () => hasAnyPermission(grantedPermissions as PermissionKey[], ['USER_CREATE']),
+    [grantedPermissions]
   );
   const canEditUserAddresses = useMemo(
-    () => canViewAllUsers && hasAnyPermission(grantedPermissions as PermissionKey[], ['USER_UPDATE']),
-    [canViewAllUsers, grantedPermissions]
+    () => hasAnyPermission(grantedPermissions as PermissionKey[], ['USER_UPDATE']),
+    [grantedPermissions]
   );
   const canDeleteUserAddresses = useMemo(
-    () => canViewAllUsers && hasAnyPermission(grantedPermissions as PermissionKey[], ['USER_DELETE']),
-    [canViewAllUsers, grantedPermissions]
+    () => hasAnyPermission(grantedPermissions as PermissionKey[], ['USER_DELETE']),
+    [grantedPermissions]
   );
   const canCreateUserCartItems = useMemo(
-    () => canViewAllUsers && hasAnyPermission(grantedPermissions as PermissionKey[], ['USER_CREATE']),
-    [canViewAllUsers, grantedPermissions]
+    () => hasAnyPermission(grantedPermissions as PermissionKey[], ['USER_CREATE']),
+    [grantedPermissions]
   );
   const canEditUserCartItems = useMemo(
-    () => canViewAllUsers && hasAnyPermission(grantedPermissions as PermissionKey[], ['USER_UPDATE']),
-    [canViewAllUsers, grantedPermissions]
+    () => hasAnyPermission(grantedPermissions as PermissionKey[], ['USER_UPDATE']),
+    [grantedPermissions]
   );
   const canRemoveUserCartItems = useMemo(
-    () =>
-      canViewAllUsers && hasAnyPermission(grantedPermissions as PermissionKey[], ['USER_DELETE']),
-    [canViewAllUsers, grantedPermissions]
+    () => hasAnyPermission(grantedPermissions as PermissionKey[], ['USER_DELETE']),
+    [grantedPermissions]
   );
   const canManageUserAddresses =
     canCreateUserAddresses || canEditUserAddresses || canDeleteUserAddresses;
@@ -2350,9 +2349,10 @@ const UsersPage = () => {
     }
 
     const addressList = addressesQuery.data ?? [];
-    const canCreateAddresses = canCreateUserAddresses;
-    const canEditAddresses = canEditUserAddresses;
-    const canDeleteAddresses = canDeleteUserAddresses;
+    const targetIsSelf = selectedUserId != null && selectedUserId === currentUserId;
+    const canCreateAddresses = canCreateUserAddresses && (canViewAllUsers || targetIsSelf);
+    const canEditAddresses = canEditUserAddresses && (canViewAllUsers || targetIsSelf);
+    const canDeleteAddresses = canDeleteUserAddresses && (canViewAllUsers || targetIsSelf);
     const canManageAddresses = canManageUserAddresses;
     const countryOptions = addressCountriesQuery.data ?? [];
     const stateOptions = addressStatesQuery.data ?? [];

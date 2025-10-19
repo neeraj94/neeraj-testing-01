@@ -181,6 +181,12 @@ public class UserRecentViewService {
             if (product == null) {
                 continue;
             }
+            if (!Hibernate.isInitialized(product)) {
+                product = productRepository.findById(productId).orElse(product);
+            }
+            if (product == null) {
+                continue;
+            }
             Hibernate.initialize(product);
             initializeRecommendationAssociations(product);
             UserRecentViewDto dto = new UserRecentViewDto();
@@ -224,6 +230,9 @@ public class UserRecentViewService {
     }
 
     private void initializeRecommendationAssociations(Product product) {
+        if (product == null) {
+            return;
+        }
         Hibernate.initialize(product.getGalleryImages());
         Hibernate.initialize(product.getVariants());
         if (product.getVariants() != null) {

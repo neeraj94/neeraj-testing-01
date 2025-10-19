@@ -28,21 +28,21 @@ public class UserAddressAdminController {
     }
 
     @GetMapping("/{userId}/addresses")
-    @PreAuthorize("hasAuthority('USER_VIEW_GLOBAL')")
+    @PreAuthorize("@userPermissionEvaluator.canViewUser(#userId)")
     public List<CheckoutAddressDto> listAddresses(@PathVariable Long userId) {
         return checkoutService.listAddressesForAdmin(userId);
     }
 
     @PostMapping("/{userId}/addresses")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAuthority('USER_VIEW_GLOBAL') and hasAuthority('USER_CREATE')")
+    @PreAuthorize("@userPermissionEvaluator.canCreateUserRecords(#userId)")
     public CheckoutAddressDto createAddress(@PathVariable Long userId,
                                             @RequestBody CheckoutAddressRequest request) {
         return checkoutService.createAddress(userId, request);
     }
 
     @PutMapping("/{userId}/addresses/{addressId}")
-    @PreAuthorize("hasAuthority('USER_VIEW_GLOBAL') and hasAuthority('USER_UPDATE')")
+    @PreAuthorize("@userPermissionEvaluator.canUpdateUserRecords(#userId)")
     public CheckoutAddressDto updateAddress(@PathVariable Long userId,
                                             @PathVariable Long addressId,
                                             @RequestBody CheckoutAddressRequest request) {
@@ -51,7 +51,7 @@ public class UserAddressAdminController {
 
     @DeleteMapping("/{userId}/addresses/{addressId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PreAuthorize("hasAuthority('USER_VIEW_GLOBAL') and hasAuthority('USER_DELETE')")
+    @PreAuthorize("@userPermissionEvaluator.canDeleteUserRecords(#userId)")
     public void deleteAddress(@PathVariable Long userId, @PathVariable Long addressId) {
         checkoutService.deleteAddressAsAdmin(userId, addressId);
     }

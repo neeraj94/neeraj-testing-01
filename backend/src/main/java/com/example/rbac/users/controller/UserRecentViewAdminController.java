@@ -21,7 +21,7 @@ public class UserRecentViewAdminController {
     }
 
     @GetMapping("/{userId}/recent-views")
-    @PreAuthorize("hasAuthority('USER_VIEW_GLOBAL')")
+    @PreAuthorize("@userPermissionEvaluator.canViewRecentActivity(#userId)")
     public List<UserRecentViewDto> listRecentViews(@PathVariable Long userId) {
         return userRecentViewService.getRecentViewsForUser(userId);
     }
