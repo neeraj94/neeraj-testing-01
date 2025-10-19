@@ -239,23 +239,32 @@ const PermissionMatrix = ({
 const DefaultPermissionSection = ({ groups }: { groups: PermissionGroup[] }) => {
   const infoBlock = (
     <div className="space-y-3 text-sm text-slate-500">
-      <p>The following default user permissions are active for every customer and cannot be modified per role:</p>
+      <p>Every registered customer automatically receives these capabilities. They cannot be revoked on a per-role basis:</p>
       <ul className="list-disc space-y-1 pl-5">
-        <li>Profile management (view and update)</li>
-        <li>Address management</li>
-        <li>Cart management</li>
-        <li>Checkout access</li>
-        <li>Recently viewed products</li>
+        <li>
+          <span className="font-medium text-slate-700">Self Cart Management:</span> add, update, and remove items in their own cart.
+        </li>
+        <li>
+          <span className="font-medium text-slate-700">Self Checkout Management:</span> complete checkout for their personal cart.
+        </li>
+        <li>
+          <span className="font-medium text-slate-700">Self Profile Management:</span> update profile information, passwords, contact details, and avatars.
+        </li>
+        <li>
+          <span className="font-medium text-slate-700">Self Orders:</span> place new orders and review their own order history.
+        </li>
       </ul>
       <div className="space-y-1">
-        <p>Public Endpoints:</p>
+        <p>
+          <span className="font-medium text-slate-700">Public Endpoints Access:</span> customers can always reach essential entry points such as:
+        </p>
         <ul className="list-disc space-y-1 pl-5">
           <li>Login / Logout</li>
           <li>Registration</li>
           <li>Forgot / Reset password</li>
           <li>Product listing and details view</li>
           <li>Category listing</li>
-          <li>Public event pages (if applicable)</li>
+          <li>Other published content intended for all visitors</li>
         </ul>
       </div>
     </div>
@@ -416,14 +425,22 @@ const RolesPage = () => {
     }
   });
 
+  const { data: defaultPermissions = [] } = useQuery<Permission[]>({
+    queryKey: ['permissions', 'defaults'],
+    queryFn: async () => {
+      const { data } = await api.get<Permission[]>('/permissions/defaults');
+      return data;
+    }
+  });
+
   const permissionGroups = useMemo(() => buildPermissionGroups(permissions), [permissions]);
   const adminPermissionGroups = useMemo(
-    () => permissionGroups.filter((group) => group.category === 'admin'),
+    () => permissionGroups.filter((group) => group.category === 'admin' || group.category === 'system'),
     [permissionGroups]
   );
   const defaultPermissionGroups = useMemo(
-    () => permissionGroups.filter((group) => group.category === 'public'),
-    [permissionGroups]
+    () => buildPermissionGroups(defaultPermissions).filter((group) => group.category === 'public'),
+    [defaultPermissions]
   );
   const permissionLookup = useMemo(() => {
     const lookup = new Map<string, Permission>();

@@ -222,16 +222,18 @@ const App = () => {
           >
             <Route path="products" element={<ProductsPage />} />
           </Route>
-          <Route element={<PermissionRoute required={['COUPON_MANAGE']} />}>
+          <Route element={<PermissionRoute required={['COUPON_VIEW_GLOBAL']} />}>
             <Route path="catalog/coupons" element={<CouponsPage />} />
           </Route>
-          <Route element={<PermissionRoute required={['PAYMENT_MANAGE']} />}>
+          <Route element={<PermissionRoute required={['PAYMENT_VIEW']} />}>
             <Route path="payments" element={<AdminPaymentPage />} />
           </Route>
-          <Route element={<PermissionRoute required={['ORDER_MANAGE', 'CHECKOUT_MANAGE']} />}>
+          <Route element={<PermissionRoute required={['USER_VIEW_GLOBAL']} />}>
             <Route path="orders" element={<AdminOrdersPage />} />
           </Route>
-          <Route path="carts" element={<AdminCartsPage />} />
+          <Route element={<PermissionRoute required={['USER_VIEW_GLOBAL']} />}>
+            <Route path="carts" element={<AdminCartsPage />} />
+          </Route>
           <Route
             element={
               <PermissionRoute
@@ -246,7 +248,7 @@ const App = () => {
           >
             <Route path="reviews" element={<ReviewsPage />} />
           </Route>
-          <Route element={<PermissionRoute required={['SHIPPING_AREA_VIEW']} />}>
+          <Route element={<PermissionRoute required={['SHIPPING_VIEW']} />}>
             <Route path="shipping" element={<ShippingPage />} />
           </Route>
           <Route element={<PermissionRoute required={['ACTIVITY_VIEW']} />}>

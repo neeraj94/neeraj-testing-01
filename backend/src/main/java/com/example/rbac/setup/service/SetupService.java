@@ -354,7 +354,7 @@ public class SetupService {
                             "Coupons",
                             "🎟️",
                             "/admin/catalog/coupons",
-                            List.of("COUPON_MANAGE")
+                            List.of("COUPON_VIEW_GLOBAL", "COUPON_CREATE", "COUPON_UPDATE", "COUPON_DELETE")
                     ),
                     MenuDefinition.item(
                             "reviews",
@@ -375,7 +375,7 @@ public class SetupService {
                             "Shipping overview",
                             "🗺️",
                             "/admin/shipping",
-                            List.of("SHIPPING_AREA_VIEW")
+                            List.of("SHIPPING_VIEW")
                     )
             )),
             MenuDefinition.group("commerce", "Commerce", "💳", List.of(
@@ -384,21 +384,21 @@ public class SetupService {
                             "Carts",
                             "🛒",
                             "/admin/carts",
-                            List.of()
+                            List.of("USER_VIEW_GLOBAL")
                     ),
                     MenuDefinition.item(
                             "orders",
                             "Orders",
                             "📦",
                             "/admin/orders",
-                            List.of("ORDER_MANAGE", "CHECKOUT_MANAGE")
+                            List.of("USER_VIEW_GLOBAL")
                     ),
                     MenuDefinition.item(
                             "payments",
                             "Payments",
                             "💰",
                             "/admin/payments",
-                            List.of("PAYMENT_MANAGE")
+                            List.of("PAYMENT_VIEW", "PAYMENT_MANAGE")
                     )
             )),
             MenuDefinition.item("gallery", "Gallery", "🖼️", "/admin/gallery", List.of("GALLERY_VIEW_ALL", "GALLERY_VIEW_OWN", "GALLERY_CREATE")),
