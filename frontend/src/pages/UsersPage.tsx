@@ -2334,6 +2334,10 @@ const UsersPage = () => {
 
     const handleSubmitAddress = (event: FormEvent) => {
       event.preventDefault();
+      if (!canModifyAddresses) {
+        notify({ type: 'error', message: 'You do not have permission to modify addresses.' });
+        return;
+      }
       if (isAddressSubmitting) {
         return;
       }
@@ -2353,6 +2357,10 @@ const UsersPage = () => {
     };
 
     const handleToggleForm = () => {
+      if (!canModifyAddresses) {
+        notify({ type: 'error', message: 'You do not have permission to modify addresses.' });
+        return;
+      }
       if (addressFormOpen) {
         setAddressFormOpen(false);
         setAddressForm(createEmptyAddressForm());
