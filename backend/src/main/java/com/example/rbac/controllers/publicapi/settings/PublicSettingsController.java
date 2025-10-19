@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/public/settings")
+@RequestMapping("/api/publicapi/settings")
 public class PublicSettingsController {
 
     private final SettingsService settingsService;

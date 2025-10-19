@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/public/coupons")
+@RequestMapping("/api/publicapi/coupons")
 public class PublicCouponController {
 
     private final CouponService couponService;

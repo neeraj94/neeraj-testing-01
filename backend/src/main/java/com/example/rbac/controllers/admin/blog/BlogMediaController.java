@@ -54,7 +54,7 @@ public class BlogMediaController {
         }
         StoredMedia stored = blogMediaStorageService.store(file);
         String url = ServletUriComponentsBuilder.fromCurrentContextPath()
-                .path("/api/public/blog/media/")
+                .path("/api/publicapi/blog/media/")
                 .path(stored.key())
                 .toUriString();
         recordUpload(resolveModule(usage), stored, url);

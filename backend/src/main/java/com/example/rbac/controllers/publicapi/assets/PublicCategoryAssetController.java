@@ -16,7 +16,7 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 
 @RestController
-@RequestMapping("/api/public/categories/assets")
+@RequestMapping("/api/publicapi/categories/assets")
 public class PublicCategoryAssetController {
 
     private final CategoryAssetStorageService storageService;

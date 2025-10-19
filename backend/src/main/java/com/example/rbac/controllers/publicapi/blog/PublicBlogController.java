@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/public/blog")
+@RequestMapping("/api/publicapi/blog")
 public class PublicBlogController {
 
     private final BlogPostService blogPostService;

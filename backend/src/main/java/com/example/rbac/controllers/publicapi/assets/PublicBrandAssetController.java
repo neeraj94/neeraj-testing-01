@@ -15,7 +15,7 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 
 @RestController
-@RequestMapping("/api/public/brands/assets")
+@RequestMapping("/api/publicapi/brands/assets")
 public class PublicBrandAssetController {
 
     private final BrandLogoStorageService storageService;

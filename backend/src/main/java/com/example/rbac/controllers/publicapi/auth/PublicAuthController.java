@@ -11,7 +11,7 @@ import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/public/auth")
+@RequestMapping("/api/publicapi/auth")
 public class PublicAuthController {
 
     private final AuthService authService;
