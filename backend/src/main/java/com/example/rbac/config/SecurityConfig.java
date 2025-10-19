@@ -1,5 +1,7 @@
 package com.example.rbac.config;
 
+import com.example.rbac.common.security.PublicEndpointDefinition;
+import com.example.rbac.common.security.PublicEndpointRegistry;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -72,25 +74,32 @@ public class SecurityConfig {
         http.csrf(csrf -> csrf.disable())
                 .cors(cors -> {})
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/v1/auth/**", "/api/v1/settings/theme", "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/v1/blog/public/**", "/api/v1/blog/media/**", "/api/v1/public/catalog/**", "/api/v1/public/coupons/**", "/api/v1/public/products/**", "/api/v1/brands/assets/**", "/api/v1/categories/assets/**", "/api/v1/badge-categories/assets/**", "/api/v1/badges/assets/**", "/api/v1/products/assets/**", "/api/v1/uploaded-files/assets/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/v1/uploaded-files/**").hasAnyAuthority("UPLOADED_FILE_VIEW", "UPLOADED_FILE_MANAGE", "COUPON_MANAGE")
+                .authorizeHttpRequests(auth -> {
+                    for (PublicEndpointDefinition endpoint : PublicEndpointRegistry.getEndpoints()) {
+                        if (endpoint.matchesAllMethods()) {
+                            auth.requestMatchers(endpoint.pattern()).permitAll();
+                        } else {
+                            auth.requestMatchers(endpoint.method(), endpoint.pattern()).permitAll();
+                        }
+                    }
+                    auth
+                        .requestMatchers(HttpMethod.GET, "/api/v1/uploaded-files/**").hasAnyAuthority("UPLOADED_FILE_VIEW", "UPLOADED_FILE_MANAGE", "COUPON_VIEW_GLOBAL", "COUPON_CREATE", "COUPON_UPDATE")
                         .requestMatchers(HttpMethod.GET, "/api/v1/tax-rates/**").hasAuthority("TAX_RATE_VIEW")
-                        .requestMatchers(HttpMethod.GET, "/api/v1/shipping/countries/**", "/api/v1/shipping/states/**", "/api/v1/shipping/cities/**").hasAnyAuthority("SHIPPING_AREA_VIEW", "SHIPPING_LOCATION_MANAGE", "CHECKOUT_MANAGE", "ORDER_MANAGE")
-                        .requestMatchers(HttpMethod.POST, "/api/v1/shipping/countries/**", "/api/v1/shipping/states/**", "/api/v1/shipping/cities/**").hasAuthority("SHIPPING_LOCATION_MANAGE")
-                        .requestMatchers(HttpMethod.PUT, "/api/v1/shipping/countries/**", "/api/v1/shipping/states/**", "/api/v1/shipping/cities/**").hasAuthority("SHIPPING_LOCATION_MANAGE")
-                        .requestMatchers(HttpMethod.DELETE, "/api/v1/shipping/countries/**", "/api/v1/shipping/states/**", "/api/v1/shipping/cities/**").hasAuthority("SHIPPING_LOCATION_MANAGE")
-                        .requestMatchers(HttpMethod.GET, "/api/v1/shipping/area-rates/**").hasAuthority("SHIPPING_AREA_VIEW")
-                        .requestMatchers(HttpMethod.POST, "/api/v1/shipping/area-rates/**").hasAuthority("SHIPPING_AREA_CREATE")
-                        .requestMatchers(HttpMethod.PUT, "/api/v1/shipping/area-rates/**").hasAuthority("SHIPPING_AREA_UPDATE")
-                        .requestMatchers(HttpMethod.PATCH, "/api/v1/shipping/area-rates/**").hasAuthority("SHIPPING_AREA_UPDATE")
-                        .requestMatchers(HttpMethod.DELETE, "/api/v1/shipping/area-rates/**").hasAuthority("SHIPPING_AREA_DELETE")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/shipping/countries/**", "/api/v1/shipping/states/**", "/api/v1/shipping/cities/**").hasAnyAuthority("SHIPPING_VIEW", "SHIPPING_MANAGE", "CHECKOUT_MANAGE")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/shipping/countries/**", "/api/v1/shipping/states/**", "/api/v1/shipping/cities/**").hasAuthority("SHIPPING_MANAGE")
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/shipping/countries/**", "/api/v1/shipping/states/**", "/api/v1/shipping/cities/**").hasAuthority("SHIPPING_MANAGE")
+                        .requestMatchers(HttpMethod.DELETE, "/api/v1/shipping/countries/**", "/api/v1/shipping/states/**", "/api/v1/shipping/cities/**").hasAuthority("SHIPPING_MANAGE")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/shipping/area-rates/**").hasAnyAuthority("SHIPPING_VIEW", "SHIPPING_MANAGE")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/shipping/area-rates/**").hasAuthority("SHIPPING_MANAGE")
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/shipping/area-rates/**").hasAuthority("SHIPPING_MANAGE")
+                        .requestMatchers(HttpMethod.PATCH, "/api/v1/shipping/area-rates/**").hasAuthority("SHIPPING_MANAGE")
+                        .requestMatchers(HttpMethod.DELETE, "/api/v1/shipping/area-rates/**").hasAuthority("SHIPPING_MANAGE")
                         .requestMatchers(HttpMethod.POST, "/api/v1/tax-rates/**").hasAuthority("TAX_RATE_CREATE")
                         .requestMatchers(HttpMethod.PUT, "/api/v1/tax-rates/**").hasAuthority("TAX_RATE_UPDATE")
                         .requestMatchers(HttpMethod.PATCH, "/api/v1/tax-rates/**").hasAuthority("TAX_RATE_UPDATE")
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/tax-rates/**").hasAuthority("TAX_RATE_DELETE")
-                        .anyRequest().authenticated())
+                        .anyRequest().authenticated();
+                })
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }

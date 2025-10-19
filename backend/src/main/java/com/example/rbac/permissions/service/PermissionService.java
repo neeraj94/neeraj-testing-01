@@ -16,7 +16,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Service
@@ -43,6 +45,16 @@ public class PermissionService {
                 .findByKeyNotStartingWithIgnoreCase(CUSTOMER_PERMISSION_PREFIX, pageable)
                 .map(permissionMapper::toDto);
         return PageResponse.from(result);
+    }
+
+    @PreAuthorize("hasAuthority('PERMISSION_VIEW')")
+    public List<PermissionDto> listDefaultPermissions() {
+        return permissionRepository
+                .findByKeyStartingWithIgnoreCase(CUSTOMER_PERMISSION_PREFIX)
+                .stream()
+                .sorted(Comparator.comparing(Permission::getName, String.CASE_INSENSITIVE_ORDER))
+                .map(permissionMapper::toDto)
+                .toList();
     }
 
     private Pageable buildPageable(int page, int size, String sort, String direction) {
