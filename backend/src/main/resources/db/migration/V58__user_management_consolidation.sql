@@ -15,17 +15,23 @@ INSERT INTO role_permissions (role_id, permission_id)
 SELECT DISTINCT rp.role_id, globalPerm.id
 FROM role_permissions rp
 JOIN permissions perm ON perm.id = rp.permission_id AND perm.code IN ('USER_CREATE', 'USER_UPDATE', 'USER_DELETE')
-JOIN roles r ON r.id = rp.role_id AND UPPER(r.code) <> 'CUSTOMER'
 JOIN permissions globalPerm ON globalPerm.code = 'USER_VIEW_GLOBAL'
 LEFT JOIN role_permissions existing ON existing.role_id = rp.role_id AND existing.permission_id = globalPerm.id
-WHERE existing.role_id IS NULL;
+WHERE existing.role_id IS NULL
+  AND NOT EXISTS (
+    SELECT 1 FROM roles r
+    WHERE r.id = rp.role_id AND UPPER(r.code) = 'CUSTOMER'
+  );
 
 -- Grant the global view permission to non-customer roles that previously held scoped user view access
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT DISTINCT rp.role_id, globalPerm.id
 FROM role_permissions rp
 JOIN permissions perm ON perm.id = rp.permission_id AND perm.code = 'USER_VIEW'
-JOIN roles r ON r.id = rp.role_id AND UPPER(r.code) <> 'CUSTOMER'
 JOIN permissions globalPerm ON globalPerm.code = 'USER_VIEW_GLOBAL'
 LEFT JOIN role_permissions existing ON existing.role_id = rp.role_id AND existing.permission_id = globalPerm.id
-WHERE existing.role_id IS NULL;
+WHERE existing.role_id IS NULL
+  AND NOT EXISTS (
+    SELECT 1 FROM roles r
+    WHERE r.id = rp.role_id AND UPPER(r.code) = 'CUSTOMER'
+  );
