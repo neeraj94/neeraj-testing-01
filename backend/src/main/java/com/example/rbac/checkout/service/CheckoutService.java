@@ -93,6 +93,11 @@ public class CheckoutService {
         return addressService.updateAddressAsAdmin(userId, addressId, request);
     }
 
+    @Transactional
+    public void deleteAddressAsAdmin(Long userId, Long addressId) {
+        addressService.deleteAddressAsAdmin(userId, addressId);
+    }
+
     @Transactional(readOnly = true)
     public CheckoutSummaryDto buildSummary(Long userId, CheckoutOrderRequest request) {
         CheckoutSummaryDto summary = new CheckoutSummaryDto();

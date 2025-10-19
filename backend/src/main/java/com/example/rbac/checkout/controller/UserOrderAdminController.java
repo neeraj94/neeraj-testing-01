@@ -22,13 +22,13 @@ public class UserOrderAdminController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('USER_VIEW', 'USER_VIEW_GLOBAL', 'USER_VIEW_OWN', 'ORDER_MANAGE', 'CHECKOUT_MANAGE')")
+    @PreAuthorize("hasAuthority('USER_VIEW_GLOBAL')")
     public List<OrderListItemDto> listOrders(@PathVariable Long userId) {
         return checkoutService.listOrdersForUser(userId);
     }
 
     @GetMapping("/{orderId}")
-    @PreAuthorize("hasAnyAuthority('USER_VIEW', 'USER_VIEW_GLOBAL', 'USER_VIEW_OWN', 'ORDER_MANAGE', 'CHECKOUT_MANAGE')")
+    @PreAuthorize("hasAuthority('USER_VIEW_GLOBAL')")
     public OrderDetailDto getOrder(@PathVariable Long userId, @PathVariable Long orderId) {
         return checkoutService.getOrderDetailForUser(userId, orderId);
     }
