@@ -260,7 +260,7 @@ const TaxRatesPage = () => {
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <h2 className="text-lg font-semibold text-slate-900">All tax rates</h2>
-          <p className="text-sm text-slate-500">Configure the taxes applied to invoices and orders.</p>
+          <p className="text-sm text-slate-500">Configure the taxes applied to checkout totals and administrative orders.</p>
         </div>
         <div className="flex w-full gap-3 sm:max-w-xs">
           <input
@@ -561,7 +561,7 @@ const TaxRatesPage = () => {
     <div className="space-y-6 px-6 py-6">
       <PageHeader
         title="Tax rates"
-        description="Manage tax rules that finance teams apply to orders and invoices across regions."
+        description="Manage tax rules that finance teams apply to orders and checkout flows across regions."
         actions={
           isDirectoryView && canCreate
             ? (
