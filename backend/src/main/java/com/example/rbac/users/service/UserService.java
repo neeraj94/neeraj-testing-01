@@ -17,6 +17,7 @@ import com.example.rbac.users.dto.UserDto;
 import com.example.rbac.users.dto.UserSummaryResponse;
 import com.example.rbac.users.mapper.UserMapper;
 import com.example.rbac.users.model.User;
+import com.example.rbac.users.model.UserPrincipal;
 import com.example.rbac.users.repository.UserRepository;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.Page;
@@ -25,14 +26,19 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -79,6 +85,16 @@ public class UserService {
 
     @PreAuthorize(USER_VIEW_AUTHORITY)
     public PageResponse<UserDto> list(String search, int page, int size, String sort, String direction) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (!hasAuthority(authentication, "USER_VIEW_GLOBAL")) {
+            Long currentUserId = resolveCurrentUserId(authentication)
+                    .orElseThrow(() -> new ApiException(HttpStatus.FORBIDDEN, "You are not allowed to view other users"));
+            User user = userRepository.findDetailedById(currentUserId)
+                    .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "User not found"));
+            UserDto dto = userMapper.toDto(user);
+            return new PageResponse<>(Collections.singletonList(dto), 1, 1, 0, size);
+        }
+
         Pageable pageable = buildPageable(page, size, sort, direction);
         Page<User> result;
         if (search != null && !search.isBlank()) {
@@ -144,6 +160,14 @@ public class UserService {
 
     @PreAuthorize(USER_VIEW_AUTHORITY)
     public UserDto get(Long id) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (!hasAuthority(authentication, "USER_VIEW_GLOBAL")) {
+            Long currentUserId = resolveCurrentUserId(authentication)
+                    .orElseThrow(() -> new ApiException(HttpStatus.FORBIDDEN, "You are not allowed to view this user"));
+            if (!currentUserId.equals(id)) {
+                throw new ApiException(HttpStatus.FORBIDDEN, "You are not allowed to view this user");
+            }
+        }
         User user = userRepository.findDetailedById(id)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "User not found"));
         return userMapper.toDto(user);
@@ -429,6 +453,29 @@ public class UserService {
             builder.append(lastName.trim());
         }
         return builder.length() > 0 ? builder.toString() : null;
+    }
+
+    private Optional<Long> resolveCurrentUserId(Authentication authentication) {
+        if (authentication == null || !(authentication.getPrincipal() instanceof UserPrincipal userPrincipal)) {
+            return Optional.empty();
+        }
+        User user = userPrincipal.getUser();
+        if (user == null) {
+            return Optional.empty();
+        }
+        return Optional.ofNullable(user.getId());
+    }
+
+    private boolean hasAuthority(Authentication authentication, String authority) {
+        if (authentication == null || authority == null) {
+            return false;
+        }
+        for (GrantedAuthority grantedAuthority : authentication.getAuthorities()) {
+            if (authority.equals(grantedAuthority.getAuthority())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private String normalize(String value) {

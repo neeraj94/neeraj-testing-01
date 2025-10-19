@@ -43,14 +43,7 @@ export const DEFAULT_NAVIGATION_MENU: NavigationNode[] = [
         icon: '👥',
         path: '/admin/users',
         group: false,
-        permissions: [
-          'USER_VIEW',
-          'USER_VIEW_GLOBAL',
-          'USER_VIEW_OWN',
-          'USER_CREATE',
-          'USER_UPDATE',
-          'USER_DELETE'
-        ],
+        permissions: ['USER_VIEW_GLOBAL'],
         children: []
       },
       {

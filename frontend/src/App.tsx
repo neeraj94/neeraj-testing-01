@@ -169,14 +169,7 @@ const App = () => {
           <Route
             element={
               <PermissionRoute
-                required={[
-                  'USER_VIEW',
-                  'USER_VIEW_GLOBAL',
-                  'USER_VIEW_OWN',
-                  'USER_CREATE',
-                  'USER_UPDATE',
-                  'USER_DELETE'
-                ]}
+                required={['USER_VIEW_GLOBAL']}
               />
             }
           >

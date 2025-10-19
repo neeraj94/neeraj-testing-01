@@ -10,9 +10,10 @@ import java.util.Optional;
 
 public interface UserRecentViewRepository extends JpaRepository<UserRecentView, Long> {
 
-    @EntityGraph(attributePaths = {"product"})
+    @EntityGraph(attributePaths = {"product", "product.galleryImages", "product.variants"})
     List<UserRecentView> findTop20ByUserIdOrderByViewedAtDesc(Long userId);
 
+    @EntityGraph(attributePaths = {"product", "product.galleryImages", "product.variants"})
     List<UserRecentView> findByUserIdOrderByViewedAtDesc(Long userId);
 
     Optional<UserRecentView> findByUserIdAndProductId(Long userId, Long productId);

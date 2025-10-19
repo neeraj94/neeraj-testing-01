@@ -9,11 +9,15 @@ import com.example.rbac.products.model.ProductVariant;
 import com.example.rbac.products.repository.ProductRepository;
 import com.example.rbac.users.dto.UserRecentViewDto;
 import com.example.rbac.users.model.User;
+import com.example.rbac.users.model.UserPrincipal;
 import com.example.rbac.users.model.UserRecentView;
 import com.example.rbac.users.repository.UserRecentViewRepository;
 import org.hibernate.Hibernate;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
@@ -139,6 +143,14 @@ public class UserRecentViewService {
         if (userId == null) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "User id is required");
         }
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (!hasAuthority(authentication, "USER_VIEW_GLOBAL")) {
+            Long currentUserId = resolveCurrentUserId(authentication)
+                    .orElseThrow(() -> new ApiException(HttpStatus.FORBIDDEN, "You are not allowed to view this activity"));
+            if (!Objects.equals(currentUserId, userId)) {
+                throw new ApiException(HttpStatus.FORBIDDEN, "You are not allowed to view this activity");
+            }
+        }
         List<UserRecentView> entries = recentViewRepository.findTop20ByUserIdOrderByViewedAtDesc(userId);
         List<Long> productIds = entries.stream()
                 .map(UserRecentView::getProduct)
@@ -217,6 +229,29 @@ public class UserRecentViewService {
         if (product.getVariants() != null) {
             product.getVariants().forEach(variant -> Hibernate.initialize(variant.getMedia()));
         }
+    }
+
+    private Optional<Long> resolveCurrentUserId(Authentication authentication) {
+        if (authentication == null || !(authentication.getPrincipal() instanceof UserPrincipal userPrincipal)) {
+            return Optional.empty();
+        }
+        User user = userPrincipal.getUser();
+        if (user == null) {
+            return Optional.empty();
+        }
+        return Optional.ofNullable(user.getId());
+    }
+
+    private boolean hasAuthority(Authentication authentication, String authority) {
+        if (authentication == null || authority == null) {
+            return false;
+        }
+        for (GrantedAuthority grantedAuthority : authentication.getAuthorities()) {
+            if (authority.equals(grantedAuthority.getAuthority())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private String resolveThumbnailUrl(Product product, ProductVariant variant) {

@@ -140,6 +140,32 @@ public class CheckoutAddressService {
         return updateAddress(userId, addressId, request);
     }
 
+    @Transactional
+    public void deleteAddress(Long userId, Long addressId) {
+        if (userId == null || addressId == null) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Address not found");
+        }
+        CheckoutAddress address = addressRepository.findByIdAndUserId(addressId, userId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Address not found"));
+        CheckoutAddressType type = address.getType();
+        addressRepository.delete(address);
+        addressRepository.flush();
+        ensureDefaultExists(userId, type);
+    }
+
+    @Transactional
+    public void deleteAddressAsAdmin(Long userId, Long addressId) {
+        if (userId == null) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "User is required");
+        }
+        CheckoutAddress address = addressRepository.findById(addressId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Address not found"));
+        if (address.getUser() == null || !Objects.equals(address.getUser().getId(), userId)) {
+            throw new ApiException(HttpStatus.NOT_FOUND, "Address not found");
+        }
+        deleteAddress(userId, addressId);
+    }
+
     private void ensureDefaultExists(Long userId, CheckoutAddressType type) {
         if (userId == null || type == null) {
             return;

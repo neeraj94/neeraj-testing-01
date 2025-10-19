@@ -5,6 +5,7 @@ import com.example.rbac.checkout.dto.CheckoutAddressRequest;
 import com.example.rbac.checkout.service.CheckoutService;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -46,5 +47,12 @@ public class UserAddressAdminController {
                                             @PathVariable Long addressId,
                                             @RequestBody CheckoutAddressRequest request) {
         return checkoutService.updateAddressAsAdmin(userId, addressId, request);
+    }
+
+    @DeleteMapping("/{userId}/addresses/{addressId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("hasAuthority('USER_VIEW_GLOBAL') and hasAuthority('USER_DELETE')")
+    public void deleteAddress(@PathVariable Long userId, @PathVariable Long addressId) {
+        checkoutService.deleteAddressAsAdmin(userId, addressId);
     }
 }

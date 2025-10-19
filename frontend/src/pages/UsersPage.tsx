@@ -423,6 +423,10 @@ const UsersPage = () => {
     () => canViewAllUsers && hasAnyPermission(grantedPermissions as PermissionKey[], ['USER_UPDATE']),
     [canViewAllUsers, grantedPermissions]
   );
+  const canDeleteUserAddresses = useMemo(
+    () => canViewAllUsers && hasAnyPermission(grantedPermissions as PermissionKey[], ['USER_DELETE']),
+    [canViewAllUsers, grantedPermissions]
+  );
   const canCreateUserCartItems = useMemo(
     () => canViewAllUsers && hasAnyPermission(grantedPermissions as PermissionKey[], ['USER_CREATE']),
     [canViewAllUsers, grantedPermissions]
@@ -436,7 +440,8 @@ const UsersPage = () => {
       canViewAllUsers && hasAnyPermission(grantedPermissions as PermissionKey[], ['USER_DELETE']),
     [canViewAllUsers, grantedPermissions]
   );
-  const canManageUserAddresses = canCreateUserAddresses || canEditUserAddresses;
+  const canManageUserAddresses =
+    canCreateUserAddresses || canEditUserAddresses || canDeleteUserAddresses;
   const canModifyUserCartItems = canCreateUserCartItems || canEditUserCartItems;
 
   useEffect(() => {
@@ -858,6 +863,36 @@ const UsersPage = () => {
     },
     onError: (error) => {
       notify({ type: 'error', message: extractErrorMessage(error, 'Unable to update address.') });
+    }
+  });
+
+  const deleteAddressMutation = useMutation({
+    mutationFn: async (addressId: number) => {
+      if (!selectedUserId) {
+        throw new Error('Select a user before deleting an address.');
+      }
+      if (!canDeleteUserAddresses) {
+        throw new Error('You do not have permission to delete addresses.');
+      }
+      await api.delete(`/admin/users/${selectedUserId}/addresses/${addressId}`);
+      return addressId;
+    },
+    onSuccess: (addressId) => {
+      if (selectedUserId != null) {
+        queryClient.setQueryData<CheckoutAddress[]>(['users', selectedUserId, 'addresses'], (prev) =>
+          (prev ?? []).filter((address) => address.id !== addressId)
+        );
+      }
+      if (editingAddressId === addressId) {
+        setAddressForm(createEmptyAddressForm());
+        setEditingAddressId(null);
+        setAddressFormOpen(false);
+      }
+      notify({ type: 'success', message: 'Address deleted successfully.' });
+      void addressesQuery.refetch();
+    },
+    onError: (error) => {
+      notify({ type: 'error', message: extractErrorMessage(error, 'Unable to delete address.') });
     }
   });
 
@@ -2317,6 +2352,7 @@ const UsersPage = () => {
     const addressList = addressesQuery.data ?? [];
     const canCreateAddresses = canCreateUserAddresses;
     const canEditAddresses = canEditUserAddresses;
+    const canDeleteAddresses = canDeleteUserAddresses;
     const canManageAddresses = canManageUserAddresses;
     const countryOptions = addressCountriesQuery.data ?? [];
     const stateOptions = addressStatesQuery.data ?? [];
@@ -2330,7 +2366,8 @@ const UsersPage = () => {
     const cityError = addressCitiesQuery.isError
       ? extractErrorMessage(addressCitiesQuery.error, 'Unable to load cities.')
       : null;
-    const isAddressSubmitting = createAddressMutation.isPending || updateAddressMutation.isPending;
+    const isAddressSubmitting =
+      createAddressMutation.isPending || updateAddressMutation.isPending || deleteAddressMutation.isPending;
 
     const handleSubmitAddress = (event: FormEvent) => {
       event.preventDefault();
@@ -2398,6 +2435,24 @@ const UsersPage = () => {
       setAddressFormOpen(true);
     };
 
+    const handleDeleteAddress = (address: CheckoutAddress) => {
+      if (!canDeleteAddresses) {
+        notify({ type: 'error', message: 'You do not have permission to delete addresses.' });
+        return;
+      }
+      if (!address.id) {
+        notify({ type: 'error', message: 'Unable to determine the selected address.' });
+        return;
+      }
+      const confirmation = window.confirm(
+        `Are you sure you want to delete the ${address.type.toLowerCase()} address for ${address.fullName}?`
+      );
+      if (!confirmation) {
+        return;
+      }
+      deleteAddressMutation.mutate(address.id);
+    };
+
     return (
       <section className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -2406,7 +2461,7 @@ const UsersPage = () => {
             <p className="text-xs text-slate-500">Manage shipping and billing locations for this customer.</p>
             {!canManageAddresses && (
               <p className="mt-1 text-xs text-slate-500">
-                You can review saved addresses but do not have permission to add or edit them.
+                You can review saved addresses but do not have permission to add, edit, or delete them.
               </p>
             )}
           </div>
@@ -2645,16 +2700,28 @@ const UsersPage = () => {
                       )}
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => handleEditAddress(address)}
-                    disabled={isAddressSubmitting || !canEditAddresses}
-                    className="rounded-full border border-slate-200 p-2 text-slate-500 transition hover:border-primary/40 hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
-                    aria-label={`Edit address for ${address.fullName}`}
-                    title={!canEditAddresses ? 'You do not have permission to edit addresses.' : undefined}
-                  >
-                    <PencilIcon />
-                  </button>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => handleEditAddress(address)}
+                      disabled={isAddressSubmitting || !canEditAddresses}
+                      className="rounded-full border border-slate-200 p-2 text-slate-500 transition hover:border-primary/40 hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
+                      aria-label={`Edit address for ${address.fullName}`}
+                      title={!canEditAddresses ? 'You do not have permission to edit addresses.' : undefined}
+                    >
+                      <PencilIcon />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteAddress(address)}
+                      disabled={isAddressSubmitting || !canDeleteAddresses}
+                      className="rounded-full border border-rose-200 p-2 text-rose-500 transition hover:border-rose-300 hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-50"
+                      aria-label={`Delete address for ${address.fullName}`}
+                      title={!canDeleteAddresses ? 'You do not have permission to delete addresses.' : undefined}
+                    >
+                      <TrashIcon />
+                    </button>
+                  </div>
                 </div>
                 <p className="mt-2 text-sm text-slate-600">
                   {address.addressLine1}
