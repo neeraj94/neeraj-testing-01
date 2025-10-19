@@ -3,6 +3,8 @@ package com.example.rbac.users.model;
 import com.example.rbac.products.model.Product;
 import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.NotFound;
+import org.hibernate.annotations.NotFoundAction;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.Instant;
@@ -17,10 +19,12 @@ public class UserRecentView {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @NotFound(action = NotFoundAction.IGNORE)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @NotFound(action = NotFoundAction.IGNORE)
     @JoinColumn(name = "product_id", nullable = false)
     private Product product;
 
