@@ -169,6 +169,7 @@ public class UserRecentViewService {
             if (product == null) {
                 continue;
             }
+            Hibernate.initialize(product);
             initializeRecommendationAssociations(product);
             UserRecentViewDto dto = new UserRecentViewDto();
             dto.setProductId(product.getId());

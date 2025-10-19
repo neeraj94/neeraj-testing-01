@@ -122,7 +122,7 @@ modules.append({
                     "firstName": "Operations",
                     "lastName": "Lead",
                     "roles": ["ADMIN"],
-                    "permissions": ["PRODUCT_VIEW", "ORDER_MANAGE"],
+                    "permissions": ["PRODUCT_VIEW", "USER_VIEW_GLOBAL"],
                     "status": "ACTIVE"
                 }
             },

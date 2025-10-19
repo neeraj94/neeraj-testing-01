@@ -7,6 +7,8 @@ import com.example.rbac.permissions.service.PermissionService;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/v1/permissions")
 public class PermissionController {
@@ -23,6 +25,11 @@ public class PermissionController {
                                             @RequestParam(name = "sort", defaultValue = "key") String sort,
                                             @RequestParam(name = "direction", defaultValue = "asc") String direction) {
         return permissionService.list(page, size, sort, direction);
+    }
+
+    @GetMapping("/defaults")
+    public List<PermissionDto> listDefaults() {
+        return permissionService.listDefaultPermissions();
     }
 
     @PostMapping
