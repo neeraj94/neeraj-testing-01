@@ -4,6 +4,7 @@ import com.example.rbac.activity.service.ActivityRecorder;
 import com.example.rbac.cart.dto.AddCartItemRequest;
 import com.example.rbac.cart.dto.AdminCartSummaryDto;
 import com.example.rbac.cart.dto.CartDto;
+import com.example.rbac.cart.dto.CartItemDto;
 import com.example.rbac.cart.dto.CartSortOption;
 import com.example.rbac.cart.dto.CartSummaryRow;
 import com.example.rbac.cart.dto.GuestCartLineRequest;
@@ -27,6 +28,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -42,6 +44,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
@@ -69,10 +72,32 @@ public class CartService {
     }
 
     @Transactional(readOnly = true)
-    @PreAuthorize("hasAuthority('USER_VIEW_GLOBAL')")
-    public PageResponse<AdminCartSummaryDto> listAdminCarts(int page, int size, String search, String sort) {
+    @PreAuthorize("hasAnyAuthority('USER_VIEW','USER_VIEW_GLOBAL','USER_VIEW_OWN')")
+    public PageResponse<AdminCartSummaryDto> listAdminCarts(int page,
+                                                           int size,
+                                                           String search,
+                                                           String sort,
+                                                           UserPrincipal principal) {
         int safePage = Math.max(page, 0);
         int safeSize = Math.max(1, Math.min(size, 100));
+        boolean canViewAll = hasAuthority("USER_VIEW_GLOBAL");
+
+        if (!canViewAll) {
+            User currentUser = findCurrentUser(principal)
+                    .orElseThrow(() -> new AccessDeniedException("Access to other carts is restricted."));
+            Optional<Cart> cart = cartRepository.findByUserId(currentUser.getId());
+            if (cart.isEmpty() || !matchesOwnSearch(cart.get(), search)) {
+                Page<AdminCartSummaryDto> emptyPage = new PageImpl<>(List.of(),
+                        PageRequest.of(safePage, safeSize), 0);
+                return PageResponse.from(emptyPage);
+            }
+            AdminCartSummaryDto summary = buildSummaryForCart(cart.get());
+            List<AdminCartSummaryDto> pageContent = safePage == 0 ? List.of(summary) : List.of();
+            Page<AdminCartSummaryDto> singleResultPage = new PageImpl<>(pageContent,
+                    PageRequest.of(safePage, safeSize), 1);
+            return PageResponse.from(singleResultPage);
+        }
+
         Pageable pageable = PageRequest.of(safePage, safeSize);
         CartSortOption sortOption = CartSortOption.fromString(sort);
         String pattern = (search == null || search.isBlank()) ? null : "%" + search.trim().toLowerCase() + "%";
@@ -106,13 +131,17 @@ public class CartService {
 
             Cart detailed = detailedCarts.get(row.cartId());
             if (detailed != null) {
-                CartDto cartDto = cartMapper.toDto(detailed);
-                summary.setItems(cartDto.getItems());
-                if (cartDto.getTotalQuantity() != null && cartDto.getTotalQuantity() > summary.getTotalQuantity()) {
-                    summary.setTotalQuantity(cartDto.getTotalQuantity());
+                AdminCartSummaryDto detailedSummary = buildSummaryForCart(detailed);
+                if (detailedSummary.getItems() != null) {
+                    summary.setItems(detailedSummary.getItems());
                 }
-                if (cartDto.getSubtotal() != null && cartDto.getSubtotal().compareTo(summary.getSubtotal()) > 0) {
-                    summary.setSubtotal(cartDto.getSubtotal());
+                if (detailedSummary.getTotalQuantity() != null
+                        && detailedSummary.getTotalQuantity() > summary.getTotalQuantity()) {
+                    summary.setTotalQuantity(detailedSummary.getTotalQuantity());
+                }
+                if (detailedSummary.getSubtotal() != null
+                        && detailedSummary.getSubtotal().compareTo(summary.getSubtotal()) > 0) {
+                    summary.setSubtotal(detailedSummary.getSubtotal());
                 }
             }
             summaries.add(summary);
@@ -415,6 +444,64 @@ public class CartService {
             }
         }
         return null;
+    }
+
+    private Optional<User> findCurrentUser(UserPrincipal principal) {
+        if (principal != null && principal.getUser() != null && principal.getUser().getId() != null) {
+            return Optional.of(principal.getUser());
+        }
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.getPrincipal() instanceof UserPrincipal userPrincipal
+                && userPrincipal.getUser() != null && userPrincipal.getUser().getId() != null) {
+            return Optional.of(userPrincipal.getUser());
+        }
+        return Optional.empty();
+    }
+
+    private boolean matchesOwnSearch(Cart cart, String search) {
+        if (search == null || search.isBlank()) {
+            return true;
+        }
+        String normalized = search.trim().toLowerCase(Locale.ROOT);
+        if (cart.getId() != null && String.valueOf(cart.getId()).contains(normalized)) {
+            return true;
+        }
+        User user = cart.getUser();
+        if (user == null) {
+            return false;
+        }
+        if (user.getFullName() != null && user.getFullName().toLowerCase(Locale.ROOT).contains(normalized)) {
+            return true;
+        }
+        if (user.getEmail() != null && user.getEmail().toLowerCase(Locale.ROOT).contains(normalized)) {
+            return true;
+        }
+        return user.getId() != null && String.valueOf(user.getId()).contains(normalized);
+    }
+
+    private AdminCartSummaryDto buildSummaryForCart(Cart cart) {
+        AdminCartSummaryDto summary = new AdminCartSummaryDto();
+        if (cart == null) {
+            return summary;
+        }
+        summary.setCartId(cart.getId());
+        summary.setUpdatedAt(cart.getUpdatedAt());
+        User cartUser = cart.getUser();
+        if (cartUser != null) {
+            summary.setUserId(cartUser.getId());
+            summary.setUserName(cartUser.getFullName());
+            summary.setUserEmail(cartUser.getEmail());
+        }
+        CartDto cartDto = cartMapper.toDto(cart);
+        List<CartItemDto> items = Optional.ofNullable(cartDto.getItems()).orElseGet(Collections::emptyList);
+        summary.setItems(items);
+        if (cartDto.getTotalQuantity() != null) {
+            summary.setTotalQuantity(cartDto.getTotalQuantity());
+        }
+        if (cartDto.getSubtotal() != null) {
+            summary.setSubtotal(cartDto.getSubtotal());
+        }
+        return summary;
     }
 
     private boolean hasAuthority(String authority) {
