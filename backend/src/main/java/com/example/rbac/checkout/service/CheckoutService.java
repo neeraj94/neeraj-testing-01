@@ -28,7 +28,9 @@ import com.example.rbac.users.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -190,6 +192,20 @@ public class CheckoutService {
     }
 
     @Transactional(readOnly = true)
+    public List<OrderListItemDto> listOrdersForAdmin(UserPrincipal principal) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (hasAuthority(authentication, "USER_VIEW_GLOBAL")) {
+            return orderService.listOrders();
+        }
+        if (!hasAuthority(authentication, "USER_VIEW") && !hasAuthority(authentication, "USER_VIEW_OWN")) {
+            throw new AccessDeniedException("Access to other orders is restricted.");
+        }
+        Long userId = resolveCurrentUserId(principal)
+                .orElseThrow(() -> new AccessDeniedException("Unable to determine current user context."));
+        return orderService.listOrdersForUser(userId);
+    }
+
+    @Transactional(readOnly = true)
     public List<OrderListItemDto> listOrdersForUser(Long userId) {
         return orderService.listOrdersForUser(userId);
     }
@@ -200,8 +216,46 @@ public class CheckoutService {
     }
 
     @Transactional(readOnly = true)
+    public OrderDetailDto getOrderDetailForAdmin(Long orderId, UserPrincipal principal) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (hasAuthority(authentication, "USER_VIEW_GLOBAL")) {
+            return orderService.getOrder(orderId);
+        }
+        if (!hasAuthority(authentication, "USER_VIEW") && !hasAuthority(authentication, "USER_VIEW_OWN")) {
+            throw new AccessDeniedException("Access to other orders is restricted.");
+        }
+        Long userId = resolveCurrentUserId(principal)
+                .orElseThrow(() -> new AccessDeniedException("Unable to determine current user context."));
+        return orderService.getOrderForUser(userId, orderId);
+    }
+
+    @Transactional(readOnly = true)
     public OrderDetailDto getOrderDetailForUser(Long userId, Long orderId) {
         return orderService.getOrderForUser(userId, orderId);
+    }
+
+    private boolean hasAuthority(Authentication authentication, String authority) {
+        if (authentication == null || authority == null) {
+            return false;
+        }
+        for (GrantedAuthority grantedAuthority : authentication.getAuthorities()) {
+            if (authority.equals(grantedAuthority.getAuthority())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private Optional<Long> resolveCurrentUserId(UserPrincipal principal) {
+        if (principal != null && principal.getUser() != null) {
+            return Optional.ofNullable(principal.getUser().getId());
+        }
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.getPrincipal() instanceof UserPrincipal userPrincipal
+                && userPrincipal.getUser() != null) {
+            return Optional.ofNullable(userPrincipal.getUser().getId());
+        }
+        return Optional.empty();
     }
 
     @Transactional(readOnly = true)

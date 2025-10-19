@@ -152,7 +152,8 @@ public class UserRecentViewService {
             }
         }
         List<UserRecentView> entries = recentViewRepository.findTop20ByUserIdOrderByViewedAtDesc(userId);
-        List<Long> productIds = entries.stream()
+        List<UserRecentView> validEntries = removeStaleEntries(entries);
+        List<Long> productIds = validEntries.stream()
                 .map(UserRecentView::getProduct)
                 .filter(Objects::nonNull)
                 .map(Product::getId)
@@ -168,7 +169,7 @@ public class UserRecentViewService {
 
         Set<Long> emittedProductIds = new LinkedHashSet<>();
         List<UserRecentViewDto> result = new ArrayList<>();
-        for (UserRecentView entry : entries) {
+        for (UserRecentView entry : validEntries) {
             Product productRef = entry.getProduct();
             Long productId = productRef != null ? productRef.getId() : null;
             if (productId == null) {
@@ -204,6 +205,27 @@ public class UserRecentViewService {
             }
         }
         return result;
+    }
+
+    private List<UserRecentView> removeStaleEntries(List<UserRecentView> entries) {
+        if (CollectionUtils.isEmpty(entries)) {
+            return List.of();
+        }
+        List<UserRecentView> valid = new ArrayList<>();
+        List<UserRecentView> stale = new ArrayList<>();
+        for (UserRecentView entry : entries) {
+            Product product = entry.getProduct();
+            if (product == null || product.getId() == null) {
+                stale.add(entry);
+                continue;
+            }
+            valid.add(entry);
+        }
+        if (!stale.isEmpty()) {
+            recentViewRepository.deleteAll(stale);
+            recentViewRepository.flush();
+        }
+        return valid;
     }
 
     private void pruneExcessEntries(Long userId) {
