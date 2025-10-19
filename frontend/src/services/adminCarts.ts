@@ -1,10 +1,5 @@
 import api from './http';
-import type {
-  AdminAddCartItemPayload,
-  AdminCartSummary,
-  AdminUpdateCartItemPayload,
-  Cart
-} from '../types/cart';
+import type { AddCartItemPayload, AdminCartSummary, Cart, UpdateCartItemPayload } from '../types/cart';
 import type { Pagination } from '../types/models';
 
 export const fetchAdminCarts = async ({
@@ -34,7 +29,7 @@ export const fetchUserCartByAdmin = async (userId: number): Promise<Cart> => {
   return data;
 };
 
-export const addItemToUserCart = async (userId: number, payload: AdminAddCartItemPayload): Promise<Cart> => {
+export const addItemToUserCart = async (userId: number, payload: AddCartItemPayload): Promise<Cart> => {
   const { data } = await api.post<Cart>(`/users/${userId}/cart/items`, payload);
   return data;
 };
@@ -42,7 +37,7 @@ export const addItemToUserCart = async (userId: number, payload: AdminAddCartIte
 export const updateCartItemQuantity = async (
   userId: number,
   itemId: number,
-  payload: AdminUpdateCartItemPayload
+  payload: UpdateCartItemPayload
 ): Promise<Cart> => {
   const { data } = await api.patch<Cart>(`/users/${userId}/cart/items/${itemId}`, payload);
   return data;

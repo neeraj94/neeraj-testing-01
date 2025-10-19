@@ -20,7 +20,7 @@ public class AdminCartController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAuthority('CART_VIEW_GLOBAL')")
+    @PreAuthorize("hasAuthority('USER_VIEW_GLOBAL')")
     public PageResponse<AdminCartSummaryDto> listCarts(@RequestParam(name = "page", defaultValue = "0") int page,
                                                        @RequestParam(name = "size", defaultValue = "20") int size,
                                                        @RequestParam(name = "search", required = false) String search,

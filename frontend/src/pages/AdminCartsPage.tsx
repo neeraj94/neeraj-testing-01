@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useMemo, useState } from 'react';
+import type { FormEvent } from 'react';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAppSelector } from '../app/hooks';
 import {
@@ -9,7 +10,14 @@ import {
   removeCartItem,
   updateCartItemQuantity
 } from '../services/adminCarts';
-import type { AdminAddCartItemPayload, AdminCartSummary, Cart } from '../types/cart';
+import {
+  addItemToOwnCart,
+  clearOwnCart,
+  fetchOwnCart,
+  removeOwnCartItem,
+  updateOwnCartItem
+} from '../services/cart';
+import type { AddCartItemPayload, AdminCartSummary, Cart } from '../types/cart';
 import type { Pagination } from '../types/models';
 import Spinner from '../components/Spinner';
 import { formatCurrency } from '../utils/currency';
@@ -18,6 +26,8 @@ import PaginationControls from '../components/PaginationControls';
 import Button from '../components/Button';
 import { extractErrorMessage } from '../utils/errors';
 import { useToast } from '../components/ToastProvider';
+import { hasAnyPermission } from '../utils/permissions';
+import type { PermissionKey } from '../types/auth';
 
 const formatTimestamp = (value?: string | null) => {
   if (!value) {
@@ -36,10 +46,315 @@ const SORT_OPTIONS: Array<{ value: string; label: string }> = [
   { value: 'LOWEST_AMOUNT', label: 'Lowest amount' }
 ];
 
-const AdminCartsPage = () => {
+const SelfCartPanel = () => {
   const baseCurrency = useAppSelector(selectBaseCurrency);
   const { notify } = useToast();
   const queryClient = useQueryClient();
+
+  const cartQuery = useQuery<Cart>({
+    queryKey: ['self', 'cart'],
+    queryFn: fetchOwnCart
+  });
+
+  const invalidateCart = () => {
+    queryClient.invalidateQueries({ queryKey: ['self', 'cart'] });
+  };
+
+  const addItemMutation = useMutation({
+    mutationFn: (payload: AddCartItemPayload) => addItemToOwnCart(payload),
+    onSuccess: () => {
+      notify({ title: 'Item added', message: 'The product was added to your cart.', type: 'success' });
+      invalidateCart();
+    },
+    onError: (error) => {
+      notify({
+        title: 'Unable to add item',
+        message: extractErrorMessage(error, 'Try again later.'),
+        type: 'error'
+      });
+    }
+  });
+
+  const updateItemMutation = useMutation({
+    mutationFn: ({ itemId, quantity }: { itemId: number; quantity: number }) =>
+      updateOwnCartItem(itemId, { quantity }),
+    onSuccess: () => {
+      notify({ title: 'Cart updated', message: 'The item quantity was updated.', type: 'success' });
+      invalidateCart();
+    },
+    onError: (error) => {
+      notify({
+        title: 'Unable to update item',
+        message: extractErrorMessage(error, 'Try again later.'),
+        type: 'error'
+      });
+    }
+  });
+
+  const removeItemMutation = useMutation({
+    mutationFn: (itemId: number) => removeOwnCartItem(itemId),
+    onSuccess: () => {
+      notify({ title: 'Item removed', message: 'The product was removed from your cart.', type: 'success' });
+      invalidateCart();
+    },
+    onError: (error) => {
+      notify({
+        title: 'Unable to remove item',
+        message: extractErrorMessage(error, 'Try again later.'),
+        type: 'error'
+      });
+    }
+  });
+
+  const clearCartMutation = useMutation({
+    mutationFn: () => clearOwnCart(),
+    onSuccess: () => {
+      notify({ title: 'Cart cleared', message: 'All items were removed from your cart.', type: 'success' });
+      invalidateCart();
+    },
+    onError: (error) => {
+      notify({
+        title: 'Unable to clear cart',
+        message: extractErrorMessage(error, 'Try again later.'),
+        type: 'error'
+      });
+    }
+  });
+
+  const isMutating =
+    addItemMutation.isPending ||
+    updateItemMutation.isPending ||
+    removeItemMutation.isPending ||
+    clearCartMutation.isPending;
+
+  const handleAddItem = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const productId = Number(form.get('productId'));
+    const quantity = Number(form.get('quantity'));
+    const variantIdValue = form.get('variantId');
+    const variantId = variantIdValue ? Number(variantIdValue) : undefined;
+
+    if (!Number.isFinite(productId) || productId <= 0 || !Number.isFinite(quantity) || quantity <= 0) {
+      notify({
+        title: 'Invalid item details',
+        message: 'Enter a product ID and quantity greater than zero.',
+        type: 'error'
+      });
+      return;
+    }
+
+    addItemMutation.mutate({ productId, quantity, variantId: variantId ?? undefined });
+    event.currentTarget.reset();
+  };
+
+  return (
+    <div className="space-y-6">
+      <header className="space-y-1">
+        <h1 className="text-2xl font-semibold text-slate-900">Your cart</h1>
+        <p className="text-sm text-slate-500">
+          Review and manage the products you intend to purchase. Changes here reflect immediately across the storefront.
+        </p>
+      </header>
+
+      <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        {cartQuery.isLoading ? (
+          <div className="flex min-h-[160px] items-center justify-center">
+            <Spinner />
+          </div>
+        ) : cartQuery.isError ? (
+          <div className="space-y-3 rounded-xl border border-rose-200 bg-rose-50/80 p-4 text-sm text-rose-600">
+            <p>{extractErrorMessage(cartQuery.error, 'Unable to load your cart.')}</p>
+            <Button onClick={() => cartQuery.refetch()} className="px-3 py-1.5 text-xs font-semibold">
+              Retry
+            </Button>
+          </div>
+        ) : (
+          <Fragment>
+            <header className="flex items-start justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-semibold text-slate-900">Cart details</h2>
+                <p className="text-sm text-slate-500">
+                  Adjust quantities, remove items, or clear your basket. Updates are applied instantly.
+                </p>
+                <p className="mt-1 text-xs text-slate-400">Last updated {formatTimestamp(cartQuery.data?.updatedAt)}</p>
+              </div>
+              <span className="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                {(cartQuery.data?.items.length ?? 0)} items
+              </span>
+            </header>
+
+            <div className="space-y-3">
+              {cartQuery.data?.items.length ? (
+                cartQuery.data.items.map((item) => (
+                  <div
+                    key={item.id ?? `${item.productId}-${item.variantId ?? 'none'}`}
+                    className="rounded-xl border border-slate-200 bg-slate-50 p-4"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="space-y-1">
+                        <div className="text-sm font-semibold text-slate-900">{item.productName}</div>
+                        {item.variantLabel && (
+                          <div className="text-xs uppercase tracking-wide text-slate-400">{item.variantLabel}</div>
+                        )}
+                        {item.sku && <div className="text-xs text-slate-400">SKU: {item.sku}</div>}
+                      </div>
+                      <div className="text-right text-sm font-semibold text-slate-900">
+                        {formatCurrency(item.lineTotal ?? 0, baseCurrency)}
+                      </div>
+                    </div>
+                    <form
+                      className="mt-4 flex flex-wrap items-center gap-3 text-sm"
+                      onSubmit={(event) => {
+                        event.preventDefault();
+                        const form = new FormData(event.currentTarget);
+                        const quantity = Number(form.get('quantity'));
+                        if (!Number.isFinite(quantity) || quantity <= 0) {
+                          notify({
+                            title: 'Invalid quantity',
+                            message: 'Quantity must be greater than zero.',
+                            type: 'error'
+                          });
+                          return;
+                        }
+                        if (item.id == null) {
+                          notify({
+                            title: 'Unable to update item',
+                            message: 'Missing item identifier.',
+                            type: 'error'
+                          });
+                          return;
+                        }
+                        updateItemMutation.mutate({ itemId: item.id, quantity });
+                      }}
+                    >
+                      <label className="flex items-center gap-2">
+                        <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Quantity</span>
+                        <input
+                          type="number"
+                          name="quantity"
+                          defaultValue={item.quantity}
+                          min={1}
+                          disabled={isMutating}
+                          className="w-24 rounded-lg border border-slate-300 px-3 py-1.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                        />
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <Button type="submit" disabled={isMutating} className="px-3 py-1.5 text-xs font-semibold">
+                          Update
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          disabled={isMutating}
+                          className="px-3 py-1.5 text-xs font-semibold text-rose-600 hover:text-rose-700"
+                          onClick={() => {
+                            if (item.id == null) {
+                              notify({
+                                title: 'Unable to remove item',
+                                message: 'Missing item identifier.',
+                                type: 'error'
+                              });
+                              return;
+                            }
+                            removeItemMutation.mutate(item.id);
+                          }}
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                    </form>
+                  </div>
+                ))
+              ) : (
+                <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-sm text-slate-500">
+                  Your cart is empty. Add a product below to start shopping.
+                </div>
+              )}
+            </div>
+
+            <form onSubmit={handleAddItem} className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <h3 className="text-sm font-semibold text-slate-800">Add item</h3>
+              <p className="text-xs text-slate-500">
+                Specify the product identifier, optional variant, and quantity to insert into your cart.
+              </p>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Product ID
+                  <input
+                    name="productId"
+                    type="number"
+                    min={1}
+                    required
+                    disabled={isMutating}
+                    className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  />
+                </label>
+                <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Variant ID
+                  <input
+                    name="variantId"
+                    type="number"
+                    min={1}
+                    disabled={isMutating}
+                    className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  />
+                </label>
+                <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Quantity
+                  <input
+                    name="quantity"
+                    type="number"
+                    min={1}
+                    defaultValue={1}
+                    required
+                    disabled={isMutating}
+                    className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  />
+                </label>
+              </div>
+              <div className="flex justify-end">
+                <Button type="submit" disabled={isMutating} className="px-3 py-1.5 text-xs font-semibold">
+                  Add to cart
+                </Button>
+              </div>
+            </form>
+
+            <div className="flex flex-col gap-3 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                Subtotal:{' '}
+                <span className="font-semibold text-slate-900">
+                  {formatCurrency(cartQuery.data?.subtotal ?? 0, baseCurrency)}
+                </span>
+              </div>
+              <Button
+                variant="ghost"
+                disabled={isMutating || (cartQuery.data?.items.length ?? 0) === 0}
+                className="px-3 py-1.5 text-xs font-semibold text-rose-600 hover:text-rose-700"
+                onClick={() => clearCartMutation.mutate()}
+              >
+                Clear cart
+              </Button>
+            </div>
+          </Fragment>
+        )}
+      </section>
+    </div>
+  );
+};
+
+interface AllCartsPanelProps {
+  permissions: PermissionKey[];
+}
+
+const AllCartsPanel = ({ permissions }: AllCartsPanelProps) => {
+  const baseCurrency = useAppSelector(selectBaseCurrency);
+  const { notify } = useToast();
+  const queryClient = useQueryClient();
+
+  const hasUserViewGlobal = useMemo(() => hasAnyPermission(permissions, ['USER_VIEW_GLOBAL']), [permissions]);
+  const canUpdateAllCarts = hasUserViewGlobal && hasAnyPermission(permissions, ['USER_UPDATE']);
+  const canDeleteAllCarts = hasUserViewGlobal && hasAnyPermission(permissions, ['USER_DELETE']);
 
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(10);
@@ -72,7 +387,7 @@ const AdminCartsPage = () => {
     placeholderData: keepPreviousData
   });
 
-  const carts: AdminCartSummary[] = cartsQuery.data?.content ?? [];
+  const carts = useMemo<AdminCartSummary[]>(() => cartsQuery.data?.content ?? [], [cartsQuery.data]);
 
   useEffect(() => {
     if (!carts.length) {
@@ -103,7 +418,7 @@ const AdminCartsPage = () => {
   };
 
   const addItemMutation = useMutation({
-    mutationFn: async (payload: AdminAddCartItemPayload) => {
+    mutationFn: async (payload: AddCartItemPayload) => {
       if (selectedUserId == null) {
         throw new Error('No cart selected');
       }
@@ -188,10 +503,21 @@ const AdminCartsPage = () => {
     removeItemMutation.isPending ||
     clearCartMutation.isPending;
 
-  const selection = useMemo(() => carts.find((cart) => cart.userId === selectedUserId) ?? null, [carts, selectedUserId]);
+  const selection = useMemo(
+    () => carts.find((cart) => cart.userId === selectedUserId) ?? null,
+    [carts, selectedUserId]
+  );
 
-  const handleAddItem = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleAddItem = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (!canUpdateAllCarts) {
+      notify({
+        title: 'Insufficient permissions',
+        message: 'User edit access is required to add items to carts.',
+        type: 'error'
+      });
+      return;
+    }
     const form = new FormData(event.currentTarget);
     const productId = Number(form.get('productId'));
     const quantity = Number(form.get('quantity'));
@@ -250,9 +576,7 @@ const AdminCartsPage = () => {
       return (
         <tr
           key={cart.cartId}
-          className={`cursor-pointer transition ${
-            isSelected ? 'bg-primary/5' : 'hover:bg-slate-50'
-          }`}
+          className={`cursor-pointer transition ${isSelected ? 'bg-primary/5' : 'hover:bg-slate-50'}`}
           onClick={() => setSelectedUserId(cart.userId)}
         >
           <td className="whitespace-nowrap px-6 py-4 text-sm font-semibold text-slate-800">
@@ -304,6 +628,11 @@ const AdminCartsPage = () => {
           <p className="text-sm text-slate-500">
             Monitor customer carts, adjust quantities, and keep storefront sessions in sync with administrative updates.
           </p>
+          {!canUpdateAllCarts && !canDeleteAllCarts && (
+            <p className="text-xs text-amber-600">
+              You currently have read-only access. Grant User edit/delete permissions to modify other customers&apos; carts.
+            </p>
+          )}
         </div>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <div className="relative">
@@ -314,9 +643,7 @@ const AdminCartsPage = () => {
               placeholder="Search customers or products"
               className="w-full rounded-lg border border-slate-300 py-2 pl-3 pr-10 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:w-64"
             />
-            <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-slate-400">
-              🔍
-            </span>
+            <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-slate-400">🔍</span>
           </div>
           <label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
             Sort
@@ -359,9 +686,7 @@ const AdminCartsPage = () => {
             onPageChange={setPage}
             onPageSizeChange={setPageSize}
             isLoading={cartsQuery.isFetching}
-            prefix={
-              <span className="hidden sm:inline">Sorted by {SORT_OPTIONS.find((option) => option.value === sortOption)?.label}</span>
-            }
+            prefix={<span className="hidden sm:inline">Sorted by {SORT_OPTIONS.find((option) => option.value === sortOption)?.label}</span>}
           />
         </section>
 
@@ -398,8 +723,10 @@ const AdminCartsPage = () => {
               <div className="space-y-3">
                 {cartDetailQuery.data.items.length ? (
                   cartDetailQuery.data.items.map((item) => (
-                    <div key={item.id ?? `${item.productId}-${item.variantId ?? 'none'}`}
-                      className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                    <div
+                      key={item.id ?? `${item.productId}-${item.variantId ?? 'none'}`}
+                      className="rounded-xl border border-slate-200 bg-slate-50 p-4"
+                    >
                       <div className="flex items-start justify-between gap-3">
                         <div className="space-y-1">
                           <div className="text-sm font-semibold text-slate-900">{item.productName}</div>
@@ -416,6 +743,14 @@ const AdminCartsPage = () => {
                         className="mt-4 flex flex-wrap items-center gap-3 text-sm"
                         onSubmit={(event) => {
                           event.preventDefault();
+                          if (!canUpdateAllCarts) {
+                            notify({
+                              title: 'Insufficient permissions',
+                              message: 'User edit access is required to update cart items.',
+                              type: 'error'
+                            });
+                            return;
+                          }
                           const form = new FormData(event.currentTarget);
                           const quantity = Number(form.get('quantity'));
                           if (!Number.isFinite(quantity) || quantity <= 0) {
@@ -444,13 +779,14 @@ const AdminCartsPage = () => {
                             name="quantity"
                             defaultValue={item.quantity}
                             min={1}
+                            disabled={isMutating || !canUpdateAllCarts}
                             className="w-24 rounded-lg border border-slate-300 px-3 py-1.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                           />
                         </label>
                         <div className="flex items-center gap-2">
                           <Button
                             type="submit"
-                            disabled={isMutating}
+                            disabled={isMutating || !canUpdateAllCarts}
                             className="px-3 py-1.5 text-xs font-semibold"
                           >
                             Update
@@ -458,9 +794,17 @@ const AdminCartsPage = () => {
                           <Button
                             type="button"
                             variant="ghost"
-                            disabled={isMutating}
+                            disabled={isMutating || !canDeleteAllCarts}
                             className="px-3 py-1.5 text-xs font-semibold text-rose-600 hover:text-rose-700"
                             onClick={() => {
+                              if (!canDeleteAllCarts) {
+                                notify({
+                                  title: 'Insufficient permissions',
+                                  message: 'User delete access is required to remove items.',
+                                  type: 'error'
+                                });
+                                return;
+                              }
                               if (item.id == null) {
                                 notify({
                                   title: 'Unable to remove item',
@@ -498,6 +842,7 @@ const AdminCartsPage = () => {
                       type="number"
                       min={1}
                       required
+                      disabled={isMutating || !canUpdateAllCarts}
                       className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                     />
                   </label>
@@ -507,6 +852,7 @@ const AdminCartsPage = () => {
                       name="variantId"
                       type="number"
                       min={1}
+                      disabled={isMutating || !canUpdateAllCarts}
                       className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                     />
                   </label>
@@ -518,12 +864,13 @@ const AdminCartsPage = () => {
                       min={1}
                       defaultValue={1}
                       required
+                      disabled={isMutating || !canUpdateAllCarts}
                       className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                     />
                   </label>
                 </div>
                 <div className="flex justify-end">
-                  <Button type="submit" disabled={isMutating} className="px-3 py-1.5 text-xs font-semibold">
+                  <Button type="submit" disabled={isMutating || !canUpdateAllCarts} className="px-3 py-1.5 text-xs font-semibold">
                     Add to cart
                   </Button>
                 </div>
@@ -538,9 +885,23 @@ const AdminCartsPage = () => {
                 </div>
                 <Button
                   variant="ghost"
-                  disabled={isMutating || cartDetailQuery.data.items.length === 0}
+                  disabled={
+                    isMutating ||
+                    !canDeleteAllCarts ||
+                    cartDetailQuery.data.items.length === 0
+                  }
                   className="px-3 py-1.5 text-xs font-semibold text-rose-600 hover:text-rose-700"
-                  onClick={() => clearCartMutation.mutate()}
+                  onClick={() => {
+                    if (!canDeleteAllCarts) {
+                      notify({
+                        title: 'Insufficient permissions',
+                        message: 'User delete access is required to clear carts.',
+                        type: 'error'
+                      });
+                      return;
+                    }
+                    clearCartMutation.mutate();
+                  }}
                 >
                   Clear cart
                 </Button>
@@ -551,6 +912,20 @@ const AdminCartsPage = () => {
       </div>
     </div>
   );
+};
+
+const AdminCartsPage = () => {
+  const permissions = useAppSelector((state) => state.auth.permissions as PermissionKey[]);
+  const hasUserViewGlobal = useMemo(
+    () => hasAnyPermission(permissions ?? [], ['USER_VIEW_GLOBAL']),
+    [permissions]
+  );
+
+  if (!hasUserViewGlobal) {
+    return <SelfCartPanel />;
+  }
+
+  return <AllCartsPanel permissions={permissions ?? []} />;
 };
 
 export default AdminCartsPage;
