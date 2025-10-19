@@ -2353,6 +2353,7 @@ const UsersPage = () => {
     const canCreateAddresses = canCreateUserAddresses && (canViewAllUsers || targetIsSelf);
     const canEditAddresses = canEditUserAddresses && (canViewAllUsers || targetIsSelf);
     const canDeleteAddresses = canDeleteUserAddresses && (canViewAllUsers || targetIsSelf);
+    const canModifyAddresses = canCreateAddresses || canEditAddresses || canDeleteAddresses;
     const canManageAddresses = canManageUserAddresses;
     const countryOptions = addressCountriesQuery.data ?? [];
     const stateOptions = addressStatesQuery.data ?? [];
