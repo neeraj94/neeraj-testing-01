@@ -47,8 +47,8 @@ const AUDIENCE_PREFIXES: Array<{
 const FEATURE_KEY_OVERRIDES: Record<string, string> = {
   COUPON: 'COUPONS',
   COUPONS: 'COUPONS',
-  ORDER: 'ORDERS',
-  ORDERS: 'ORDERS',
+  ORDER: 'USER_MANAGEMENT',
+  ORDERS: 'USER_MANAGEMENT',
   PAYMENT: 'PAYMENTS',
   PAYMENTS: 'PAYMENTS',
   CHECKOUT: 'CHECKOUT',
@@ -62,8 +62,16 @@ const FEATURE_KEY_OVERRIDES: Record<string, string> = {
   PERMISSIONS: 'PERMISSIONS',
   ROLE: 'ROLES',
   ROLES: 'ROLES',
-  USER: 'USERS',
-  USERS: 'USERS',
+  USER: 'USER_MANAGEMENT',
+  USERS: 'USER_MANAGEMENT',
+  USER_ADDRESS: 'USER_MANAGEMENT',
+  USER_ADDRESSES: 'USER_MANAGEMENT',
+  USER_CART: 'USER_MANAGEMENT',
+  USER_CARTS: 'USER_MANAGEMENT',
+  USER_ORDER: 'USER_MANAGEMENT',
+  USER_ORDERS: 'USER_MANAGEMENT',
+  USER_RECENTLY: 'USER_MANAGEMENT',
+  USER_RECENTLY_VIEWED: 'USER_MANAGEMENT',
   GALLERY_FILE: 'GALLERY',
   GALLERY_FILES: 'GALLERY',
   GALLERY: 'GALLERY',
@@ -107,6 +115,7 @@ const FEATURE_LABEL_OVERRIDES: Record<string, string> = {
   SHIPPING: 'Shipping',
   TAX_RATES: 'Tax Rates',
   GALLERY: 'Gallery',
+  USER_MANAGEMENT: 'User Management',
   USERS: 'Users',
   UPLOADED_FILES: 'Uploaded Files'
 };
@@ -121,9 +130,7 @@ const ADMIN_FEATURE_ORDER = [
   'Brands',
   'Categories',
   'Coupons',
-  'All Cart',
-  'All User Management',
-  'Orders',
+  'User Management',
   'Payments',
   'Permissions',
   'Product Reviews',
@@ -133,7 +140,6 @@ const ADMIN_FEATURE_ORDER = [
   'Setup',
   'Shipping',
   'Tax Rates',
-  'Users',
   'Gallery',
   'Uploaded Files'
 ] as const;
@@ -325,23 +331,9 @@ export const buildPermissionGroups = (permissions: Permission[]): PermissionGrou
     }
   });
 
-  const userGroup = map.get('admin:USERS');
+  const userGroup = map.get('admin:USER_MANAGEMENT');
   if (userGroup) {
-    userGroup.feature = 'All User Management';
-    const aliases: Array<{ key: string; feature: string }> = [
-      { key: 'admin:ORDERS_ALIAS', feature: 'Orders' },
-      { key: 'admin:ALL_CART', feature: 'All Cart' }
-    ];
-    aliases.forEach(({ key, feature }) => {
-      if (!map.has(key)) {
-        map.set(key, {
-          feature,
-          slots: { ...userGroup.slots },
-          extras: [...userGroup.extras],
-          category: 'admin'
-        });
-      }
-    });
+    userGroup.feature = 'User Management';
   }
 
   return Array.from(map.values())
