@@ -16,6 +16,8 @@ public interface PermissionRepository extends JpaRepository<Permission, Long> {
 
     List<Permission> findByKeyIn(Set<String> keys);
 
+    List<Permission> findByKeyStartingWithIgnoreCase(String prefix);
+
     @Query("SELECT p FROM Permission p WHERE LOWER(p.key) NOT LIKE LOWER(CONCAT(:prefix, '%'))")
     Page<Permission> findByKeyNotStartingWithIgnoreCase(@Param("prefix") String prefix, Pageable pageable);
 }

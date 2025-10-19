@@ -1,8 +1,8 @@
 import type { Permission } from '../types/models';
 
-export type CapabilitySlot = 'viewOwn' | 'viewGlobal' | 'create' | 'edit' | 'delete' | 'export';
+export type CapabilitySlot = 'viewOwn' | 'viewGlobal' | 'create' | 'edit' | 'delete' | 'manage' | 'export';
 
-export type PermissionAudience = 'admin' | 'public';
+export type PermissionAudience = 'admin' | 'system' | 'public';
 
 export type PermissionOption = {
   id: number;
@@ -23,14 +23,16 @@ export const CAPABILITY_COLUMNS: Array<{ slot: CapabilitySlot; label: string }> 
   { slot: 'create', label: 'Create' },
   { slot: 'edit', label: 'Edit' },
   { slot: 'delete', label: 'Delete' },
+  { slot: 'manage', label: 'Manage' },
   { slot: 'export', label: 'Export' }
 ];
 
-export const PERMISSION_AUDIENCE_ORDER: PermissionAudience[] = ['admin', 'public'];
+export const PERMISSION_AUDIENCE_ORDER: PermissionAudience[] = ['admin', 'system', 'public'];
 
 export const PERMISSION_AUDIENCE_HEADERS: Record<PermissionAudience, string> = {
-  admin: 'Administrative Access',
-  public: 'Public Access'
+  admin: 'Admin Permissions',
+  system: 'System Permissions',
+  public: 'Default User Permissions'
 };
 
 const AUDIENCE_PREFIXES: Array<{
@@ -119,6 +121,8 @@ const ADMIN_FEATURE_ORDER = [
   'Brands',
   'Categories',
   'Coupons',
+  'All Cart',
+  'All User Management',
   'Orders',
   'Payments',
   'Permissions',
@@ -138,17 +142,15 @@ const ADMIN_FEATURE_PRIORITY = new Map<string, number>(
   ADMIN_FEATURE_ORDER.map((feature, index) => [feature.toLowerCase(), index])
 );
 
-const DEFAULT_MANAGE_SLOTS: CapabilitySlot[] = ['create', 'edit', 'delete'];
-
-const MANAGE_SLOT_OVERRIDES: Record<string, CapabilitySlot[]> = {
-  CHECKOUT: ['viewGlobal', 'create', 'edit', 'delete'],
-  COUPONS: ['viewGlobal', 'create', 'edit', 'delete'],
-  ORDERS: ['viewGlobal', 'create', 'edit', 'delete'],
-  PAYMENTS: ['viewGlobal', 'create', 'edit', 'delete'],
-  SETUP: ['viewGlobal', 'create', 'edit', 'delete'],
-  SHIPPING: ['viewGlobal', 'create', 'edit', 'delete'],
-  UPLOADED_FILES: ['viewGlobal', 'create', 'edit', 'delete']
-};
+const SYSTEM_FEATURE_KEYS = new Set([
+  'PERMISSIONS',
+  'ROLES',
+  'SETTINGS',
+  'SETUP',
+  'PAYMENTS',
+  'SHIPPING',
+  'ACTIVITY'
+]);
 
 const CAPABILITY_PATTERNS: Array<{ slot: CapabilitySlot; regex: RegExp }> = [
   { slot: 'viewGlobal', regex: /_VIEW_GLOBAL$/i },
@@ -269,7 +271,11 @@ export const buildPermissionGroups = (permissions: Permission[]): PermissionGrou
     const audienceInfo = determineAudience(keyUpper);
     const stripped = stripCapabilitySuffix(audienceInfo.baseKey).toUpperCase();
     const normalizedKey = FEATURE_KEY_OVERRIDES[stripped] ?? stripped;
-    const mapKey = `${audienceInfo.audience}:${normalizedKey}`;
+    const category: PermissionAudience =
+      audienceInfo.audience === 'admin' && SYSTEM_FEATURE_KEYS.has(normalizedKey)
+        ? 'system'
+        : audienceInfo.audience;
+    const mapKey = `${category}:${normalizedKey}`;
 
     let group = map.get(mapKey);
 
@@ -281,7 +287,7 @@ export const buildPermissionGroups = (permissions: Permission[]): PermissionGrou
     }
 
     if (!group) {
-      group = { feature: featureLabel, slots: {}, extras: [], category: audienceInfo.audience };
+      group = { feature: featureLabel, slots: {}, extras: [], category };
       map.set(mapKey, group);
     } else if (!group.feature && featureLabel) {
       group.feature = featureLabel;
@@ -307,14 +313,7 @@ export const buildPermissionGroups = (permissions: Permission[]): PermissionGrou
     }
 
     if (isManage) {
-      const slots = MANAGE_SLOT_OVERRIDES[normalizedKey] ?? DEFAULT_MANAGE_SLOTS;
-      let assigned = false;
-      for (const slot of slots) {
-        if (assignSlot(group, slot, option)) {
-          assigned = true;
-        }
-      }
-      if (!assigned) {
+      if (!assignSlot(group, 'manage', option)) {
         group.extras = addExtraOption(group.extras, option);
       }
     } else if (matchedSlot) {
@@ -325,6 +324,25 @@ export const buildPermissionGroups = (permissions: Permission[]): PermissionGrou
       group.extras = addExtraOption(group.extras, option);
     }
   });
+
+  const userGroup = map.get('admin:USERS');
+  if (userGroup) {
+    userGroup.feature = 'All User Management';
+    const aliases: Array<{ key: string; feature: string }> = [
+      { key: 'admin:ORDERS_ALIAS', feature: 'Orders' },
+      { key: 'admin:ALL_CART', feature: 'All Cart' }
+    ];
+    aliases.forEach(({ key, feature }) => {
+      if (!map.has(key)) {
+        map.set(key, {
+          feature,
+          slots: { ...userGroup.slots },
+          extras: [...userGroup.extras],
+          category: 'admin'
+        });
+      }
+    });
+  }
 
   return Array.from(map.values())
     .map((group) => ({
@@ -338,7 +356,7 @@ export const buildPermissionGroups = (permissions: Permission[]): PermissionGrou
         return audienceComparison;
       }
 
-      if (a.category === 'admin' && b.category === 'admin') {
+      if ((a.category === 'admin' || a.category === 'system') && (b.category === 'admin' || b.category === 'system')) {
         const aPriority = ADMIN_FEATURE_PRIORITY.get(a.feature.toLowerCase());
         const bPriority = ADMIN_FEATURE_PRIORITY.get(b.feature.toLowerCase());
         if (aPriority != null || bPriority != null) {

@@ -24,7 +24,7 @@ public class PaymentAdminController {
     }
 
     @GetMapping("/methods")
-    @PreAuthorize("hasAuthority('PAYMENT_MANAGE')")
+    @PreAuthorize("hasAnyAuthority('PAYMENT_VIEW', 'PAYMENT_MANAGE')")
     public List<PaymentMethodDto> listPaymentMethods() {
         return checkoutService.listPaymentMethodsForAdmin();
     }

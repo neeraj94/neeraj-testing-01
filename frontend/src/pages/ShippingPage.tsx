@@ -149,7 +149,7 @@ const AreaShippingManager = () => {
   const [pendingCityId, setPendingCityId] = useState<number | null>(null);
 
   const canManageLocations = useMemo(
-    () => hasAnyPermission(permissions as PermissionKey[], ['SHIPPING_LOCATION_MANAGE']),
+    () => hasAnyPermission(permissions as PermissionKey[], ['SHIPPING_MANAGE']),
     [permissions]
   );
 
