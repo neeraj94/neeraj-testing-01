@@ -28,6 +28,9 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
@@ -268,7 +271,7 @@ public class CartService {
     }
 
     @Transactional
-    @PreAuthorize("hasAuthority('USER_VIEW_GLOBAL') and hasAuthority('USER_UPDATE')")
+    @PreAuthorize("hasAuthority('USER_VIEW_GLOBAL') and (hasAuthority('USER_CREATE') or hasAuthority('USER_UPDATE'))")
     public CartDto addItemForUser(Long userId, AddCartItemRequest request) {
         Cart cart = getExistingCart(userId);
         Product product = productRepository.findById(request.getProductId())
@@ -276,6 +279,15 @@ public class CartService {
         ProductVariant variant = resolveVariant(product, request.getVariantId());
         int quantity = Optional.ofNullable(request.getQuantity()).orElse(1);
         CartItem item = findExistingItem(cart, product, variant);
+        boolean hasCreatePermission = hasAuthority("USER_CREATE");
+        boolean hasUpdatePermission = hasAuthority("USER_UPDATE");
+
+        if (item == null && !hasCreatePermission) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "Create permission is required to add new cart items.");
+        }
+        if (item != null && !hasUpdatePermission) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "Edit permission is required to modify existing cart items.");
+        }
         int newQuantity = quantity;
         if (item != null && item.getQuantity() != null) {
             newQuantity = item.getQuantity() + quantity;
@@ -377,6 +389,19 @@ public class CartService {
             }
         }
         return null;
+    }
+
+    private boolean hasAuthority(String authority) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null) {
+            return false;
+        }
+        for (GrantedAuthority grantedAuthority : authentication.getAuthorities()) {
+            if (authority.equals(grantedAuthority.getAuthority())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void enforceQuantityBounds(Product product, ProductVariant variant, int quantity) {

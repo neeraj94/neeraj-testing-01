@@ -394,6 +394,10 @@ const UsersPage = () => {
     () => (currentRoles ?? []).some((role) => role.toUpperCase() === 'SUPER_ADMIN'),
     [currentRoles]
   );
+  const canViewAllUsers = useMemo(
+    () => hasAnyPermission(grantedPermissions as PermissionKey[], ['USER_VIEW_GLOBAL']),
+    [grantedPermissions]
+  );
 
   const canCreateUser = useMemo(
     () => hasAnyPermission(grantedPermissions as PermissionKey[], ['USER_CREATE']),
@@ -412,16 +416,21 @@ const UsersPage = () => {
     [grantedPermissions]
   );
   const canModifyUserAddresses = useMemo(
-    () => hasAnyPermission(grantedPermissions as PermissionKey[], ['USER_CREATE', 'USER_UPDATE']),
-    [grantedPermissions]
+    () =>
+      canViewAllUsers &&
+      hasAnyPermission(grantedPermissions as PermissionKey[], ['USER_CREATE', 'USER_UPDATE']),
+    [canViewAllUsers, grantedPermissions]
   );
   const canAddUserCartItems = useMemo(
-    () => hasAnyPermission(grantedPermissions as PermissionKey[], ['USER_UPDATE']),
-    [grantedPermissions]
+    () =>
+      canViewAllUsers &&
+      hasAnyPermission(grantedPermissions as PermissionKey[], ['USER_CREATE', 'USER_UPDATE']),
+    [canViewAllUsers, grantedPermissions]
   );
   const canRemoveUserCartItems = useMemo(
-    () => hasAnyPermission(grantedPermissions as PermissionKey[], ['USER_DELETE']),
-    [grantedPermissions]
+    () =>
+      canViewAllUsers && hasAnyPermission(grantedPermissions as PermissionKey[], ['USER_DELETE']),
+    [canViewAllUsers, grantedPermissions]
   );
 
   useEffect(() => {
@@ -794,7 +803,13 @@ const UsersPage = () => {
       );
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      if (selectedUserId != null) {
+        queryClient.setQueryData<CheckoutAddress[]>(['users', selectedUserId, 'addresses'], (prev) => {
+          const next = (prev ?? []).filter((address) => address.id !== data.id);
+          return [data, ...next];
+        });
+      }
       notify({ type: 'success', message: 'Address added successfully.' });
       setAddressForm(createEmptyAddressForm());
       setAddressFormOpen(false);
@@ -821,7 +836,12 @@ const UsersPage = () => {
       );
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      if (selectedUserId != null) {
+        queryClient.setQueryData<CheckoutAddress[]>(['users', selectedUserId, 'addresses'], (prev) =>
+          (prev ?? []).map((address) => (address.id === data.id ? data : address))
+        );
+      }
       notify({ type: 'success', message: 'Address updated successfully.' });
       setAddressForm(createEmptyAddressForm());
       setAddressFormOpen(false);
