@@ -1,7 +1,8 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '../services/http';
-import type { Customer, Invoice, Pagination, User } from '../types/models';
+import type { Customer, Pagination, User } from '../types/models';
+import type { AdminCartSummary } from '../types/cart';
 import DataTable from '../components/DataTable';
 import { useAppSelector } from '../app/hooks';
 import { selectBaseCurrency } from '../features/settings/selectors';
@@ -44,6 +45,17 @@ const ClipboardIcon = () => (
   </svg>
 );
 
+const formatDateTime = (value?: string | null) => {
+  if (!value) {
+    return '—';
+  }
+  try {
+    return new Date(value).toLocaleString();
+  } catch {
+    return value;
+  }
+};
+
 const DashboardPage = () => {
   const baseCurrency = useAppSelector(selectBaseCurrency);
   const { data: usersPage } = useQuery<Pagination<User>>({
@@ -62,30 +74,27 @@ const DashboardPage = () => {
     }
   });
 
-  const { data: invoicesPage } = useQuery<Pagination<Invoice>>({
-    queryKey: ['invoices', 'recent'],
+  const users = usersPage?.content ?? [];
+  const customers = customersPage?.content ?? [];
+  const { data: cartsPage } = useQuery<Pagination<AdminCartSummary>>({
+    queryKey: ['admin-carts', 'recent'],
     queryFn: async () => {
-      const { data } = await api.get<Pagination<Invoice>>('/invoices?size=8');
+      const { data } = await api.get<Pagination<AdminCartSummary>>('/admin/carts', { params: { size: 8, sort: 'newest' } });
       return data;
     }
   });
 
-  const users = usersPage?.content ?? [];
-  const customers = customersPage?.content ?? [];
-  const invoices = invoicesPage?.content ?? [];
+  const carts = cartsPage?.content ?? [];
 
-  const paidTotal = useMemo(
-    () => invoices.filter((invoice) => invoice.status === 'PAID').reduce((sum, invoice) => sum + invoice.total, 0),
-    [invoices]
+  const totalCartValue = useMemo(
+    () => carts.reduce((sum, cart) => sum + (cart.subtotal ?? 0), 0),
+    [carts]
   );
 
-  const outstandingTotal = useMemo(
-    () => invoices.filter((invoice) => invoice.status !== 'PAID').reduce((sum, invoice) => sum + invoice.total, 0),
-    [invoices]
+  const totalCartItems = useMemo(
+    () => carts.reduce((sum, cart) => sum + (cart.totalQuantity ?? 0), 0),
+    [carts]
   );
-
-  const draftCount = useMemo(() => invoices.filter((invoice) => invoice.status === 'DRAFT').length, [invoices]);
-  const sentCount = useMemo(() => invoices.filter((invoice) => invoice.status === 'SENT').length, [invoices]);
 
   return (
     <div className="space-y-6">
@@ -134,11 +143,9 @@ const DashboardPage = () => {
         <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Invoices paid</p>
-              <p className="mt-2 text-3xl font-semibold text-slate-900">
-                {formatCurrencyCompact(paidTotal, baseCurrency)}
-              </p>
-              <p className="mt-1 text-xs text-emerald-600">Up to date</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Active carts</p>
+              <p className="mt-2 text-3xl font-semibold text-slate-900">{cartsPage?.totalElements ?? 0}</p>
+              <p className="mt-1 text-xs text-emerald-600">{formatCurrencyCompact(totalCartValue, baseCurrency)} in merchandise</p>
             </div>
             <ClipboardIcon />
           </div>
@@ -146,51 +153,46 @@ const DashboardPage = () => {
         <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Outstanding</p>
-              <p className="mt-2 text-3xl font-semibold text-slate-900">
-                {formatCurrencyCompact(outstandingTotal, baseCurrency)}
-              </p>
-              <p className="mt-1 text-xs text-amber-600">{sentCount} sent • {draftCount} drafts</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Items in carts</p>
+              <p className="mt-2 text-3xl font-semibold text-slate-900">{totalCartItems}</p>
+              <p className="mt-1 text-xs text-slate-500">Ready to convert</p>
             </div>
-            <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-amber-100 text-amber-500">!</span>
+            <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">🛒</span>
           </div>
         </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
-          <DataTable title="Recent invoices">
+          <DataTable title="Active carts overview">
             <thead>
               <tr>
-                <th className="px-3 py-2 text-left">Number</th>
                 <th className="px-3 py-2 text-left">Customer</th>
-                <th className="px-3 py-2 text-left">Status</th>
-                <th className="px-3 py-2 text-right">Total</th>
+                <th className="px-3 py-2 text-left">Email</th>
+                <th className="px-3 py-2 text-right">Items</th>
+                <th className="px-3 py-2 text-right">Subtotal</th>
+                <th className="px-3 py-2 text-left">Updated</th>
               </tr>
             </thead>
             <tbody>
-              {invoices.map((invoice) => (
-                <tr key={invoice.id} className="border-t border-slate-200">
-                  <td className="px-3 py-2 font-medium text-slate-700">{invoice.number}</td>
-                  <td className="px-3 py-2 text-sm text-slate-600">{invoice.customerName}</td>
-                  <td className="px-3 py-2">
-                    <span
-                      className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold uppercase tracking-wide ${
-                        invoice.status === 'PAID'
-                          ? 'bg-emerald-100 text-emerald-700'
-                          : invoice.status === 'SENT'
-                          ? 'bg-blue-100 text-blue-700'
-                          : 'bg-slate-100 text-slate-600'
-                      }`}
-                    >
-                      {invoice.status}
-                    </span>
-                  </td>
+              {carts.map((cart) => (
+                <tr key={cart.cartId} className="border-t border-slate-200">
+                  <td className="px-3 py-2 font-medium text-slate-700">{cart.userName}</td>
+                  <td className="px-3 py-2 text-sm text-slate-600">{cart.userEmail}</td>
+                  <td className="px-3 py-2 text-right text-sm text-slate-600">{cart.totalQuantity ?? 0}</td>
                   <td className="px-3 py-2 text-right font-semibold text-slate-700">
-                    {formatCurrency(invoice.total, baseCurrency)}
+                    {formatCurrency(cart.subtotal ?? 0, baseCurrency)}
                   </td>
+                  <td className="px-3 py-2 text-sm text-slate-500">{formatDateTime(cart.updatedAt ?? null)}</td>
                 </tr>
               ))}
+              {!carts.length && (
+                <tr>
+                  <td colSpan={5} className="px-3 py-4 text-center text-sm text-slate-500">
+                    No active carts right now.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </DataTable>
 
@@ -224,7 +226,7 @@ const DashboardPage = () => {
               </li>
               <li className="flex items-start gap-3">
                 <span className="mt-1 h-2 w-2 rounded-full bg-emerald-500"></span>
-                Review outstanding invoices and send reminders.
+                Review carts awaiting checkout and nudge shoppers to complete their orders.
               </li>
               <li className="flex items-start gap-3">
                 <span className="mt-1 h-2 w-2 rounded-full bg-amber-500"></span>
