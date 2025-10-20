@@ -14,7 +14,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 
 @RestController
-@RequestMapping("/api/publicapi/blog/media")
+@RequestMapping("/api/public/blog/media")
 public class PublicBlogMediaController {
 
     private final BlogMediaStorageService blogMediaStorageService;

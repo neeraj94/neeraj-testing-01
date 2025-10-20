@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/publicapi/badges/assets")
+@RequestMapping("/api/public/badges/assets")
 public class PublicBadgeAssetController {
 
     private final BadgeIconStorageService storageService;
