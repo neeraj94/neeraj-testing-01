@@ -1,9 +1,9 @@
 import { FormEvent, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAppDispatch, useAppSelector } from '../app/hooks';
-import { login } from '../features/auth/authSlice';
-import { useToast } from '../components/ToastProvider';
-import { selectApplicationName } from '../features/settings/selectors';
+import { useAppDispatch, useAppSelector } from '../../app/hooks';
+import { login } from '../../features/auth/authSlice';
+import { useToast } from '../../components/ToastProvider';
+import { selectApplicationName } from '../../features/settings/selectors';
 
 const LoginPage = () => {
   const dispatch = useAppDispatch();

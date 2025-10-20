@@ -13,7 +13,7 @@ const ProtectedRoute = () => {
       </div>
     );
   }
-  return <Navigate to="/login" replace />;
+  return <Navigate to="/admin/login" replace />;
 };
 
 export default ProtectedRoute;

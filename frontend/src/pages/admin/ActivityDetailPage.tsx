@@ -1,8 +1,8 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import api from '../services/http';
-import type { ActivityLogDetail } from '../types/models';
-import { extractErrorMessage } from '../utils/errors';
+import api from '../../services/http';
+import type { ActivityLogDetail } from '../../types/models';
+import { extractErrorMessage } from '../../utils/errors';
 
 const formatDateTime = (value: string) =>
   new Intl.DateTimeFormat(undefined, {

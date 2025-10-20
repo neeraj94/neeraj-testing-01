@@ -1,24 +1,24 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import api from '../services/http';
+import api from '../../services/http';
 import type {
   Category,
   CategoryAssetUploadResponse,
   CategoryOption,
   CategoryPage,
   CategoryType
-} from '../types/category';
-import { useAppSelector } from '../app/hooks';
-import { hasAnyPermission } from '../utils/permissions';
-import type { PermissionKey } from '../types/auth';
-import { useToast } from '../components/ToastProvider';
-import { useConfirm } from '../components/ConfirmDialogProvider';
-import { extractErrorMessage } from '../utils/errors';
-import PageHeader from '../components/PageHeader';
-import PageSection from '../components/PageSection';
-import PaginationControls from '../components/PaginationControls';
-import MediaLibraryDialog from '../components/MediaLibraryDialog';
-import type { MediaSelection } from '../types/uploaded-file';
+} from '../../types/category';
+import { useAppSelector } from '../../app/hooks';
+import { hasAnyPermission } from '../../utils/permissions';
+import type { PermissionKey } from '../../types/auth';
+import { useToast } from '../../components/ToastProvider';
+import { useConfirm } from '../../components/ConfirmDialogProvider';
+import { extractErrorMessage } from '../../utils/errors';
+import PageHeader from '../../components/PageHeader';
+import PageSection from '../../components/PageSection';
+import PaginationControls from '../../components/PaginationControls';
+import MediaLibraryDialog from '../../components/MediaLibraryDialog';
+import type { MediaSelection } from '../../types/uploaded-file';
 
 interface CategoryFormState {
   name: string;

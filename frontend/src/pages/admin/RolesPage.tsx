@@ -1,11 +1,11 @@
 import { Dispatch, FormEvent, Fragment, SetStateAction, useCallback, useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import type { AxiosError } from 'axios';
-import api from '../services/http';
-import type { Pagination, Permission, Role } from '../types/models';
-import type { PermissionKey } from '../types/auth';
-import { useToast } from '../components/ToastProvider';
-import { useConfirm } from '../components/ConfirmDialogProvider';
+import api from '../../services/http';
+import type { Pagination, Permission, Role } from '../../types/models';
+import type { PermissionKey } from '../../types/auth';
+import { useToast } from '../../components/ToastProvider';
+import { useConfirm } from '../../components/ConfirmDialogProvider';
 import {
   CAPABILITY_COLUMNS,
   PERMISSION_AUDIENCE_HEADERS,
@@ -13,16 +13,16 @@ import {
   type PermissionGroup,
   type PermissionOption,
   buildPermissionGroups
-} from '../utils/permissionGroups';
-import type { PublicEndpoint } from '../types/system';
-import SortableColumnHeader from '../components/SortableColumnHeader';
-import { useAppSelector } from '../app/hooks';
-import { hasAnyPermission } from '../utils/permissions';
-import ExportMenu from '../components/ExportMenu';
-import { exportDataset, type ExportFormat } from '../utils/exporters';
-import PageHeader from '../components/PageHeader';
-import PageSection from '../components/PageSection';
-import PaginationControls from '../components/PaginationControls';
+} from '../../utils/permissionGroups';
+import type { PublicEndpoint } from '../../types/system';
+import SortableColumnHeader from '../../components/SortableColumnHeader';
+import { useAppSelector } from '../../app/hooks';
+import { hasAnyPermission } from '../../utils/permissions';
+import ExportMenu from '../../components/ExportMenu';
+import { exportDataset, type ExportFormat } from '../../utils/exporters';
+import PageHeader from '../../components/PageHeader';
+import PageSection from '../../components/PageSection';
+import PaginationControls from '../../components/PaginationControls';
 
 const CUSTOMER_ROLE_KEY = 'CUSTOMER';
 

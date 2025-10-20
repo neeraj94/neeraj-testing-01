@@ -3,8 +3,14 @@ import type { Store } from '@reduxjs/toolkit';
 import type { RootState } from '../app/store';
 import type { AuthResponse } from '../types/auth';
 
+const rawBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1';
+const trimmedBaseUrl = rawBaseUrl.replace(/\/+$/, '');
+const baseURL = trimmedBaseUrl.endsWith('/admin')
+  ? trimmedBaseUrl.slice(0, -'/admin'.length)
+  : trimmedBaseUrl;
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'
+  baseURL
 });
 
 let storeRef: Store<RootState> | null = null;

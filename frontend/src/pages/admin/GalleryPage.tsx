@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import api from '../services/http';
-import { useToast } from '../components/ToastProvider';
-import { useAppSelector } from '../app/hooks';
-import { hasAnyPermission } from '../utils/permissions';
-import { formatFileSize } from '../utils/files';
-import type { GalleryFile, GalleryFilePage, GalleryFolder, GallerySettings } from '../types/gallery';
-import type { PermissionKey } from '../types/auth';
-import { extractErrorMessage } from '../utils/errors';
+import api from '../../services/http';
+import { useToast } from '../../components/ToastProvider';
+import { useAppSelector } from '../../app/hooks';
+import { hasAnyPermission } from '../../utils/permissions';
+import { formatFileSize } from '../../utils/files';
+import type { GalleryFile, GalleryFilePage, GalleryFolder, GallerySettings } from '../../types/gallery';
+import type { PermissionKey } from '../../types/auth';
+import { extractErrorMessage } from '../../utils/errors';
 
 const PAGE_SIZE_OPTIONS = [20, 50, 100];
 
