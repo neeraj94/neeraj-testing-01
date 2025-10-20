@@ -1,6 +1,7 @@
 package com.example.rbac.admin.shipping.controller;
 
 import com.example.rbac.admin.shipping.dto.*;
+import com.example.rbac.client.shipping.dto.ShippingOptionDto;
 import com.example.rbac.admin.shipping.service.ShippingLocationService;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;

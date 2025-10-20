@@ -1,8 +1,8 @@
 package com.example.rbac.admin.checkout.controller;
 
-import com.example.rbac.admin.checkout.dto.OrderDetailDto;
-import com.example.rbac.admin.checkout.dto.OrderListItemDto;
-import com.example.rbac.admin.checkout.service.CheckoutService;
+import com.example.rbac.client.checkout.dto.OrderDetailDto;
+import com.example.rbac.client.checkout.dto.OrderListItemDto;
+import com.example.rbac.client.checkout.service.CheckoutService;
 import com.example.rbac.admin.users.model.UserPrincipal;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;

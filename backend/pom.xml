@@ -124,7 +124,7 @@
                 <configuration>
                     <filesets>
                         <fileset>
-                            <directory>${project.basedir}/src/main/java/com/example/rbac/products/dto/public</directory>
+                            <directory>${project.basedir}/src/main/java/com/example/rbac/publicapi/products/dto/public</directory>
                             <includes>
                                 <include>**/*</include>
                             </includes>
@@ -145,7 +145,7 @@
                 <configuration>
                     <release>${java.version}</release>
                     <excludes>
-                        <exclude>**/products/dto/public/**</exclude>
+                        <exclude>**/publicapi/products/dto/public/**</exclude>
                     </excludes>
                     <compilerArgs>
                         <arg>-parameters</arg>

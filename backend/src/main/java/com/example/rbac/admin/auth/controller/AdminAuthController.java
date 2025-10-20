@@ -2,10 +2,10 @@ package com.example.rbac.admin.auth.controller;
 
 import com.example.rbac.admin.auth.dto.AdminLoginRequest;
 import com.example.rbac.admin.auth.dto.AdminRefreshTokenRequest;
-import com.example.rbac.admin.auth.dto.AuthResponse;
-import com.example.rbac.admin.auth.dto.LoginRequest;
-import com.example.rbac.admin.auth.dto.RefreshTokenRequest;
-import com.example.rbac.admin.auth.service.AuthService;
+import com.example.rbac.client.auth.dto.AuthResponse;
+import com.example.rbac.client.auth.dto.LoginRequest;
+import com.example.rbac.client.auth.dto.RefreshTokenRequest;
+import com.example.rbac.client.auth.service.AuthService;
 import com.example.rbac.admin.users.dto.UserDto;
 import com.example.rbac.admin.users.model.UserPrincipal;
 import jakarta.validation.Valid;

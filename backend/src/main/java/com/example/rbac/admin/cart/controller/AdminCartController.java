@@ -1,7 +1,7 @@
 package com.example.rbac.admin.cart.controller;
 
 import com.example.rbac.admin.cart.dto.AdminCartSummaryDto;
-import com.example.rbac.admin.cart.service.CartService;
+import com.example.rbac.client.cart.service.CartService;
 import com.example.rbac.common.pagination.PageResponse;
 import com.example.rbac.admin.users.model.UserPrincipal;
 import org.springframework.security.access.prepost.PreAuthorize;

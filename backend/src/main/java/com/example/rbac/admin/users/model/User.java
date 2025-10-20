@@ -1,6 +1,6 @@
 package com.example.rbac.admin.users.model;
 
-import com.example.rbac.admin.auth.token.RefreshToken;
+import com.example.rbac.client.auth.token.RefreshToken;
 import com.example.rbac.admin.permissions.model.Permission;
 import com.example.rbac.admin.roles.model.Role;
 import jakarta.persistence.*;

@@ -1,7 +1,7 @@
 package com.example.rbac.admin.auth;
 
-import com.example.rbac.admin.auth.dto.AuthResponse;
-import com.example.rbac.admin.auth.dto.LoginRequest;
+import com.example.rbac.client.auth.dto.AuthResponse;
+import com.example.rbac.client.auth.dto.LoginRequest;
 import com.example.rbac.admin.settings.dto.SettingsThemeDto;
 import com.example.rbac.admin.users.dto.UserDto;
 import org.junit.jupiter.api.Test;

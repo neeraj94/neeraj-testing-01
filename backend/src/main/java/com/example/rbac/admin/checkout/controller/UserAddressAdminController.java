@@ -1,8 +1,8 @@
 package com.example.rbac.admin.checkout.controller;
 
-import com.example.rbac.admin.checkout.dto.CheckoutAddressDto;
-import com.example.rbac.admin.checkout.dto.CheckoutAddressRequest;
-import com.example.rbac.admin.checkout.service.CheckoutService;
+import com.example.rbac.client.checkout.dto.CheckoutAddressDto;
+import com.example.rbac.client.checkout.dto.CheckoutAddressRequest;
+import com.example.rbac.client.checkout.service.CheckoutService;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
