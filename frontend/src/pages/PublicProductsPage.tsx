@@ -4,7 +4,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import StorefrontHeader from '../components/StorefrontHeader';
 import { useAppDispatch, useAppSelector } from '../app/hooks';
 import { selectBaseCurrency } from '../features/settings/selectors';
-import api from '../services/http';
+import { api } from '../services/http';
 import { formatCurrency } from '../utils/currency';
 import type {
   StorefrontFilterValue,
