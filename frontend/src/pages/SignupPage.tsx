@@ -79,7 +79,7 @@ const SignupPage = () => {
         </form>
         <p className="mt-6 text-center text-sm text-slate-500">
           Already have an account?{' '}
-          <Link to="/login" className="text-primary hover:underline">
+          <Link to="/admin/login" className="text-primary hover:underline">
             Sign in
           </Link>
         </p>
