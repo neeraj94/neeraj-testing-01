@@ -4,7 +4,7 @@ import PageHeader from '../../components/PageHeader';
 import PageSection from '../../components/PageSection';
 import PaginationControls from '../../components/PaginationControls';
 import { useToast } from '../../components/ToastProvider';
-import api from '../../services/http';
+import { adminApi } from '../../services/http';
 import type { ShippingCity, ShippingCountry, ShippingState } from '../../types/shipping';
 import { useAppSelector } from '../../app/hooks';
 import { hasAnyPermission } from '../../utils/permissions';
@@ -181,7 +181,7 @@ const AreaShippingManager = () => {
   const countriesQuery = useQuery<ShippingCountry[]>({
     queryKey: ['shipping', 'countries'],
     queryFn: async () => {
-      const { data } = await api.get<ShippingCountry[]>('/shipping/countries');
+      const { data } = await adminApi.get<ShippingCountry[]>('/shipping/countries');
       return data;
     }
   });
@@ -277,7 +277,7 @@ const AreaShippingManager = () => {
     queryKey: ['shipping', 'states', 'list', stateCountryId],
     enabled: stateCountryId !== null,
     queryFn: async () => {
-      const { data } = await api.get<ShippingState[]>(`/shipping/countries/${stateCountryId}/states`);
+      const { data } = await adminApi.get<ShippingState[]>(`/shipping/countries/${stateCountryId}/states`);
       return data;
     }
   });
@@ -314,7 +314,7 @@ const AreaShippingManager = () => {
     queryKey: ['shipping', 'states', 'list', cityCountryId, 'city'],
     enabled: cityCountryId !== null,
     queryFn: async () => {
-      const { data } = await api.get<ShippingState[]>(`/shipping/countries/${cityCountryId}/states`);
+      const { data } = await adminApi.get<ShippingState[]>(`/shipping/countries/${cityCountryId}/states`);
       return data;
     }
   });
@@ -356,7 +356,7 @@ const AreaShippingManager = () => {
     queryKey: ['shipping', 'cities', 'list', cityStateId],
     enabled: cityStateId !== null,
     queryFn: async () => {
-      const { data } = await api.get<ShippingCity[]>(`/shipping/states/${cityStateId}/cities`);
+      const { data } = await adminApi.get<ShippingCity[]>(`/shipping/states/${cityStateId}/cities`);
       return data;
     }
   });
@@ -391,7 +391,7 @@ const AreaShippingManager = () => {
 
   const updateCountrySettingsMutation = useMutation({
     mutationFn: async ({ id, payload }: { id: number; payload: CountrySettingsPayload }) => {
-      const { data } = await api.put<ShippingCountry>(`/shipping/countries/${id}/settings`, payload);
+      const { data } = await adminApi.put<ShippingCountry>(`/shipping/countries/${id}/settings`, payload);
       return data;
     },
     onMutate: ({ id }) => {
@@ -422,7 +422,7 @@ const AreaShippingManager = () => {
       id: number;
       payload: StateSettingsPayload;
     }) => {
-      const { data } = await api.put<ShippingState>(`/shipping/states/${id}/settings`, payload);
+      const { data } = await adminApi.put<ShippingState>(`/shipping/states/${id}/settings`, payload);
       return data;
     },
     onMutate: ({ id }) => {
@@ -447,7 +447,7 @@ const AreaShippingManager = () => {
 
   const updateCitySettingsMutation = useMutation({
     mutationFn: async ({ id, payload }: { id: number; payload: CitySettingsPayload }) => {
-      const { data } = await api.put<ShippingCity>(`/shipping/cities/${id}/settings`, payload);
+      const { data } = await adminApi.put<ShippingCity>(`/shipping/cities/${id}/settings`, payload);
       return data;
     },
     onMutate: ({ id }) => {
@@ -471,7 +471,7 @@ const AreaShippingManager = () => {
 
   const bulkCountrySettingsMutation = useMutation({
     mutationFn: async (payload: CountryBulkSettingsPayload) => {
-      const { data } = await api.put<ShippingCountry[]>('/shipping/countries/bulk-settings', payload);
+      const { data } = await adminApi.put<ShippingCountry[]>('/shipping/countries/bulk-settings', payload);
       return data;
     },
     onSuccess: (_, variables) => {
@@ -490,7 +490,7 @@ const AreaShippingManager = () => {
 
   const bulkStateSettingsMutation = useMutation({
     mutationFn: async (payload: StateBulkSettingsPayload) => {
-      const { data } = await api.put<ShippingState[]>('/shipping/states/bulk-settings', payload);
+      const { data } = await adminApi.put<ShippingState[]>('/shipping/states/bulk-settings', payload);
       return data;
     },
     onSuccess: (_, variables) => {
@@ -509,7 +509,7 @@ const AreaShippingManager = () => {
 
   const bulkCitySettingsMutation = useMutation({
     mutationFn: async (payload: CityBulkSettingsPayload) => {
-      const { data } = await api.put<ShippingCity[]>('/shipping/cities/bulk-settings', payload);
+      const { data } = await adminApi.put<ShippingCity[]>('/shipping/cities/bulk-settings', payload);
       return data;
     },
     onSuccess: (_, variables) => {
@@ -531,7 +531,7 @@ const AreaShippingManager = () => {
 
   const createCountryMutation = useMutation({
     mutationFn: async ({ name, code }: { name: string; code?: string }) => {
-      const { data } = await api.post<ShippingCountry>('/shipping/countries', { name, code });
+      const { data } = await adminApi.post<ShippingCountry>('/shipping/countries', { name, code });
       return data;
     },
     onSuccess: () => {
@@ -546,7 +546,7 @@ const AreaShippingManager = () => {
 
   const createStateMutation = useMutation({
     mutationFn: async ({ countryId, name }: { countryId: number; name: string }) => {
-      const { data } = await api.post<ShippingState>(`/shipping/countries/${countryId}/states`, { name });
+      const { data } = await adminApi.post<ShippingState>(`/shipping/countries/${countryId}/states`, { name });
       return data;
     },
     onSuccess: (_, variables) => {
@@ -561,7 +561,7 @@ const AreaShippingManager = () => {
 
   const createCityMutation = useMutation({
     mutationFn: async ({ stateId, name }: { stateId: number; name: string }) => {
-      const { data } = await api.post<ShippingCity>(`/shipping/states/${stateId}/cities`, { name });
+      const { data } = await adminApi.post<ShippingCity>(`/shipping/states/${stateId}/cities`, { name });
       return data;
     },
     onSuccess: (_, variables) => {

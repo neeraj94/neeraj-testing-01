@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import api from '../../services/http';
+import { adminApi } from '../../services/http';
 import type { PaymentMethod } from '../../types/checkout';
 import { useToast } from '../../components/ToastProvider';
 import { extractErrorMessage } from '../../utils/errors';
@@ -14,14 +14,14 @@ const AdminPaymentPage = () => {
   const methodsQuery = useQuery<PaymentMethod[]>({
     queryKey: ['payments', 'methods'],
     queryFn: async () => {
-      const { data } = await api.get<PaymentMethod[]>('/admin/payments/methods');
+      const { data } = await adminApi.get<PaymentMethod[]>('/payments/methods');
       return data;
     }
   });
 
   const updateMutation = useMutation({
     mutationFn: async ({ key, payload }: { key: string; payload: { enabled?: boolean; notes?: string } }) => {
-      const { data } = await api.put<PaymentMethod>(`/admin/payments/methods/${key}`, payload);
+      const { data } = await adminApi.put<PaymentMethod>(`/payments/methods/${key}`, payload);
       return data;
     },
     onSuccess: () => {

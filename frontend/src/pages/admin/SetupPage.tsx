@@ -1,5 +1,5 @@
 import { Fragment, type DragEvent, useEffect, useMemo, useState } from 'react';
-import api from '../../services/http';
+import { adminApi } from '../../services/http';
 import { DEFAULT_NAVIGATION_MENU } from '../../constants/navigation';
 import type {
   MenuLayoutConfigNode,
@@ -47,7 +47,7 @@ const SetupPage = () => {
 
     const load = async () => {
       try {
-        const { data } = await api.get<SetupLayoutResponse>('/setup/menu');
+        const { data } = await adminApi.get<SetupLayoutResponse>('/setup/menu');
         if (!active) {
           return;
         }
@@ -174,7 +174,7 @@ const SetupPage = () => {
     setSaving(true);
     try {
       const payload: MenuLayoutUpdatePayload = { layout: serializeLayout(layout) };
-      const { data } = await api.put<SetupLayoutResponse>('/setup/menu', payload);
+      const { data } = await adminApi.put<SetupLayoutResponse>('/setup/menu', payload);
       const refreshedLayout = data?.layout?.length ? data.layout : layout;
       const refreshedDefaults = data?.defaults?.length ? data.defaults : defaults;
       setLayout(cloneNodes(refreshedLayout));

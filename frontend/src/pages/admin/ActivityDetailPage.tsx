@@ -1,6 +1,6 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import api from '../../services/http';
+import { adminApi } from '../../services/http';
 import type { ActivityLogDetail } from '../../types/models';
 import { extractErrorMessage } from '../../utils/errors';
 
@@ -62,7 +62,7 @@ const ActivityDetailPage = () => {
     queryKey: ['activity', 'detail', id],
     enabled: Boolean(id),
     queryFn: async () => {
-      const { data } = await api.get<ActivityLogDetail>(`/activity/${id}`);
+      const { data } = await adminApi.get<ActivityLogDetail>(`/activity/${id}`);
       return data;
     }
   });

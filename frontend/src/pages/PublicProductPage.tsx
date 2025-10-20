@@ -3,7 +3,7 @@ import type { MouseEvent } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import type { AxiosError } from 'axios';
-import api from '../services/http';
+import { api } from '../services/http';
 import { useAppDispatch, useAppSelector } from '../app/hooks';
 import { addCartItem, addGuestItem } from '../features/cart/cartSlice';
 import { useToast } from '../components/ToastProvider';

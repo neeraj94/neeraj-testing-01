@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import api from '../../services/http';
+import { adminApi } from '../../services/http';
 import type {
   Category,
   CategoryAssetUploadResponse,
@@ -135,7 +135,7 @@ const CategoriesPage = () => {
   const categoriesQuery = useQuery<CategoryPage>({
     queryKey: ['categories', { page, pageSize, search }],
     queryFn: async () => {
-      const { data } = await api.get<CategoryPage>('/categories', {
+      const { data } = await adminApi.get<CategoryPage>('/categories', {
         params: { page, size: pageSize, search }
       });
       return data;
@@ -145,7 +145,7 @@ const CategoriesPage = () => {
   const categoryOptionsQuery = useQuery<CategoryOption[]>({
     queryKey: ['category-options'],
     queryFn: async () => {
-      const { data } = await api.get<CategoryOption[]>('/categories/options');
+      const { data } = await adminApi.get<CategoryOption[]>('/categories/options');
       return data;
     }
   });
@@ -160,7 +160,7 @@ const CategoriesPage = () => {
 
   const createMutation = useMutation<Category, unknown, CategoryPayload>({
     mutationFn: async (payload) => {
-      const { data } = await api.post<Category>('/categories', payload);
+      const { data } = await adminApi.post<Category>('/categories', payload);
       return data;
     },
     onSuccess: () => {
@@ -175,7 +175,7 @@ const CategoriesPage = () => {
 
   const updateMutation = useMutation<Category, unknown, { id: number; payload: CategoryPayload }>({
     mutationFn: async ({ id, payload }) => {
-      const { data } = await api.put<Category>(`/categories/${id}`, payload);
+      const { data } = await adminApi.put<Category>(`/categories/${id}`, payload);
       return data;
     },
     onSuccess: () => {
@@ -190,7 +190,7 @@ const CategoriesPage = () => {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
-      await api.delete(`/categories/${id}`);
+      await adminApi.delete(`/categories/${id}`);
     },
     onSuccess: () => {
       notify({ type: 'success', message: 'Category deleted successfully.' });
@@ -206,7 +206,7 @@ const CategoriesPage = () => {
     mutationFn: async ({ type, file }) => {
       const formData = new FormData();
       formData.append('file', file);
-      const { data } = await api.post<CategoryAssetUploadResponse>(`/categories/assets/${type}`, formData, {
+      const { data } = await adminApi.post<CategoryAssetUploadResponse>(`/categories/assets/${type}`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       return { type, data };

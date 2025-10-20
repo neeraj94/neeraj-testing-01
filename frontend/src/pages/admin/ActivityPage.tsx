@@ -5,7 +5,7 @@ import DataTable from '../../components/DataTable';
 import SortableColumnHeader from '../../components/SortableColumnHeader';
 import ExportMenu from '../../components/ExportMenu';
 import FilterDropdown from '../../components/FilterDropdown';
-import api from '../../services/http';
+import { adminApi } from '../../services/http';
 import { useAppSelector } from '../../app/hooks';
 import { hasAnyPermission } from '../../utils/permissions';
 import type { PermissionKey } from '../../types/auth';
@@ -132,7 +132,7 @@ const ActivityPage = () => {
   const filtersQuery = useQuery<ActivityFilterOptions>({
     queryKey: ['activity', 'filters'],
     queryFn: async () => {
-      const { data } = await api.get<ActivityFilterOptions>('/activity/filters');
+      const { data } = await adminApi.get<ActivityFilterOptions>('/activity/filters');
       return data;
     }
   });
@@ -140,7 +140,7 @@ const ActivityPage = () => {
   const activityQuery = useQuery<Pagination<ActivityLogEntry>>({
     queryKey: ['activity', 'list', { page, pageSize, sort, filtersKey }],
     queryFn: async () => {
-      const { data } = await api.get<Pagination<ActivityLogEntry>>('/activity', {
+      const { data } = await adminApi.get<Pagination<ActivityLogEntry>>('/activity', {
         params: buildQueryParams()
       });
       return data;
@@ -214,7 +214,7 @@ const ActivityPage = () => {
     try {
       const params = buildQueryParams({ page: 0, size: Math.max(pageSize, 1000) });
       params.set('size', '1000');
-      const { data } = await api.get<Pagination<ActivityLogEntry>>('/activity', { params });
+      const { data } = await adminApi.get<Pagination<ActivityLogEntry>>('/activity', { params });
       if (!data.content.length) {
         notify({ type: 'error', message: 'There are no activity records to export for the selected filters.' });
         return;

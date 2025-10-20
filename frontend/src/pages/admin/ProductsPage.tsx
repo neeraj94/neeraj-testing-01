@@ -13,7 +13,7 @@ import { useConfirm } from '../../components/ConfirmDialogProvider';
 import { useAppSelector } from '../../app/hooks';
 import { hasAnyPermission } from '../../utils/permissions';
 import type { PermissionKey } from '../../types/auth';
-import api from '../../services/http';
+import { adminApi } from '../../services/http';
 import type { BrandPage } from '../../types/brand';
 import type { Category, CategoryPage } from '../../types/category';
 import type { TaxRatePage } from '../../types/tax-rate';
@@ -541,7 +541,7 @@ const ProductsPage = () => {
   const brandsQuery = useQuery({
     queryKey: ['products', 'brands'],
     queryFn: async () => {
-      const { data } = await api.get<BrandPage>('/brands', {
+      const { data } = await adminApi.get<BrandPage>('/brands', {
         params: { page: 0, size: 200 }
       });
       return data.content ?? [];
@@ -551,7 +551,7 @@ const ProductsPage = () => {
   const categoriesQuery = useQuery({
     queryKey: ['products', 'categories'],
     queryFn: async () => {
-      const { data } = await api.get<CategoryPage>('/categories', {
+      const { data } = await adminApi.get<CategoryPage>('/categories', {
         params: { page: 0, size: 500 }
       });
       return data.content ?? [];
@@ -561,7 +561,7 @@ const ProductsPage = () => {
   const taxRatesQuery = useQuery({
     queryKey: ['products', 'tax-rates'],
     queryFn: async () => {
-      const { data } = await api.get<TaxRatePage>('/tax-rates', {
+      const { data } = await adminApi.get<TaxRatePage>('/tax-rates', {
         params: { page: 0, size: 200 }
       });
       return data.content ?? [];
@@ -571,7 +571,7 @@ const ProductsPage = () => {
   const attributesQuery = useQuery({
     queryKey: ['products', 'attributes'],
     queryFn: async () => {
-      const { data } = await api.get<AttributePage>('/attributes', {
+      const { data } = await adminApi.get<AttributePage>('/attributes', {
         params: { page: 0, size: 200 }
       });
       return data.content ?? [];
@@ -581,7 +581,7 @@ const ProductsPage = () => {
   const productsQuery = useQuery({
     queryKey: ['products', { page, pageSize, search }],
     queryFn: async () => {
-      const { data } = await api.get<ProductSummaryPage>('/products', {
+      const { data } = await adminApi.get<ProductSummaryPage>('/products', {
         params: { page, size: pageSize, search: search || undefined }
       });
       return data;
@@ -604,7 +604,7 @@ const ProductsPage = () => {
       if (frequentlyBoughtSearchTerm) {
         params.search = frequentlyBoughtSearchTerm;
       }
-      const { data } = await api.get<ProductSummaryPage>('/products', { params });
+      const { data } = await adminApi.get<ProductSummaryPage>('/products', { params });
       return data.content ?? [];
     },
     enabled: frequentlyBoughtDropdownOpen,
@@ -838,7 +838,7 @@ const ProductsPage = () => {
       if (editingId == null) {
         throw new Error('No product selected');
       }
-      const { data } = await api.get<ProductDetail>(`/products/${editingId}`);
+      const { data } = await adminApi.get<ProductDetail>(`/products/${editingId}`);
       return data;
     },
     enabled: panelMode === 'edit' && editingId !== null
@@ -846,7 +846,7 @@ const ProductsPage = () => {
 
   const createMutation = useMutation({
     mutationFn: async (payload: CreateProductPayload) => {
-      await api.post('/products', payload);
+      await adminApi.post('/products', payload);
     },
     onSuccess: () => {
       notify({ type: 'success', message: 'Product created successfully.' });
@@ -863,7 +863,7 @@ const ProductsPage = () => {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, payload }: { id: number; payload: CreateProductPayload }) => {
-      await api.put(`/products/${id}`, payload);
+      await adminApi.put(`/products/${id}`, payload);
     },
     onSuccess: () => {
       notify({ type: 'success', message: 'Product updated successfully.' });
@@ -880,7 +880,7 @@ const ProductsPage = () => {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
-      await api.delete(`/products/${id}`);
+      await adminApi.delete(`/products/${id}`);
     },
     onSuccess: () => {
       notify({ type: 'success', message: 'Product deleted successfully.' });
@@ -897,7 +897,7 @@ const ProductsPage = () => {
   const toggleReviewVisibilityMutation = useMutation({
     mutationFn: async ({ review, published }: { review: ProductReview; published: boolean }) => {
       const payload = reviewToPayload(review, { published });
-      await api.put(`/product-reviews/${review.id}`, payload);
+      await adminApi.put(`/product-reviews/${review.id}`, payload);
       return { review, published };
     },
     onMutate: ({ review }) => {
@@ -1848,7 +1848,7 @@ const ProductsPage = () => {
     }
 
     try {
-      const { data } = await api.post<ProductAssetUploadResponse[]>(endpoint, formData, {
+      const { data } = await adminApi.post<ProductAssetUploadResponse[]>(endpoint, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
 

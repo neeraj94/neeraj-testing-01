@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import api from '../../services/http';
+import { adminApi } from '../../services/http';
 import type { Brand, BrandLogoUploadResponse, BrandPage } from '../../types/brand';
 import { useAppSelector } from '../../app/hooks';
 import { hasAnyPermission } from '../../utils/permissions';
@@ -89,7 +89,7 @@ const BrandsPage = () => {
   const brandsQuery = useQuery<BrandPage>({
     queryKey: ['brands', { page, pageSize, search }],
     queryFn: async () => {
-      const { data } = await api.get<BrandPage>('/brands', {
+      const { data } = await adminApi.get<BrandPage>('/brands', {
         params: { page, size: pageSize, search }
       });
       return data;
@@ -100,7 +100,7 @@ const BrandsPage = () => {
 
   const createMutation = useMutation({
     mutationFn: async (payload: BrandFormState) => {
-      const { data } = await api.post<Brand>('/brands', payload);
+      const { data } = await adminApi.post<Brand>('/brands', payload);
       return data;
     },
     onSuccess: () => {
@@ -114,7 +114,7 @@ const BrandsPage = () => {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, payload }: { id: number; payload: BrandFormState }) => {
-      const { data } = await api.put<Brand>(`/brands/${id}`, payload);
+      const { data } = await adminApi.put<Brand>(`/brands/${id}`, payload);
       return data;
     },
     onSuccess: () => {
@@ -128,7 +128,7 @@ const BrandsPage = () => {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
-      await api.delete(`/brands/${id}`);
+      await adminApi.delete(`/brands/${id}`);
     },
     onSuccess: () => {
       notify({ type: 'success', message: 'Brand deleted successfully.' });
@@ -233,7 +233,7 @@ const BrandsPage = () => {
     mutationFn: async (file: File) => {
       const formData = new FormData();
       formData.append('file', file);
-      const { data } = await api.post<BrandLogoUploadResponse>('/brands/assets', formData, {
+      const { data } = await adminApi.post<BrandLogoUploadResponse>('/brands/assets', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       return data;

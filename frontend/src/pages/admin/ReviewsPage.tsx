@@ -11,7 +11,7 @@ import { useConfirm } from '../../components/ConfirmDialogProvider';
 import { useAppSelector } from '../../app/hooks';
 import { hasAnyPermission } from '../../utils/permissions';
 import type { PermissionKey } from '../../types/auth';
-import api from '../../services/http';
+import { adminApi } from '../../services/http';
 import { extractErrorMessage } from '../../utils/errors';
 import { formatCurrency } from '../../utils/currency';
 import type {
@@ -174,7 +174,7 @@ const ReviewsPage = () => {
   const productsQuery = useQuery({
     queryKey: ['reviews', 'products'],
     queryFn: async () => {
-      const { data } = await api.get<Pagination<ProductSummary>>('/products', {
+      const { data } = await adminApi.get<Pagination<ProductSummary>>('/products', {
         params: { page: 0, size: 200 }
       });
       return data.content ?? [];
@@ -184,7 +184,7 @@ const ReviewsPage = () => {
   const categoriesQuery = useQuery({
     queryKey: ['reviews', 'categories'],
     queryFn: async () => {
-      const { data } = await api.get<CategoryPage>('/categories', {
+      const { data } = await adminApi.get<CategoryPage>('/categories', {
         params: { page: 0, size: 200 }
       });
       return data.content ?? [];
@@ -194,7 +194,7 @@ const ReviewsPage = () => {
   const customersQuery = useQuery({
     queryKey: ['reviews', 'customers'],
     queryFn: async () => {
-      const { data } = await api.get<Pagination<Customer>>('/customers', {
+      const { data } = await adminApi.get<Pagination<Customer>>('/customers', {
         params: { page: 0, size: 200 }
       });
       return data.content ?? [];
@@ -225,7 +225,7 @@ const ReviewsPage = () => {
         params.ratingMin = rating;
         params.ratingMax = rating;
       }
-      const { data } = await api.get<ProductReviewPage>('/product-reviews', { params });
+      const { data } = await adminApi.get<ProductReviewPage>('/product-reviews', { params });
       return data;
     },
     enabled: canViewReviews
@@ -239,7 +239,7 @@ const ReviewsPage = () => {
       if (!selectedProductId) {
         throw new Error('No product selected');
       }
-      const { data } = await api.get<ProductDetail>(`/products/${selectedProductId}`);
+      const { data } = await adminApi.get<ProductDetail>(`/products/${selectedProductId}`);
       return data;
     },
     enabled: Boolean(selectedProductId)
@@ -251,7 +251,7 @@ const ReviewsPage = () => {
       if (!editingId) {
         throw new Error('No review selected');
       }
-      const { data } = await api.get<ProductReview>(`/product-reviews/${editingId}`);
+      const { data } = await adminApi.get<ProductReview>(`/product-reviews/${editingId}`);
       return data;
     },
     enabled: panelMode === 'edit' && editingId !== null
@@ -259,7 +259,7 @@ const ReviewsPage = () => {
 
   const createReviewMutation = useMutation({
     mutationFn: async (payload: CreateProductReviewPayload) => {
-      await api.post('/product-reviews', payload);
+      await adminApi.post('/product-reviews', payload);
     },
     onSuccess: (_data, variables) => {
       notify({ type: 'success', message: 'Review added successfully.' });
@@ -280,7 +280,7 @@ const ReviewsPage = () => {
 
   const updateReviewMutation = useMutation({
     mutationFn: async ({ id, payload }: { id: number; payload: CreateProductReviewPayload }) => {
-      await api.put(`/product-reviews/${id}`, payload);
+      await adminApi.put(`/product-reviews/${id}`, payload);
     },
     onSuccess: (_data, variables) => {
       notify({ type: 'success', message: 'Review updated successfully.' });
@@ -303,7 +303,7 @@ const ReviewsPage = () => {
   const toggleReviewVisibilityMutation = useMutation({
     mutationFn: async (input: { review: ProductReview; published: boolean }) => {
       const payload = reviewToPayload(input.review, { published: input.published });
-      await api.put(`/product-reviews/${input.review.id}`, payload);
+      await adminApi.put(`/product-reviews/${input.review.id}`, payload);
       return input;
     },
     onMutate: ({ review }) => {
@@ -332,7 +332,7 @@ const ReviewsPage = () => {
 
   const deleteReviewMutation = useMutation({
     mutationFn: async (id: number) => {
-      await api.delete(`/product-reviews/${id}`);
+      await adminApi.delete(`/product-reviews/${id}`);
     },
     onSuccess: () => {
       notify({ type: 'success', message: 'Review deleted successfully.' });
@@ -461,7 +461,7 @@ const ReviewsPage = () => {
     const context = mediaDialogContext ?? 'attachments';
     formData.append('module', context === 'avatar' ? 'USER_PROFILE' : 'PRODUCT_MEDIA');
     try {
-      const { data } = await api.post<UploadedFileUploadResponse[]>('/uploaded-files/upload', formData, {
+      const { data } = await adminApi.post<UploadedFileUploadResponse[]>('/uploaded-files/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       const selections = (data ?? [])

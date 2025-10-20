@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import api from '../../services/http';
+import { adminApi } from '../../services/http';
 import type {
   Badge,
   BadgeCategoryOption,
@@ -90,7 +90,7 @@ const BadgesPage = () => {
   const badgesQuery = useQuery<BadgePage>({
     queryKey: ['badges', { page, pageSize, search }],
     queryFn: async () => {
-      const { data } = await api.get<BadgePage>('/badges', {
+      const { data } = await adminApi.get<BadgePage>('/badges', {
         params: { page, size: pageSize, search }
       });
       return data;
@@ -100,7 +100,7 @@ const BadgesPage = () => {
   const badgeCategoriesQuery = useQuery<BadgeCategoryOption[]>({
     queryKey: ['badgeCategories', 'options'],
     queryFn: async () => {
-      const { data } = await api.get<BadgeCategoryOption[]>('/badge-categories/options');
+      const { data } = await adminApi.get<BadgeCategoryOption[]>('/badge-categories/options');
       return data;
     }
   });
@@ -110,7 +110,7 @@ const BadgesPage = () => {
 
   const createMutation = useMutation({
     mutationFn: async (payload: BadgeFormState) => {
-      const { data } = await api.post<Badge>('/badges', {
+      const { data } = await adminApi.post<Badge>('/badges', {
         name: payload.name,
         iconUrl: payload.iconUrl || null,
         shortDescription: payload.shortDescription || null,
@@ -132,7 +132,7 @@ const BadgesPage = () => {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, payload }: { id: number; payload: BadgeFormState }) => {
-      const { data } = await api.put<Badge>(`/badges/${id}`, {
+      const { data } = await adminApi.put<Badge>(`/badges/${id}`, {
         name: payload.name,
         iconUrl: payload.iconUrl || null,
         shortDescription: payload.shortDescription || null,
@@ -154,7 +154,7 @@ const BadgesPage = () => {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
-      await api.delete(`/badges/${id}`);
+      await adminApi.delete(`/badges/${id}`);
     },
     onSuccess: () => {
       notify({ type: 'success', message: 'Badge deleted successfully.' });
@@ -169,7 +169,7 @@ const BadgesPage = () => {
     mutationFn: async (file: File) => {
       const formData = new FormData();
       formData.append('file', file);
-      const { data } = await api.post<BadgeIconUploadResponse>('/badges/assets', formData, {
+      const { data } = await adminApi.post<BadgeIconUploadResponse>('/badges/assets', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       return data;

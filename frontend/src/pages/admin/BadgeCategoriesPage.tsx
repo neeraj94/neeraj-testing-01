@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import api from '../../services/http';
+import { adminApi } from '../../services/http';
 import type { BadgeCategory, BadgeCategoryPage, BadgeCategoryUploadResponse } from '../../types/badge';
 import { useToast } from '../../components/ToastProvider';
 import { useConfirm } from '../../components/ConfirmDialogProvider';
@@ -79,7 +79,7 @@ const BadgeCategoriesPage = () => {
   const categoriesQuery = useQuery<BadgeCategoryPage>({
     queryKey: ['badgeCategories', { page, pageSize, search }],
     queryFn: async () => {
-      const { data } = await api.get<BadgeCategoryPage>('/badge-categories', {
+      const { data } = await adminApi.get<BadgeCategoryPage>('/badge-categories', {
         params: { page, size: pageSize, search }
       });
       return data;
@@ -91,7 +91,7 @@ const BadgeCategoriesPage = () => {
 
   const createMutation = useMutation({
     mutationFn: async (payload: BadgeCategoryFormState) => {
-      const { data } = await api.post<BadgeCategory>('/badge-categories', {
+      const { data } = await adminApi.post<BadgeCategory>('/badge-categories', {
         title: payload.title,
         description: payload.description || null,
         iconUrl: payload.iconUrl || null
@@ -110,7 +110,7 @@ const BadgeCategoriesPage = () => {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, payload }: { id: number; payload: BadgeCategoryFormState }) => {
-      const { data } = await api.put<BadgeCategory>(`/badge-categories/${id}`, {
+      const { data } = await adminApi.put<BadgeCategory>(`/badge-categories/${id}`, {
         title: payload.title,
         description: payload.description || null,
         iconUrl: payload.iconUrl || null
@@ -129,7 +129,7 @@ const BadgeCategoriesPage = () => {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
-      await api.delete(`/badge-categories/${id}`);
+      await adminApi.delete(`/badge-categories/${id}`);
     },
     onSuccess: () => {
       notify({ type: 'success', message: 'Badge category deleted successfully.' });
@@ -144,7 +144,7 @@ const BadgeCategoriesPage = () => {
     mutationFn: async (file: File) => {
       const formData = new FormData();
       formData.append('file', file);
-      const { data } = await api.post<BadgeCategoryUploadResponse>('/badge-categories/assets', formData, {
+      const { data } = await adminApi.post<BadgeCategoryUploadResponse>('/badge-categories/assets', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       return data;

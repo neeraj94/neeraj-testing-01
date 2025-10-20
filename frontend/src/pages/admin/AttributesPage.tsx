@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import api from '../../services/http';
+import { adminApi } from '../../services/http';
 import type { Attribute, AttributePage } from '../../types/attribute';
 import { useAppSelector } from '../../app/hooks';
 import { hasAnyPermission } from '../../utils/permissions';
@@ -69,7 +69,7 @@ const AttributesPage = () => {
   const attributesQuery = useQuery<AttributePage>({
     queryKey: ['attributes', { page, pageSize, search }],
     queryFn: async () => {
-      const { data } = await api.get<AttributePage>('/attributes', {
+      const { data } = await adminApi.get<AttributePage>('/attributes', {
         params: { page, size: pageSize, search }
       });
       return data;
@@ -80,7 +80,7 @@ const AttributesPage = () => {
 
   const createMutation = useMutation({
     mutationFn: async (payload: AttributeFormState) => {
-      const { data } = await api.post<Attribute>('/attributes', payload);
+      const { data } = await adminApi.post<Attribute>('/attributes', payload);
       return data;
     },
     onSuccess: () => {
@@ -94,7 +94,7 @@ const AttributesPage = () => {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, payload }: { id: number; payload: AttributeFormState }) => {
-      const { data } = await api.put<Attribute>(`/attributes/${id}`, payload);
+      const { data } = await adminApi.put<Attribute>(`/attributes/${id}`, payload);
       return data;
     },
     onSuccess: () => {
@@ -108,7 +108,7 @@ const AttributesPage = () => {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
-      await api.delete(`/attributes/${id}`);
+      await adminApi.delete(`/attributes/${id}`);
     },
     onSuccess: () => {
       notify({ type: 'success', message: 'Attribute deleted successfully.' });

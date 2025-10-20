@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import PageHeader from '../../components/PageHeader';
 import PageSection from '../../components/PageSection';
 import PaginationControls from '../../components/PaginationControls';
-import api from '../../services/http';
+import { adminApi } from '../../services/http';
 import type {
   UploadedFile,
   UploadedFileModuleOption,
@@ -111,7 +111,7 @@ const UploadedFilesPage = () => {
   const moduleQuery = useQuery<UploadedFileModuleOption[]>({
     queryKey: ['uploaded-files', 'modules'],
     queryFn: async () => {
-      const { data } = await api.get<UploadedFileModuleOption[]>('/uploaded-files/modules');
+      const { data } = await adminApi.get<UploadedFileModuleOption[]>('/uploaded-files/modules');
       return data;
     }
   });
@@ -119,7 +119,7 @@ const UploadedFilesPage = () => {
   const uploaderQuery = useQuery<UploadedFileUploaderOption[]>({
     queryKey: ['uploaded-files', 'uploaders'],
     queryFn: async () => {
-      const { data } = await api.get<UploadedFileUploaderOption[]>('/uploaded-files/uploaders');
+      const { data } = await adminApi.get<UploadedFileUploaderOption[]>('/uploaded-files/uploaders');
       return data;
     }
   });
@@ -134,7 +134,7 @@ const UploadedFilesPage = () => {
       if (uploader) params.uploadedBy = uploader;
       if (from) params.from = from;
       if (to) params.to = to;
-      const { data } = await api.get<UploadedFilePage>('/uploaded-files', { params });
+      const { data } = await adminApi.get<UploadedFilePage>('/uploaded-files', { params });
       return data;
     }
   });
@@ -169,7 +169,7 @@ const UploadedFilesPage = () => {
 
   const deleteFilesMutation = useMutation({
     mutationFn: async (ids: number[]) => {
-      await api.post('/uploaded-files/delete', { ids });
+      await adminApi.post('/uploaded-files/delete', { ids });
     },
     onSuccess: (_data, ids) => {
       notify({

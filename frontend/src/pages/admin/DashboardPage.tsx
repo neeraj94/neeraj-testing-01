@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import api from '../../services/http';
+import { adminApi } from '../../services/http';
 import type { Customer, Pagination, User } from '../../types/models';
 import type { AdminCartSummary } from '../../types/cart';
 import DataTable from '../../components/DataTable';
@@ -61,7 +61,7 @@ const DashboardPage = () => {
   const { data: usersPage } = useQuery<Pagination<User>>({
     queryKey: ['users', 'recent'],
     queryFn: async () => {
-      const { data } = await api.get<Pagination<User>>('/users?size=5');
+      const { data } = await adminApi.get<Pagination<User>>('/users?size=5');
       return data;
     }
   });
@@ -69,7 +69,7 @@ const DashboardPage = () => {
   const { data: customersPage } = useQuery<Pagination<Customer>>({
     queryKey: ['customers', 'recent'],
     queryFn: async () => {
-      const { data } = await api.get<Pagination<Customer>>('/customers?size=5');
+      const { data } = await adminApi.get<Pagination<Customer>>('/customers?size=5');
       return data;
     }
   });
@@ -79,7 +79,9 @@ const DashboardPage = () => {
   const { data: cartsPage } = useQuery<Pagination<AdminCartSummary>>({
     queryKey: ['admin-carts', 'recent'],
     queryFn: async () => {
-      const { data } = await api.get<Pagination<AdminCartSummary>>('/admin/carts', { params: { size: 8, sort: 'newest' } });
+      const { data } = await adminApi.get<Pagination<AdminCartSummary>>('/carts', {
+        params: { size: 8, sort: 'newest' }
+      });
       return data;
     }
   });
