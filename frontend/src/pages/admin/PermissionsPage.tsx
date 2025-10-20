@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { adminApi } from '../../services/http';
+import api from '../../services/http';
 import type { Pagination, Permission } from '../../types/models';
 import SortableColumnHeader from '../../components/SortableColumnHeader';
 import { useAppSelector } from '../../app/hooks';
@@ -48,7 +48,7 @@ const PermissionsPage = () => {
   } = useQuery<Permission[]>({
     queryKey: ['permissions', 'all'],
     queryFn: async () => {
-      const { data } = await adminApi.get<Pagination<Permission>>('/permissions?size=500');
+      const { data } = await api.get<Pagination<Permission>>('/permissions?size=500');
       return data.content;
     }
   });

@@ -26,7 +26,7 @@ import PermissionRoute from './routes/PermissionRoute';
 import { useAppDispatch, useAppSelector } from './app/hooks';
 import { loadCurrentUser, logout as logoutAction, tokensRefreshed } from './features/auth/authSlice';
 import { syncGuestCart } from './features/cart/cartSlice';
-import { adminApi } from './services/http';
+import api from './services/http';
 import SettingsPage from './pages/admin/SettingsPage';
 import { fetchTheme } from './features/settings/settingsSlice';
 import { selectApplicationName, selectPrimaryColor } from './features/settings/selectors';
@@ -87,7 +87,7 @@ const App = () => {
       if (!accessToken && refreshToken) {
         setInitializing('checking');
         try {
-          const { data } = await adminApi.post('/auth/refresh', { refreshToken });
+          const { data } = await api.post('/auth/refresh', { refreshToken });
           if (!active) {
             return;
           }

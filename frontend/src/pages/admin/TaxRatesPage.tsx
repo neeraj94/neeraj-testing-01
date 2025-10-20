@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { adminApi } from '../../services/http';
+import api from '../../services/http';
 import type { TaxRate, TaxRatePage, TaxRateType } from '../../types/tax-rate';
 import { useAppSelector } from '../../app/hooks';
 import { hasAnyPermission } from '../../utils/permissions';
@@ -78,7 +78,7 @@ const TaxRatesPage = () => {
   const taxRatesQuery = useQuery<TaxRatePage>({
     queryKey: ['tax-rates', { page, pageSize, search }],
     queryFn: async () => {
-      const { data } = await adminApi.get<TaxRatePage>('/tax-rates', {
+      const { data } = await api.get<TaxRatePage>('/tax-rates', {
         params: { page, size: pageSize, search }
       });
       return data;
@@ -97,7 +97,7 @@ const TaxRatesPage = () => {
 
   const createMutation = useMutation({
     mutationFn: async (payload: TaxRatePayload) => {
-      const { data } = await adminApi.post<TaxRate>('/tax-rates', payload);
+      const { data } = await api.post<TaxRate>('/tax-rates', payload);
       return data;
     },
     onSuccess: () => {
@@ -111,7 +111,7 @@ const TaxRatesPage = () => {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, payload }: { id: number; payload: TaxRatePayload }) => {
-      const { data } = await adminApi.put<TaxRate>(`/tax-rates/${id}`, payload);
+      const { data } = await api.put<TaxRate>(`/tax-rates/${id}`, payload);
       return data;
     },
     onSuccess: () => {
@@ -125,7 +125,7 @@ const TaxRatesPage = () => {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
-      await adminApi.delete(`/tax-rates/${id}`);
+      await api.delete(`/tax-rates/${id}`);
     },
     onSuccess: () => {
       notify({ type: 'success', message: 'Tax rate deleted successfully.' });

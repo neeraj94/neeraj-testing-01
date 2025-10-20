@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { adminApi } from '../../services/http';
+import api from '../../services/http';
 import type { BlogCategory, BlogCategoryPage } from '../../types/blog';
 import { useAppSelector } from '../../app/hooks';
 import { hasAnyPermission } from '../../utils/permissions';
@@ -63,7 +63,7 @@ const BlogCategoriesPage = () => {
   const categoriesQuery = useQuery<BlogCategoryPage>({
     queryKey: ['blog', 'categories', { page, pageSize, search }],
     queryFn: async () => {
-      const { data } = await adminApi.get<BlogCategoryPage>('/blog/categories', {
+      const { data } = await api.get<BlogCategoryPage>('/blog/categories', {
         params: { page, size: pageSize, search }
       });
       return data;
@@ -73,7 +73,7 @@ const BlogCategoriesPage = () => {
   const categories = categoriesQuery.data?.content ?? [];
   const createMutation = useMutation({
     mutationFn: async (payload: CategoryFormState) => {
-      const { data } = await adminApi.post<BlogCategory>('/blog/categories', payload);
+      const { data } = await api.post<BlogCategory>('/blog/categories', payload);
       return data;
     },
     onSuccess: () => {
@@ -87,7 +87,7 @@ const BlogCategoriesPage = () => {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, payload }: { id: number; payload: CategoryFormState }) => {
-      const { data } = await adminApi.put<BlogCategory>(`/blog/categories/${id}`, payload);
+      const { data } = await api.put<BlogCategory>(`/blog/categories/${id}`, payload);
       return data;
     },
     onSuccess: () => {
@@ -101,7 +101,7 @@ const BlogCategoriesPage = () => {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
-      await adminApi.delete(`/blog/categories/${id}`);
+      await api.delete(`/blog/categories/${id}`);
     },
     onSuccess: () => {
       notify({ type: 'success', message: 'Category deleted successfully.' });

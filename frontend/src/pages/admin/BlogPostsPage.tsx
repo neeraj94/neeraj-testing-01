@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { adminApi } from '../../services/http';
+import api from '../../services/http';
 import type { BlogCategory, BlogMediaUploadResponse, BlogPost, BlogPostPage } from '../../types/blog';
 import { useToast } from '../../components/ToastProvider';
 import { useConfirm } from '../../components/ConfirmDialogProvider';
@@ -53,7 +53,7 @@ const buildMediaUrl = (key?: string | null) => {
   if (!key) {
     return null;
   }
-  const base = adminApi.defaults.baseURL ?? '';
+  const base = api.defaults.baseURL ?? '';
   return `${base.replace(/\/$/, '')}/blog/media/${key}`;
 };
 
@@ -109,7 +109,7 @@ const BlogPostsPage = () => {
   const categoriesQuery = useQuery<BlogCategory[]>({
     queryKey: ['blog', 'categories', 'all'],
     queryFn: async () => {
-      const { data } = await adminApi.get<BlogCategory[]>('/blog/categories/all');
+      const { data } = await api.get<BlogCategory[]>('/blog/categories/all');
       return data;
     }
   });
@@ -126,14 +126,14 @@ const BlogPostsPage = () => {
       } else if (statusFilter === 'draft') {
         params.published = false;
       }
-      const { data } = await adminApi.get<BlogPostPage>('/blog/posts', { params });
+      const { data } = await api.get<BlogPostPage>('/blog/posts', { params });
       return data;
     }
   });
 
   const createMutation = useMutation({
     mutationFn: async (payload: BlogPostPayload) => {
-      const { data } = await adminApi.post<BlogPost>('/blog/posts', payload);
+      const { data } = await api.post<BlogPost>('/blog/posts', payload);
       return data;
     },
     onSuccess: () => {
@@ -147,7 +147,7 @@ const BlogPostsPage = () => {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, payload }: { id: number; payload: BlogPostPayload }) => {
-      const { data } = await adminApi.put<BlogPost>(`/blog/posts/${id}`, payload);
+      const { data } = await api.put<BlogPost>(`/blog/posts/${id}`, payload);
       return data;
     },
     onSuccess: () => {
@@ -161,7 +161,7 @@ const BlogPostsPage = () => {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
-      await adminApi.delete(`/blog/posts/${id}`);
+      await api.delete(`/blog/posts/${id}`);
     },
     onSuccess: () => {
       notify({ type: 'success', message: 'Post deleted successfully.' });
@@ -272,7 +272,7 @@ const BlogPostsPage = () => {
       const formData = new FormData();
       formData.append('file', file);
       const usage = mediaLibraryTarget === 'bannerImage' ? 'BANNER' : 'META';
-      const { data } = await adminApi.post<BlogMediaUploadResponse>('/blog/media', formData, {
+      const { data } = await api.post<BlogMediaUploadResponse>('/blog/media', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
         params: { usage }
       });

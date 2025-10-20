@@ -1,7 +1,7 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { adminApi } from '../../services/http';
+import api from '../../services/http';
 import type { Pagination, Permission, Role, User, UserSummaryMetrics, UserRecentProduct } from '../../types/models';
 import type { Cart } from '../../types/cart';
 import type { AddressType, CheckoutAddress, CheckoutRegionOption } from '../../types/checkout';
@@ -468,7 +468,7 @@ const UsersPage = () => {
   const { data: roles = [] } = useQuery<Role[]>({
     queryKey: ['roles', 'options'],
     queryFn: async () => {
-      const { data } = await adminApi.get<Pagination<Role>>('/roles', { params: { size: 200 } });
+      const { data } = await api.get<Pagination<Role>>('/roles', { params: { size: 200 } });
       return data.content;
     }
   });
@@ -476,7 +476,7 @@ const UsersPage = () => {
   const { data: permissionsCatalog = [] } = useQuery<Permission[]>({
     queryKey: ['permissions', 'catalogue'],
     queryFn: async () => {
-      const { data } = await adminApi.get<Pagination<Permission>>('/permissions', { params: { size: 500 } });
+      const { data } = await api.get<Pagination<Permission>>('/permissions', { params: { size: 500 } });
       return data.content;
     }
   });
@@ -528,7 +528,7 @@ const UsersPage = () => {
   const summaryQuery = useQuery<UserSummaryMetrics>({
     queryKey: ['users', 'summary'],
     queryFn: async () => {
-      const { data } = await adminApi.get<UserSummaryMetrics>('/users/summary');
+      const { data } = await api.get<UserSummaryMetrics>('/users/summary');
       return data;
     }
   });
@@ -547,7 +547,7 @@ const UsersPage = () => {
       if (searchTerm.trim()) {
         params.search = searchTerm.trim();
       }
-      const { data } = await adminApi.get<Pagination<User>>('/users', { params });
+      const { data } = await api.get<Pagination<User>>('/users', { params });
       return data;
     },
     placeholderData: (previousData) => previousData
@@ -556,7 +556,7 @@ const UsersPage = () => {
   const selectedUserQuery = useQuery<User>({
     queryKey: ['users', 'detail', selectedUserId],
     queryFn: async () => {
-      const { data } = await adminApi.get<User>(`/users/${selectedUserId}`);
+      const { data } = await api.get<User>(`/users/${selectedUserId}`);
       return data;
     },
     enabled: panelMode === 'detail' && selectedUserId !== null
@@ -616,7 +616,7 @@ const UsersPage = () => {
       if (trimmedPassword.length < 8) {
         throw new Error('Password must be at least 8 characters long.');
       }
-      const { data } = await adminApi.post<User>('/users', {
+      const { data } = await api.post<User>('/users', {
         email: form.email.trim(),
         firstName: form.firstName.trim(),
         lastName: form.lastName.trim(),
@@ -670,7 +670,7 @@ const UsersPage = () => {
   const cartQuery = useQuery<Cart>({
     queryKey: ['users', selectedUserId, 'cart'],
     queryFn: async () => {
-      const { data } = await adminApi.get<Cart>(`/users/${selectedUserId}/cart`);
+      const { data } = await api.get<Cart>(`/users/${selectedUserId}/cart`);
       return data;
     },
     enabled: panelMode === 'detail' && activeTab === 'cart' && selectedUserId != null
@@ -680,7 +680,7 @@ const UsersPage = () => {
     queryKey: ['users', selectedUserId, 'cart-product-search', cartProductSearchTerm],
     queryFn: async () => {
       const trimmed = cartProductSearchTerm.trim();
-      const { data } = await adminApi.get<Pagination<ProductSummary>>('/products', {
+      const { data } = await api.get<Pagination<ProductSummary>>('/products', {
         params: {
           page: 0,
           size: 10,
@@ -695,7 +695,7 @@ const UsersPage = () => {
   const cartSelectedProductQuery = useQuery<ProductDetail>({
     queryKey: ['users', selectedUserId, 'cart-product-detail', cartSelectedProductId],
     queryFn: async () => {
-      const { data } = await adminApi.get<ProductDetail>(`/products/${cartSelectedProductId}`);
+      const { data } = await api.get<ProductDetail>(`/products/${cartSelectedProductId}`);
       return data;
     },
     enabled: panelMode === 'detail' && activeTab === 'cart' && isCartAddOpen && cartSelectedProductId != null
@@ -704,7 +704,7 @@ const UsersPage = () => {
   const recentViewsQuery = useQuery<UserRecentProduct[]>({
     queryKey: ['admin', 'users', selectedUserId, 'recent-views'],
     queryFn: async () => {
-      const { data } = await adminApi.get<UserRecentProduct[]>(
+      const { data } = await api.get<UserRecentProduct[]>(
         `/admin/users/${selectedUserId}/recent-views`
       );
       return data;
@@ -715,7 +715,7 @@ const UsersPage = () => {
   const addressesQuery = useQuery<CheckoutAddress[]>({
     queryKey: ['users', selectedUserId, 'addresses'],
     queryFn: async () => {
-      const { data } = await adminApi.get<CheckoutAddress[]>(
+      const { data } = await api.get<CheckoutAddress[]>(
         `/admin/users/${selectedUserId}/addresses`
       );
       return data;
@@ -726,7 +726,7 @@ const UsersPage = () => {
   const userOrdersQuery = useQuery<OrderListItem[]>({
     queryKey: ['users', selectedUserId, 'orders'],
     queryFn: async () => {
-      const { data } = await adminApi.get<OrderListItem[]>(`/admin/users/${selectedUserId}/orders`);
+      const { data } = await api.get<OrderListItem[]>(`/admin/users/${selectedUserId}/orders`);
       return data;
     },
     enabled: panelMode === 'detail' && activeTab === 'orders' && selectedUserId != null
@@ -735,7 +735,7 @@ const UsersPage = () => {
   const userOrderDetailQuery = useQuery<OrderDetail>({
     queryKey: ['users', selectedUserId, 'orders', selectedUserOrderId],
     queryFn: async () => {
-      const { data } = await adminApi.get<OrderDetail>(
+      const { data } = await api.get<OrderDetail>(
         `/admin/users/${selectedUserId}/orders/${selectedUserOrderId}`
       );
       return data;
@@ -750,7 +750,7 @@ const UsersPage = () => {
   const addressCountriesQuery = useQuery<CheckoutRegionOption[]>({
     queryKey: ['admin', 'users', 'addresses', 'countries'],
     queryFn: async () => {
-      const { data } = await adminApi.get<CheckoutRegionOption[]>('/checkout/regions/countries');
+      const { data } = await api.get<CheckoutRegionOption[]>('/checkout/regions/countries');
       return data;
     },
     enabled: panelMode === 'detail' && activeTab === 'addresses' && addressFormOpen
@@ -759,7 +759,7 @@ const UsersPage = () => {
   const addressStatesQuery = useQuery<CheckoutRegionOption[]>({
     queryKey: ['admin', 'users', 'addresses', 'states', addressForm.countryId],
     queryFn: async () => {
-      const { data } = await adminApi.get<CheckoutRegionOption[]>(
+      const { data } = await api.get<CheckoutRegionOption[]>(
         `/checkout/regions/countries/${addressForm.countryId}/states`
       );
       return data;
@@ -774,7 +774,7 @@ const UsersPage = () => {
   const addressCitiesQuery = useQuery<CheckoutRegionOption[]>({
     queryKey: ['admin', 'users', 'addresses', 'cities', addressForm.stateId],
     queryFn: async () => {
-      const { data } = await adminApi.get<CheckoutRegionOption[]>(
+      const { data } = await api.get<CheckoutRegionOption[]>(
         `/checkout/regions/states/${addressForm.stateId}/cities`
       );
       return data;
@@ -809,7 +809,7 @@ const UsersPage = () => {
         throw new Error('You do not have permission to add addresses.');
       }
       const payload = buildAddressPayload();
-      const { data } = await adminApi.post<CheckoutAddress>(
+      const { data } = await api.post<CheckoutAddress>(
         `/admin/users/${selectedUserId}/addresses`,
         payload
       );
@@ -842,7 +842,7 @@ const UsersPage = () => {
         throw new Error('You do not have permission to update addresses.');
       }
       const payload = buildAddressPayload();
-      const { data } = await adminApi.put<CheckoutAddress>(
+      const { data } = await api.put<CheckoutAddress>(
         `/admin/users/${selectedUserId}/addresses/${editingAddressId}`,
         payload
       );
@@ -873,7 +873,7 @@ const UsersPage = () => {
       if (!canDeleteUserAddresses) {
         throw new Error('You do not have permission to delete addresses.');
       }
-      await adminApi.delete(`/admin/users/${selectedUserId}/addresses/${addressId}`);
+      await api.delete(`/admin/users/${selectedUserId}/addresses/${addressId}`);
       return addressId;
     },
     onSuccess: (addressId) => {
@@ -1025,7 +1025,7 @@ const UsersPage = () => {
       if (trimmedPassword && trimmedPassword.length < 8) {
         throw new Error('Password must be at least 8 characters long.');
       }
-      const { data } = await adminApi.put<User>(`/users/${selectedUserId}`, {
+      const { data } = await api.put<User>(`/users/${selectedUserId}`, {
         email: form.email.trim(),
         firstName: form.firstName.trim(),
         lastName: form.lastName.trim(),
@@ -1087,10 +1087,10 @@ const UsersPage = () => {
       if (form.roleIds.length === 0) {
         throw new Error('Assign at least one role before saving access.');
       }
-      await adminApi.post<User>(`/users/${selectedUserId}/roles`, {
+      await api.post<User>(`/users/${selectedUserId}/roles`, {
         roleIds: form.roleIds
       });
-      const { data } = await adminApi.put<User>(`/users/${selectedUserId}/permissions`, {
+      const { data } = await api.put<User>(`/users/${selectedUserId}/permissions`, {
         grantedPermissionKeys: form.directPermissions,
         revokedPermissionKeys: form.revokedPermissions
       });
@@ -1134,7 +1134,7 @@ const UsersPage = () => {
 
   const deleteUser = useMutation({
     mutationFn: async (userId: number) => {
-      await adminApi.delete(`/users/${userId}`);
+      await api.delete(`/users/${userId}`);
     },
     onSuccess: () => {
       notify({ type: 'success', message: 'User removed.' });
@@ -1151,7 +1151,7 @@ const UsersPage = () => {
   const toggleStatus = useMutation({
     mutationFn: async ({ userId, nextActive }: { userId: number; nextActive: boolean }) => {
       setStatusUpdateId(userId);
-      const { data } = await adminApi.patch<User>(`/users/${userId}/status`, { active: nextActive });
+      const { data } = await api.patch<User>(`/users/${userId}/status`, { active: nextActive });
       return data;
     },
     onSuccess: (data) => {
@@ -1175,7 +1175,7 @@ const UsersPage = () => {
 
   const verifyUser = useMutation({
     mutationFn: async (userId: number) => {
-      const { data } = await adminApi.post<User>(`/users/${userId}/verify`);
+      const { data } = await api.post<User>(`/users/${userId}/verify`);
       return data;
     },
     onSuccess: (data) => {
@@ -1202,7 +1202,7 @@ const UsersPage = () => {
 
   const unlockUser = useMutation({
     mutationFn: async (userId: number) => {
-      const { data } = await adminApi.post<User>(`/users/${userId}/unlock`);
+      const { data } = await api.post<User>(`/users/${userId}/unlock`);
       return data;
     },
     onSuccess: (data) => {
@@ -1243,7 +1243,7 @@ const UsersPage = () => {
       if (!canCreateUserCartItems) {
         throw new Error('You do not have permission to modify cart items.');
       }
-      const { data } = await adminApi.post<Cart>(`/users/${selectedUserId}/cart/items`, {
+      const { data } = await api.post<Cart>(`/users/${selectedUserId}/cart/items`, {
         productId,
         variantId: variantId ?? undefined,
         quantity
@@ -1275,7 +1275,7 @@ const UsersPage = () => {
       if (!canEditUserCartItems) {
         throw new Error('You do not have permission to update cart items.');
       }
-      const { data } = await adminApi.patch<Cart>(`/users/${selectedUserId}/cart/items/${itemId}`, { quantity });
+      const { data } = await api.patch<Cart>(`/users/${selectedUserId}/cart/items/${itemId}`, { quantity });
       return data;
     },
     onMutate: ({ itemId }) => {
@@ -1307,7 +1307,7 @@ const UsersPage = () => {
       if (!canRemoveUserCartItems) {
         throw new Error('You do not have permission to remove cart items.');
       }
-      const { data } = await adminApi.delete<Cart>(`/users/${selectedUserId}/cart/items/${itemId}`);
+      const { data } = await api.delete<Cart>(`/users/${selectedUserId}/cart/items/${itemId}`);
       return data;
     },
     onMutate: (itemId) => {
@@ -1502,7 +1502,7 @@ const UsersPage = () => {
 
     do {
       const params = { ...baseParams, page: pageIndex };
-      const { data } = await adminApi.get<Pagination<User>>('/users', { params });
+      const { data } = await api.get<Pagination<User>>('/users', { params });
       aggregated.push(...(data.content ?? []));
       totalPagesCount = data.totalPages ?? 1;
       pageIndex += 1;

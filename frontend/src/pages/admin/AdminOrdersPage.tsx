@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { adminApi } from '../../services/http';
+import api from '../../services/http';
 import type { OrderDetail, OrderListItem } from '../../types/orders';
 import Spinner from '../../components/Spinner';
 import { formatCurrency } from '../../utils/currency';
@@ -20,7 +20,7 @@ const AdminOrdersPage = () => {
   const ordersQuery = useQuery<OrderListItem[]>({
     queryKey: ['orders', 'admin'],
     queryFn: async () => {
-      const { data } = await adminApi.get<OrderListItem[]>('/admin/orders');
+      const { data } = await api.get<OrderListItem[]>('/admin/orders');
       return data;
     }
   });
@@ -41,7 +41,7 @@ const AdminOrdersPage = () => {
     queryKey: ['orders', 'admin', 'detail', selectedOrderId],
     enabled: selectedOrderId != null,
     queryFn: async () => {
-      const { data } = await adminApi.get<OrderDetail>(`/admin/orders/${selectedOrderId}`);
+      const { data } = await api.get<OrderDetail>(`/admin/orders/${selectedOrderId}`);
       return data;
     }
   });

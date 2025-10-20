@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { adminApi } from '../../services/http';
+import api from '../../services/http';
 import PageHeader from '../../components/PageHeader';
 import PageSection from '../../components/PageSection';
 import PaginationControls from '../../components/PaginationControls';
@@ -204,7 +204,7 @@ const CouponsPage = () => {
       if (typeFilter !== 'ALL') params.type = typeFilter;
       if (stateFilter !== 'ALL') params.state = stateFilter;
       if (discountFilter !== 'ALL') params.discountType = discountFilter;
-      const { data } = await adminApi.get<CouponPage>('/coupons', { params });
+      const { data } = await api.get<CouponPage>('/coupons', { params });
       return data;
     }
   });
@@ -215,7 +215,7 @@ const CouponsPage = () => {
   const detailQuery = useQuery<CouponDetail>({
     queryKey: ['coupon', selectedCouponId],
     queryFn: async () => {
-      const { data } = await adminApi.get<CouponDetail>(`/coupons/${selectedCouponId}`);
+      const { data } = await api.get<CouponDetail>(`/coupons/${selectedCouponId}`);
       return data;
     },
     enabled: selectedCouponId != null
@@ -224,7 +224,7 @@ const CouponsPage = () => {
   const editDetailQuery = useQuery<CouponDetail>({
     queryKey: ['coupon-edit', editingId],
     queryFn: async () => {
-      const { data } = await adminApi.get<CouponDetail>(`/coupons/${editingId}`);
+      const { data } = await api.get<CouponDetail>(`/coupons/${editingId}`);
       return data;
     },
     enabled: panelMode === 'edit' && editingId != null
@@ -237,7 +237,7 @@ const CouponsPage = () => {
       if (productSearch) {
         params.search = productSearch;
       }
-      const { data } = await adminApi.get<CouponProductSummary[]>('/coupons/reference/products', {
+      const { data } = await api.get<CouponProductSummary[]>('/coupons/reference/products', {
         params
       });
       return data;
@@ -252,7 +252,7 @@ const CouponsPage = () => {
       if (categorySearch) {
         params.search = categorySearch;
       }
-      const { data } = await adminApi.get<CouponCategorySummary[]>('/coupons/reference/categories', {
+      const { data } = await api.get<CouponCategorySummary[]>('/coupons/reference/categories', {
         params
       });
       return data;
@@ -263,7 +263,7 @@ const CouponsPage = () => {
   const userOptionsQuery = useQuery<CouponUserSummary[]>({
     queryKey: ['coupon-user-options', panelMode, form.type],
     queryFn: async () => {
-      const { data } = await adminApi.get<CouponUserSummary[]>('/coupons/reference/users', {
+      const { data } = await api.get<CouponUserSummary[]>('/coupons/reference/users', {
         params: { size: 50 }
       });
       return data;
@@ -364,7 +364,7 @@ const CouponsPage = () => {
 
   const createMutation = useMutation({
     mutationFn: async (payload: SaveCouponPayload) => {
-      const { data } = await adminApi.post<CouponDetail>('/coupons', payload);
+      const { data } = await api.post<CouponDetail>('/coupons', payload);
       return data;
     },
     onSuccess: (data) => {
@@ -379,7 +379,7 @@ const CouponsPage = () => {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, payload }: { id: number; payload: SaveCouponPayload }) => {
-      const { data } = await adminApi.put<CouponDetail>(`/coupons/${id}`, payload);
+      const { data } = await api.put<CouponDetail>(`/coupons/${id}`, payload);
       return data;
     },
     onSuccess: (data) => {
@@ -397,7 +397,7 @@ const CouponsPage = () => {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
-      await adminApi.delete(`/coupons/${id}`);
+      await api.delete(`/coupons/${id}`);
     },
     onSuccess: (_, id) => {
       notify({ type: 'success', message: 'Coupon deleted.' });
@@ -566,7 +566,7 @@ const CouponsPage = () => {
     });
     formData.append('module', 'COUPON_MEDIA');
     try {
-      const { data } = await adminApi.post<UploadedFileUploadResponse[]>('/uploaded-files/upload', formData, {
+      const { data } = await api.post<UploadedFileUploadResponse[]>('/uploaded-files/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       const uploads = (data ?? []).filter(

@@ -14,7 +14,7 @@ const SignupPage = () => {
     event.preventDefault();
     const result = await dispatch(signup(form));
     if (signup.fulfilled.match(result)) {
-      navigate('/dashboard');
+      navigate('/admin/dashboard');
     }
   };
 
