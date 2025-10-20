@@ -1,14 +1,14 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import api from '../services/http';
-import { useAppSelector, useAppDispatch } from '../app/hooks';
-import { loadCurrentUser } from '../features/auth/authSlice';
-import { useToast } from '../components/ToastProvider';
-import { extractErrorMessage } from '../utils/errors';
-import MediaLibraryDialog from '../components/MediaLibraryDialog';
-import ImagePreview from '../components/ImagePreview';
-import type { MediaSelection } from '../types/uploaded-file';
-import type { CheckoutAddress } from '../types/checkout';
+import api from '../../services/http';
+import { useAppSelector, useAppDispatch } from '../../app/hooks';
+import { loadCurrentUser } from '../../features/auth/authSlice';
+import { useToast } from '../../components/ToastProvider';
+import { extractErrorMessage } from '../../utils/errors';
+import MediaLibraryDialog from '../../components/MediaLibraryDialog';
+import ImagePreview from '../../components/ImagePreview';
+import type { MediaSelection } from '../../types/uploaded-file';
+import type { CheckoutAddress } from '../../types/checkout';
 
 interface UploadedFileUploadResponse {
   url: string;

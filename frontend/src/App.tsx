@@ -1,25 +1,25 @@
 import { useEffect, useState } from 'react';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import Layout from './components/Layout';
-import LoginPage from './pages/LoginPage';
+import LoginPage from './pages/admin/LoginPage';
 import SignupPage from './pages/SignupPage';
-import DashboardPage from './pages/DashboardPage';
-import UsersPage from './pages/UsersPage';
-import RolesPage from './pages/RolesPage';
-import PermissionsPage from './pages/PermissionsPage';
-import ProfilePage from './pages/ProfilePage';
-import ForbiddenPage from './pages/ForbiddenPage';
-import NotFoundPage from './pages/NotFoundPage';
-import BrandsPage from './pages/BrandsPage';
-import ProductsPage from './pages/ProductsPage';
-import ReviewsPage from './pages/ReviewsPage';
-import TaxRatesPage from './pages/TaxRatesPage';
-import AttributesPage from './pages/AttributesPage';
-import CategoriesPage from './pages/CategoriesPage';
-import CouponsPage from './pages/CouponsPage';
-import BadgesPage from './pages/BadgesPage';
-import BadgeCategoriesPage from './pages/BadgeCategoriesPage';
-import ShippingPage from './pages/ShippingPage';
+import DashboardPage from './pages/admin/DashboardPage';
+import UsersPage from './pages/admin/UsersPage';
+import RolesPage from './pages/admin/RolesPage';
+import PermissionsPage from './pages/admin/PermissionsPage';
+import ProfilePage from './pages/admin/ProfilePage';
+import ForbiddenPage from './pages/admin/ForbiddenPage';
+import NotFoundPage from './pages/admin/NotFoundPage';
+import BrandsPage from './pages/admin/BrandsPage';
+import ProductsPage from './pages/admin/ProductsPage';
+import ReviewsPage from './pages/admin/ReviewsPage';
+import TaxRatesPage from './pages/admin/TaxRatesPage';
+import AttributesPage from './pages/admin/AttributesPage';
+import CategoriesPage from './pages/admin/CategoriesPage';
+import CouponsPage from './pages/admin/CouponsPage';
+import BadgesPage from './pages/admin/BadgesPage';
+import BadgeCategoriesPage from './pages/admin/BadgeCategoriesPage';
+import ShippingPage from './pages/admin/ShippingPage';
 import EcommerceHomePage from './pages/EcommerceHomePage';
 import ProtectedRoute from './routes/ProtectedRoute';
 import PermissionRoute from './routes/PermissionRoute';
@@ -27,19 +27,19 @@ import { useAppDispatch, useAppSelector } from './app/hooks';
 import { loadCurrentUser, logout as logoutAction, tokensRefreshed } from './features/auth/authSlice';
 import { syncGuestCart } from './features/cart/cartSlice';
 import api from './services/http';
-import SettingsPage from './pages/SettingsPage';
+import SettingsPage from './pages/admin/SettingsPage';
 import { fetchTheme } from './features/settings/settingsSlice';
 import { selectApplicationName, selectPrimaryColor } from './features/settings/selectors';
 import { applyPrimaryColor } from './utils/colors';
-import ActivityPage from './pages/ActivityPage';
-import ActivityDetailPage from './pages/ActivityDetailPage';
-import SetupPage from './pages/SetupPage';
-import GalleryPage from './pages/GalleryPage';
-import BlogCategoriesPage from './pages/BlogCategoriesPage';
-import BlogPostsPage from './pages/BlogPostsPage';
+import ActivityPage from './pages/admin/ActivityPage';
+import ActivityDetailPage from './pages/admin/ActivityDetailPage';
+import SetupPage from './pages/admin/SetupPage';
+import GalleryPage from './pages/admin/GalleryPage';
+import BlogCategoriesPage from './pages/admin/BlogCategoriesPage';
+import BlogPostsPage from './pages/admin/BlogPostsPage';
 import PublicBlogListPage from './pages/PublicBlogListPage';
 import PublicBlogPostPage from './pages/PublicBlogPostPage';
-import UploadedFilesPage from './pages/UploadedFilesPage';
+import UploadedFilesPage from './pages/admin/UploadedFilesPage';
 import PublicCategoriesPage from './pages/PublicCategoriesPage';
 import PublicProductPage from './pages/PublicProductPage';
 import PublicBrandsPage from './pages/PublicBrandsPage';
@@ -48,9 +48,9 @@ import PublicProductsPage from './pages/PublicProductsPage';
 import CartPage from './pages/CartPage';
 import CheckoutPage from './pages/CheckoutPage';
 import OrderConfirmationPage from './pages/OrderConfirmationPage';
-import AdminPaymentPage from './pages/AdminPaymentPage';
-import AdminOrdersPage from './pages/AdminOrdersPage';
-import AdminCartsPage from './pages/AdminCartsPage';
+import AdminPaymentPage from './pages/admin/AdminPaymentPage';
+import AdminOrdersPage from './pages/admin/AdminOrdersPage';
+import AdminCartsPage from './pages/admin/AdminCartsPage';
 
 const App = () => {
   const dispatch = useAppDispatch();
@@ -131,7 +131,17 @@ const App = () => {
     };
   }, [accessToken, refreshToken, dispatch]);
 
-  const publicExact = ['/', '/login', '/signup', '/categories', '/brands', '/products', '/products/showcase', '/coupons'];
+  const publicExact = [
+    '/',
+    '/admin/login',
+    '/login',
+    '/signup',
+    '/categories',
+    '/brands',
+    '/products',
+    '/products/showcase',
+    '/coupons'
+  ];
   const publicPrefixes = ['/blog', '/product', '/products'];
   const isPublicRoute =
     publicExact.includes(location.pathname) ||
@@ -150,7 +160,8 @@ const App = () => {
   return (
     <Routes>
       <Route path="/" element={<EcommerceHomePage />} />
-      <Route path="/login" element={<LoginPage />} />
+      <Route path="/admin/login" element={<LoginPage />} />
+      <Route path="/login" element={<Navigate to="/admin/login" replace />} />
       <Route path="/signup" element={<SignupPage />} />
       <Route path="/blog" element={<PublicBlogListPage />} />
       <Route path="/blog/:slug" element={<PublicBlogPostPage />} />
@@ -267,7 +278,7 @@ const App = () => {
         </Route>
         <Route path="/checkout" element={<CheckoutPage />} />
       </Route>
-      <Route path="*" element={<Navigate to="/login" replace />} />
+      <Route path="*" element={<Navigate to="/admin/login" replace />} />
     </Routes>
   );
 };

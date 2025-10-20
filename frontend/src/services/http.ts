@@ -3,9 +3,24 @@ import type { Store } from '@reduxjs/toolkit';
 import type { RootState } from '../app/store';
 import type { AuthResponse } from '../types/auth';
 
+const rawBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1';
+
+const normalizeBaseUrl = (value: string): string => {
+  const trimmed = value.trim().replace(/\/+$/, '');
+  if (/\/admin$/i.test(trimmed)) {
+    return trimmed.slice(0, -'/admin'.length);
+  }
+  return trimmed;
+};
+
+const baseURL = normalizeBaseUrl(rawBaseUrl);
+const adminBaseURL = `${baseURL}/admin`;
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'
+  baseURL
 });
+
+api.defaults.baseURL = baseURL;
 
 let storeRef: Store<RootState> | null = null;
 let refreshListener: ((payload: AuthResponse) => void) | null = null;
@@ -24,6 +39,28 @@ export const registerAuthListeners = (
 };
 
 api.interceptors.request.use((config) => {
+  if (typeof config.baseURL === 'string') {
+    config.baseURL = normalizeBaseUrl(config.baseURL);
+  }
+
+  if (typeof config.url === 'string') {
+    const url = config.url.trim();
+    const isAbsolute = /^[a-z][a-z\d+\-.]*:/.test(url);
+    if (!isAbsolute) {
+      if (url === '/admin') {
+        config.baseURL = adminBaseURL;
+        config.url = '';
+      } else if (url.startsWith('/admin/')) {
+        config.baseURL = adminBaseURL;
+        config.url = url.slice('/admin'.length);
+      } else if (!config.baseURL) {
+        config.baseURL = baseURL;
+      }
+    }
+  } else if (!config.baseURL) {
+    config.baseURL = baseURL;
+  }
+
   if (!storeRef) return config;
   const state = storeRef.getState();
   const token = state.auth.accessToken;

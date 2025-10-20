@@ -1,36 +1,36 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import api from '../services/http';
-import type { Pagination, Permission, Role, User, UserSummaryMetrics, UserRecentProduct } from '../types/models';
-import type { Cart } from '../types/cart';
-import type { AddressType, CheckoutAddress, CheckoutRegionOption } from '../types/checkout';
-import type { OrderDetail, OrderListItem } from '../types/orders';
-import { useToast } from '../components/ToastProvider';
-import { useConfirm } from '../components/ConfirmDialogProvider';
-import SortableColumnHeader from '../components/SortableColumnHeader';
-import ExportMenu from '../components/ExportMenu';
-import { exportDataset, type ExportFormat } from '../utils/exporters';
-import { extractErrorMessage } from '../utils/errors';
+import api from '../../services/http';
+import type { Pagination, Permission, Role, User, UserSummaryMetrics, UserRecentProduct } from '../../types/models';
+import type { Cart } from '../../types/cart';
+import type { AddressType, CheckoutAddress, CheckoutRegionOption } from '../../types/checkout';
+import type { OrderDetail, OrderListItem } from '../../types/orders';
+import { useToast } from '../../components/ToastProvider';
+import { useConfirm } from '../../components/ConfirmDialogProvider';
+import SortableColumnHeader from '../../components/SortableColumnHeader';
+import ExportMenu from '../../components/ExportMenu';
+import { exportDataset, type ExportFormat } from '../../utils/exporters';
+import { extractErrorMessage } from '../../utils/errors';
 import {
   buildPermissionGroups,
   CAPABILITY_COLUMNS,
   PERMISSION_AUDIENCE_HEADERS,
   PERMISSION_AUDIENCE_ORDER,
   type PermissionGroup
-} from '../utils/permissionGroups';
-import { useAppSelector } from '../app/hooks';
-import type { PermissionKey } from '../types/auth';
-import { hasAnyPermission } from '../utils/permissions';
-import PageHeader from '../components/PageHeader';
-import PageSection from '../components/PageSection';
-import PaginationControls from '../components/PaginationControls';
-import { formatCurrency } from '../utils/currency';
-import type { ProductDetail, ProductSummary } from '../types/product';
-import Button from '../components/Button';
-import OrderDetailPanel from '../components/orders/OrderDetailPanel';
-import { selectBaseCurrency } from '../features/settings/selectors';
-import Spinner from '../components/Spinner';
+} from '../../utils/permissionGroups';
+import { useAppSelector } from '../../app/hooks';
+import type { PermissionKey } from '../../types/auth';
+import { hasAnyPermission } from '../../utils/permissions';
+import PageHeader from '../../components/PageHeader';
+import PageSection from '../../components/PageSection';
+import PaginationControls from '../../components/PaginationControls';
+import { formatCurrency } from '../../utils/currency';
+import type { ProductDetail, ProductSummary } from '../../types/product';
+import Button from '../../components/Button';
+import OrderDetailPanel from '../../components/orders/OrderDetailPanel';
+import { selectBaseCurrency } from '../../features/settings/selectors';
+import Spinner from '../../components/Spinner';
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100];
 const DEFAULT_PAGE_SIZE = 25;

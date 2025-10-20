@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import api from '../services/http';
-import type { PaymentMethod } from '../types/checkout';
-import { useToast } from '../components/ToastProvider';
-import { extractErrorMessage } from '../utils/errors';
-import Button from '../components/Button';
+import api from '../../services/http';
+import type { PaymentMethod } from '../../types/checkout';
+import { useToast } from '../../components/ToastProvider';
+import { extractErrorMessage } from '../../utils/errors';
+import Button from '../../components/Button';
 
 const AdminPaymentPage = () => {
   const { notify } = useToast();

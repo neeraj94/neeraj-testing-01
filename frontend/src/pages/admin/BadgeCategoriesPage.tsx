@@ -1,46 +1,35 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import api from '../services/http';
-import type {
-  Badge,
-  BadgeCategoryOption,
-  BadgeIconUploadResponse,
-  BadgePage
-} from '../types/badge';
-import { useToast } from '../components/ToastProvider';
-import { useConfirm } from '../components/ConfirmDialogProvider';
-import PageHeader from '../components/PageHeader';
-import PageSection from '../components/PageSection';
-import PaginationControls from '../components/PaginationControls';
-import { extractErrorMessage } from '../utils/errors';
-import { useAppSelector } from '../app/hooks';
-import { hasAnyPermission } from '../utils/permissions';
-import type { PermissionKey } from '../types/auth';
-import MediaLibraryDialog from '../components/MediaLibraryDialog';
-import type { MediaSelection } from '../types/uploaded-file';
+import api from '../../services/http';
+import type { BadgeCategory, BadgeCategoryPage, BadgeCategoryUploadResponse } from '../../types/badge';
+import { useToast } from '../../components/ToastProvider';
+import { useConfirm } from '../../components/ConfirmDialogProvider';
+import PageHeader from '../../components/PageHeader';
+import PageSection from '../../components/PageSection';
+import PaginationControls from '../../components/PaginationControls';
+import { extractErrorMessage } from '../../utils/errors';
+import { useAppSelector } from '../../app/hooks';
+import { hasAnyPermission } from '../../utils/permissions';
+import type { PermissionKey } from '../../types/auth';
+import MediaLibraryDialog from '../../components/MediaLibraryDialog';
+import type { MediaSelection } from '../../types/uploaded-file';
 
-interface BadgeFormState {
-  name: string;
+interface BadgeCategoryFormState {
+  title: string;
+  description: string;
   iconUrl: string;
-  badgeCategoryId: string;
-  shortDescription: string;
-  longDescription: string;
-  defaultBadge: boolean;
 }
 
 const DEFAULT_PAGE_SIZE = 10;
 const PAGE_SIZE_OPTIONS = [10, 25, 50];
 
-const defaultFormState: BadgeFormState = {
-  name: '',
-  iconUrl: '',
-  badgeCategoryId: '',
-  shortDescription: '',
-  longDescription: '',
-  defaultBadge: false
+const defaultFormState: BadgeCategoryFormState = {
+  title: '',
+  description: '',
+  iconUrl: ''
 };
 
-const BadgesPage = () => {
+const BadgeCategoriesPage = () => {
   const queryClient = useQueryClient();
   const { notify } = useToast();
   const permissions = useAppSelector((state) => state.auth.permissions);
@@ -50,23 +39,23 @@ const BadgesPage = () => {
   const [searchDraft, setSearchDraft] = useState('');
   const [search, setSearch] = useState('');
   const [panelMode, setPanelMode] = useState<'list' | 'create' | 'edit'>('list');
-  const [form, setForm] = useState<BadgeFormState>({ ...defaultFormState });
+  const [form, setForm] = useState<BadgeCategoryFormState>({ ...defaultFormState });
   const [formError, setFormError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [activeTab, setActiveTab] = useState<'general' | 'content'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'details'>('general');
   const [iconPreview, setIconPreview] = useState<string | null>(null);
   const [mediaLibraryOpen, setMediaLibraryOpen] = useState(false);
 
   const canCreate = useMemo(
-    () => hasAnyPermission(permissions as PermissionKey[], ['BADGE_CREATE']),
+    () => hasAnyPermission(permissions as PermissionKey[], ['BADGE_CATEGORY_CREATE']),
     [permissions]
   );
   const canUpdate = useMemo(
-    () => hasAnyPermission(permissions as PermissionKey[], ['BADGE_UPDATE']),
+    () => hasAnyPermission(permissions as PermissionKey[], ['BADGE_CATEGORY_UPDATE']),
     [permissions]
   );
   const canDelete = useMemo(
-    () => hasAnyPermission(permissions as PermissionKey[], ['BADGE_DELETE']),
+    () => hasAnyPermission(permissions as PermissionKey[], ['BADGE_CATEGORY_DELETE']),
     [permissions]
   );
 
@@ -87,81 +76,67 @@ const BadgesPage = () => {
     setIconPreview(null);
   };
 
-  const badgesQuery = useQuery<BadgePage>({
-    queryKey: ['badges', { page, pageSize, search }],
+  const categoriesQuery = useQuery<BadgeCategoryPage>({
+    queryKey: ['badgeCategories', { page, pageSize, search }],
     queryFn: async () => {
-      const { data } = await api.get<BadgePage>('/badges', {
+      const { data } = await api.get<BadgeCategoryPage>('/badge-categories', {
         params: { page, size: pageSize, search }
       });
       return data;
     }
   });
 
-  const badgeCategoriesQuery = useQuery<BadgeCategoryOption[]>({
-    queryKey: ['badgeCategories', 'options'],
-    queryFn: async () => {
-      const { data } = await api.get<BadgeCategoryOption[]>('/badge-categories/options');
-      return data;
-    }
-  });
-
-  const badges = badgesQuery.data?.content ?? [];
-  const totalElements = badgesQuery.data?.totalElements ?? 0;
+  const categories = categoriesQuery.data?.content ?? [];
+  const totalElements = categoriesQuery.data?.totalElements ?? 0;
 
   const createMutation = useMutation({
-    mutationFn: async (payload: BadgeFormState) => {
-      const { data } = await api.post<Badge>('/badges', {
-        name: payload.name,
-        iconUrl: payload.iconUrl || null,
-        shortDescription: payload.shortDescription || null,
-        longDescription: payload.longDescription || null,
-        defaultBadge: payload.defaultBadge,
-        badgeCategoryId: payload.badgeCategoryId ? Number(payload.badgeCategoryId) : null
+    mutationFn: async (payload: BadgeCategoryFormState) => {
+      const { data } = await api.post<BadgeCategory>('/badge-categories', {
+        title: payload.title,
+        description: payload.description || null,
+        iconUrl: payload.iconUrl || null
       });
       return data;
     },
     onSuccess: () => {
-      notify({ type: 'success', message: 'Badge created successfully.' });
-      queryClient.invalidateQueries({ queryKey: ['badges'] });
+      notify({ type: 'success', message: 'Badge category created successfully.' });
+      queryClient.invalidateQueries({ queryKey: ['badgeCategories'] });
       closeForm();
     },
     onError: (error: unknown) => {
-      setFormError(extractErrorMessage(error, 'Failed to create badge.'));
+      setFormError(extractErrorMessage(error, 'Failed to create badge category.'));
     }
   });
 
   const updateMutation = useMutation({
-    mutationFn: async ({ id, payload }: { id: number; payload: BadgeFormState }) => {
-      const { data } = await api.put<Badge>(`/badges/${id}`, {
-        name: payload.name,
-        iconUrl: payload.iconUrl || null,
-        shortDescription: payload.shortDescription || null,
-        longDescription: payload.longDescription || null,
-        defaultBadge: payload.defaultBadge,
-        badgeCategoryId: payload.badgeCategoryId ? Number(payload.badgeCategoryId) : null
+    mutationFn: async ({ id, payload }: { id: number; payload: BadgeCategoryFormState }) => {
+      const { data } = await api.put<BadgeCategory>(`/badge-categories/${id}`, {
+        title: payload.title,
+        description: payload.description || null,
+        iconUrl: payload.iconUrl || null
       });
       return data;
     },
     onSuccess: () => {
-      notify({ type: 'success', message: 'Badge updated successfully.' });
-      queryClient.invalidateQueries({ queryKey: ['badges'] });
+      notify({ type: 'success', message: 'Badge category updated successfully.' });
+      queryClient.invalidateQueries({ queryKey: ['badgeCategories'] });
       closeForm();
     },
     onError: (error: unknown) => {
-      setFormError(extractErrorMessage(error, 'Failed to update badge.'));
+      setFormError(extractErrorMessage(error, 'Failed to update badge category.'));
     }
   });
 
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
-      await api.delete(`/badges/${id}`);
+      await api.delete(`/badge-categories/${id}`);
     },
     onSuccess: () => {
-      notify({ type: 'success', message: 'Badge deleted successfully.' });
-      queryClient.invalidateQueries({ queryKey: ['badges'] });
+      notify({ type: 'success', message: 'Badge category deleted successfully.' });
+      queryClient.invalidateQueries({ queryKey: ['badgeCategories'] });
     },
     onError: (error: unknown) => {
-      notify({ type: 'error', message: extractErrorMessage(error, 'Failed to delete badge.') });
+      notify({ type: 'error', message: extractErrorMessage(error, 'Failed to delete badge category.') });
     }
   });
 
@@ -169,7 +144,7 @@ const BadgesPage = () => {
     mutationFn: async (file: File) => {
       const formData = new FormData();
       formData.append('file', file);
-      const { data } = await api.post<BadgeIconUploadResponse>('/badges/assets', formData, {
+      const { data } = await api.post<BadgeCategoryUploadResponse>('/badge-categories/assets', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       return data;
@@ -193,38 +168,35 @@ const BadgesPage = () => {
     setIconPreview(null);
   };
 
-  const openEditForm = (badge: Badge) => {
+  const openEditForm = (category: BadgeCategory) => {
     setForm({
-      name: badge.name,
-      iconUrl: badge.iconUrl ?? '',
-      badgeCategoryId: badge.badgeCategory?.id ? String(badge.badgeCategory.id) : '',
-      shortDescription: badge.shortDescription ?? '',
-      longDescription: badge.longDescription ?? '',
-      defaultBadge: badge.defaultBadge
+      title: category.title,
+      description: category.description ?? '',
+      iconUrl: category.iconUrl ?? ''
     });
     setFormError(null);
     setActiveTab('general');
     setPanelMode('edit');
-    setEditingId(badge.id);
-    setIconPreview(badge.iconUrl ?? null);
+    setEditingId(category.id);
+    setIconPreview(category.iconUrl ?? null);
   };
 
   const confirm = useConfirm();
 
-  const handleDelete = async (badge: Badge) => {
+  const handleDelete = async (category: BadgeCategory) => {
     if (!canDelete) {
       return;
     }
     const confirmed = await confirm({
-      title: 'Delete badge?',
-      description: `Delete badge "${badge.name}"? This action cannot be undone.`,
+      title: 'Delete badge category?',
+      description: `Delete badge category "${category.title}"? This action cannot be undone.`,
       confirmLabel: 'Delete',
       tone: 'danger'
     });
     if (!confirmed) {
       return;
     }
-    await deleteMutation.mutateAsync(badge.id);
+    await deleteMutation.mutateAsync(category.id);
   };
 
   const handleIconSelect = () => {
@@ -266,15 +238,15 @@ const BadgesPage = () => {
     event.preventDefault();
     setFormError(null);
 
-    if (!form.name.trim()) {
-      setFormError('Badge name is required.');
+    if (!form.title.trim()) {
+      setFormError('Category title is required.');
       setActiveTab('general');
       return;
     }
 
-    const payload: BadgeFormState = {
+    const payload: BadgeCategoryFormState = {
       ...form,
-      name: form.name.trim()
+      title: form.title.trim()
     };
 
     if (panelMode === 'create') {
@@ -302,7 +274,7 @@ const BadgesPage = () => {
           type="search"
           value={searchDraft}
           onChange={(event) => setSearchDraft(event.target.value)}
-          placeholder="Search badges"
+          placeholder="Search badge categories"
           className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:max-w-xs"
         />
       </div>
@@ -310,9 +282,7 @@ const BadgesPage = () => {
         <table className="min-w-full divide-y divide-slate-200 text-sm">
           <thead className="bg-slate-50">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Badge</th>
               <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Category</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Default</th>
               <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Updated</th>
               {(canUpdate || canDelete) && (
                 <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Actions</th>
@@ -320,42 +290,40 @@ const BadgesPage = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 bg-white">
-            {badgesQuery.isLoading ? (
+            {categoriesQuery.isLoading ? (
               <tr>
-                <td colSpan={canUpdate || canDelete ? 5 : 4} className="px-4 py-6 text-center text-sm text-slate-500">
-                  Loading badges…
+                <td colSpan={canUpdate || canDelete ? 3 : 2} className="px-4 py-6 text-center text-sm text-slate-500">
+                  Loading badge categories…
                 </td>
               </tr>
-            ) : badges.length > 0 ? (
-              badges.map((badge) => (
-                <tr key={badge.id} className="transition hover:bg-blue-50/40">
+            ) : categories.length > 0 ? (
+              categories.map((category) => (
+                <tr key={category.id} className="transition hover:bg-blue-50/40">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
                       <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
-                        {badge.iconUrl ? (
-                          <img src={badge.iconUrl} alt={`${badge.name} icon`} className="h-full w-full object-cover" />
+                        {category.iconUrl ? (
+                          <img src={category.iconUrl} alt={`${category.title} icon`} className="h-full w-full object-cover" />
                         ) : (
                           <span className="text-xs text-slate-400">No icon</span>
                         )}
                       </div>
                       <div className="flex flex-col">
-                        <span className="font-medium text-slate-900">{badge.name}</span>
-                        {badge.shortDescription && <span className="text-xs text-slate-500">{badge.shortDescription}</span>}
+                        <span className="font-medium text-slate-900">{category.title}</span>
+                        {category.description && <span className="text-xs text-slate-500">{category.description}</span>}
                       </div>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-slate-600">{badge.badgeCategory?.title ?? '—'}</td>
-                  <td className="px-4 py-3 text-slate-600">{badge.defaultBadge ? 'Yes' : 'No'}</td>
-                  <td className="px-4 py-3 text-slate-600">{formatDate(badge.updatedAt)}</td>
+                  <td className="px-4 py-3 text-slate-600">{formatDate(category.updatedAt)}</td>
                   {(canUpdate || canDelete) && (
                     <td className="px-4 py-3">
                       <div className="flex justify-end gap-2">
                         {canUpdate && (
                           <button
                             type="button"
-                            onClick={() => openEditForm(badge)}
+                            onClick={() => openEditForm(category)}
                             className="rounded-full border border-slate-200 p-2 text-slate-500 transition hover:border-slate-300 hover:text-slate-800"
-                            aria-label={`Edit ${badge.name}`}
+                            aria-label={`Edit ${category.title}`}
                           >
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
                               <path d="M15.414 2.586a2 2 0 0 0-2.828 0L3 12.172V17h4.828l9.586-9.586a2 2 0 0 0 0-2.828l-2-2Zm-2.121 1.415 2 2L13 8.293l-2-2 2.293-2.292ZM5 13.414 11.293 7.12l1.586 1.586L6.586 15H5v-1.586Z" />
@@ -365,9 +333,9 @@ const BadgesPage = () => {
                         {canDelete && (
                           <button
                             type="button"
-                            onClick={() => handleDelete(badge)}
+                            onClick={() => handleDelete(category)}
                             className="rounded-full border border-rose-200 p-2 text-rose-500 transition hover:border-rose-300 hover:text-rose-600"
-                            aria-label={`Delete ${badge.name}`}
+                            aria-label={`Delete ${category.title}`}
                           >
                             <svg
                               xmlns="http://www.w3.org/2000/svg"
@@ -391,8 +359,8 @@ const BadgesPage = () => {
               ))
             ) : (
               <tr>
-                <td colSpan={canUpdate || canDelete ? 5 : 4} className="px-4 py-6 text-center text-sm text-slate-500">
-                  No badges found.
+                <td colSpan={canUpdate || canDelete ? 3 : 2} className="px-4 py-6 text-center text-sm text-slate-500">
+                  No badge categories found.
                 </td>
               </tr>
             )}
@@ -409,17 +377,17 @@ const BadgesPage = () => {
           setPageSize(size);
           setPage(0);
         }}
-        isLoading={badgesQuery.isLoading}
+        isLoading={categoriesQuery.isLoading}
       />
     </PageSection>
   );
 
   const renderForm = () => {
-    const headerTitle = isCreate ? 'Create badge' : form.name || 'Edit badge';
+    const headerTitle = isCreate ? 'Create badge category' : form.title || 'Edit badge category';
     const headerSubtitle = isCreate
-      ? 'Design reusable merchandising badges for storefront highlights.'
+      ? 'Organize badges into thematic collections for merchandising workflows.'
       : editingId
-      ? `#${editingId} badge`
+      ? `#${editingId} category`
       : '';
 
     return (
@@ -431,7 +399,7 @@ const BadgesPage = () => {
               type="button"
               onClick={closeForm}
               className="rounded-full border border-slate-200 bg-white p-2 text-slate-600 transition hover:border-primary/40 hover:text-primary"
-              aria-label="Back to badges"
+              aria-label="Back to badge categories"
             >
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} className="h-5 w-5">
                 <path strokeLinecap="round" strokeLinejoin="round" d="m15 19-7-7 7-7" />
@@ -439,7 +407,7 @@ const BadgesPage = () => {
             </button>
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-primary">
-                {isCreate ? 'New badge' : 'Edit badge'}
+                {isCreate ? 'New badge category' : 'Edit badge category'}
               </p>
               <h2 className="mt-1 text-2xl font-semibold text-slate-900">{headerTitle}</h2>
               {headerSubtitle && <p className="text-sm text-slate-500">{headerSubtitle}</p>}
@@ -450,12 +418,12 @@ const BadgesPage = () => {
           <nav className="flex shrink-0 flex-row gap-2 border-b border-slate-200 bg-white px-6 py-3 text-sm font-semibold text-slate-600 lg:flex-col lg:border-b-0 lg:border-r">
             {[
               { key: 'general', label: 'General' },
-              { key: 'content', label: 'Content' }
+              { key: 'details', label: 'Details' }
             ].map((tab) => (
               <button
                 key={tab.key}
                 type="button"
-                onClick={() => setActiveTab(tab.key as 'general' | 'content')}
+                onClick={() => setActiveTab(tab.key as 'general' | 'details')}
                 className={`rounded-lg px-3 py-2 text-left transition ${
                   activeTab === tab.key ? 'bg-primary/10 text-primary' : 'text-slate-600 hover:bg-slate-100'
                 }`}
@@ -471,25 +439,25 @@ const BadgesPage = () => {
             {activeTab === 'general' ? (
               <div className="space-y-6">
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="badge-name">
-                    Name
+                  <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="badge-category-title">
+                    Title
                   </label>
                   <input
-                    id="badge-name"
+                    id="badge-category-title"
                     type="text"
-                    value={form.name}
-                    onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
+                    value={form.title}
+                    onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))}
                     className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                    placeholder="Limited Edition"
+                    placeholder="Seasonal"
                   />
                 </div>
                 <div>
                   <span className="mb-1 block text-sm font-medium text-slate-700">Icon</span>
-                  <p className="mb-3 text-xs text-slate-500">Upload a square image (PNG, JPG, GIF, WEBP, or SVG).</p>
+                  <p className="mb-3 text-xs text-slate-500">Upload an image to represent this category.</p>
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
                     <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-xl border border-dashed border-slate-300 bg-slate-50">
                       {iconPreview ? (
-                        <img src={iconPreview} alt="Badge icon preview" className="h-full w-full object-cover" />
+                        <img src={iconPreview} alt="Badge category icon" className="h-full w-full object-cover" />
                       ) : (
                         <span className="text-xs text-slate-400">No icon</span>
                       )}
@@ -520,78 +488,19 @@ const BadgesPage = () => {
                     </div>
                   </div>
                 </div>
-                <div>
-                  <span className="mb-1 block text-sm font-medium text-slate-700">Default badge</span>
-                  <div className="flex flex-col gap-2 sm:flex-row">
-                    <label className="flex items-center gap-2 text-sm text-slate-600">
-                      <input
-                        type="radio"
-                        name="badge-default"
-                        checked={form.defaultBadge}
-                        onChange={() => setForm((prev) => ({ ...prev, defaultBadge: true }))}
-                      />
-                      Yes
-                    </label>
-                    <label className="flex items-center gap-2 text-sm text-slate-600">
-                      <input
-                        type="radio"
-                        name="badge-default"
-                        checked={!form.defaultBadge}
-                        onChange={() => setForm((prev) => ({ ...prev, defaultBadge: false }))}
-                      />
-                      No
-                    </label>
-                  </div>
-                </div>
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="badge-category">
-                    Badge category
-                  </label>
-                  <select
-                    id="badge-category"
-                    value={form.badgeCategoryId}
-                    onChange={(event) => setForm((prev) => ({ ...prev, badgeCategoryId: event.target.value }))}
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                  >
-                    <option value="">No category</option>
-                    {(badgeCategoriesQuery.data ?? []).map((option) => (
-                      <option key={option.id} value={option.id}>
-                        {option.title}
-                      </option>
-                    ))}
-                  </select>
-                  {badgeCategoriesQuery.isLoading && (
-                    <p className="mt-1 text-xs text-slate-500">Loading categories…</p>
-                  )}
-                  {badgeCategoriesQuery.isError && (
-                    <p className="mt-1 text-xs text-rose-500">Unable to load badge categories.</p>
-                  )}
-                </div>
               </div>
             ) : (
               <div className="space-y-6">
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="badge-short-description">
-                    Short description
+                  <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="badge-category-description">
+                    Description <span className="text-xs font-normal text-slate-400">(optional)</span>
                   </label>
                   <textarea
-                    id="badge-short-description"
-                    value={form.shortDescription}
-                    onChange={(event) => setForm((prev) => ({ ...prev, shortDescription: event.target.value }))}
-                    className="min-h-[80px] w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                    placeholder="Appears in badge listings"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="badge-long-description">
-                    Long description
-                  </label>
-                  <textarea
-                    id="badge-long-description"
-                    value={form.longDescription}
-                    onChange={(event) => setForm((prev) => ({ ...prev, longDescription: event.target.value }))}
-                    className="min-h-[140px] w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                    placeholder="Detail how this badge should be used"
+                    id="badge-category-description"
+                    value={form.description}
+                    onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
+                    className="min-h-[120px] w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    placeholder="Explain how badges in this category should be used"
                   />
                 </div>
               </div>
@@ -599,7 +508,7 @@ const BadgesPage = () => {
           </div>
         </div>
         <footer className="flex flex-col gap-3 bg-slate-50 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
-          <span className="text-xs text-slate-500">Badges highlight key merchandising moments across the storefront.</span>
+          <span className="text-xs text-slate-500">Badge categories help organize reusable badge assets across campaigns.</span>
           <div className="flex flex-wrap items-center gap-3">
             <button
               type="button"
@@ -614,7 +523,7 @@ const BadgesPage = () => {
               className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white shadow hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-60"
               disabled={isSaving}
             >
-              {isSaving ? 'Saving…' : isCreate ? 'Create badge' : 'Save changes'}
+              {isSaving ? 'Saving…' : isCreate ? 'Create category' : 'Save changes'}
             </button>
           </div>
         </footer>
@@ -622,7 +531,7 @@ const BadgesPage = () => {
         <MediaLibraryDialog
           open={mediaLibraryOpen}
           onClose={() => setMediaLibraryOpen(false)}
-          moduleFilters={['BADGE_ICON']}
+          moduleFilters={['BADGE_CATEGORY_ICON']}
           onSelect={handleMediaSelect}
           onUpload={handleMediaUpload}
         />
@@ -633,8 +542,8 @@ const BadgesPage = () => {
   return (
     <div className="space-y-6 px-6 py-6">
       <PageHeader
-        title="Badges"
-        description="Create reusable merchandising badges for storefront highlights."
+        title="Badge categories"
+        description="Group badges into curated collections for merchandising workflows."
         actions={
           isDirectoryView && canCreate ? (
             <button
@@ -642,7 +551,7 @@ const BadgesPage = () => {
               onClick={openCreateForm}
               className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white shadow hover:bg-blue-600"
             >
-              New badge
+              New badge category
             </button>
           ) : undefined
         }
@@ -653,4 +562,4 @@ const BadgesPage = () => {
   );
 };
 
-export default BadgesPage;
+export default BadgeCategoriesPage;

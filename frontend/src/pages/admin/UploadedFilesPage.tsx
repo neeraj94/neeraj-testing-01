@@ -1,22 +1,22 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import PageHeader from '../components/PageHeader';
-import PageSection from '../components/PageSection';
-import PaginationControls from '../components/PaginationControls';
-import api from '../services/http';
+import PageHeader from '../../components/PageHeader';
+import PageSection from '../../components/PageSection';
+import PaginationControls from '../../components/PaginationControls';
+import api from '../../services/http';
 import type {
   UploadedFile,
   UploadedFileModuleOption,
   UploadedFilePage,
   UploadedFileUploaderOption
-} from '../types/uploaded-file';
-import { formatFileSize } from '../utils/files';
-import { useToast } from '../components/ToastProvider';
-import { useConfirm } from '../components/ConfirmDialogProvider';
-import { extractErrorMessage } from '../utils/errors';
-import { useAppSelector } from '../app/hooks';
-import { hasAnyPermission } from '../utils/permissions';
-import type { PermissionKey } from '../types/auth';
+} from '../../types/uploaded-file';
+import { formatFileSize } from '../../utils/files';
+import { useToast } from '../../components/ToastProvider';
+import { useConfirm } from '../../components/ConfirmDialogProvider';
+import { extractErrorMessage } from '../../utils/errors';
+import { useAppSelector } from '../../app/hooks';
+import { hasAnyPermission } from '../../utils/permissions';
+import type { PermissionKey } from '../../types/auth';
 
 const DEFAULT_PAGE_SIZE = 20;
 const PAGE_SIZE_OPTIONS = [20, 50, 100];

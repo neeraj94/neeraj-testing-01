@@ -1,14 +1,14 @@
 import { Fragment, type DragEvent, useEffect, useMemo, useState } from 'react';
-import api from '../services/http';
-import { DEFAULT_NAVIGATION_MENU } from '../constants/navigation';
+import api from '../../services/http';
+import { DEFAULT_NAVIGATION_MENU } from '../../constants/navigation';
 import type {
   MenuLayoutConfigNode,
   MenuLayoutUpdatePayload,
   NavigationNode,
   SetupLayoutResponse
-} from '../types/navigation';
-import { useToast } from '../components/ToastProvider';
-import { extractErrorMessage } from '../utils/errors';
+} from '../../types/navigation';
+import { useToast } from '../../components/ToastProvider';
+import { extractErrorMessage } from '../../utils/errors';
 
 interface DragInfo {
   level: 'root' | 'child';

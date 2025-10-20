@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import api from '../services/http';
-import type { OrderDetail, OrderListItem } from '../types/orders';
-import Spinner from '../components/Spinner';
-import { formatCurrency } from '../utils/currency';
-import { useAppSelector } from '../app/hooks';
-import { selectBaseCurrency } from '../features/settings/selectors';
-import OrderDetailPanel from '../components/orders/OrderDetailPanel';
-import Button from '../components/Button';
-import { extractErrorMessage } from '../utils/errors';
+import api from '../../services/http';
+import type { OrderDetail, OrderListItem } from '../../types/orders';
+import Spinner from '../../components/Spinner';
+import { formatCurrency } from '../../utils/currency';
+import { useAppSelector } from '../../app/hooks';
+import { selectBaseCurrency } from '../../features/settings/selectors';
+import OrderDetailPanel from '../../components/orders/OrderDetailPanel';
+import Button from '../../components/Button';
+import { extractErrorMessage } from '../../utils/errors';
 
 const formatDateTime = (value: string) =>
   new Date(value).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
