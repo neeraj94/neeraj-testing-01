@@ -131,7 +131,17 @@ const App = () => {
     };
   }, [accessToken, refreshToken, dispatch]);
 
-  const publicExact = ['/', '/login', '/signup', '/categories', '/brands', '/products', '/products/showcase', '/coupons'];
+  const publicExact = [
+    '/',
+    '/admin/login',
+    '/login',
+    '/signup',
+    '/categories',
+    '/brands',
+    '/products',
+    '/products/showcase',
+    '/coupons'
+  ];
   const publicPrefixes = ['/blog', '/product', '/products'];
   const isPublicRoute =
     publicExact.includes(location.pathname) ||
@@ -150,7 +160,8 @@ const App = () => {
   return (
     <Routes>
       <Route path="/" element={<EcommerceHomePage />} />
-      <Route path="/login" element={<LoginPage />} />
+      <Route path="/admin/login" element={<LoginPage />} />
+      <Route path="/login" element={<Navigate to="/admin/login" replace />} />
       <Route path="/signup" element={<SignupPage />} />
       <Route path="/blog" element={<PublicBlogListPage />} />
       <Route path="/blog/:slug" element={<PublicBlogPostPage />} />
@@ -267,7 +278,7 @@ const App = () => {
         </Route>
         <Route path="/checkout" element={<CheckoutPage />} />
       </Route>
-      <Route path="*" element={<Navigate to="/login" replace />} />
+      <Route path="*" element={<Navigate to="/admin/login" replace />} />
     </Routes>
   );
 };

@@ -311,7 +311,7 @@ const Layout = () => {
       }
     }
     dispatch(logout());
-    navigate('/login', { replace: true });
+    navigate('/admin/login', { replace: true });
   };
 
   const handleProfileNavigate = () => {
