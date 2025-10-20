@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import api from '../services/http';
+import { api } from '../services/http';
 import type { PublicBlogPost } from '../types/blog';
 import StorefrontHeader from '../components/StorefrontHeader';
 

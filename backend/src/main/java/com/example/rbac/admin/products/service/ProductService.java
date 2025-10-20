@@ -1,0 +1,758 @@
+package com.example.rbac.admin.products.service;
+
+import com.example.rbac.admin.attributes.model.AttributeValue;
+import com.example.rbac.admin.attributes.repository.AttributeValueRepository;
+import com.example.rbac.admin.brands.model.Brand;
+import com.example.rbac.admin.brands.repository.BrandRepository;
+import com.example.rbac.admin.categories.model.Category;
+import com.example.rbac.admin.categories.repository.CategoryRepository;
+import com.example.rbac.common.exception.ApiException;
+import com.example.rbac.common.pagination.PageResponse;
+import com.example.rbac.admin.finance.taxrate.model.TaxRate;
+import com.example.rbac.admin.finance.taxrate.repository.TaxRateRepository;
+import com.example.rbac.admin.products.dto.*;
+import com.example.rbac.admin.products.mapper.ProductMapper;
+import com.example.rbac.admin.products.model.*;
+import com.example.rbac.admin.products.repository.ProductRepository;
+import com.example.rbac.admin.products.repository.ProductReviewRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.CollectionUtils;
+import org.springframework.util.StringUtils;
+
+import java.text.Normalizer;
+import java.time.Instant;
+import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
+@Service
+public class ProductService {
+
+    private final ProductRepository productRepository;
+    private final BrandRepository brandRepository;
+    private final CategoryRepository categoryRepository;
+    private final TaxRateRepository taxRateRepository;
+    private final AttributeValueRepository attributeValueRepository;
+    private final ProductMapper productMapper;
+    private final ProductReviewRepository productReviewRepository;
+    private final SkuGenerator skuGenerator;
+
+    public ProductService(ProductRepository productRepository,
+                          BrandRepository brandRepository,
+                          CategoryRepository categoryRepository,
+                          TaxRateRepository taxRateRepository,
+                          AttributeValueRepository attributeValueRepository,
+                          ProductMapper productMapper,
+                          ProductReviewRepository productReviewRepository,
+                          SkuGenerator skuGenerator) {
+        this.productRepository = productRepository;
+        this.brandRepository = brandRepository;
+        this.categoryRepository = categoryRepository;
+        this.taxRateRepository = taxRateRepository;
+        this.attributeValueRepository = attributeValueRepository;
+        this.productMapper = productMapper;
+        this.productReviewRepository = productReviewRepository;
+        this.skuGenerator = skuGenerator;
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<ProductSummaryDto> list(int page, int size, String search) {
+        Pageable pageable = PageRequest.of(Math.max(page, 0), Math.max(size, 1), Sort.by(Sort.Direction.DESC, "createdAt"));
+        Page<Product> result;
+        if (StringUtils.hasText(search)) {
+            String term = search.trim();
+            result = productRepository.findByNameContainingIgnoreCase(term, pageable);
+        } else {
+            result = productRepository.findAll(pageable);
+        }
+        return PageResponse.from(result.map(productMapper::toSummary));
+    }
+
+    @Transactional(readOnly = true)
+    public ProductDto get(Long id) {
+        Product product = productRepository.findDetailedById(id)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Product not found"));
+        initializeDetailedAssociations(product);
+        return productMapper.toDto(product, productReviewRepository.findByProductIdOrderByReviewedAtDesc(id));
+    }
+
+    @Transactional
+    public ProductDto create(CreateProductRequest request) {
+        Product product = new Product();
+        product.setSku(skuGenerator.generatePlaceholder());
+        applyRequest(product, request, true);
+        Product saved = productRepository.saveAndFlush(product);
+        ensureGeneratedSku(saved);
+        return productMapper.toDto(saved, List.of());
+    }
+
+    @Transactional
+    public ProductDto update(Long id, CreateProductRequest request) {
+        Product product = productRepository.findDetailedById(id)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Product not found"));
+        initializeDetailedAssociations(product);
+        applyRequest(product, request, false);
+        Product saved = productRepository.save(product);
+        return productMapper.toDto(saved, productReviewRepository.findByProductIdOrderByReviewedAtDesc(saved.getId()));
+    }
+
+    private void initializeDetailedAssociations(Product product) {
+        if (product.getAttributeValues() != null) {
+            product.getAttributeValues().forEach(value -> {
+                if (value.getAttribute() != null) {
+                    value.getAttribute().getName();
+                }
+            });
+        }
+        if (product.getCategories() != null) {
+            product.getCategories().forEach(category -> category.getName());
+        }
+        if (product.getTaxRates() != null) {
+            product.getTaxRates().forEach(rate -> rate.getName());
+        }
+        if (product.getGalleryImages() != null) {
+            product.getGalleryImages().forEach(image -> {
+                if (image.getMedia() != null) {
+                    image.getMedia().getUrl();
+                }
+            });
+        }
+        if (product.getVariants() != null) {
+            product.getVariants().forEach(variant -> {
+                if (variant.getValues() != null) {
+                    variant.getValues().forEach(value -> {
+                        if (value.getAttributeValue() != null && value.getAttributeValue().getAttribute() != null) {
+                            value.getAttributeValue().getAttribute().getName();
+                        }
+                    });
+                }
+                if (variant.getMedia() != null) {
+                    variant.getMedia().forEach(media -> {
+                        if (media.getMedia() != null) {
+                            media.getMedia().getUrl();
+                        }
+                    });
+                }
+            });
+        }
+        if (product.getExpandableSections() != null) {
+            product.getExpandableSections().forEach(section -> {
+                section.getTitle();
+                section.getContent();
+            });
+        }
+        if (product.getInfoSections() != null) {
+            product.getInfoSections().forEach(section -> {
+                section.getTitle();
+                if (section.getBulletPoints() != null) {
+                    section.getBulletPoints().size();
+                }
+            });
+        }
+        if (product.getTags() != null) {
+            product.getTags().size();
+        }
+        if (product.getFrequentlyBoughtProducts() != null) {
+            product.getFrequentlyBoughtProducts().forEach(related -> {
+                related.getName();
+                if (related.getBrand() != null) {
+                    related.getBrand().getName();
+                }
+                if (related.getThumbnail() != null) {
+                    related.getThumbnail().getUrl();
+                }
+            });
+        }
+        if (product.getFrequentlyBoughtCategories() != null) {
+            product.getFrequentlyBoughtCategories().forEach(category -> category.getName());
+        }
+    }
+
+    @Transactional
+    public void delete(Long id) {
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Product not found"));
+        productRepository.delete(product);
+    }
+
+    private void applyRequest(Product product, CreateProductRequest request, boolean creating) {
+        product.setName(request.getName().trim());
+        String normalizedSlug = normalizeSlug(request.getSlug(), request.getName());
+        ensureUniqueSlug(normalizedSlug, creating ? null : product.getId());
+        product.setSlug(normalizedSlug);
+        product.setUnit(request.getUnit().trim());
+        product.setWeightKg(request.getWeightKg());
+        product.setMinPurchaseQuantity(request.getMinPurchaseQuantity());
+        product.setFeatured(request.isFeatured());
+        product.setTodaysDeal(request.isTodaysDeal());
+        product.setShortDescription(trimToNull(request.getShortDescription()));
+        product.setDescription(trimToNull(request.getDescription()));
+        product.setVideoProvider(trimToNull(request.getVideoProvider()));
+        product.setVideoUrl(trimToNull(request.getVideoUrl()));
+
+        if (request.getBrandId() != null) {
+            Brand brand = brandRepository.findById(request.getBrandId())
+                    .orElseThrow(() -> new ApiException(HttpStatus.BAD_REQUEST, "Selected brand does not exist"));
+            product.setBrand(brand);
+        } else {
+            product.setBrand(null);
+        }
+
+        Set<Long> categoryIds = new LinkedHashSet<>(request.getCategoryIds());
+        List<Category> categories = categoryRepository.findAllById(categoryIds);
+        if (categories.size() != categoryIds.size()) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "One or more selected categories were not found");
+        }
+        product.getCategories().clear();
+        product.getCategories().addAll(categories);
+
+        if (!CollectionUtils.isEmpty(request.getTaxRateIds())) {
+            Set<Long> taxIds = new LinkedHashSet<>(request.getTaxRateIds());
+            List<TaxRate> taxRates = taxRateRepository.findAllById(taxIds);
+            if (taxRates.size() != taxIds.size()) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, "One or more selected taxes were not found");
+            }
+            product.getTaxRates().clear();
+            product.getTaxRates().addAll(taxRates);
+        } else {
+            product.getTaxRates().clear();
+        }
+
+        ProductPricingRequest pricing = request.getPricing();
+        if (pricing == null) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Pricing details are required");
+        }
+
+        String requestedSku = trimToNull(pricing.getSku());
+        if (requestedSku != null) {
+            String normalizedSku = normalizeSku(requestedSku);
+            ensureUniqueSku(normalizedSku, creating ? null : product.getId());
+            product.setSku(normalizedSku);
+        }
+
+        validateDiscountWindow(pricing);
+
+        product.setUnitPrice(pricing.getUnitPrice());
+        product.setDiscountType(pricing.getDiscountType());
+        product.setDiscountValue(pricing.getDiscountValue());
+        product.setDiscountMinQuantity(pricing.getDiscountMinQuantity());
+        product.setDiscountMaxQuantity(pricing.getDiscountMaxQuantity());
+        product.setDiscountStartAt(pricing.getDiscountStartAt());
+        product.setDiscountEndAt(pricing.getDiscountEndAt());
+        replaceTags(product, pricing.getTags());
+        product.setStockQuantity(pricing.getStockQuantity());
+        product.setExternalLink(trimToNull(pricing.getExternalLink()));
+        product.setExternalLinkButton(trimToNull(pricing.getExternalLinkButton()));
+        product.setLowStockWarning(pricing.getLowStockWarning());
+        product.setStockVisibility(pricing.getStockVisibility());
+
+        ProductSeoRequest seo = request.getSeo();
+        if (seo != null) {
+            product.setMetaTitle(trimToNull(seo.getTitle()));
+            product.setMetaDescription(trimToNull(seo.getDescription()));
+            product.setMetaKeywords(trimToNull(seo.getKeywords()));
+            product.setMetaCanonicalUrl(trimToNull(seo.getCanonicalUrl()));
+            product.setMetaImage(toMediaAsset(seo.getImage()));
+        } else {
+            product.setMetaTitle(null);
+            product.setMetaDescription(null);
+            product.setMetaKeywords(null);
+            product.setMetaCanonicalUrl(null);
+            product.setMetaImage(null);
+        }
+
+        product.setThumbnail(toMediaAsset(request.getThumbnail()));
+        product.setPdfSpecification(toMediaAsset(request.getPdfSpecification()));
+
+        rebuildGallery(product, request.getGallery());
+        rebuildExpandableSections(product, request.getExpandableSections());
+        rebuildFrequentlyBoughtAssociations(product, request.getFrequentlyBoughtProductIds(), request.getFrequentlyBoughtCategoryIds());
+
+        Set<Long> attributeValueIds = collectAttributeValueIds(request);
+        Map<Long, AttributeValue> attributeValueMap = attributeValueIds.isEmpty()
+                ? Collections.emptyMap()
+                : attributeValueRepository.findAllById(attributeValueIds).stream()
+                .collect(Collectors.toMap(AttributeValue::getId, value -> value));
+
+        validateAttributeSelections(request, attributeValueMap);
+        product.getAttributeValues().clear();
+        product.getAttributeValues().addAll(resolveSelectedAttributeValues(request, attributeValueMap));
+
+        rebuildVariants(product, request.getVariants(), attributeValueMap);
+
+        rebuildInfoSections(product, request.getInfoSections());
+    }
+
+    private void ensureGeneratedSku(Product product) {
+        if (!skuGenerator.isPlaceholder(product.getSku())) {
+            return;
+        }
+        long seed = skuGenerator.initialSequence(product);
+        for (int attempt = 0; attempt < 20; attempt++) {
+            String candidate = skuGenerator.generate(product, seed + attempt);
+            if (!productRepository.existsBySkuIgnoreCase(candidate)) {
+                product.setSku(candidate);
+                productRepository.saveAndFlush(product);
+                return;
+            }
+        }
+        throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "Unable to allocate a unique SKU");
+    }
+
+    private void validateDiscountWindow(ProductPricingRequest pricing) {
+        Instant start = pricing.getDiscountStartAt();
+        Instant end = pricing.getDiscountEndAt();
+        if (start != null && end != null && end.isBefore(start)) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Discount end date must be on or after the start date");
+        }
+    }
+
+    private void replaceTags(Product product, List<String> tags) {
+        List<String> normalized = normalizeTags(tags);
+        List<String> target = product.getTags();
+        if (target == null) {
+            target = new ArrayList<>();
+            product.setTags(target);
+        } else {
+            target.clear();
+        }
+        target.addAll(normalized);
+    }
+
+    private List<String> normalizeTags(List<String> tags) {
+        if (CollectionUtils.isEmpty(tags)) {
+            return List.of();
+        }
+        List<String> normalized = new ArrayList<>();
+        for (String tag : tags) {
+            String value = trimToNull(tag);
+            if (value == null) {
+                continue;
+            }
+            if (value.length() > 120) {
+                value = value.substring(0, 120);
+            }
+            String candidate = value;
+            boolean exists = normalized.stream().anyMatch(existing -> existing.equalsIgnoreCase(candidate));
+            if (!exists) {
+                normalized.add(value);
+            }
+        }
+        return normalized;
+    }
+
+    private void rebuildGallery(Product product, List<MediaSelectionRequest> gallery) {
+        product.getGalleryImages().clear();
+        if (CollectionUtils.isEmpty(gallery)) {
+            return;
+        }
+        int index = 0;
+        for (MediaSelectionRequest item : gallery) {
+            if (item == null) {
+                continue;
+            }
+            MediaAsset mediaAsset = toMediaAsset(item);
+            if (mediaAsset == null) {
+                continue;
+            }
+            ProductGalleryImage image = new ProductGalleryImage();
+            image.setProduct(product);
+            image.setMedia(mediaAsset);
+            image.setDisplayOrder(index++);
+            product.getGalleryImages().add(image);
+        }
+    }
+
+    private void rebuildExpandableSections(Product product, List<ProductExpandableSectionRequest> sections) {
+        List<ProductExpandableSection> expandableSections = product.getExpandableSections();
+        if (expandableSections == null) {
+            expandableSections = new ArrayList<>();
+            product.setExpandableSections(expandableSections);
+        }
+        expandableSections.clear();
+        if (CollectionUtils.isEmpty(sections)) {
+            return;
+        }
+        for (ProductExpandableSectionRequest sectionRequest : sections) {
+            if (sectionRequest == null) {
+                continue;
+            }
+            String title = trimToNull(sectionRequest.getTitle());
+            String content = trimToNull(sectionRequest.getContent());
+            if (title == null && content == null) {
+                continue;
+            }
+            ProductExpandableSection section = new ProductExpandableSection();
+            section.setTitle(title);
+            section.setContent(content);
+            expandableSections.add(section);
+        }
+    }
+
+    private void rebuildFrequentlyBoughtAssociations(Product product,
+                                                     List<Long> relatedProductIds,
+                                                     List<Long> categoryIds) {
+        LinkedHashSet<Long> normalizedProductIds = new LinkedHashSet<>();
+        if (!CollectionUtils.isEmpty(relatedProductIds)) {
+            for (Long id : relatedProductIds) {
+                if (id == null) {
+                    continue;
+                }
+                if (product.getId() != null && product.getId().equals(id)) {
+                    continue;
+                }
+                normalizedProductIds.add(id);
+            }
+        }
+
+        LinkedHashSet<Product> nextRelatedProducts = new LinkedHashSet<>();
+        if (!normalizedProductIds.isEmpty()) {
+            List<Product> relatedProducts = productRepository.findAllById(normalizedProductIds);
+            Map<Long, Product> relatedMap = relatedProducts.stream()
+                    .collect(Collectors.toMap(Product::getId, Function.identity()));
+            if (relatedMap.size() != normalizedProductIds.size()) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, "One or more selected frequently bought products were not found");
+            }
+            for (Long id : normalizedProductIds) {
+                Product related = relatedMap.get(id);
+                if (related != null) {
+                    nextRelatedProducts.add(related);
+                }
+            }
+        }
+        product.getFrequentlyBoughtProducts().clear();
+        product.getFrequentlyBoughtProducts().addAll(nextRelatedProducts);
+
+        LinkedHashSet<Long> normalizedCategoryIds = new LinkedHashSet<>();
+        if (!CollectionUtils.isEmpty(categoryIds)) {
+            for (Long id : categoryIds) {
+                if (id != null) {
+                    normalizedCategoryIds.add(id);
+                }
+            }
+        }
+
+        LinkedHashSet<Category> nextCategories = new LinkedHashSet<>();
+        if (!normalizedCategoryIds.isEmpty()) {
+            List<Category> categories = categoryRepository.findAllById(normalizedCategoryIds);
+            Map<Long, Category> categoryMap = categories.stream()
+                    .collect(Collectors.toMap(Category::getId, Function.identity()));
+            if (categoryMap.size() != normalizedCategoryIds.size()) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, "One or more selected frequently bought categories were not found");
+            }
+            for (Long id : normalizedCategoryIds) {
+                Category category = categoryMap.get(id);
+                if (category != null) {
+                    nextCategories.add(category);
+                }
+            }
+        }
+        product.getFrequentlyBoughtCategories().clear();
+        product.getFrequentlyBoughtCategories().addAll(nextCategories);
+    }
+
+    private Set<Long> collectAttributeValueIds(CreateProductRequest request) {
+        Set<Long> ids = new HashSet<>();
+        if (!CollectionUtils.isEmpty(request.getAttributes())) {
+            request.getAttributes().forEach(attribute -> {
+                if (!CollectionUtils.isEmpty(attribute.getValueIds())) {
+                    ids.addAll(attribute.getValueIds());
+                }
+            });
+        }
+        if (!CollectionUtils.isEmpty(request.getVariants())) {
+            request.getVariants().forEach(variant -> {
+                if (!CollectionUtils.isEmpty(variant.getAttributeValueIds())) {
+                    ids.addAll(variant.getAttributeValueIds());
+                }
+            });
+        }
+        return ids;
+    }
+
+    private void validateAttributeSelections(CreateProductRequest request, Map<Long, AttributeValue> attributeValueMap) {
+        if (CollectionUtils.isEmpty(request.getAttributes())) {
+            return;
+        }
+        for (SelectedAttributeRequest attribute : request.getAttributes()) {
+            if (CollectionUtils.isEmpty(attribute.getValueIds())) {
+                continue;
+            }
+            for (Long valueId : attribute.getValueIds()) {
+                AttributeValue value = attributeValueMap.get(valueId);
+                if (value == null) {
+                    throw new ApiException(HttpStatus.BAD_REQUEST, "Unknown attribute value: " + valueId);
+                }
+                if (value.getAttribute() == null || !Objects.equals(value.getAttribute().getId(), attribute.getAttributeId())) {
+                    throw new ApiException(HttpStatus.BAD_REQUEST, "Attribute value " + valueId + " does not belong to the selected attribute");
+                }
+            }
+        }
+        if (!CollectionUtils.isEmpty(request.getVariants())) {
+            for (ProductVariantRequest variant : request.getVariants()) {
+                if (CollectionUtils.isEmpty(variant.getAttributeValueIds())) {
+                    continue;
+                }
+                for (Long valueId : variant.getAttributeValueIds()) {
+                    AttributeValue value = attributeValueMap.get(valueId);
+                    if (value == null) {
+                        throw new ApiException(HttpStatus.BAD_REQUEST, "Unknown attribute value: " + valueId);
+                    }
+                }
+            }
+        }
+    }
+
+    private Collection<AttributeValue> resolveSelectedAttributeValues(CreateProductRequest request, Map<Long, AttributeValue> attributeValueMap) {
+        if (CollectionUtils.isEmpty(request.getAttributes())) {
+            return Collections.emptyList();
+        }
+        return request.getAttributes().stream()
+                .filter(attribute -> !CollectionUtils.isEmpty(attribute.getValueIds()))
+                .flatMap(attribute -> attribute.getValueIds().stream())
+                .map(attributeValueMap::get)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+    }
+
+    private void rebuildVariants(Product product, List<ProductVariantRequest> variants, Map<Long, AttributeValue> attributeValueMap) {
+        product.getVariants().clear();
+        if (CollectionUtils.isEmpty(variants)) {
+            return;
+        }
+
+        List<String> normalizedManualSkus = new ArrayList<>();
+        Set<String> usedVariantSkus = new HashSet<>();
+        for (ProductVariantRequest variantRequest : variants) {
+            String manualSku = trimToNull(variantRequest.getSku());
+            if (manualSku != null) {
+                String normalizedSku = normalizeSku(manualSku);
+                if (!usedVariantSkus.add(normalizedSku)) {
+                    throw new ApiException(HttpStatus.BAD_REQUEST, "Duplicate variant SKU: " + normalizedSku);
+                }
+                normalizedManualSkus.add(normalizedSku);
+            } else {
+                normalizedManualSkus.add(null);
+            }
+        }
+
+        int variantIndex = 0;
+        for (ProductVariantRequest variantRequest : variants) {
+            ProductVariant variant = new ProductVariant();
+            variant.setProduct(product);
+            variant.setVariantKey(variantRequest.getKey().trim());
+            variant.setPriceAdjustment(variantRequest.getPriceAdjustment());
+            String manualSku = normalizedManualSkus.get(variantIndex);
+            if (manualSku != null) {
+                variant.setSku(manualSku);
+            } else {
+                String generatedSku = generateVariantSku(product, variantRequest, attributeValueMap, usedVariantSkus, variantIndex);
+                variant.setSku(generatedSku);
+            }
+            variant.setQuantity(variantRequest.getQuantity());
+            variant.setDisplayOrder(variantIndex);
+
+            List<ProductVariantValue> values = new ArrayList<>();
+            if (!CollectionUtils.isEmpty(variantRequest.getAttributeValueIds())) {
+                int position = 0;
+                for (Long valueId : variantRequest.getAttributeValueIds()) {
+                    AttributeValue attributeValue = attributeValueMap.get(valueId);
+                    if (attributeValue == null) {
+                        throw new ApiException(HttpStatus.BAD_REQUEST, "Unknown attribute value: " + valueId);
+                    }
+                    ProductVariantValue value = new ProductVariantValue();
+                    value.setVariant(variant);
+                    value.setAttributeValue(attributeValue);
+                    value.setPosition(position++);
+                    values.add(value);
+                }
+            }
+            variant.setValues(values);
+
+            List<ProductVariantMedia> mediaItems = new ArrayList<>();
+            if (!CollectionUtils.isEmpty(variantRequest.getMedia())) {
+                int mediaIndex = 0;
+                for (MediaSelectionRequest mediaRequest : variantRequest.getMedia()) {
+                    MediaAsset asset = toMediaAsset(mediaRequest);
+                    if (asset == null) {
+                        continue;
+                    }
+                    ProductVariantMedia media = new ProductVariantMedia();
+                    media.setVariant(variant);
+                    media.setMedia(asset);
+                    media.setDisplayOrder(mediaIndex++);
+                    mediaItems.add(media);
+                }
+            }
+            variant.setMedia(mediaItems);
+
+            product.getVariants().add(variant);
+            variantIndex++;
+        }
+    }
+
+    private void rebuildInfoSections(Product product, List<ProductInfoSectionRequest> sections) {
+        product.getInfoSections().clear();
+        if (CollectionUtils.isEmpty(sections)) {
+            return;
+        }
+        int order = 0;
+        for (ProductInfoSectionRequest sectionRequest : sections) {
+            if (sectionRequest == null || !StringUtils.hasText(sectionRequest.getTitle())) {
+                continue;
+            }
+            ProductInfoSection section = new ProductInfoSection();
+            section.setProduct(product);
+            section.setTitle(sectionRequest.getTitle().trim());
+            section.setContent(trimToNull(sectionRequest.getContent()));
+            section.setDisplayOrder(order++);
+
+            List<String> bulletPoints = new ArrayList<>();
+            if (!CollectionUtils.isEmpty(sectionRequest.getBulletPoints())) {
+                for (String bullet : sectionRequest.getBulletPoints()) {
+                    if (StringUtils.hasText(bullet)) {
+                        bulletPoints.add(bullet.trim());
+                    }
+                }
+            }
+            section.setBulletPoints(bulletPoints);
+            product.getInfoSections().add(section);
+        }
+    }
+
+    private String generateVariantSku(Product product,
+                                      ProductVariantRequest variantRequest,
+                                      Map<Long, AttributeValue> attributeValueMap,
+                                      Set<String> usedSkus,
+                                      int variantIndex) {
+        String baseSku = normalizeSku(product.getSku());
+        if (!StringUtils.hasText(baseSku) || skuGenerator.isPlaceholder(product.getSku())) {
+            baseSku = normalizeSku(product.getSlug());
+        }
+        if (!StringUtils.hasText(baseSku)) {
+            baseSku = "VAR";
+        }
+
+        List<String> segments = new ArrayList<>();
+        segments.add(baseSku);
+        if (!CollectionUtils.isEmpty(variantRequest.getAttributeValueIds())) {
+            for (Long valueId : variantRequest.getAttributeValueIds()) {
+                AttributeValue value = attributeValueMap.get(valueId);
+                if (value != null && StringUtils.hasText(value.getValue())) {
+                    segments.add(toSkuSegment(value.getValue()));
+                }
+            }
+        }
+        if (segments.size() == 1) {
+            segments.add(toSkuSegment(Integer.toString(variantIndex + 1)));
+        }
+
+        String candidate = String.join("-", segments).replaceAll("-{2,}", "-");
+        if (candidate.length() > 160) {
+            candidate = candidate.substring(0, 160);
+        }
+        String normalized = candidate;
+        int attempt = 1;
+        while (usedSkus.contains(normalized)) {
+            String suffix = "-" + Integer.toString(attempt++, 36).toUpperCase(Locale.ROOT);
+            if (candidate.length() + suffix.length() > 160) {
+                normalized = candidate.substring(0, Math.max(1, 160 - suffix.length())) + suffix;
+            } else {
+                normalized = candidate + suffix;
+            }
+        }
+        usedSkus.add(normalized);
+        return normalized;
+    }
+
+    private String toSkuSegment(String source) {
+        if (!StringUtils.hasText(source)) {
+            return "VAR";
+        }
+        String normalized = Normalizer.normalize(source, Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "")
+                .replaceAll("[^A-Za-z0-9]", "")
+                .toUpperCase(Locale.ROOT);
+        if (normalized.length() >= 4) {
+            return normalized.substring(0, 4);
+        }
+        return (normalized + "XXXX").substring(0, 4);
+    }
+
+    private void ensureUniqueSku(String sku, Long productId) {
+        if (!StringUtils.hasText(sku)) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "SKU is required");
+        }
+        boolean exists = productId == null
+                ? productRepository.existsBySkuIgnoreCase(sku)
+                : productRepository.existsBySkuIgnoreCaseAndIdNot(sku, productId);
+        if (exists) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "SKU already exists");
+        }
+    }
+
+    private void ensureUniqueSlug(String slug, Long productId) {
+        if (!StringUtils.hasText(slug)) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Slug is required");
+        }
+        boolean exists = productId == null
+                ? productRepository.existsBySlugIgnoreCase(slug)
+                : productRepository.existsBySlugIgnoreCaseAndIdNot(slug, productId);
+        if (exists) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Slug already exists");
+        }
+    }
+
+    private String normalizeSlug(String slug, String fallback) {
+        String candidate = Optional.ofNullable(slug)
+                .filter(StringUtils::hasText)
+                .map(String::trim)
+                .orElseGet(() -> Optional.ofNullable(fallback).map(String::trim).orElse(null));
+        if (!StringUtils.hasText(candidate)) {
+            candidate = "product-" + Long.toHexString(System.nanoTime());
+        }
+        String sanitized = Normalizer.normalize(candidate, Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "")
+                .toLowerCase(Locale.ROOT)
+                .replaceAll("[^a-z0-9]+", "-")
+                .replaceAll("^-+|-+$", "");
+        if (!StringUtils.hasText(sanitized)) {
+            sanitized = "product-" + Long.toHexString(System.nanoTime());
+        }
+        return sanitized.length() > 160 ? sanitized.substring(0, 160) : sanitized;
+    }
+
+    private String normalizeSku(String sku) {
+        if (!StringUtils.hasText(sku)) {
+            return "";
+        }
+        String normalized = Normalizer.normalize(sku, Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "")
+                .toUpperCase(Locale.ROOT)
+                .replaceAll("[^A-Z0-9-]", "");
+        return normalized.length() > 160 ? normalized.substring(0, 160) : normalized;
+    }
+
+    private MediaAsset toMediaAsset(MediaSelectionRequest request) {
+        if (request == null || !StringUtils.hasText(request.getUrl())) {
+            return null;
+        }
+        MediaAsset asset = new MediaAsset();
+        asset.setUrl(request.getUrl().trim());
+        asset.setStorageKey(trimToNull(request.getStorageKey()));
+        asset.setOriginalFilename(trimToNull(request.getOriginalFilename()));
+        asset.setMimeType(trimToNull(request.getMimeType()));
+        asset.setSizeBytes(request.getSizeBytes());
+        return asset;
+    }
+
+    private String trimToNull(String value) {
+        return StringUtils.hasText(value) ? value.trim() : null;
+    }
+}

@@ -1,6 +1,7 @@
 package com.example.rbac.config;
 
-import com.example.rbac.users.model.UserPrincipal;
+import com.example.rbac.admin.users.model.UserPrincipal;
+import com.example.rbac.admin.users.service.UserDetailsServiceImpl;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -19,10 +20,10 @@ import java.io.IOException;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
-    private final com.example.rbac.users.service.UserDetailsServiceImpl userDetailsService;
+    private final UserDetailsServiceImpl userDetailsService;
 
     public JwtAuthenticationFilter(JwtService jwtService,
-                                   com.example.rbac.users.service.UserDetailsServiceImpl userDetailsService) {
+                                   UserDetailsServiceImpl userDetailsService) {
         this.jwtService = jwtService;
         this.userDetailsService = userDetailsService;
     }

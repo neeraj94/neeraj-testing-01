@@ -1,4 +1,4 @@
-import api from './http';
+import { api } from './http';
 import type { AddCartItemPayload, Cart, UpdateCartItemPayload } from '../types/cart';
 
 export const fetchOwnCart = async (): Promise<Cart> => {

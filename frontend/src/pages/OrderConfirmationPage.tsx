@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import api from '../services/http';
+import { api } from '../services/http';
 import Spinner from '../components/Spinner';
 import { formatCurrency } from '../utils/currency';
 import type { OrderDetail } from '../types/orders';

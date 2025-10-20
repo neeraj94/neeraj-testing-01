@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import api from '../services/http';
+import { api } from '../services/http';
 import { useQuery } from '@tanstack/react-query';
 import type { CouponType, PublicCoupon, PublicCouponPage } from '../types/coupon';
 import { useAppSelector } from '../app/hooks';

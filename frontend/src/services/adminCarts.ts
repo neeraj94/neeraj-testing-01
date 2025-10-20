@@ -1,4 +1,4 @@
-import api from './http';
+import { adminApi } from './http';
 import type { AddCartItemPayload, AdminCartSummary, Cart, UpdateCartItemPayload } from '../types/cart';
 import type { Pagination } from '../types/models';
 
@@ -13,7 +13,7 @@ export const fetchAdminCarts = async ({
   search?: string;
   sort?: string;
 }): Promise<Pagination<AdminCartSummary>> => {
-  const { data } = await api.get<Pagination<AdminCartSummary>>('/admin/carts', {
+  const { data } = await adminApi.get<Pagination<AdminCartSummary>>('/admin/carts', {
     params: {
       page,
       size,
@@ -25,12 +25,12 @@ export const fetchAdminCarts = async ({
 };
 
 export const fetchUserCartByAdmin = async (userId: number): Promise<Cart> => {
-  const { data } = await api.get<Cart>(`/users/${userId}/cart`);
+  const { data } = await adminApi.get<Cart>(`/users/${userId}/cart`);
   return data;
 };
 
 export const addItemToUserCart = async (userId: number, payload: AddCartItemPayload): Promise<Cart> => {
-  const { data } = await api.post<Cart>(`/users/${userId}/cart/items`, payload);
+  const { data } = await adminApi.post<Cart>(`/users/${userId}/cart/items`, payload);
   return data;
 };
 
@@ -39,16 +39,16 @@ export const updateCartItemQuantity = async (
   itemId: number,
   payload: UpdateCartItemPayload
 ): Promise<Cart> => {
-  const { data } = await api.patch<Cart>(`/users/${userId}/cart/items/${itemId}`, payload);
+  const { data } = await adminApi.patch<Cart>(`/users/${userId}/cart/items/${itemId}`, payload);
   return data;
 };
 
 export const removeCartItem = async (userId: number, itemId: number): Promise<Cart> => {
-  const { data } = await api.delete<Cart>(`/users/${userId}/cart/items/${itemId}`);
+  const { data } = await adminApi.delete<Cart>(`/users/${userId}/cart/items/${itemId}`);
   return data;
 };
 
 export const clearUserCart = async (userId: number): Promise<Cart> => {
-  const { data } = await api.delete<Cart>(`/users/${userId}/cart`);
+  const { data } = await adminApi.delete<Cart>(`/users/${userId}/cart`);
   return data;
 };
