@@ -1,29 +1,29 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import PageHeader from '../components/PageHeader';
-import PageSection from '../components/PageSection';
-import PaginationControls from '../components/PaginationControls';
-import MediaLibraryDialog from '../components/MediaLibraryDialog';
-import ImagePreview from '../components/ImagePreview';
-import StarRating from '../components/StarRating';
-import { useToast } from '../components/ToastProvider';
-import { useConfirm } from '../components/ConfirmDialogProvider';
-import { useAppSelector } from '../app/hooks';
-import { hasAnyPermission } from '../utils/permissions';
-import type { PermissionKey } from '../types/auth';
-import api from '../services/http';
-import { extractErrorMessage } from '../utils/errors';
-import { formatCurrency } from '../utils/currency';
+import PageHeader from '../../components/PageHeader';
+import PageSection from '../../components/PageSection';
+import PaginationControls from '../../components/PaginationControls';
+import MediaLibraryDialog from '../../components/MediaLibraryDialog';
+import ImagePreview from '../../components/ImagePreview';
+import StarRating from '../../components/StarRating';
+import { useToast } from '../../components/ToastProvider';
+import { useConfirm } from '../../components/ConfirmDialogProvider';
+import { useAppSelector } from '../../app/hooks';
+import { hasAnyPermission } from '../../utils/permissions';
+import type { PermissionKey } from '../../types/auth';
+import api from '../../services/http';
+import { extractErrorMessage } from '../../utils/errors';
+import { formatCurrency } from '../../utils/currency';
 import type {
   ProductReviewPage,
   CreateProductReviewPayload,
   ProductDetail,
   ProductSummary,
   ProductReview
-} from '../types/product';
-import type { CategoryPage } from '../types/category';
-import type { Pagination, Customer } from '../types/models';
-import type { MediaSelection } from '../types/uploaded-file';
+} from '../../types/product';
+import type { CategoryPage } from '../../types/category';
+import type { Pagination, Customer } from '../../types/models';
+import type { MediaSelection } from '../../types/uploaded-file';
 
 interface UploadedFileUploadResponse {
   url: string;

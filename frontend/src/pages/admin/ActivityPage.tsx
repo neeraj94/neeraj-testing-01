@@ -1,18 +1,18 @@
 import { ChangeEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import DataTable from '../components/DataTable';
-import SortableColumnHeader from '../components/SortableColumnHeader';
-import ExportMenu from '../components/ExportMenu';
-import FilterDropdown from '../components/FilterDropdown';
-import api from '../services/http';
-import { useAppSelector } from '../app/hooks';
-import { hasAnyPermission } from '../utils/permissions';
-import type { PermissionKey } from '../types/auth';
-import type { ActivityFilterOptions, ActivityLogEntry, Pagination } from '../types/models';
-import { extractErrorMessage } from '../utils/errors';
-import { useToast } from '../components/ToastProvider';
-import { exportDataset, type ExportFormat } from '../utils/exporters';
+import DataTable from '../../components/DataTable';
+import SortableColumnHeader from '../../components/SortableColumnHeader';
+import ExportMenu from '../../components/ExportMenu';
+import FilterDropdown from '../../components/FilterDropdown';
+import api from '../../services/http';
+import { useAppSelector } from '../../app/hooks';
+import { hasAnyPermission } from '../../utils/permissions';
+import type { PermissionKey } from '../../types/auth';
+import type { ActivityFilterOptions, ActivityLogEntry, Pagination } from '../../types/models';
+import { extractErrorMessage } from '../../utils/errors';
+import { useToast } from '../../components/ToastProvider';
+import { exportDataset, type ExportFormat } from '../../utils/exporters';
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100];
 

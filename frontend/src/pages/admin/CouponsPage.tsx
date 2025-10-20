@@ -1,18 +1,18 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import api from '../services/http';
-import PageHeader from '../components/PageHeader';
-import PageSection from '../components/PageSection';
-import PaginationControls from '../components/PaginationControls';
-import MediaLibraryDialog from '../components/MediaLibraryDialog';
-import ImagePreview from '../components/ImagePreview';
-import { useToast } from '../components/ToastProvider';
-import { useConfirm } from '../components/ConfirmDialogProvider';
-import { useAppSelector } from '../app/hooks';
-import { hasAnyPermission } from '../utils/permissions';
-import { extractErrorMessage } from '../utils/errors';
-import type { PermissionKey } from '../types/auth';
+import api from '../../services/http';
+import PageHeader from '../../components/PageHeader';
+import PageSection from '../../components/PageSection';
+import PaginationControls from '../../components/PaginationControls';
+import MediaLibraryDialog from '../../components/MediaLibraryDialog';
+import ImagePreview from '../../components/ImagePreview';
+import { useToast } from '../../components/ToastProvider';
+import { useConfirm } from '../../components/ConfirmDialogProvider';
+import { useAppSelector } from '../../app/hooks';
+import { hasAnyPermission } from '../../utils/permissions';
+import { extractErrorMessage } from '../../utils/errors';
+import type { PermissionKey } from '../../types/auth';
 import type {
   CouponCategorySummary,
   CouponDetail,
@@ -24,9 +24,9 @@ import type {
   CouponType,
   CouponUserSummary,
   SaveCouponPayload
-} from '../types/coupon';
-import type { DiscountType } from '../types/product';
-import type { MediaSelection } from '../types/uploaded-file';
+} from '../../types/coupon';
+import type { DiscountType } from '../../types/product';
+import type { MediaSelection } from '../../types/uploaded-file';
 
 const DEFAULT_PAGE_SIZE = 12;
 const PAGE_SIZE_OPTIONS = [6, 12, 24];

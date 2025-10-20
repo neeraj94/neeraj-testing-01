@@ -1,24 +1,24 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import PageHeader from '../components/PageHeader';
-import PageSection from '../components/PageSection';
-import PaginationControls from '../components/PaginationControls';
-import MediaLibraryDialog from '../components/MediaLibraryDialog';
-import RichTextEditor from '../components/RichTextEditor';
-import TagsInput from '../components/TagsInput';
-import StarRating from '../components/StarRating';
-import ImagePreview from '../components/ImagePreview';
-import { useToast } from '../components/ToastProvider';
-import { useConfirm } from '../components/ConfirmDialogProvider';
-import { useAppSelector } from '../app/hooks';
-import { hasAnyPermission } from '../utils/permissions';
-import type { PermissionKey } from '../types/auth';
-import api from '../services/http';
-import type { BrandPage } from '../types/brand';
-import type { Category, CategoryPage } from '../types/category';
-import type { TaxRatePage } from '../types/tax-rate';
-import type { Attribute, AttributePage, AttributeValue } from '../types/attribute';
-import type { MediaSelection } from '../types/uploaded-file';
+import PageHeader from '../../components/PageHeader';
+import PageSection from '../../components/PageSection';
+import PaginationControls from '../../components/PaginationControls';
+import MediaLibraryDialog from '../../components/MediaLibraryDialog';
+import RichTextEditor from '../../components/RichTextEditor';
+import TagsInput from '../../components/TagsInput';
+import StarRating from '../../components/StarRating';
+import ImagePreview from '../../components/ImagePreview';
+import { useToast } from '../../components/ToastProvider';
+import { useConfirm } from '../../components/ConfirmDialogProvider';
+import { useAppSelector } from '../../app/hooks';
+import { hasAnyPermission } from '../../utils/permissions';
+import type { PermissionKey } from '../../types/auth';
+import api from '../../services/http';
+import type { BrandPage } from '../../types/brand';
+import type { Category, CategoryPage } from '../../types/category';
+import type { TaxRatePage } from '../../types/tax-rate';
+import type { Attribute, AttributePage, AttributeValue } from '../../types/attribute';
+import type { MediaSelection } from '../../types/uploaded-file';
 import type {
   CreateProductPayload,
   CreateProductReviewPayload,
@@ -29,9 +29,9 @@ import type {
   ProductSummary,
   ProductSummaryPage,
   StockVisibilityState
-} from '../types/product';
-import { extractErrorMessage } from '../utils/errors';
-import { formatCurrency } from '../utils/currency';
+} from '../../types/product';
+import { extractErrorMessage } from '../../utils/errors';
+import { formatCurrency } from '../../utils/currency';
 
 interface ProductFormState {
   name: string;

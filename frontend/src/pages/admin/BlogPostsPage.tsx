@@ -1,19 +1,19 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import api from '../services/http';
-import type { BlogCategory, BlogMediaUploadResponse, BlogPost, BlogPostPage } from '../types/blog';
-import { useToast } from '../components/ToastProvider';
-import { useConfirm } from '../components/ConfirmDialogProvider';
-import { useAppSelector } from '../app/hooks';
-import { hasAnyPermission } from '../utils/permissions';
-import type { PermissionKey } from '../types/auth';
-import { extractErrorMessage } from '../utils/errors';
-import RichTextEditor from '../components/RichTextEditor';
-import PageHeader from '../components/PageHeader';
-import PageSection from '../components/PageSection';
-import PaginationControls from '../components/PaginationControls';
-import MediaLibraryDialog from '../components/MediaLibraryDialog';
-import type { MediaSelection } from '../types/uploaded-file';
+import api from '../../services/http';
+import type { BlogCategory, BlogMediaUploadResponse, BlogPost, BlogPostPage } from '../../types/blog';
+import { useToast } from '../../components/ToastProvider';
+import { useConfirm } from '../../components/ConfirmDialogProvider';
+import { useAppSelector } from '../../app/hooks';
+import { hasAnyPermission } from '../../utils/permissions';
+import type { PermissionKey } from '../../types/auth';
+import { extractErrorMessage } from '../../utils/errors';
+import RichTextEditor from '../../components/RichTextEditor';
+import PageHeader from '../../components/PageHeader';
+import PageSection from '../../components/PageSection';
+import PaginationControls from '../../components/PaginationControls';
+import MediaLibraryDialog from '../../components/MediaLibraryDialog';
+import type { MediaSelection } from '../../types/uploaded-file';
 
 interface PostFormState {
   title: string;
