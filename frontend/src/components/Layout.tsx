@@ -5,7 +5,7 @@ import { logout } from '../features/auth/authSlice';
 import { selectApplicationName } from '../features/settings/selectors';
 import { hasAnyPermission } from '../utils/permissions';
 import type { PermissionKey } from '../types/auth';
-import api from '../services/http';
+import { adminApi } from '../services/http';
 import { DEFAULT_NAVIGATION_MENU } from '../constants/navigation';
 import type { NavigationNode, NavigationResponse } from '../types/navigation';
 
@@ -103,7 +103,7 @@ const Layout = () => {
     let active = true;
     const loadNavigation = async () => {
       try {
-        const { data } = await api.get<NavigationResponse>('/navigation/menu');
+        const { data } = await adminApi.get<NavigationResponse>('/navigation/menu');
         if (!active) {
           return;
         }
@@ -305,7 +305,7 @@ const Layout = () => {
   const handleLogout = async () => {
     if (refreshToken) {
       try {
-        await api.post('/auth/logout', { refreshToken });
+        await adminApi.post('/auth/logout', { refreshToken });
       } catch (error) {
         // ignore logout errors
       }

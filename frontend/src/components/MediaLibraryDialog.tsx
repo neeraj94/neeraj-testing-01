@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { useQuery } from '@tanstack/react-query';
-import api from '../services/http';
+import { adminApi } from '../services/http';
 import type {
   MediaSelection,
   UploadedFile,
@@ -83,7 +83,7 @@ const MediaLibraryDialog = ({
   const { data: moduleOptions } = useQuery<UploadedFileModuleOption[]>({
     queryKey: ['uploaded-files', 'modules'],
     queryFn: async () => {
-      const { data } = await api.get<UploadedFileModuleOption[]>('/uploaded-files/modules');
+      const { data } = await adminApi.get<UploadedFileModuleOption[]>('/uploaded-files/modules');
       return data;
     },
     enabled: open
@@ -92,7 +92,7 @@ const MediaLibraryDialog = ({
   const { data: uploaderOptions } = useQuery<UploadedFileUploaderOption[]>({
     queryKey: ['uploaded-files', 'uploaders'],
     queryFn: async () => {
-      const { data } = await api.get<UploadedFileUploaderOption[]>('/uploaded-files/uploaders');
+      const { data } = await adminApi.get<UploadedFileUploaderOption[]>('/uploaded-files/uploaders');
       return data;
     },
     enabled: open
@@ -122,7 +122,7 @@ const MediaLibraryDialog = ({
       if (uploader) params.uploadedBy = uploader;
       if (from) params.from = from;
       if (to) params.to = to;
-      const { data } = await api.get<UploadedFilePage>('/uploaded-files', { params });
+      const { data } = await adminApi.get<UploadedFilePage>('/uploaded-files', { params });
       return data;
     },
     enabled: open
