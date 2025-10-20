@@ -1,14 +1,14 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import api from '../services/http';
-import { useAppSelector, useAppDispatch } from '../app/hooks';
-import { loadCurrentUser } from '../features/auth/authSlice';
-import { useToast } from '../components/ToastProvider';
-import { extractErrorMessage } from '../utils/errors';
-import MediaLibraryDialog from '../components/MediaLibraryDialog';
-import ImagePreview from '../components/ImagePreview';
-import type { MediaSelection } from '../types/uploaded-file';
-import type { CheckoutAddress } from '../types/checkout';
+import { adminApi } from '../../services/http';
+import { useAppSelector, useAppDispatch } from '../../app/hooks';
+import { loadCurrentUser } from '../../features/auth/authSlice';
+import { useToast } from '../../components/ToastProvider';
+import { extractErrorMessage } from '../../utils/errors';
+import MediaLibraryDialog from '../../components/MediaLibraryDialog';
+import ImagePreview from '../../components/ImagePreview';
+import type { MediaSelection } from '../../types/uploaded-file';
+import type { CheckoutAddress } from '../../types/checkout';
 
 interface UploadedFileUploadResponse {
   url: string;
@@ -45,7 +45,7 @@ const ProfilePage = () => {
     queryKey: ['profile', 'addresses'],
     enabled: Boolean(user?.id),
     queryFn: async () => {
-      const { data } = await api.get<CheckoutAddress[]>('/checkout/addresses');
+      const { data } = await adminApi.get<CheckoutAddress[]>('/checkout/addresses');
       return data;
     }
   });
@@ -121,7 +121,7 @@ const ProfilePage = () => {
     formData.append('module', 'USER_PROFILE');
 
     try {
-      const { data } = await api.post<UploadedFileUploadResponse[]>('/uploaded-files/upload', formData, {
+      const { data } = await adminApi.post<UploadedFileUploadResponse[]>('/uploaded-files/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       const selections = (data ?? [])
@@ -184,7 +184,7 @@ const ProfilePage = () => {
         newPassword: newPassword ? newPassword : undefined,
         confirmNewPassword: confirmPassword ? confirmPassword : undefined
       };
-      await api.put('/profile', payload);
+      await adminApi.put('/profile', payload);
     },
     onSuccess: () => {
       setForm((prev) => ({

@@ -1,20 +1,20 @@
 import { Fragment, useEffect, useMemo, useState } from 'react';
-import { useAppDispatch, useAppSelector } from '../app/hooks';
-import { fetchSettings, updateSettings } from '../features/settings/settingsSlice';
+import { useAppDispatch, useAppSelector } from '../../app/hooks';
+import { fetchSettings, updateSettings } from '../../features/settings/settingsSlice';
 import {
   selectPrimaryColor,
   selectSettingsCategories,
   selectSettingsError,
   selectSettingsStatus
-} from '../features/settings/selectors';
-import type { SettingItem, SettingsCategory, SettingsSection, SettingUpdatePayload } from '../types/settings';
-import { useToast } from '../components/ToastProvider';
-import { normalizeHexColor } from '../utils/colors';
-import { extractErrorMessage } from '../utils/errors';
-import api from '../services/http';
-import EmailTemplatesPanel from '../components/settings/EmailTemplatesPanel';
-import PageHeader from '../components/PageHeader';
-import PageSection from '../components/PageSection';
+} from '../../features/settings/selectors';
+import type { SettingItem, SettingsCategory, SettingsSection, SettingUpdatePayload } from '../../types/settings';
+import { useToast } from '../../components/ToastProvider';
+import { normalizeHexColor } from '../../utils/colors';
+import { extractErrorMessage } from '../../utils/errors';
+import { adminApi } from '../../services/http';
+import EmailTemplatesPanel from '../../components/settings/EmailTemplatesPanel';
+import PageHeader from '../../components/PageHeader';
+import PageSection from '../../components/PageSection';
 
 type SettingFormValue = string | boolean;
 
@@ -323,7 +323,7 @@ const SettingsPage = () => {
 
     setIsSendingTest(true);
     try {
-      await api.post('/settings/email/test', { recipient });
+      await adminApi.post('/settings/email/test', { recipient });
       notify({ type: 'success', message: 'Test email sent successfully.' });
     } catch (error) {
       notify({

@@ -1,17 +1,17 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import api from '../services/http';
-import type { Pagination, Permission } from '../types/models';
-import SortableColumnHeader from '../components/SortableColumnHeader';
-import { useAppSelector } from '../app/hooks';
-import type { PermissionKey } from '../types/auth';
-import { hasAnyPermission } from '../utils/permissions';
-import ExportMenu from '../components/ExportMenu';
-import { exportDataset, type ExportFormat } from '../utils/exporters';
-import { useToast } from '../components/ToastProvider';
-import PageHeader from '../components/PageHeader';
-import PageSection from '../components/PageSection';
-import PaginationControls from '../components/PaginationControls';
+import { adminApi } from '../../services/http';
+import type { Pagination, Permission } from '../../types/models';
+import SortableColumnHeader from '../../components/SortableColumnHeader';
+import { useAppSelector } from '../../app/hooks';
+import type { PermissionKey } from '../../types/auth';
+import { hasAnyPermission } from '../../utils/permissions';
+import ExportMenu from '../../components/ExportMenu';
+import { exportDataset, type ExportFormat } from '../../utils/exporters';
+import { useToast } from '../../components/ToastProvider';
+import PageHeader from '../../components/PageHeader';
+import PageSection from '../../components/PageSection';
+import PaginationControls from '../../components/PaginationControls';
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100];
 
@@ -48,7 +48,7 @@ const PermissionsPage = () => {
   } = useQuery<Permission[]>({
     queryKey: ['permissions', 'all'],
     queryFn: async () => {
-      const { data } = await api.get<Pagination<Permission>>('/permissions?size=500');
+      const { data } = await adminApi.get<Pagination<Permission>>('/permissions?size=500');
       return data.content;
     }
   });

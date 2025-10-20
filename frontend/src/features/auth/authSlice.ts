@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit';
-import api from '../../services/http';
+import { adminApi } from '../../services/http';
 import type { AuthResponse, UserSummary } from '../../types/auth';
 import { safeLocalStorage } from '../../utils/storage';
 
@@ -35,7 +35,7 @@ export const login = createAsyncThunk<
   { rejectValue: string }
 >('auth/login', async (credentials, { rejectWithValue }) => {
   try {
-    const { data } = await api.post<AuthResponse>('/auth/login', credentials);
+    const { data } = await adminApi.post<AuthResponse>('/auth/login', credentials);
     return data;
   } catch (error) {
     if (axios.isAxiosError(error)) {
@@ -53,13 +53,13 @@ export const login = createAsyncThunk<
 export const signup = createAsyncThunk<AuthResponse, { email: string; password: string; firstName: string; lastName: string }>(
   'auth/signup',
   async (payload) => {
-    const { data } = await api.post<AuthResponse>('/auth/signup', payload);
+    const { data } = await adminApi.post<AuthResponse>('/auth/signup', payload);
     return data;
   }
 );
 
 export const loadCurrentUser = createAsyncThunk<UserSummary>('auth/me', async () => {
-  const { data } = await api.get<UserSummary>('/auth/me');
+  const { data } = await adminApi.get<UserSummary>('/auth/me');
   return data;
 });
 

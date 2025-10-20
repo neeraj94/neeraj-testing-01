@@ -1,15 +1,15 @@
 import { FormEvent, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import api from '../services/http';
-import DataTable from '../components/DataTable';
-import type { Customer, Pagination } from '../types/models';
-import { useAppSelector } from '../app/hooks';
-import type { PermissionKey } from '../types/auth';
-import { hasAnyPermission } from '../utils/permissions';
-import { useToast } from '../components/ToastProvider';
-import { extractErrorMessage } from '../utils/errors';
-import ExportMenu from '../components/ExportMenu';
-import { exportDataset, type ExportFormat } from '../utils/exporters';
+import { adminApi } from '../../services/http';
+import DataTable from '../../components/DataTable';
+import type { Customer, Pagination } from '../../types/models';
+import { useAppSelector } from '../../app/hooks';
+import type { PermissionKey } from '../../types/auth';
+import { hasAnyPermission } from '../../utils/permissions';
+import { useToast } from '../../components/ToastProvider';
+import { extractErrorMessage } from '../../utils/errors';
+import ExportMenu from '../../components/ExportMenu';
+import { exportDataset, type ExportFormat } from '../../utils/exporters';
 
 const CustomersPage = () => {
   const { permissions } = useAppSelector((state) => state.auth);
@@ -26,7 +26,7 @@ const CustomersPage = () => {
   } = useQuery<Customer[]>({
     queryKey: ['customers', 'all'],
     queryFn: async () => {
-      const { data } = await api.get<Pagination<Customer>>('/customers');
+      const { data } = await adminApi.get<Pagination<Customer>>('/customers');
       return data.content;
     }
   });
@@ -37,7 +37,7 @@ const CustomersPage = () => {
 
   const createCustomer = useMutation({
     mutationFn: async () => {
-      await api.post('/customers', form);
+      await adminApi.post('/customers', form);
     },
     onSuccess: () => {
       setForm({ name: '', email: '', phone: '', address: '' });
@@ -52,7 +52,7 @@ const CustomersPage = () => {
 
   const deleteCustomer = useMutation<void, unknown, number>({
     mutationFn: async (id: number) => {
-      await api.delete(`/customers/${id}`);
+      await adminApi.delete(`/customers/${id}`);
     },
     onSuccess: () => {
       notify({ type: 'success', message: 'Customer removed.' });

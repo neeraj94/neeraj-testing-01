@@ -1,11 +1,11 @@
 import { Dispatch, FormEvent, Fragment, SetStateAction, useCallback, useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import type { AxiosError } from 'axios';
-import api from '../services/http';
-import type { Pagination, Permission, Role } from '../types/models';
-import type { PermissionKey } from '../types/auth';
-import { useToast } from '../components/ToastProvider';
-import { useConfirm } from '../components/ConfirmDialogProvider';
+import { adminApi } from '../../services/http';
+import type { Pagination, Permission, Role } from '../../types/models';
+import type { PermissionKey } from '../../types/auth';
+import { useToast } from '../../components/ToastProvider';
+import { useConfirm } from '../../components/ConfirmDialogProvider';
 import {
   CAPABILITY_COLUMNS,
   PERMISSION_AUDIENCE_HEADERS,
@@ -13,16 +13,16 @@ import {
   type PermissionGroup,
   type PermissionOption,
   buildPermissionGroups
-} from '../utils/permissionGroups';
-import type { PublicEndpoint } from '../types/system';
-import SortableColumnHeader from '../components/SortableColumnHeader';
-import { useAppSelector } from '../app/hooks';
-import { hasAnyPermission } from '../utils/permissions';
-import ExportMenu from '../components/ExportMenu';
-import { exportDataset, type ExportFormat } from '../utils/exporters';
-import PageHeader from '../components/PageHeader';
-import PageSection from '../components/PageSection';
-import PaginationControls from '../components/PaginationControls';
+} from '../../utils/permissionGroups';
+import type { PublicEndpoint } from '../../types/system';
+import SortableColumnHeader from '../../components/SortableColumnHeader';
+import { useAppSelector } from '../../app/hooks';
+import { hasAnyPermission } from '../../utils/permissions';
+import ExportMenu from '../../components/ExportMenu';
+import { exportDataset, type ExportFormat } from '../../utils/exporters';
+import PageHeader from '../../components/PageHeader';
+import PageSection from '../../components/PageSection';
+import PaginationControls from '../../components/PaginationControls';
 
 const CUSTOMER_ROLE_KEY = 'CUSTOMER';
 
@@ -482,7 +482,7 @@ const RolesPage = () => {
         sort: serverSortField,
         direction
       });
-      const { data } = await api.get<Pagination<Role>>(`/roles?${params.toString()}`);
+      const { data } = await adminApi.get<Pagination<Role>>(`/roles?${params.toString()}`);
       return data;
     }
   });
@@ -492,7 +492,7 @@ const RolesPage = () => {
   } = useQuery<Permission[]>({
     queryKey: ['permissions', 'options'],
     queryFn: async () => {
-      const { data } = await api.get<Pagination<Permission>>('/permissions?size=500');
+      const { data } = await adminApi.get<Pagination<Permission>>('/permissions?size=500');
       return data.content;
     }
   });
@@ -500,7 +500,7 @@ const RolesPage = () => {
   const { data: defaultPermissions = [] } = useQuery<Permission[]>({
     queryKey: ['permissions', 'defaults'],
     queryFn: async () => {
-      const { data } = await api.get<Permission[]>('/permissions/defaults');
+      const { data } = await adminApi.get<Permission[]>('/permissions/defaults');
       return data;
     }
   });
@@ -517,7 +517,7 @@ const RolesPage = () => {
   const { data: publicEndpoints = [] } = useQuery<PublicEndpoint[]>({
     queryKey: ['system', 'public-endpoints'],
     queryFn: async () => {
-      const { data } = await api.get<PublicEndpoint[]>('/system/public-endpoints');
+      const { data } = await adminApi.get<PublicEndpoint[]>('/system/public-endpoints');
       return data;
     }
   });
@@ -661,7 +661,7 @@ const RolesPage = () => {
 
     do {
       const params = { ...baseParams, page: pageIndex };
-      const { data } = await api.get<Pagination<Role>>('/roles', { params });
+      const { data } = await adminApi.get<Pagination<Role>>('/roles', { params });
       aggregated.push(...(data.content ?? []));
       totalPagesCount = data.totalPages ?? 1;
       pageIndex += 1;
@@ -758,9 +758,9 @@ const RolesPage = () => {
 
   const createRole = useMutation({
     mutationFn: async (payload: { key: string; name: string; permissionIds: number[] }) => {
-      const { data } = await api.post<Role>('/roles', { key: payload.key, name: payload.name });
+      const { data } = await adminApi.post<Role>('/roles', { key: payload.key, name: payload.name });
       if (payload.permissionIds.length) {
-        await api.post(`/roles/${data.id}/permissions`, { permissionIds: payload.permissionIds });
+        await adminApi.post(`/roles/${data.id}/permissions`, { permissionIds: payload.permissionIds });
       }
       return data;
     },
@@ -779,8 +779,8 @@ const RolesPage = () => {
 
   const updateRole = useMutation({
     mutationFn: async (payload: { id: number; key: string; name: string; permissionIds: number[] }) => {
-      await api.put(`/roles/${payload.id}`, { key: payload.key, name: payload.name });
-      await api.post(`/roles/${payload.id}/permissions`, { permissionIds: payload.permissionIds });
+      await adminApi.put(`/roles/${payload.id}`, { key: payload.key, name: payload.name });
+      await adminApi.post(`/roles/${payload.id}/permissions`, { permissionIds: payload.permissionIds });
     },
     onSuccess: () => {
       setEditingRole(null);
@@ -798,7 +798,7 @@ const RolesPage = () => {
 
   const deleteRole = useMutation({
     mutationFn: async (id: number) => {
-      await api.delete(`/roles/${id}`);
+      await adminApi.delete(`/roles/${id}`);
     },
     onSuccess: () => {
       if (editingRole) {
