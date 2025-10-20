@@ -1,14 +1,7 @@
-<<<<<<<< HEAD:backend/src/main/java/com/example/rbac/client/checkout/service/PaymentMethodService.java
 package com.example.rbac.client.checkout.service;
 
 import com.example.rbac.client.checkout.dto.PaymentMethodDto;
 import com.example.rbac.client.checkout.dto.PaymentMethodSettingsRequest;
-========
-package com.example.rbac.admin.checkout.service;
-
-import com.example.rbac.admin.checkout.dto.PaymentMethodDto;
-import com.example.rbac.admin.checkout.dto.PaymentMethodSettingsRequest;
->>>>>>>> origin/main:backend/src/main/java/com/example/rbac/admin/checkout/service/PaymentMethodService.java
 import com.example.rbac.common.exception.ApiException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;

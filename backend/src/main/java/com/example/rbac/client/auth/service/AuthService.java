@@ -1,4 +1,3 @@
-<<<<<<<< HEAD:backend/src/main/java/com/example/rbac/client/auth/service/AuthService.java
 package com.example.rbac.client.auth.service;
 
 import com.example.rbac.admin.activity.service.ActivityRecorder;
@@ -10,19 +9,6 @@ import com.example.rbac.client.auth.dto.VerificationRequest;
 import com.example.rbac.client.auth.dto.VerificationResponse;
 import com.example.rbac.client.auth.token.RefreshToken;
 import com.example.rbac.client.auth.token.RefreshTokenRepository;
-========
-package com.example.rbac.admin.auth.service;
-
-import com.example.rbac.admin.activity.service.ActivityRecorder;
-import com.example.rbac.admin.auth.dto.AuthResponse;
-import com.example.rbac.admin.auth.dto.LoginRequest;
-import com.example.rbac.admin.auth.dto.RefreshTokenRequest;
-import com.example.rbac.admin.auth.dto.SignupRequest;
-import com.example.rbac.admin.auth.dto.VerificationRequest;
-import com.example.rbac.admin.auth.dto.VerificationResponse;
-import com.example.rbac.admin.auth.token.RefreshToken;
-import com.example.rbac.admin.auth.token.RefreshTokenRepository;
->>>>>>>> origin/main:backend/src/main/java/com/example/rbac/admin/auth/service/AuthService.java
 import com.example.rbac.common.exception.ApiException;
 import com.example.rbac.config.JwtService;
 import com.example.rbac.admin.settings.service.SettingsService;

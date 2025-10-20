@@ -1,12 +1,6 @@
-<<<<<<<< HEAD:backend/src/main/java/com/example/rbac/client/checkout/model/CheckoutAddress.java
 package com.example.rbac.client.checkout.model;
 
 import com.example.rbac.client.checkout.dto.CheckoutAddressType;
-========
-package com.example.rbac.admin.checkout.model;
-
-import com.example.rbac.admin.checkout.dto.CheckoutAddressType;
->>>>>>>> origin/main:backend/src/main/java/com/example/rbac/admin/checkout/model/CheckoutAddress.java
 import com.example.rbac.admin.shipping.model.ShippingCity;
 import com.example.rbac.admin.shipping.model.ShippingCountry;
 import com.example.rbac.admin.shipping.model.ShippingState;
