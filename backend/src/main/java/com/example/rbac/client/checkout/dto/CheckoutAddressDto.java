@@ -1,8 +1,4 @@
-<<<<<<<< HEAD:backend/src/main/java/com/example/rbac/client/checkout/dto/CheckoutAddressDto.java
 package com.example.rbac.client.checkout.dto;
-========
-package com.example.rbac.admin.checkout.dto;
->>>>>>>> origin/main:backend/src/main/java/com/example/rbac/admin/checkout/dto/CheckoutAddressDto.java
 
 import java.time.Instant;
 

@@ -1,4 +1,3 @@
-<<<<<<<< HEAD:backend/src/main/java/com/example/rbac/client/checkout/service/CheckoutService.java
 package com.example.rbac.client.checkout.service;
 
 import com.example.rbac.client.cart.model.Cart;
@@ -22,31 +21,6 @@ import com.example.rbac.admin.finance.taxrate.model.TaxRate;
 import com.example.rbac.admin.finance.taxrate.model.TaxRateType;
 import com.example.rbac.client.shipping.dto.ShippingOptionDto;
 import com.example.rbac.client.shipping.dto.ShippingRateQuoteDto;
-========
-package com.example.rbac.admin.checkout.service;
-
-import com.example.rbac.admin.cart.model.Cart;
-import com.example.rbac.admin.cart.model.CartItem;
-import com.example.rbac.admin.cart.repository.CartRepository;
-import com.example.rbac.admin.checkout.dto.AppliedCouponDto;
-import com.example.rbac.admin.checkout.dto.CheckoutAddressDto;
-import com.example.rbac.admin.checkout.dto.CheckoutAddressRequest;
-import com.example.rbac.admin.checkout.dto.CheckoutOrderLineRequest;
-import com.example.rbac.admin.checkout.dto.CheckoutOrderRequest;
-import com.example.rbac.admin.checkout.dto.CheckoutOrderResponse;
-import com.example.rbac.admin.checkout.dto.CheckoutSummaryDto;
-import com.example.rbac.admin.checkout.dto.OrderDetailDto;
-import com.example.rbac.admin.checkout.dto.OrderListItemDto;
-import com.example.rbac.admin.checkout.dto.OrderSummaryDto;
-import com.example.rbac.admin.checkout.dto.OrderTaxLineDto;
-import com.example.rbac.admin.checkout.dto.PaymentMethodDto;
-import com.example.rbac.admin.checkout.dto.PaymentMethodSettingsRequest;
-import com.example.rbac.common.exception.ApiException;
-import com.example.rbac.admin.finance.taxrate.model.TaxRate;
-import com.example.rbac.admin.finance.taxrate.model.TaxRateType;
-import com.example.rbac.admin.shipping.dto.ShippingOptionDto;
-import com.example.rbac.admin.shipping.dto.ShippingRateQuoteDto;
->>>>>>>> origin/main:backend/src/main/java/com/example/rbac/admin/checkout/service/CheckoutService.java
 import com.example.rbac.admin.shipping.service.ShippingLocationService;
 import com.example.rbac.admin.users.model.User;
 import com.example.rbac.admin.users.model.UserPrincipal;

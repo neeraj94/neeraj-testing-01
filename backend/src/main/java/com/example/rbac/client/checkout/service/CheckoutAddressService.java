@@ -1,4 +1,3 @@
-<<<<<<<< HEAD:backend/src/main/java/com/example/rbac/client/checkout/service/CheckoutAddressService.java
 package com.example.rbac.client.checkout.service;
 
 import com.example.rbac.client.checkout.dto.CheckoutAddressDto;
@@ -6,15 +5,6 @@ import com.example.rbac.client.checkout.dto.CheckoutAddressRequest;
 import com.example.rbac.client.checkout.dto.CheckoutAddressType;
 import com.example.rbac.client.checkout.model.CheckoutAddress;
 import com.example.rbac.client.checkout.repository.CheckoutAddressRepository;
-========
-package com.example.rbac.admin.checkout.service;
-
-import com.example.rbac.admin.checkout.dto.CheckoutAddressDto;
-import com.example.rbac.admin.checkout.dto.CheckoutAddressRequest;
-import com.example.rbac.admin.checkout.dto.CheckoutAddressType;
-import com.example.rbac.admin.checkout.model.CheckoutAddress;
-import com.example.rbac.admin.checkout.repository.CheckoutAddressRepository;
->>>>>>>> origin/main:backend/src/main/java/com/example/rbac/admin/checkout/service/CheckoutAddressService.java
 import com.example.rbac.common.exception.ApiException;
 import com.example.rbac.admin.shipping.model.ShippingCity;
 import com.example.rbac.admin.shipping.model.ShippingCountry;

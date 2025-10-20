@@ -1,14 +1,7 @@
-<<<<<<<< HEAD:backend/src/main/java/com/example/rbac/client/checkout/repository/CheckoutAddressRepository.java
 package com.example.rbac.client.checkout.repository;
 
 import com.example.rbac.client.checkout.dto.CheckoutAddressType;
 import com.example.rbac.client.checkout.model.CheckoutAddress;
-========
-package com.example.rbac.admin.checkout.repository;
-
-import com.example.rbac.admin.checkout.dto.CheckoutAddressType;
-import com.example.rbac.admin.checkout.model.CheckoutAddress;
->>>>>>>> origin/main:backend/src/main/java/com/example/rbac/admin/checkout/repository/CheckoutAddressRepository.java
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
