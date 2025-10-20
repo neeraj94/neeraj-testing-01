@@ -22,7 +22,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/api/publicapi/products")
+@RequestMapping("/api/public/products")
 public class PublicProductController {
 
     private final PublicProductService publicProductService;

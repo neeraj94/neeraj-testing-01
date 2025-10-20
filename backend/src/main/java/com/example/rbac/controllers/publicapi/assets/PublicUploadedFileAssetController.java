@@ -14,7 +14,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 
 @RestController
-@RequestMapping("/api/publicapi/uploaded-files/assets")
+@RequestMapping("/api/public/uploaded-files/assets")
 public class PublicUploadedFileAssetController {
 
     private final UploadedFileStorageService storageService;

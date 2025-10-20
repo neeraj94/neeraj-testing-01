@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/publicapi/catalog")
+@RequestMapping("/api/public/catalog")
 public class PublicCatalogController {
 
     private final CategoryService categoryService;
