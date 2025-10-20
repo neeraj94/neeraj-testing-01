@@ -35,7 +35,7 @@ public class CustomerService {
         this.activityRecorder = activityRecorder;
     }
 
-    @PreAuthorize("hasAnyAuthority('USER_VIEW','USER_VIEW_GLOBAL','USER_VIEW_OWN')")
+    @PreAuthorize("hasAnyAuthority('USER_VIEW','USER_VIEW_GLOBAL')")
     public PageResponse<CustomerDto> list(int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
         Page<CustomerDto> result = customerRepository.findAll(pageable).map(customerMapper::toDto);
@@ -57,7 +57,7 @@ public class CustomerService {
         return dto;
     }
 
-    @PreAuthorize("hasAnyAuthority('USER_VIEW','USER_VIEW_GLOBAL','USER_VIEW_OWN')")
+    @PreAuthorize("hasAnyAuthority('USER_VIEW','USER_VIEW_GLOBAL')")
     public CustomerDto get(Long id) {
         Customer customer = customerRepository.findById(id)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Customer not found"));

@@ -264,7 +264,7 @@ public class SetupService {
                             "Users",
                             "👥",
                             "/admin/users",
-                            List.of("USER_VIEW", "USER_VIEW_GLOBAL", "USER_VIEW_OWN", "USER_CREATE", "USER_UPDATE", "USER_DELETE")
+                            List.of("USER_VIEW", "USER_VIEW_GLOBAL", "USER_CREATE", "USER_UPDATE", "USER_DELETE")
                     ),
                     MenuDefinition.item(
                             "roles",

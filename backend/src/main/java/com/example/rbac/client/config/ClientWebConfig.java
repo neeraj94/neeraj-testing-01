@@ -12,7 +12,7 @@ public class ClientWebConfig implements WebMvcConfigurer {
 
     @Override
     public void configurePathMatch(PathMatchConfigurer configurer) {
-        configurer.addPathPrefix("/api/v1/client", handlerType -> {
+        configurer.addPathPrefix("/api/v1", handlerType -> {
             String packageName = handlerType.getPackageName();
             return packageName.startsWith(CLIENT_BASE_PACKAGE)
                     && !packageName.startsWith(CONFIG_PACKAGE);

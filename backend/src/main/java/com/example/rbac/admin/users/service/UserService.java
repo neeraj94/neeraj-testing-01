@@ -47,7 +47,7 @@ public class UserService {
 
     private static final String CUSTOMER_ROLE_KEY = "CUSTOMER";
 
-    private static final String USER_VIEW_AUTHORITY = "hasAnyAuthority('USER_VIEW','USER_VIEW_GLOBAL','USER_VIEW_OWN')";
+    private static final String USER_VIEW_AUTHORITY = "hasAnyAuthority('USER_VIEW','USER_VIEW_GLOBAL')";
     private static final String USER_CREATE_AUTHORITY = "hasAuthority('USER_CREATE')";
     private static final String USER_UPDATE_AUTHORITY = "hasAuthority('USER_UPDATE')";
     private static final String USER_DELETE_AUTHORITY = "hasAuthority('USER_DELETE')";

@@ -24,7 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("/checkout")
+@RequestMapping("/client/checkout")
 public class CheckoutController {
 
     private final CheckoutService checkoutService;
