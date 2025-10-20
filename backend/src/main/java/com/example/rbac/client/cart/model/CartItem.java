@@ -1,8 +1,4 @@
-<<<<<<<< HEAD:backend/src/main/java/com/example/rbac/client/cart/model/CartItem.java
 package com.example.rbac.client.cart.model;
-========
-package com.example.rbac.admin.cart.model;
->>>>>>>> origin/main:backend/src/main/java/com/example/rbac/admin/cart/model/CartItem.java
 
 import com.example.rbac.admin.products.model.Product;
 import com.example.rbac.admin.products.model.ProductVariant;

@@ -1,8 +1,4 @@
-<<<<<<<< HEAD:backend/src/main/java/com/example/rbac/client/auth/token/RefreshTokenRepository.java
 package com.example.rbac.client.auth.token;
-========
-package com.example.rbac.admin.auth.token;
->>>>>>>> origin/main:backend/src/main/java/com/example/rbac/admin/auth/token/RefreshTokenRepository.java
 
 import com.example.rbac.admin.users.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
