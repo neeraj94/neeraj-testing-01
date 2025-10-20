@@ -8,6 +8,7 @@ public final class PublicEndpointRegistry {
 
     private static final List<PublicEndpointDefinition> PUBLIC_ENDPOINTS = List.of(
             new PublicEndpointDefinition(null, "/api/v1/auth/**", "Authentication entry points (login, logout, refresh, register)"),
+            new PublicEndpointDefinition(null, "/api/v1/admin/auth/**", "Admin authentication entry points"),
             new PublicEndpointDefinition(null, "/api/v1/settings/theme", "Public storefront theming"),
             new PublicEndpointDefinition(null, "/swagger-ui.html", "OpenAPI UI entry point"),
             new PublicEndpointDefinition(null, "/swagger-ui/**", "OpenAPI UI assets"),

@@ -1,4 +1,4 @@
-import api from '../services/http';
+import { api } from '../services/http';
 
 const WINDOW_ORIGIN = typeof window !== 'undefined' ? window.location.origin : '';
 

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import api from '../services/http';
+import { api } from '../services/http';
 import type { PublicCategory } from '../types/category';
 import type { PublicBrand } from '../types/brand';
 import StorefrontHeader from '../components/StorefrontHeader';

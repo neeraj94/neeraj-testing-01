@@ -1,5 +1,5 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
-import api from '../../services/http';
+import { adminApi, api } from '../../services/http';
 import { extractErrorMessage } from '../../utils/errors';
 import { normalizeHexColor } from '../../utils/colors';
 import type {
@@ -44,7 +44,7 @@ export const fetchSettings = createAsyncThunk<SettingsResponse, void, { rejectVa
   'settings/fetch',
   async (_, { rejectWithValue }) => {
     try {
-      const { data } = await api.get<SettingsResponse>('/settings');
+  const { data } = await adminApi.get<SettingsResponse>('/settings');
       return data;
     } catch (error) {
       return rejectWithValue(extractErrorMessage(error, 'Unable to load settings.'));
@@ -56,7 +56,7 @@ export const updateSettings = createAsyncThunk<SettingsResponse, SettingUpdatePa
   'settings/update',
   async (payload, { rejectWithValue }) => {
     try {
-      const { data } = await api.patch<SettingsResponse>('/settings', { updates: payload });
+      const { data } = await adminApi.patch<SettingsResponse>('/settings', { updates: payload });
       return data;
     } catch (error) {
       return rejectWithValue(extractErrorMessage(error, 'Unable to update settings.'));
