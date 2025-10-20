@@ -1,15 +1,15 @@
 package com.example.rbac.checkout.controller;
 
-import com.example.rbac.checkout.dto.CheckoutAddressDto;
-import com.example.rbac.checkout.dto.CheckoutAddressRequest;
-import com.example.rbac.checkout.dto.CheckoutOrderRequest;
-import com.example.rbac.checkout.dto.CheckoutOrderResponse;
-import com.example.rbac.checkout.dto.CheckoutSummaryDto;
-import com.example.rbac.checkout.dto.OrderDetailDto;
-import com.example.rbac.checkout.dto.OrderSummaryDto;
-import com.example.rbac.checkout.dto.PaymentMethodDto;
-import com.example.rbac.checkout.service.CheckoutService;
-import com.example.rbac.shipping.dto.ShippingOptionDto;
+import com.example.rbac.admin.checkout.dto.CheckoutAddressDto;
+import com.example.rbac.admin.checkout.dto.CheckoutAddressRequest;
+import com.example.rbac.admin.checkout.dto.CheckoutOrderRequest;
+import com.example.rbac.admin.checkout.dto.CheckoutOrderResponse;
+import com.example.rbac.admin.checkout.dto.CheckoutSummaryDto;
+import com.example.rbac.admin.checkout.dto.OrderDetailDto;
+import com.example.rbac.admin.checkout.dto.OrderSummaryDto;
+import com.example.rbac.admin.checkout.dto.PaymentMethodDto;
+import com.example.rbac.admin.checkout.service.CheckoutService;
+import com.example.rbac.admin.shipping.dto.ShippingOptionDto;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
