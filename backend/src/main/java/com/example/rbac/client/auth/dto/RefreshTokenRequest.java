@@ -1,8 +1,4 @@
-<<<<<<<< HEAD:backend/src/main/java/com/example/rbac/client/auth/dto/RefreshTokenRequest.java
 package com.example.rbac.client.auth.dto;
-========
-package com.example.rbac.admin.auth.dto;
->>>>>>>> origin/main:backend/src/main/java/com/example/rbac/admin/auth/dto/RefreshTokenRequest.java
 
 import jakarta.validation.constraints.NotBlank;
 

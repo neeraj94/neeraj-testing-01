@@ -2,10 +2,8 @@ package com.example.rbac.admin.auth.controller;
 
 import com.example.rbac.admin.auth.dto.AdminLoginRequest;
 import com.example.rbac.admin.auth.dto.AdminRefreshTokenRequest;
-import com.example.rbac.client.auth.dto.AuthResponse;
-import com.example.rbac.client.auth.dto.LoginRequest;
-import com.example.rbac.client.auth.dto.RefreshTokenRequest;
-import com.example.rbac.client.auth.service.AuthService;
+import com.example.rbac.admin.auth.service.AdminAuthService;
+import com.example.rbac.common.auth.dto.AuthResponse;
 import com.example.rbac.admin.users.dto.UserDto;
 import com.example.rbac.admin.users.model.UserPrincipal;
 import jakarta.validation.Valid;
@@ -20,32 +18,25 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/auth")
 public class AdminAuthController {
 
-    private final AuthService authService;
+    private final AdminAuthService authService;
 
-    public AdminAuthController(AuthService authService) {
+    public AdminAuthController(AdminAuthService authService) {
         this.authService = authService;
     }
 
     @PostMapping("/login")
     public AuthResponse login(@Valid @RequestBody AdminLoginRequest request) {
-        LoginRequest delegate = new LoginRequest();
-        delegate.setEmail(request.getEmail());
-        delegate.setPassword(request.getPassword());
-        return authService.login(delegate);
+        return authService.login(request.getEmail(), request.getPassword());
     }
 
     @PostMapping("/refresh")
     public AuthResponse refresh(@Valid @RequestBody AdminRefreshTokenRequest request) {
-        RefreshTokenRequest delegate = new RefreshTokenRequest();
-        delegate.setRefreshToken(request.getRefreshToken());
-        return authService.refresh(delegate);
+        return authService.refresh(request.getRefreshToken());
     }
 
     @PostMapping("/logout")
     public void logout(@Valid @RequestBody AdminRefreshTokenRequest request) {
-        RefreshTokenRequest delegate = new RefreshTokenRequest();
-        delegate.setRefreshToken(request.getRefreshToken());
-        authService.logout(delegate);
+        authService.logout(request.getRefreshToken());
     }
 
     @GetMapping("/me")

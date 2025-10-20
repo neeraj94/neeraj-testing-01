@@ -1,8 +1,4 @@
-<<<<<<<< HEAD:backend/src/main/java/com/example/rbac/client/auth/dto/AuthResponse.java
-package com.example.rbac.client.auth.dto;
-========
-package com.example.rbac.admin.auth.dto;
->>>>>>>> origin/main:backend/src/main/java/com/example/rbac/admin/auth/dto/AuthResponse.java
+package com.example.rbac.common.auth.dto;
 
 import com.example.rbac.admin.settings.dto.SettingsThemeDto;
 import com.example.rbac.admin.users.dto.UserDto;

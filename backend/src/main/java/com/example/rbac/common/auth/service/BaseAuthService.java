@@ -1,37 +1,18 @@
-<<<<<<<< HEAD:backend/src/main/java/com/example/rbac/client/auth/service/AuthService.java
-package com.example.rbac.client.auth.service;
+package com.example.rbac.common.auth.service;
 
 import com.example.rbac.admin.activity.service.ActivityRecorder;
-import com.example.rbac.client.auth.dto.AuthResponse;
-import com.example.rbac.client.auth.dto.LoginRequest;
-import com.example.rbac.client.auth.dto.RefreshTokenRequest;
-import com.example.rbac.client.auth.dto.SignupRequest;
-import com.example.rbac.client.auth.dto.VerificationRequest;
-import com.example.rbac.client.auth.dto.VerificationResponse;
-import com.example.rbac.client.auth.token.RefreshToken;
-import com.example.rbac.client.auth.token.RefreshTokenRepository;
-========
-package com.example.rbac.admin.auth.service;
-
-import com.example.rbac.admin.activity.service.ActivityRecorder;
-import com.example.rbac.admin.auth.dto.AuthResponse;
-import com.example.rbac.admin.auth.dto.LoginRequest;
-import com.example.rbac.admin.auth.dto.RefreshTokenRequest;
-import com.example.rbac.admin.auth.dto.SignupRequest;
-import com.example.rbac.admin.auth.dto.VerificationRequest;
-import com.example.rbac.admin.auth.dto.VerificationResponse;
-import com.example.rbac.admin.auth.token.RefreshToken;
-import com.example.rbac.admin.auth.token.RefreshTokenRepository;
->>>>>>>> origin/main:backend/src/main/java/com/example/rbac/admin/auth/service/AuthService.java
-import com.example.rbac.common.exception.ApiException;
-import com.example.rbac.config.JwtService;
 import com.example.rbac.admin.settings.service.SettingsService;
 import com.example.rbac.admin.users.dto.UserDto;
 import com.example.rbac.admin.users.mapper.UserMapper;
 import com.example.rbac.admin.users.model.User;
-import com.example.rbac.admin.users.repository.UserRepository;
-import com.example.rbac.admin.users.service.UserVerificationService;
-import org.springframework.transaction.annotation.Transactional;
+import com.example.rbac.client.auth.token.RefreshToken;
+import com.example.rbac.client.auth.token.RefreshTokenRepository;
+import com.example.rbac.common.auth.dto.AuthResponse;
+import com.example.rbac.common.exception.ApiException;
+import com.example.rbac.config.JwtService;
+import jakarta.transaction.Transactional;
+import org.hibernate.exception.ConstraintViolationException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -40,23 +21,18 @@ import org.springframework.security.authentication.LockedException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
-import org.hibernate.exception.ConstraintViolationException;
-import org.springframework.dao.DataIntegrityViolationException;
+public abstract class BaseAuthService {
 
-@Service
-public class AuthService {
-
+    protected static final String CUSTOMER_ROLE_KEY = "CUSTOMER";
     private static final int MAX_FAILED_LOGIN_ATTEMPTS = 5;
 
-    private final UserRepository userRepository;
+    private final com.example.rbac.admin.users.repository.UserRepository userRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
@@ -64,17 +40,15 @@ public class AuthService {
     private final UserMapper userMapper;
     private final SettingsService settingsService;
     private final ActivityRecorder activityRecorder;
-    private final UserVerificationService userVerificationService;
 
-    public AuthService(UserRepository userRepository,
-                       RefreshTokenRepository refreshTokenRepository,
-                       PasswordEncoder passwordEncoder,
-                       AuthenticationManager authenticationManager,
-                       JwtService jwtService,
-                       UserMapper userMapper,
-                       SettingsService settingsService,
-                       ActivityRecorder activityRecorder,
-                       UserVerificationService userVerificationService) {
+    protected BaseAuthService(com.example.rbac.admin.users.repository.UserRepository userRepository,
+                              RefreshTokenRepository refreshTokenRepository,
+                              PasswordEncoder passwordEncoder,
+                              AuthenticationManager authenticationManager,
+                              JwtService jwtService,
+                              UserMapper userMapper,
+                              SettingsService settingsService,
+                              ActivityRecorder activityRecorder) {
         this.userRepository = userRepository;
         this.refreshTokenRepository = refreshTokenRepository;
         this.passwordEncoder = passwordEncoder;
@@ -83,36 +57,13 @@ public class AuthService {
         this.userMapper = userMapper;
         this.settingsService = settingsService;
         this.activityRecorder = activityRecorder;
-        this.userVerificationService = userVerificationService;
     }
+
+    protected abstract void enforcePortalAccess(User user);
 
     @Transactional
-    public AuthResponse signup(SignupRequest request) {
-        String email = request.getEmail() == null ? "" : request.getEmail().trim();
-        userRepository.findByEmail(email).ifPresent(user -> {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "Email already in use");
-        });
-        User user = new User();
-        String firstName = request.getFirstName() == null ? "" : request.getFirstName().trim();
-        String lastName = request.getLastName() == null ? "" : request.getLastName().trim();
-        user.setEmail(email);
-        user.setFirstName(firstName);
-        user.setLastName(lastName);
-        user.setFullName(buildFullName(firstName, lastName));
-        user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
-        user.setEmailVerifiedAt(null);
-        user = userRepository.save(user);
-        user = userRepository.findDetailedById(user.getId()).orElseThrow();
-        String refreshTokenValue = createRefreshToken(user);
-        AuthResponse response = buildAuthResponse(user, refreshTokenValue);
-        activityRecorder.recordForUser(user, "Authentication", "SIGNUP", "User registered", "SUCCESS", buildAuthContext(user));
-        userVerificationService.initiateVerification(user);
-        return response;
-    }
-
-    @Transactional(noRollbackFor = ApiException.class)
-    public AuthResponse login(LoginRequest request) {
-        User user = userRepository.findByEmail(request.getEmail())
+    protected AuthResult loginInternal(String email, String password) {
+        User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "Invalid credentials"));
 
         if (!user.isActive()) {
@@ -132,7 +83,7 @@ public class AuthService {
 
         try {
             Authentication authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
+                    new UsernamePasswordAuthenticationToken(email, password));
             if (!authentication.isAuthenticated()) {
                 throw new ApiException(HttpStatus.UNAUTHORIZED, "Invalid credentials");
             }
@@ -167,57 +118,115 @@ public class AuthService {
             throw new ApiException(HttpStatus.FORBIDDEN, "Your account has not been verified yet. Please check your email for the verification link.");
         }
 
-        user = userRepository.findDetailedById(user.getId())
+        User detailed = userRepository.findDetailedById(user.getId())
                 .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "User not found"));
-        if (user.getRoles().isEmpty() && user.getDirectPermissions().isEmpty()) {
-            HashMap<String, Object> context = new HashMap<>(buildAuthContext(user));
+        if (detailed.getRoles().isEmpty() && detailed.getDirectPermissions().isEmpty()) {
+            HashMap<String, Object> context = new HashMap<>(buildAuthContext(detailed));
             context.put("reason", "NO_ROLES");
-            context.put("loginAttempts", user.getLoginAttempts());
-            activityRecorder.recordForUser(user, "Authentication", "LOGIN_BLOCKED", "Login blocked for user without assigned roles", "BLOCKED", context);
+            context.put("loginAttempts", detailed.getLoginAttempts());
+            activityRecorder.recordForUser(detailed, "Authentication", "LOGIN_BLOCKED", "Login blocked for user without assigned roles", "BLOCKED", context);
             throw new ApiException(HttpStatus.FORBIDDEN, "Your account has not been assigned any roles yet. Please contact an administrator.");
         }
-        String refreshTokenValue = createRefreshToken(user);
-        AuthResponse response = buildAuthResponse(user, refreshTokenValue);
-        activityRecorder.recordForUser(user, "Authentication", "LOGIN", "User logged in", "SUCCESS", buildAuthContext(user));
-        return response;
+
+        enforcePortalAccess(detailed);
+
+        String refreshTokenValue = createRefreshToken(detailed);
+        AuthResult result = new AuthResult(detailed, refreshTokenValue);
+        activityRecorder.recordForUser(detailed, "Authentication", "LOGIN", "User logged in", "SUCCESS", buildAuthContext(detailed));
+        return result;
     }
 
     @Transactional
-    public VerificationResponse verifyEmail(VerificationRequest request) {
-        UserVerificationService.VerificationResult result = userVerificationService.verifyToken(request.getToken());
-        return new VerificationResponse(result.isSuccess(), result.getMessage(), result.isWelcomeEmailSent(), result.getEmail());
-    }
-
-    @Transactional
-    public AuthResponse refresh(RefreshTokenRequest request) {
-        RefreshToken refreshToken = refreshTokenRepository.findByToken(request.getRefreshToken())
+    protected AuthResult refreshInternal(String refreshToken) {
+        RefreshToken token = refreshTokenRepository.findByToken(refreshToken)
                 .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "Invalid refresh token"));
-        if (refreshToken.isRevoked() || refreshToken.getExpiresAt().isBefore(Instant.now())) {
+        if (token.isRevoked() || token.getExpiresAt().isBefore(Instant.now())) {
             throw new ApiException(HttpStatus.UNAUTHORIZED, "Refresh token expired or revoked");
         }
-        refreshToken.setRevoked(true);
-        refreshTokenRepository.save(refreshToken);
-        User user = userRepository.findDetailedById(refreshToken.getUser().getId())
+        token.setRevoked(true);
+        refreshTokenRepository.save(token);
+        User user = userRepository.findDetailedById(token.getUser().getId())
                 .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "User not found"));
+        enforcePortalAccess(user);
         String newRefresh = createRefreshToken(user);
-        AuthResponse response = buildAuthResponse(user, newRefresh);
         activityRecorder.recordForUser(user, "Authentication", "TOKEN_REFRESH", "Refreshed access token", "SUCCESS", buildAuthContext(user));
-        return response;
+        return new AuthResult(user, newRefresh);
     }
 
     @Transactional
-    public void logout(RefreshTokenRequest request) {
-        refreshTokenRepository.findByToken(request.getRefreshToken()).ifPresent(token -> {
+    protected void logoutInternal(String refreshToken) {
+        refreshTokenRepository.findByToken(refreshToken).ifPresent(token -> {
             token.setRevoked(true);
             refreshTokenRepository.save(token);
             activityRecorder.recordForUser(token.getUser(), "Authentication", "LOGOUT", "User logged out", "SUCCESS", buildLogoutContext(token));
         });
     }
 
-    public UserDto currentUser(User user) {
+    @Transactional
+    protected UserDto currentUserInternal(User user) {
         User detailed = userRepository.findDetailedById(user.getId())
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "User not found"));
         return userMapper.toDto(detailed);
+    }
+
+    protected boolean hasRole(User user, String roleKey) {
+        if (user.getRoles() == null || user.getRoles().isEmpty()) {
+            return false;
+        }
+        String normalized = roleKey == null ? null : roleKey.trim().toUpperCase();
+        if (normalized == null || normalized.isEmpty()) {
+            return false;
+        }
+        return user.getRoles().stream()
+                .map(role -> role.getKey() == null ? null : role.getKey().trim().toUpperCase())
+                .anyMatch(key -> key != null && key.equals(normalized));
+    }
+
+    protected com.example.rbac.admin.users.repository.UserRepository getUserRepository() {
+        return userRepository;
+    }
+
+    protected PasswordEncoder getPasswordEncoder() {
+        return passwordEncoder;
+    }
+
+    protected AuthResponse buildAuthResponse(User user, String refreshTokenValue) {
+        String accessToken = jwtService.generateAccessToken(user);
+        UserDto userDto = userMapper.toDto(user);
+        AuthResponse response = new AuthResponse();
+        response.setAccessToken(accessToken);
+        response.setRefreshToken(refreshTokenValue);
+        response.setUser(userDto);
+        response.setRoles(userDto.getRoles());
+        response.setPermissions(userDto.getPermissions());
+        response.setDirectPermissions(userDto.getDirectPermissions());
+        response.setRevokedPermissions(userDto.getRevokedPermissions());
+        response.setTheme(settingsService.getTheme());
+        return response;
+    }
+
+    protected ActivityRecorder getActivityRecorder() {
+        return activityRecorder;
+    }
+
+    protected Map<String, Object> buildAuthContext(User user) {
+        HashMap<String, Object> context = new HashMap<>();
+        if (user == null) {
+            return context;
+        }
+        if (user.getId() != null) {
+            context.put("userId", user.getId());
+        }
+        if (user.getEmail() != null) {
+            context.put("email", user.getEmail());
+        }
+        context.put("active", user.isActive());
+        return context;
+    }
+
+    protected AuthResult issueTokens(User user) {
+        String refreshToken = createRefreshToken(user);
+        return new AuthResult(user, refreshToken);
     }
 
     private String createRefreshToken(User user) {
@@ -331,36 +340,6 @@ public class AuthService {
         user.setLockedAt(managed.getLockedAt());
     }
 
-    private AuthResponse buildAuthResponse(User user, String refreshTokenValue) {
-        String accessToken = jwtService.generateAccessToken(user);
-        UserDto userDto = userMapper.toDto(user);
-        AuthResponse response = new AuthResponse();
-        response.setAccessToken(accessToken);
-        response.setRefreshToken(refreshTokenValue);
-        response.setUser(userDto);
-        response.setRoles(userDto.getRoles());
-        response.setPermissions(userDto.getPermissions());
-        response.setDirectPermissions(userDto.getDirectPermissions());
-        response.setRevokedPermissions(userDto.getRevokedPermissions());
-        response.setTheme(settingsService.getTheme());
-        return response;
-    }
-
-    private Map<String, Object> buildAuthContext(User user) {
-        HashMap<String, Object> context = new HashMap<>();
-        if (user == null) {
-            return context;
-        }
-        if (user.getId() != null) {
-            context.put("userId", user.getId());
-        }
-        if (user.getEmail() != null) {
-            context.put("email", user.getEmail());
-        }
-        context.put("active", user.isActive());
-        return context;
-    }
-
     private Map<String, Object> buildLogoutContext(RefreshToken token) {
         HashMap<String, Object> context = new HashMap<>();
         if (token.getId() != null) {
@@ -372,17 +351,6 @@ public class AuthService {
         return context;
     }
 
-    private String buildFullName(String firstName, String lastName) {
-        StringBuilder builder = new StringBuilder();
-        if (StringUtils.hasText(firstName)) {
-            builder.append(firstName.trim());
-        }
-        if (StringUtils.hasText(lastName)) {
-            if (builder.length() > 0) {
-                builder.append(' ');
-            }
-            builder.append(lastName.trim());
-        }
-        return builder.length() > 0 ? builder.toString() : null;
+    protected record AuthResult(User user, String refreshToken) {
     }
 }

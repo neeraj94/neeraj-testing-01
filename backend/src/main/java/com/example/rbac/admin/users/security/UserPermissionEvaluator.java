@@ -15,7 +15,6 @@ public class UserPermissionEvaluator {
 
     private static final String VIEW_GLOBAL = "USER_VIEW_GLOBAL";
     private static final String VIEW_SELF = "USER_VIEW";
-    private static final String VIEW_OWN = "USER_VIEW_OWN";
     private static final String CREATE = "USER_CREATE";
     private static final String UPDATE = "USER_UPDATE";
     private static final String DELETE = "USER_DELETE";
@@ -28,7 +27,7 @@ public class UserPermissionEvaluator {
         if (userId == null) {
             return false;
         }
-        if (hasAuthority(authentication, VIEW_SELF) || hasAuthority(authentication, VIEW_OWN)) {
+        if (hasAuthority(authentication, VIEW_SELF)) {
             return resolveCurrentUserId(authentication)
                     .map(currentUserId -> Objects.equals(currentUserId, userId))
                     .orElse(false);

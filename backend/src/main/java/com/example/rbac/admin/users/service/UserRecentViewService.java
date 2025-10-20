@@ -138,7 +138,7 @@ public class UserRecentViewService {
     }
 
     @Transactional(readOnly = true)
-    @PreAuthorize("hasAnyAuthority('USER_VIEW','USER_VIEW_GLOBAL','USER_VIEW_OWN')")
+    @PreAuthorize("hasAnyAuthority('USER_VIEW','USER_VIEW_GLOBAL')")
     public List<UserRecentViewDto> getRecentViewsForUser(Long userId) {
         if (userId == null) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "User id is required");

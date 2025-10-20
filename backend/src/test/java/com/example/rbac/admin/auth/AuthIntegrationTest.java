@@ -1,7 +1,7 @@
 package com.example.rbac.admin.auth;
 
-import com.example.rbac.client.auth.dto.AuthResponse;
-import com.example.rbac.client.auth.dto.LoginRequest;
+import com.example.rbac.admin.auth.dto.AdminLoginRequest;
+import com.example.rbac.common.auth.dto.AuthResponse;
 import com.example.rbac.admin.settings.dto.SettingsThemeDto;
 import com.example.rbac.admin.users.dto.UserDto;
 import org.junit.jupiter.api.Test;
@@ -26,12 +26,12 @@ class AuthIntegrationTest {
 
     @Test
     void superAdminCanLoginAndAccessProtectedResources() {
-        LoginRequest request = new LoginRequest();
+        AdminLoginRequest request = new AdminLoginRequest();
         request.setEmail("superadmin@demo.io");
         request.setPassword("Super@123");
 
         ResponseEntity<AuthResponse> loginResponse = restTemplate.postForEntity(
-                baseUrl("/auth/login"),
+                adminUrl("/auth/login"),
                 request,
                 AuthResponse.class
         );
@@ -57,7 +57,7 @@ class AuthIntegrationTest {
         headers.setBearerAuth(body.getAccessToken());
 
         ResponseEntity<UserDto> currentUserResponse = restTemplate.exchange(
-                baseUrl("/auth/me"),
+                adminUrl("/auth/me"),
                 HttpMethod.GET,
                 new HttpEntity<>(headers),
                 UserDto.class
@@ -67,7 +67,7 @@ class AuthIntegrationTest {
         assertThat(currentUserResponse.getBody()).isNotNull();
 
         ResponseEntity<String> customersResponse = restTemplate.exchange(
-                baseUrl("/customers"),
+                adminUrl("/customers"),
                 HttpMethod.GET,
                 new HttpEntity<>(headers),
                 String.class
@@ -89,5 +89,9 @@ class AuthIntegrationTest {
 
     private String baseUrl(String path) {
         return "http://localhost:" + port + "/api/v1" + path;
+    }
+
+    private String adminUrl(String path) {
+        return "http://localhost:" + port + "/api/v1/admin" + path;
     }
 }
