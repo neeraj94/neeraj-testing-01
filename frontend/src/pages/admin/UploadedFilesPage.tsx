@@ -1,22 +1,22 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import PageHeader from '../components/PageHeader';
-import PageSection from '../components/PageSection';
-import PaginationControls from '../components/PaginationControls';
-import api from '../services/http';
+import PageHeader from '../../components/PageHeader';
+import PageSection from '../../components/PageSection';
+import PaginationControls from '../../components/PaginationControls';
+import { adminApi } from '../../services/http';
 import type {
   UploadedFile,
   UploadedFileModuleOption,
   UploadedFilePage,
   UploadedFileUploaderOption
-} from '../types/uploaded-file';
-import { formatFileSize } from '../utils/files';
-import { useToast } from '../components/ToastProvider';
-import { useConfirm } from '../components/ConfirmDialogProvider';
-import { extractErrorMessage } from '../utils/errors';
-import { useAppSelector } from '../app/hooks';
-import { hasAnyPermission } from '../utils/permissions';
-import type { PermissionKey } from '../types/auth';
+} from '../../types/uploaded-file';
+import { formatFileSize } from '../../utils/files';
+import { useToast } from '../../components/ToastProvider';
+import { useConfirm } from '../../components/ConfirmDialogProvider';
+import { extractErrorMessage } from '../../utils/errors';
+import { useAppSelector } from '../../app/hooks';
+import { hasAnyPermission } from '../../utils/permissions';
+import type { PermissionKey } from '../../types/auth';
 
 const DEFAULT_PAGE_SIZE = 20;
 const PAGE_SIZE_OPTIONS = [20, 50, 100];
@@ -111,7 +111,7 @@ const UploadedFilesPage = () => {
   const moduleQuery = useQuery<UploadedFileModuleOption[]>({
     queryKey: ['uploaded-files', 'modules'],
     queryFn: async () => {
-      const { data } = await api.get<UploadedFileModuleOption[]>('/uploaded-files/modules');
+      const { data } = await adminApi.get<UploadedFileModuleOption[]>('/uploaded-files/modules');
       return data;
     }
   });
@@ -119,7 +119,7 @@ const UploadedFilesPage = () => {
   const uploaderQuery = useQuery<UploadedFileUploaderOption[]>({
     queryKey: ['uploaded-files', 'uploaders'],
     queryFn: async () => {
-      const { data } = await api.get<UploadedFileUploaderOption[]>('/uploaded-files/uploaders');
+      const { data } = await adminApi.get<UploadedFileUploaderOption[]>('/uploaded-files/uploaders');
       return data;
     }
   });
@@ -134,7 +134,7 @@ const UploadedFilesPage = () => {
       if (uploader) params.uploadedBy = uploader;
       if (from) params.from = from;
       if (to) params.to = to;
-      const { data } = await api.get<UploadedFilePage>('/uploaded-files', { params });
+      const { data } = await adminApi.get<UploadedFilePage>('/uploaded-files', { params });
       return data;
     }
   });
@@ -169,7 +169,7 @@ const UploadedFilesPage = () => {
 
   const deleteFilesMutation = useMutation({
     mutationFn: async (ids: number[]) => {
-      await api.post('/uploaded-files/delete', { ids });
+      await adminApi.post('/uploaded-files/delete', { ids });
     },
     onSuccess: (_data, ids) => {
       notify({

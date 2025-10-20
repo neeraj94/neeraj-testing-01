@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import api from '../services/http';
-import { useToast } from '../components/ToastProvider';
-import { useAppSelector } from '../app/hooks';
-import { hasAnyPermission } from '../utils/permissions';
-import { formatFileSize } from '../utils/files';
-import type { GalleryFile, GalleryFilePage, GalleryFolder, GallerySettings } from '../types/gallery';
-import type { PermissionKey } from '../types/auth';
-import { extractErrorMessage } from '../utils/errors';
+import { adminApi } from '../../services/http';
+import { useToast } from '../../components/ToastProvider';
+import { useAppSelector } from '../../app/hooks';
+import { hasAnyPermission } from '../../utils/permissions';
+import { formatFileSize } from '../../utils/files';
+import type { GalleryFile, GalleryFilePage, GalleryFolder, GallerySettings } from '../../types/gallery';
+import type { PermissionKey } from '../../types/auth';
+import { extractErrorMessage } from '../../utils/errors';
 
 const PAGE_SIZE_OPTIONS = [20, 50, 100];
 
@@ -84,7 +84,7 @@ const formatDateTime = (value: string) => {
 };
 
 const resolveFileUrl = (id: number, token?: string | null) => {
-  const baseUrl = api.defaults.baseURL ?? (typeof window !== 'undefined' ? window.location.origin : '');
+  const baseUrl = adminApi.defaults.baseURL ?? (typeof window !== 'undefined' ? window.location.origin : '');
   const normalizedBase = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
   const url = new URL(`gallery/files/${id}/content`, normalizedBase);
   if (token) {
@@ -172,7 +172,7 @@ const GalleryPage = () => {
   const foldersQuery = useQuery<GalleryFolder[]>({
     queryKey: ['gallery', 'folders'],
     queryFn: async () => {
-      const { data } = await api.get<GalleryFolder[]>('/gallery/folders');
+      const { data } = await adminApi.get<GalleryFolder[]>('/gallery/folders');
       return data;
     }
   });
@@ -212,7 +212,7 @@ const GalleryPage = () => {
       if (canViewAll && uploaderFilter.trim()) {
         params.uploader = uploaderFilter.trim();
       }
-      const { data } = await api.get<GalleryFilePage>('/gallery/files', { params });
+      const { data } = await adminApi.get<GalleryFilePage>('/gallery/files', { params });
       return data;
     },
     placeholderData: (previousData) => previousData
@@ -221,7 +221,7 @@ const GalleryPage = () => {
   const settingsQuery = useQuery<GallerySettings>({
     queryKey: ['gallery', 'settings', 'preferences'],
     queryFn: async () => {
-      const { data } = await api.get<GallerySettings>('/gallery/settings');
+      const { data } = await adminApi.get<GallerySettings>('/gallery/settings');
       return data;
     },
     staleTime: 5 * 60 * 1000
@@ -239,7 +239,7 @@ const GalleryPage = () => {
       if (folderFilter !== null) {
         formData.append('folderId', folderFilter.toString());
       }
-      const { data } = await api.post<GalleryFile[]>('/gallery/files', formData, {
+      const { data } = await adminApi.post<GalleryFile[]>('/gallery/files', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
         onUploadProgress: (event) => {
           if (!event.total) {
@@ -273,9 +273,9 @@ const GalleryPage = () => {
   const deleteFiles = useMutation({
     mutationFn: async (ids: number[]) => {
       if (ids.length === 1) {
-        await api.delete(`/gallery/files/${ids[0]}`);
+        await adminApi.delete(`/gallery/files/${ids[0]}`);
       } else {
-        await api.post('/gallery/files/bulk-delete', { ids });
+        await adminApi.post('/gallery/files/bulk-delete', { ids });
       }
     },
     onSuccess: () => {
@@ -290,7 +290,7 @@ const GalleryPage = () => {
 
   const updateFile = useMutation({
     mutationFn: async (payload: { id: number; displayName: string; folderId: number | null }) => {
-      const { data } = await api.patch<GalleryFile>(`/gallery/files/${payload.id}`, {
+      const { data } = await adminApi.patch<GalleryFile>(`/gallery/files/${payload.id}`, {
         displayName: payload.displayName,
         targetFolderId: payload.folderId
       });
@@ -308,7 +308,7 @@ const GalleryPage = () => {
 
   const createFolder = useMutation({
     mutationFn: async (payload: { name: string; parentId: number | null }) => {
-      const { data } = await api.post<GalleryFolder>('/gallery/folders', payload);
+      const { data } = await adminApi.post<GalleryFolder>('/gallery/folders', payload);
       return data;
     },
     onSuccess: () => {
@@ -323,7 +323,7 @@ const GalleryPage = () => {
 
   const deleteFolder = useMutation({
     mutationFn: async (folderId: number) => {
-      await api.delete(`/gallery/folders/${folderId}`);
+      await adminApi.delete(`/gallery/folders/${folderId}`);
     },
     onSuccess: () => {
       notify({ type: 'success', message: 'Folder deleted successfully.' });
