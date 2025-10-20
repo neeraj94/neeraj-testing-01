@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import api from '../../services/http';
+import { adminApi } from '../../services/http';
 import { useToast } from '../ToastProvider';
 import { extractErrorMessage } from '../../utils/errors';
 import RichTextEditor from '../RichTextEditor';
@@ -15,12 +15,12 @@ import { useAppSelector } from '../../app/hooks';
 const EMAIL_TEMPLATES_QUERY_KEY = ['email-templates'];
 
 const fetchTemplates = async (): Promise<EmailTemplateListResponse> => {
-  const { data } = await api.get<EmailTemplateListResponse>('/settings/email/templates');
+  const { data } = await adminApi.get<EmailTemplateListResponse>('/settings/email/templates');
   return data;
 };
 
 const fetchTemplateDetail = async (id: number): Promise<EmailTemplateDetail> => {
-  const { data } = await api.get<EmailTemplateDetail>(`/settings/email/templates/${id}`);
+  const { data } = await adminApi.get<EmailTemplateDetail>(`/settings/email/templates/${id}`);
   return data;
 };
 
@@ -118,7 +118,7 @@ const EmailTemplatesPanel = () => {
 
   const mutation = useMutation({
     mutationFn: async ({ id, payload }: { id: number; payload: EmailTemplateUpdatePayload }) => {
-      const { data: updated } = await api.put<EmailTemplateDetail>(`/settings/email/templates/${id}`, payload);
+      const { data: updated } = await adminApi.put<EmailTemplateDetail>(`/settings/email/templates/${id}`, payload);
       return updated;
     },
     onSuccess: (updated) => {

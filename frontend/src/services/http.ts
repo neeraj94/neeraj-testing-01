@@ -1,4 +1,5 @@
 import axios from 'axios';
+import type { AxiosRequestConfig } from 'axios';
 import type { Store } from '@reduxjs/toolkit';
 import type { RootState } from '../app/store';
 import type { AuthResponse } from '../types/auth';
@@ -81,7 +82,7 @@ api.interceptors.response.use(
       if (refreshToken) {
         try {
           const refreshResponse = await axios.post(
-            `${api.defaults.baseURL}/auth/refresh`,
+            `${api.defaults.baseURL}${ensureAdminPath('/auth/refresh')}`,
             { refreshToken }
           );
           refreshListener?.(refreshResponse.data);
