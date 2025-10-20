@@ -1,12 +1,12 @@
 package com.example.rbac.client.auth.controller;
 
-import com.example.rbac.client.auth.dto.AuthResponse;
+import com.example.rbac.common.auth.dto.AuthResponse;
 import com.example.rbac.client.auth.dto.LoginRequest;
 import com.example.rbac.client.auth.dto.RefreshTokenRequest;
 import com.example.rbac.client.auth.dto.SignupRequest;
 import com.example.rbac.client.auth.dto.VerificationRequest;
 import com.example.rbac.client.auth.dto.VerificationResponse;
-import com.example.rbac.client.auth.service.AuthService;
+import com.example.rbac.client.auth.service.ClientAuthService;
 import com.example.rbac.admin.users.dto.UserDto;
 import com.example.rbac.admin.users.model.UserPrincipal;
 import jakarta.validation.Valid;
@@ -14,12 +14,12 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/client/auth")
+@RequestMapping({"/client/auth", "/auth"})
 public class AuthController {
 
-    private final AuthService authService;
+    private final ClientAuthService authService;
 
-    public AuthController(AuthService authService) {
+    public AuthController(ClientAuthService authService) {
         this.authService = authService;
     }
 

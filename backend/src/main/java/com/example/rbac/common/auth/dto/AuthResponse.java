@@ -1,4 +1,4 @@
-package com.example.rbac.client.auth.dto;
+package com.example.rbac.common.auth.dto;
 
 import com.example.rbac.admin.settings.dto.SettingsThemeDto;
 import com.example.rbac.admin.users.dto.UserDto;

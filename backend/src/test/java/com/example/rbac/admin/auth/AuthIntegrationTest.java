@@ -1,7 +1,7 @@
 package com.example.rbac.admin.auth;
 
-import com.example.rbac.client.auth.dto.AuthResponse;
-import com.example.rbac.client.auth.dto.LoginRequest;
+import com.example.rbac.admin.auth.dto.AdminLoginRequest;
+import com.example.rbac.common.auth.dto.AuthResponse;
 import com.example.rbac.admin.settings.dto.SettingsThemeDto;
 import com.example.rbac.admin.users.dto.UserDto;
 import org.junit.jupiter.api.Test;
@@ -26,7 +26,7 @@ class AuthIntegrationTest {
 
     @Test
     void superAdminCanLoginAndAccessProtectedResources() {
-        LoginRequest request = new LoginRequest();
+        AdminLoginRequest request = new AdminLoginRequest();
         request.setEmail("superadmin@demo.io");
         request.setPassword("Super@123");
 
