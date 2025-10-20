@@ -3,7 +3,9 @@ package com.example.rbac.controllers.admin.checkout;
 import com.example.rbac.checkout.dto.OrderDetailDto;
 import com.example.rbac.checkout.dto.OrderListItemDto;
 import com.example.rbac.checkout.service.CheckoutService;
+import com.example.rbac.users.model.UserPrincipal;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -22,14 +24,15 @@ public class OrderAdminController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAuthority('USER_VIEW_GLOBAL')")
-    public List<OrderListItemDto> listOrders() {
-        return checkoutService.listOrders();
+    @PreAuthorize("hasAnyAuthority('USER_VIEW','USER_VIEW_GLOBAL','USER_VIEW_OWN')")
+    public List<OrderListItemDto> listOrders(@AuthenticationPrincipal UserPrincipal principal) {
+        return checkoutService.listOrdersForAdmin(principal);
     }
 
     @GetMapping("/{orderId}")
-    @PreAuthorize("hasAuthority('USER_VIEW_GLOBAL')")
-    public OrderDetailDto getOrder(@PathVariable Long orderId) {
-        return checkoutService.getOrderDetail(orderId);
+    @PreAuthorize("hasAnyAuthority('USER_VIEW','USER_VIEW_GLOBAL','USER_VIEW_OWN')")
+    public OrderDetailDto getOrder(@PathVariable Long orderId,
+                                   @AuthenticationPrincipal UserPrincipal principal) {
+        return checkoutService.getOrderDetailForAdmin(orderId, principal);
     }
 }
