@@ -1,9 +1,18 @@
+<<<<<<<< HEAD:backend/src/main/java/com/example/rbac/client/cart/mapper/CartMapper.java
 package com.example.rbac.client.cart.mapper;
 
 import com.example.rbac.client.cart.dto.CartDto;
 import com.example.rbac.client.cart.dto.CartItemDto;
 import com.example.rbac.client.cart.model.Cart;
 import com.example.rbac.client.cart.model.CartItem;
+========
+package com.example.rbac.admin.cart.mapper;
+
+import com.example.rbac.admin.cart.dto.CartDto;
+import com.example.rbac.admin.cart.dto.CartItemDto;
+import com.example.rbac.admin.cart.model.Cart;
+import com.example.rbac.admin.cart.model.CartItem;
+>>>>>>>> origin/main:backend/src/main/java/com/example/rbac/admin/cart/mapper/CartMapper.java
 import com.example.rbac.admin.products.model.MediaAsset;
 import com.example.rbac.admin.products.model.Product;
 import com.example.rbac.admin.products.model.ProductGalleryImage;

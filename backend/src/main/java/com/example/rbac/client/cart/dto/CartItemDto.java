@@ -1,4 +1,8 @@
+<<<<<<<< HEAD:backend/src/main/java/com/example/rbac/client/cart/dto/CartItemDto.java
 package com.example.rbac.client.cart.dto;
+========
+package com.example.rbac.admin.cart.dto;
+>>>>>>>> origin/main:backend/src/main/java/com/example/rbac/admin/cart/dto/CartItemDto.java
 
 import java.math.BigDecimal;
 

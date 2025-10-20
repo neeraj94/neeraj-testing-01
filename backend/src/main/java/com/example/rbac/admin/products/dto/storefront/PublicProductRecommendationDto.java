@@ -1,4 +1,8 @@
+<<<<<<<< HEAD:backend/src/main/java/com/example/rbac/admin/products/dto/storefront/PublicProductRecommendationDto.java
 package com.example.rbac.admin.products.dto.storefront;
+========
+package com.example.rbac.admin.products.dto.publicview;
+>>>>>>>> origin/main:backend/src/main/java/com/example/rbac/admin/products/dto/publicview/PublicProductRecommendationDto.java
 
 import java.math.BigDecimal;
 

@@ -1,4 +1,8 @@
+<<<<<<<< HEAD:backend/src/main/java/com/example/rbac/client/cart/repository/CartRepositoryImpl.java
 package com.example.rbac.client.cart.repository;
+========
+package com.example.rbac.admin.cart.repository;
+>>>>>>>> origin/main:backend/src/main/java/com/example/rbac/admin/cart/repository/CartRepositoryImpl.java
 
 import com.example.rbac.admin.cart.dto.CartSortOption;
 import com.example.rbac.admin.cart.dto.CartSummaryRow;

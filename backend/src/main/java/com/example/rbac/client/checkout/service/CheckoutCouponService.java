@@ -1,7 +1,14 @@
+<<<<<<<< HEAD:backend/src/main/java/com/example/rbac/client/checkout/service/CheckoutCouponService.java
 package com.example.rbac.client.checkout.service;
 
 import com.example.rbac.client.checkout.dto.AppliedCouponDto;
 import com.example.rbac.client.checkout.dto.CheckoutCouponDto;
+========
+package com.example.rbac.admin.checkout.service;
+
+import com.example.rbac.admin.checkout.dto.AppliedCouponDto;
+import com.example.rbac.admin.checkout.dto.CheckoutCouponDto;
+>>>>>>>> origin/main:backend/src/main/java/com/example/rbac/admin/checkout/service/CheckoutCouponService.java
 import com.example.rbac.common.exception.ApiException;
 import com.example.rbac.admin.coupons.model.Coupon;
 import com.example.rbac.admin.coupons.model.CouponStatus;

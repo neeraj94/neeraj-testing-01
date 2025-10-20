@@ -1,0 +1,294 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Count 1 /Kids [ 5 0 R ] >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+4 0 obj
+<< /Length 5062 >>
+stream
+0 0 0 rg
+BT /F1 16 Tf 1 0 0 1 48 728 Tm (Permissions) Tj ET
+q
+0.90 0.95 1 rg
+48 664 516 28 re f
+Q
+q
+0.70 0.78 0.92 RG
+1 w
+48 664 516 28 re S
+Q
+0.18 0.25 0.45 rg
+BT /F1 10 Tf 1 0 0 1 56 682 Tm (KEY) Tj ET
+BT /F1 10 Tf 1 0 0 1 314 682 Tm (NAME) Tj ET
+0 0 0 rg
+q
+0.97 0.99 1 rg
+48 642 516 22 re f
+Q
+q
+0.85 0.88 0.94 RG
+0.5 w
+48 642 516 22 re S
+Q
+BT /F1 10 Tf 1 0 0 1 56 656 Tm (CUSTOMER_CREATE) Tj ET
+BT /F1 10 Tf 1 0 0 1 314 656 Tm (Create Customers) Tj ET
+q
+0.85 0.88 0.94 RG
+0.5 w
+48 620 516 22 re S
+Q
+BT /F1 10 Tf 1 0 0 1 56 634 Tm (CUSTOMER_DELETE) Tj ET
+BT /F1 10 Tf 1 0 0 1 314 634 Tm (Delete Customers) Tj ET
+q
+0.97 0.99 1 rg
+48 598 516 22 re f
+Q
+q
+0.85 0.88 0.94 RG
+0.5 w
+48 598 516 22 re S
+Q
+BT /F1 10 Tf 1 0 0 1 56 612 Tm (CUSTOMER_UPDATE) Tj ET
+BT /F1 10 Tf 1 0 0 1 314 612 Tm (Update Customers) Tj ET
+q
+0.85 0.88 0.94 RG
+0.5 w
+48 576 516 22 re S
+Q
+BT /F1 10 Tf 1 0 0 1 56 590 Tm (CUSTOMER_VIEW) Tj ET
+BT /F1 10 Tf 1 0 0 1 314 590 Tm (View Customers) Tj ET
+q
+0.97 0.99 1 rg
+48 554 516 22 re f
+Q
+q
+0.85 0.88 0.94 RG
+0.5 w
+48 554 516 22 re S
+Q
+BT /F1 10 Tf 1 0 0 1 56 568 Tm (CUSTOMERS_EXPORT) Tj ET
+BT /F1 10 Tf 1 0 0 1 314 568 Tm (Export Customers) Tj ET
+q
+0.85 0.88 0.94 RG
+0.5 w
+48 532 516 22 re S
+Q
+BT /F1 10 Tf 1 0 0 1 56 546 Tm (INVOICE_CREATE) Tj ET
+BT /F1 10 Tf 1 0 0 1 314 546 Tm (Create Invoices) Tj ET
+q
+0.97 0.99 1 rg
+48 510 516 22 re f
+Q
+q
+0.85 0.88 0.94 RG
+0.5 w
+48 510 516 22 re S
+Q
+BT /F1 10 Tf 1 0 0 1 56 524 Tm (INVOICE_DELETE) Tj ET
+BT /F1 10 Tf 1 0 0 1 314 524 Tm (Delete Invoices) Tj ET
+q
+0.85 0.88 0.94 RG
+0.5 w
+48 488 516 22 re S
+Q
+BT /F1 10 Tf 1 0 0 1 56 502 Tm (INVOICE_UPDATE) Tj ET
+BT /F1 10 Tf 1 0 0 1 314 502 Tm (Update Invoices) Tj ET
+q
+0.97 0.99 1 rg
+48 466 516 22 re f
+Q
+q
+0.85 0.88 0.94 RG
+0.5 w
+48 466 516 22 re S
+Q
+BT /F1 10 Tf 1 0 0 1 56 480 Tm (INVOICE_VIEW) Tj ET
+BT /F1 10 Tf 1 0 0 1 314 480 Tm (View Invoices) Tj ET
+q
+0.85 0.88 0.94 RG
+0.5 w
+48 444 516 22 re S
+Q
+BT /F1 10 Tf 1 0 0 1 56 458 Tm (INVOICES_EXPORT) Tj ET
+BT /F1 10 Tf 1 0 0 1 314 458 Tm (Export Invoices) Tj ET
+q
+0.97 0.99 1 rg
+48 422 516 22 re f
+Q
+q
+0.85 0.88 0.94 RG
+0.5 w
+48 422 516 22 re S
+Q
+BT /F1 10 Tf 1 0 0 1 56 436 Tm (PERMISSION_CREATE) Tj ET
+BT /F1 10 Tf 1 0 0 1 314 436 Tm (Create Permissions) Tj ET
+q
+0.85 0.88 0.94 RG
+0.5 w
+48 400 516 22 re S
+Q
+BT /F1 10 Tf 1 0 0 1 56 414 Tm (PERMISSION_DELETE) Tj ET
+BT /F1 10 Tf 1 0 0 1 314 414 Tm (Delete Permissions) Tj ET
+q
+0.97 0.99 1 rg
+48 378 516 22 re f
+Q
+q
+0.85 0.88 0.94 RG
+0.5 w
+48 378 516 22 re S
+Q
+BT /F1 10 Tf 1 0 0 1 56 392 Tm (PERMISSION_UPDATE) Tj ET
+BT /F1 10 Tf 1 0 0 1 314 392 Tm (Update Permissions) Tj ET
+q
+0.85 0.88 0.94 RG
+0.5 w
+48 356 516 22 re S
+Q
+BT /F1 10 Tf 1 0 0 1 56 370 Tm (PERMISSION_VIEW) Tj ET
+BT /F1 10 Tf 1 0 0 1 314 370 Tm (View Permissions) Tj ET
+q
+0.97 0.99 1 rg
+48 334 516 22 re f
+Q
+q
+0.85 0.88 0.94 RG
+0.5 w
+48 334 516 22 re S
+Q
+BT /F1 10 Tf 1 0 0 1 56 348 Tm (PERMISSIONS_EXPORT) Tj ET
+BT /F1 10 Tf 1 0 0 1 314 348 Tm (Export Permissions) Tj ET
+q
+0.85 0.88 0.94 RG
+0.5 w
+48 312 516 22 re S
+Q
+BT /F1 10 Tf 1 0 0 1 56 326 Tm (ROLE_CREATE) Tj ET
+BT /F1 10 Tf 1 0 0 1 314 326 Tm (Create Roles) Tj ET
+q
+0.97 0.99 1 rg
+48 290 516 22 re f
+Q
+q
+0.85 0.88 0.94 RG
+0.5 w
+48 290 516 22 re S
+Q
+BT /F1 10 Tf 1 0 0 1 56 304 Tm (ROLE_DELETE) Tj ET
+BT /F1 10 Tf 1 0 0 1 314 304 Tm (Delete Roles) Tj ET
+q
+0.85 0.88 0.94 RG
+0.5 w
+48 268 516 22 re S
+Q
+BT /F1 10 Tf 1 0 0 1 56 282 Tm (ROLE_UPDATE) Tj ET
+BT /F1 10 Tf 1 0 0 1 314 282 Tm (Update Roles) Tj ET
+q
+0.97 0.99 1 rg
+48 246 516 22 re f
+Q
+q
+0.85 0.88 0.94 RG
+0.5 w
+48 246 516 22 re S
+Q
+BT /F1 10 Tf 1 0 0 1 56 260 Tm (ROLE_VIEW) Tj ET
+BT /F1 10 Tf 1 0 0 1 314 260 Tm (View Roles) Tj ET
+q
+0.85 0.88 0.94 RG
+0.5 w
+48 224 516 22 re S
+Q
+BT /F1 10 Tf 1 0 0 1 56 238 Tm (ROLES_EXPORT) Tj ET
+BT /F1 10 Tf 1 0 0 1 314 238 Tm (Export Roles) Tj ET
+q
+0.97 0.99 1 rg
+48 202 516 22 re f
+Q
+q
+0.85 0.88 0.94 RG
+0.5 w
+48 202 516 22 re S
+Q
+BT /F1 10 Tf 1 0 0 1 56 216 Tm (SETTINGS_UPDATE) Tj ET
+BT /F1 10 Tf 1 0 0 1 314 216 Tm (Update Settings) Tj ET
+q
+0.85 0.88 0.94 RG
+0.5 w
+48 180 516 22 re S
+Q
+BT /F1 10 Tf 1 0 0 1 56 194 Tm (SETTINGS_VIEW) Tj ET
+BT /F1 10 Tf 1 0 0 1 314 194 Tm (View Settings) Tj ET
+q
+0.97 0.99 1 rg
+48 158 516 22 re f
+Q
+q
+0.85 0.88 0.94 RG
+0.5 w
+48 158 516 22 re S
+Q
+BT /F1 10 Tf 1 0 0 1 56 172 Tm (USER_CREATE) Tj ET
+BT /F1 10 Tf 1 0 0 1 314 172 Tm (Create Users) Tj ET
+q
+0.85 0.88 0.94 RG
+0.5 w
+48 136 516 22 re S
+Q
+BT /F1 10 Tf 1 0 0 1 56 150 Tm (USER_DELETE) Tj ET
+BT /F1 10 Tf 1 0 0 1 314 150 Tm (Delete Users) Tj ET
+q
+0.97 0.99 1 rg
+48 114 516 22 re f
+Q
+q
+0.85 0.88 0.94 RG
+0.5 w
+48 114 516 22 re S
+Q
+BT /F1 10 Tf 1 0 0 1 56 128 Tm (USER_UPDATE) Tj ET
+BT /F1 10 Tf 1 0 0 1 314 128 Tm (Update Users) Tj ET
+q
+0.85 0.88 0.94 RG
+0.5 w
+48 92 516 22 re S
+Q
+BT /F1 10 Tf 1 0 0 1 56 106 Tm (USER_VIEW) Tj ET
+BT /F1 10 Tf 1 0 0 1 314 106 Tm (View Users) Tj ET
+q
+0.97 0.99 1 rg
+48 70 516 22 re f
+Q
+q
+0.85 0.88 0.94 RG
+0.5 w
+48 70 516 22 re S
+Q
+BT /F1 10 Tf 1 0 0 1 56 84 Tm (USERS_EXPORT) Tj ET
+BT /F1 10 Tf 1 0 0 1 314 84 Tm (Export Users) Tj ET
+0.45 0.50 0.60 rg
+BT /F1 9 Tf 1 0 0 1 48 32 Tm (Page 1 of 1) Tj ET
+0 0 0 rg
+endstream
+endobj
+5 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 3 0 R >> >> >>
+endobj
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000117 00000 n 
+0000000187 00000 n 
+0000005301 00000 n 
+trailer
+<< /Size 6 /Root 1 0 R >>
+startxref
+5427
+%%EOF

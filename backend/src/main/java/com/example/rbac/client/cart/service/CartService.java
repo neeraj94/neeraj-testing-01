@@ -1,3 +1,4 @@
+<<<<<<<< HEAD:backend/src/main/java/com/example/rbac/client/cart/service/CartService.java
 package com.example.rbac.client.cart.service;
 
 import com.example.rbac.admin.activity.service.ActivityRecorder;
@@ -14,6 +15,24 @@ import com.example.rbac.client.cart.mapper.CartMapper;
 import com.example.rbac.client.cart.model.Cart;
 import com.example.rbac.client.cart.model.CartItem;
 import com.example.rbac.client.cart.repository.CartRepository;
+========
+package com.example.rbac.admin.cart.service;
+
+import com.example.rbac.admin.activity.service.ActivityRecorder;
+import com.example.rbac.admin.cart.dto.AddCartItemRequest;
+import com.example.rbac.admin.cart.dto.AdminCartSummaryDto;
+import com.example.rbac.admin.cart.dto.CartDto;
+import com.example.rbac.admin.cart.dto.CartItemDto;
+import com.example.rbac.admin.cart.dto.CartSortOption;
+import com.example.rbac.admin.cart.dto.CartSummaryRow;
+import com.example.rbac.admin.cart.dto.GuestCartLineRequest;
+import com.example.rbac.admin.cart.dto.MergeCartRequest;
+import com.example.rbac.admin.cart.dto.UpdateCartItemRequest;
+import com.example.rbac.admin.cart.mapper.CartMapper;
+import com.example.rbac.admin.cart.model.Cart;
+import com.example.rbac.admin.cart.model.CartItem;
+import com.example.rbac.admin.cart.repository.CartRepository;
+>>>>>>>> origin/main:backend/src/main/java/com/example/rbac/admin/cart/service/CartService.java
 import com.example.rbac.common.exception.ApiException;
 import com.example.rbac.common.pagination.PageResponse;
 import com.example.rbac.admin.products.model.DiscountType;

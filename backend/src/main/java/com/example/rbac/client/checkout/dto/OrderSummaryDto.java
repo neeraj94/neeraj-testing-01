@@ -1,6 +1,12 @@
+<<<<<<<< HEAD:backend/src/main/java/com/example/rbac/client/checkout/dto/OrderSummaryDto.java
 package com.example.rbac.client.checkout.dto;
 
 import com.example.rbac.client.shipping.dto.ShippingRateQuoteDto;
+========
+package com.example.rbac.admin.checkout.dto;
+
+import com.example.rbac.admin.shipping.dto.ShippingRateQuoteDto;
+>>>>>>>> origin/main:backend/src/main/java/com/example/rbac/admin/checkout/dto/OrderSummaryDto.java
 
 import java.math.BigDecimal;
 import java.util.ArrayList;

@@ -1,4 +1,8 @@
+<<<<<<<< HEAD:backend/src/main/java/com/example/rbac/client/cart/model/Cart.java
 package com.example.rbac.client.cart.model;
+========
+package com.example.rbac.admin.cart.model;
+>>>>>>>> origin/main:backend/src/main/java/com/example/rbac/admin/cart/model/Cart.java
 
 import com.example.rbac.admin.users.model.User;
 import jakarta.persistence.*;

@@ -1,4 +1,8 @@
+<<<<<<<< HEAD:backend/src/main/java/com/example/rbac/client/auth/token/RefreshToken.java
 package com.example.rbac.client.auth.token;
+========
+package com.example.rbac.admin.auth.token;
+>>>>>>>> origin/main:backend/src/main/java/com/example/rbac/admin/auth/token/RefreshToken.java
 
 import com.example.rbac.admin.users.model.User;
 import jakarta.persistence.*;

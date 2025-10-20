@@ -1,4 +1,8 @@
+<<<<<<<< HEAD:backend/src/main/java/com/example/rbac/client/cart/dto/AddCartItemRequest.java
 package com.example.rbac.client.cart.dto;
+========
+package com.example.rbac.admin.cart.dto;
+>>>>>>>> origin/main:backend/src/main/java/com/example/rbac/admin/cart/dto/AddCartItemRequest.java
 
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;

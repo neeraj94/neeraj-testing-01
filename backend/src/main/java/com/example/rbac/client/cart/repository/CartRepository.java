@@ -1,6 +1,12 @@
+<<<<<<<< HEAD:backend/src/main/java/com/example/rbac/client/cart/repository/CartRepository.java
 package com.example.rbac.client.cart.repository;
 
 import com.example.rbac.client.cart.model.Cart;
+========
+package com.example.rbac.admin.cart.repository;
+
+import com.example.rbac.admin.cart.model.Cart;
+>>>>>>>> origin/main:backend/src/main/java/com/example/rbac/admin/cart/repository/CartRepository.java
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 

@@ -1,4 +1,8 @@
+<<<<<<<< HEAD:backend/src/main/java/com/example/rbac/client/shipping/dto/ShippingOptionDto.java
 package com.example.rbac.client.shipping.dto;
+========
+package com.example.rbac.admin.shipping.dto;
+>>>>>>>> origin/main:backend/src/main/java/com/example/rbac/admin/shipping/dto/ShippingOptionDto.java
 
 public class ShippingOptionDto {
     private Long id;
