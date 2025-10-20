@@ -5,44 +5,23 @@ import type { RootState } from '../app/store';
 import type { AuthResponse } from '../types/auth';
 
 const rawBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1';
-const trimmedBaseUrl = rawBaseUrl.replace(/\/+$/, '');
-const baseURL = trimmedBaseUrl.endsWith('/admin')
-  ? trimmedBaseUrl.slice(0, -'/admin'.length)
-  : trimmedBaseUrl;
+
+const normalizeBaseUrl = (value: string): string => {
+  const trimmed = value.trim().replace(/\/+$/, '');
+  if (/\/admin$/i.test(trimmed)) {
+    return trimmed.slice(0, -'/admin'.length);
+  }
+  return trimmed;
+};
+
+const baseURL = normalizeBaseUrl(rawBaseUrl);
+const adminBaseURL = `${baseURL}/admin`;
 
 const api = axios.create({
   baseURL
 });
 
-const ensureAdminPath = (url: string): string => {
-  if (/^https?:/i.test(url)) {
-    return url;
-  }
-  if (!url) {
-    return '/admin';
-  }
-  if (url.startsWith('/admin')) {
-    return url;
-  }
-  if (url.startsWith('/')) {
-    return `/admin${url}`;
-  }
-  return `/admin/${url}`;
-};
-
-export const adminApi = {
-  get: <T = unknown>(url: string, config?: AxiosRequestConfig) =>
-    api.get<T>(ensureAdminPath(url), config),
-  delete: <T = unknown>(url: string, config?: AxiosRequestConfig) =>
-    api.delete<T>(ensureAdminPath(url), config),
-  post: <T = unknown>(url: string, data?: unknown, config?: AxiosRequestConfig) =>
-    api.post<T>(ensureAdminPath(url), data, config),
-  put: <T = unknown>(url: string, data?: unknown, config?: AxiosRequestConfig) =>
-    api.put<T>(ensureAdminPath(url), data, config),
-  patch: <T = unknown>(url: string, data?: unknown, config?: AxiosRequestConfig) =>
-    api.patch<T>(ensureAdminPath(url), data, config),
-  defaults: api.defaults
-};
+api.defaults.baseURL = baseURL;
 
 let storeRef: Store<RootState> | null = null;
 let refreshListener: ((payload: AuthResponse) => void) | null = null;
@@ -61,6 +40,28 @@ export const registerAuthListeners = (
 };
 
 api.interceptors.request.use((config) => {
+  if (typeof config.baseURL === 'string') {
+    config.baseURL = normalizeBaseUrl(config.baseURL);
+  }
+
+  if (typeof config.url === 'string') {
+    const url = config.url.trim();
+    const isAbsolute = /^[a-z][a-z\d+\-.]*:/.test(url);
+    if (!isAbsolute) {
+      if (url === '/admin') {
+        config.baseURL = adminBaseURL;
+        config.url = '';
+      } else if (url.startsWith('/admin/')) {
+        config.baseURL = adminBaseURL;
+        config.url = url.slice('/admin'.length);
+      } else if (!config.baseURL) {
+        config.baseURL = baseURL;
+      }
+    }
+  } else if (!config.baseURL) {
+    config.baseURL = baseURL;
+  }
+
   if (!storeRef) return config;
   const state = storeRef.getState();
   const token = state.auth.accessToken;
