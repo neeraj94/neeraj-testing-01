@@ -13,7 +13,7 @@
           <div class="sidebar__badge">RBAC Commerce</div>
           <h1>Checkout APIs</h1>
           <p>Endpoints implemented by the Checkout controller.</p>
-          <p class="sidebar__hint">Base path: <code>/api/endcustomer/checkout</code></p>
+          <p class="sidebar__hint">Base path: <code>/api/v1/checkout</code></p>
         </div>
         <div class="sidebar__controls">
           <label class="control">
@@ -47,13 +47,13 @@
           <p>Endpoints implemented by the Checkout controller.</p>
           <p><strong>Selected base URL:</strong> <span data-base-display>https://sandbox.api.rbac-commerce.dev</span></p>
         </header>
-        <article class="endpoint" id="get-addresses" data-endpoint-id="get-addresses" data-method="GET" data-base-path="/api/endcustomer/checkout" data-path="/addresses" data-auth="Bearer" data-body='null'>
+        <article class="endpoint" id="get-addresses" data-endpoint-id="get-addresses" data-method="GET" data-base-path="/api/v1/checkout" data-path="/addresses" data-auth="Bearer" data-body='null'>
   <div class="endpoint__header">
     <div class="endpoint__title">
       <span class="http-badge http-badge--get">GET</span>
       <div>
         <h3>List Addresses</h3>
-        <p><code>/api/endcustomer/checkout/addresses</code></p>
+        <p><code>/api/v1/checkout/addresses</code></p>
       </div>
     </div>
     <span class="auth-badge auth-badge--protected">Protected</span>
@@ -130,13 +130,13 @@
     </div>
   </div>
 </article>
-<article class="endpoint" id="post-addresses" data-endpoint-id="post-addresses" data-method="POST" data-base-path="/api/endcustomer/checkout" data-path="/addresses" data-auth="Bearer" data-headers='[[&quot;Content-Type&quot;, &quot;application/json&quot;]]' data-body='&quot;{}&quot;'>
+<article class="endpoint" id="post-addresses" data-endpoint-id="post-addresses" data-method="POST" data-base-path="/api/v1/checkout" data-path="/addresses" data-auth="Bearer" data-headers='[[&quot;Content-Type&quot;, &quot;application/json&quot;]]' data-body='&quot;{}&quot;'>
   <div class="endpoint__header">
     <div class="endpoint__title">
       <span class="http-badge http-badge--post">POST</span>
       <div>
         <h3>Create Address</h3>
-        <p><code>/api/endcustomer/checkout/addresses</code></p>
+        <p><code>/api/v1/checkout/addresses</code></p>
       </div>
     </div>
     <span class="auth-badge auth-badge--protected">Protected</span>
@@ -220,13 +220,13 @@
     </div>
   </div>
 </article>
-<article class="endpoint" id="put-addresses-id" data-endpoint-id="put-addresses-id" data-method="PUT" data-base-path="/api/endcustomer/checkout" data-path="/addresses/{id}" data-auth="Bearer" data-headers='[[&quot;Content-Type&quot;, &quot;application/json&quot;]]' data-body='&quot;{}&quot;'>
+<article class="endpoint" id="put-addresses-id" data-endpoint-id="put-addresses-id" data-method="PUT" data-base-path="/api/v1/checkout" data-path="/addresses/{id}" data-auth="Bearer" data-headers='[[&quot;Content-Type&quot;, &quot;application/json&quot;]]' data-body='&quot;{}&quot;'>
   <div class="endpoint__header">
     <div class="endpoint__title">
       <span class="http-badge http-badge--put">PUT</span>
       <div>
         <h3>Update Address</h3>
-        <p><code>/api/endcustomer/checkout/addresses/{id}</code></p>
+        <p><code>/api/v1/checkout/addresses/{id}</code></p>
       </div>
     </div>
     <span class="auth-badge auth-badge--protected">Protected</span>
@@ -317,13 +317,13 @@
     </div>
   </div>
 </article>
-<article class="endpoint" id="get-payment-methods" data-endpoint-id="get-payment-methods" data-method="GET" data-base-path="/api/endcustomer/checkout" data-path="/payment-methods" data-auth="Bearer" data-body='null'>
+<article class="endpoint" id="get-payment-methods" data-endpoint-id="get-payment-methods" data-method="GET" data-base-path="/api/v1/checkout" data-path="/payment-methods" data-auth="Bearer" data-body='null'>
   <div class="endpoint__header">
     <div class="endpoint__title">
       <span class="http-badge http-badge--get">GET</span>
       <div>
         <h3>List Payment Methods</h3>
-        <p><code>/api/endcustomer/checkout/payment-methods</code></p>
+        <p><code>/api/v1/checkout/payment-methods</code></p>
       </div>
     </div>
     <span class="auth-badge auth-badge--protected">Protected</span>
@@ -400,13 +400,13 @@
     </div>
   </div>
 </article>
-<article class="endpoint" id="get-regions-countries" data-endpoint-id="get-regions-countries" data-method="GET" data-base-path="/api/endcustomer/checkout" data-path="/regions/countries" data-auth="Bearer" data-body='null'>
+<article class="endpoint" id="get-regions-countries" data-endpoint-id="get-regions-countries" data-method="GET" data-base-path="/api/v1/checkout" data-path="/regions/countries" data-auth="Bearer" data-body='null'>
   <div class="endpoint__header">
     <div class="endpoint__title">
       <span class="http-badge http-badge--get">GET</span>
       <div>
         <h3>List Countries For Checkout</h3>
-        <p><code>/api/endcustomer/checkout/regions/countries</code></p>
+        <p><code>/api/v1/checkout/regions/countries</code></p>
       </div>
     </div>
     <span class="auth-badge auth-badge--protected">Protected</span>
@@ -483,13 +483,13 @@
     </div>
   </div>
 </article>
-<article class="endpoint" id="get-regions-countries-countryId-states" data-endpoint-id="get-regions-countries-countryId-states" data-method="GET" data-base-path="/api/endcustomer/checkout" data-path="/regions/countries/{countryId}/states" data-auth="Bearer" data-body='null'>
+<article class="endpoint" id="get-regions-countries-countryId-states" data-endpoint-id="get-regions-countries-countryId-states" data-method="GET" data-base-path="/api/v1/checkout" data-path="/regions/countries/{countryId}/states" data-auth="Bearer" data-body='null'>
   <div class="endpoint__header">
     <div class="endpoint__title">
       <span class="http-badge http-badge--get">GET</span>
       <div>
         <h3>List States For Checkout</h3>
-        <p><code>/api/endcustomer/checkout/regions/countries/{countryId}/states</code></p>
+        <p><code>/api/v1/checkout/regions/countries/{countryId}/states</code></p>
       </div>
     </div>
     <span class="auth-badge auth-badge--protected">Protected</span>
@@ -573,13 +573,13 @@
     </div>
   </div>
 </article>
-<article class="endpoint" id="get-regions-states-stateId-cities" data-endpoint-id="get-regions-states-stateId-cities" data-method="GET" data-base-path="/api/endcustomer/checkout" data-path="/regions/states/{stateId}/cities" data-auth="Bearer" data-body='null'>
+<article class="endpoint" id="get-regions-states-stateId-cities" data-endpoint-id="get-regions-states-stateId-cities" data-method="GET" data-base-path="/api/v1/checkout" data-path="/regions/states/{stateId}/cities" data-auth="Bearer" data-body='null'>
   <div class="endpoint__header">
     <div class="endpoint__title">
       <span class="http-badge http-badge--get">GET</span>
       <div>
         <h3>List Cities For Checkout</h3>
-        <p><code>/api/endcustomer/checkout/regions/states/{stateId}/cities</code></p>
+        <p><code>/api/v1/checkout/regions/states/{stateId}/cities</code></p>
       </div>
     </div>
     <span class="auth-badge auth-badge--protected">Protected</span>
@@ -663,13 +663,13 @@
     </div>
   </div>
 </article>
-<article class="endpoint" id="post-summary" data-endpoint-id="post-summary" data-method="POST" data-base-path="/api/endcustomer/checkout" data-path="/summary" data-auth="Bearer" data-headers='[[&quot;Content-Type&quot;, &quot;application/json&quot;]]' data-body='&quot;{}&quot;'>
+<article class="endpoint" id="post-summary" data-endpoint-id="post-summary" data-method="POST" data-base-path="/api/v1/checkout" data-path="/summary" data-auth="Bearer" data-headers='[[&quot;Content-Type&quot;, &quot;application/json&quot;]]' data-body='&quot;{}&quot;'>
   <div class="endpoint__header">
     <div class="endpoint__title">
       <span class="http-badge http-badge--post">POST</span>
       <div>
         <h3>Preview Order</h3>
-        <p><code>/api/endcustomer/checkout/summary</code></p>
+        <p><code>/api/v1/checkout/summary</code></p>
       </div>
     </div>
     <span class="auth-badge auth-badge--protected">Protected</span>
@@ -753,13 +753,13 @@
     </div>
   </div>
 </article>
-<article class="endpoint" id="post-orders" data-endpoint-id="post-orders" data-method="POST" data-base-path="/api/endcustomer/checkout" data-path="/orders" data-auth="Bearer" data-headers='[[&quot;Content-Type&quot;, &quot;application/json&quot;]]' data-body='&quot;{}&quot;'>
+<article class="endpoint" id="post-orders" data-endpoint-id="post-orders" data-method="POST" data-base-path="/api/v1/checkout" data-path="/orders" data-auth="Bearer" data-headers='[[&quot;Content-Type&quot;, &quot;application/json&quot;]]' data-body='&quot;{}&quot;'>
   <div class="endpoint__header">
     <div class="endpoint__title">
       <span class="http-badge http-badge--post">POST</span>
       <div>
         <h3>Place Order</h3>
-        <p><code>/api/endcustomer/checkout/orders</code></p>
+        <p><code>/api/v1/checkout/orders</code></p>
       </div>
     </div>
     <span class="auth-badge auth-badge--protected">Protected</span>
@@ -843,13 +843,13 @@
     </div>
   </div>
 </article>
-<article class="endpoint" id="get-orders-orderId" data-endpoint-id="get-orders-orderId" data-method="GET" data-base-path="/api/endcustomer/checkout" data-path="/orders/{orderId}" data-auth="Bearer" data-body='null'>
+<article class="endpoint" id="get-orders-orderId" data-endpoint-id="get-orders-orderId" data-method="GET" data-base-path="/api/v1/checkout" data-path="/orders/{orderId}" data-auth="Bearer" data-body='null'>
   <div class="endpoint__header">
     <div class="endpoint__title">
       <span class="http-badge http-badge--get">GET</span>
       <div>
         <h3>Get Order</h3>
-        <p><code>/api/endcustomer/checkout/orders/{orderId}</code></p>
+        <p><code>/api/v1/checkout/orders/{orderId}</code></p>
       </div>
     </div>
     <span class="auth-badge auth-badge--protected">Protected</span>
@@ -933,13 +933,13 @@
     </div>
   </div>
 </article>
-<article class="endpoint" id="get-summary" data-endpoint-id="get-summary" data-method="GET" data-base-path="/api/endcustomer/checkout" data-path="/summary" data-auth="Bearer" data-body='null'>
+<article class="endpoint" id="get-summary" data-endpoint-id="get-summary" data-method="GET" data-base-path="/api/v1/checkout" data-path="/summary" data-auth="Bearer" data-body='null'>
   <div class="endpoint__header">
     <div class="endpoint__title">
       <span class="http-badge http-badge--get">GET</span>
       <div>
         <h3>Full Summary</h3>
-        <p><code>/api/endcustomer/checkout/summary</code></p>
+        <p><code>/api/v1/checkout/summary</code></p>
       </div>
     </div>
     <span class="auth-badge auth-badge--protected">Protected</span>
