@@ -1,8 +1,4 @@
-<<<<<<<< HEAD:backend/src/main/java/com/example/rbac/client/checkout/model/CheckoutOrder.java
 package com.example.rbac.client.checkout.model;
-========
-package com.example.rbac.admin.checkout.model;
->>>>>>>> origin/main:backend/src/main/java/com/example/rbac/admin/checkout/model/CheckoutOrder.java
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

@@ -1,8 +1,4 @@
-<<<<<<<< HEAD:backend/src/main/java/com/example/rbac/client/checkout/dto/OrderListItemDto.java
 package com.example.rbac.client.checkout.dto;
-========
-package com.example.rbac.admin.checkout.dto;
->>>>>>>> origin/main:backend/src/main/java/com/example/rbac/admin/checkout/dto/OrderListItemDto.java
 
 import java.time.Instant;
 import java.util.ArrayList;

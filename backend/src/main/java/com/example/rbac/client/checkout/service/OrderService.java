@@ -1,4 +1,3 @@
-<<<<<<<< HEAD:backend/src/main/java/com/example/rbac/client/checkout/service/OrderService.java
 package com.example.rbac.client.checkout.service;
 
 import com.example.rbac.client.checkout.dto.AppliedCouponDto;
@@ -12,21 +11,6 @@ import com.example.rbac.client.checkout.dto.OrderSummaryDto;
 import com.example.rbac.client.checkout.dto.PaymentMethodDto;
 import com.example.rbac.client.checkout.model.CheckoutOrder;
 import com.example.rbac.client.checkout.repository.CheckoutOrderRepository;
-========
-package com.example.rbac.admin.checkout.service;
-
-import com.example.rbac.admin.checkout.dto.AppliedCouponDto;
-import com.example.rbac.admin.checkout.dto.CheckoutAddressDto;
-import com.example.rbac.admin.checkout.dto.CheckoutOrderLineRequest;
-import com.example.rbac.admin.checkout.dto.CheckoutOrderResponse;
-import com.example.rbac.admin.checkout.dto.OrderDetailDto;
-import com.example.rbac.admin.checkout.dto.OrderLineDto;
-import com.example.rbac.admin.checkout.dto.OrderListItemDto;
-import com.example.rbac.admin.checkout.dto.OrderSummaryDto;
-import com.example.rbac.admin.checkout.dto.PaymentMethodDto;
-import com.example.rbac.admin.checkout.model.CheckoutOrder;
-import com.example.rbac.admin.checkout.repository.CheckoutOrderRepository;
->>>>>>>> origin/main:backend/src/main/java/com/example/rbac/admin/checkout/service/OrderService.java
 import com.example.rbac.common.exception.ApiException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;

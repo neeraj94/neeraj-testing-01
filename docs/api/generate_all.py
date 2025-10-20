@@ -21,7 +21,7 @@ modules.append({
     "file": "auth.html",
     "title": "Authentication APIs",
     "summary": "Token issuance, refresh, logout, and verification flows used by the dashboard and storefront.",
-    "base": "/api/v1/auth",
+    "base": "/api/v1/client/auth",
     "endpoints": [
         {
             "name": "Sign up",
