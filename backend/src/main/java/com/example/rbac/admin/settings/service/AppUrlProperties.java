@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component;
 public class AppUrlProperties {
 
     private String login = "http://localhost:3000/login";
-    private String verification = "http://localhost:8080/api/v1/auth/verify";
+    private String verification = "http://localhost:8080/api/v1/client/auth/verify";
 
     public String getLogin() {
         return login;
