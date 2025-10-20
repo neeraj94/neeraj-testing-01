@@ -1,13 +1,13 @@
 package com.example.rbac.products.controller;
 
 import com.example.rbac.common.exception.ApiException;
-import com.example.rbac.products.dto.storefront.PublicProductAvailability;
-import com.example.rbac.products.dto.storefront.PublicProductDetailDto;
-import com.example.rbac.products.dto.storefront.PublicProductSearchCriteria;
-import com.example.rbac.products.dto.storefront.PublicProductSearchResponse;
-import com.example.rbac.products.dto.storefront.PublicProductSort;
-import com.example.rbac.products.service.PublicProductService;
-import com.example.rbac.users.model.UserPrincipal;
+import com.example.rbac.admin.products.dto.storefront.PublicProductAvailability;
+import com.example.rbac.admin.products.dto.storefront.PublicProductDetailDto;
+import com.example.rbac.admin.products.dto.storefront.PublicProductSearchCriteria;
+import com.example.rbac.admin.products.dto.storefront.PublicProductSearchResponse;
+import com.example.rbac.admin.products.dto.storefront.PublicProductSort;
+import com.example.rbac.admin.products.service.PublicProductService;
+import com.example.rbac.admin.users.model.UserPrincipal;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;

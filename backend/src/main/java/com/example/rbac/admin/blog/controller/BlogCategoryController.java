@@ -1,8 +1,8 @@
 package com.example.rbac.admin.blog.controller;
 
-import com.example.rbac.blog.dto.BlogCategoryDto;
-import com.example.rbac.blog.dto.BlogCategoryRequest;
-import com.example.rbac.blog.service.BlogCategoryService;
+import com.example.rbac.admin.blog.dto.BlogCategoryDto;
+import com.example.rbac.admin.blog.dto.BlogCategoryRequest;
+import com.example.rbac.admin.blog.service.BlogCategoryService;
 import com.example.rbac.common.pagination.PageResponse;
 import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;

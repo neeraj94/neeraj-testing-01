@@ -1,10 +1,10 @@
 package com.example.rbac.admin.gallery.controller;
 
 import com.example.rbac.common.pagination.PageResponse;
-import com.example.rbac.gallery.dto.*;
-import com.example.rbac.gallery.service.GalleryFileContent;
-import com.example.rbac.gallery.service.GalleryService;
-import com.example.rbac.users.model.UserPrincipal;
+import com.example.rbac.admin.gallery.dto.*;
+import com.example.rbac.admin.gallery.service.GalleryFileContent;
+import com.example.rbac.admin.gallery.service.GalleryService;
+import com.example.rbac.admin.users.model.UserPrincipal;
 import jakarta.validation.Valid;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;

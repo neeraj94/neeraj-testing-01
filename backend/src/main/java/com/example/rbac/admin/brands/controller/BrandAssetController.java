@@ -1,10 +1,10 @@
 package com.example.rbac.admin.brands.controller;
 
-import com.example.rbac.brands.dto.BrandLogoUploadResponse;
-import com.example.rbac.brands.service.BrandLogoStorageService;
-import com.example.rbac.brands.service.BrandLogoStorageService.StoredLogo;
-import com.example.rbac.uploadedfile.model.UploadedFileModule;
-import com.example.rbac.uploadedfile.service.UploadedFileService;
+import com.example.rbac.admin.brands.dto.BrandLogoUploadResponse;
+import com.example.rbac.admin.brands.service.BrandLogoStorageService;
+import com.example.rbac.admin.brands.service.BrandLogoStorageService.StoredLogo;
+import com.example.rbac.admin.uploadedfile.model.UploadedFileModule;
+import com.example.rbac.admin.uploadedfile.service.UploadedFileService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.Resource;

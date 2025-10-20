@@ -1,10 +1,10 @@
 package com.example.rbac.admin.products.controller;
 
 import com.example.rbac.common.pagination.PageResponse;
-import com.example.rbac.products.dto.CreateProductRequest;
-import com.example.rbac.products.dto.ProductDto;
-import com.example.rbac.products.dto.ProductSummaryDto;
-import com.example.rbac.products.service.ProductService;
+import com.example.rbac.admin.products.dto.CreateProductRequest;
+import com.example.rbac.admin.products.dto.ProductDto;
+import com.example.rbac.admin.products.dto.ProductSummaryDto;
+import com.example.rbac.admin.products.service.ProductService;
 import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;

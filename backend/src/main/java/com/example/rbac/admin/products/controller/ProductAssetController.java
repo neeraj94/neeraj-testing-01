@@ -1,11 +1,11 @@
 package com.example.rbac.admin.products.controller;
 
 import com.example.rbac.common.exception.ApiException;
-import com.example.rbac.products.dto.ProductAssetUploadResponse;
-import com.example.rbac.products.service.ProductAssetStorageService;
-import com.example.rbac.products.service.ProductAssetStorageService.AssetType;
-import com.example.rbac.products.service.ProductAssetStorageService.StoredAsset;
-import com.example.rbac.uploadedfile.service.UploadedFileService;
+import com.example.rbac.admin.products.dto.ProductAssetUploadResponse;
+import com.example.rbac.admin.products.service.ProductAssetStorageService;
+import com.example.rbac.admin.products.service.ProductAssetStorageService.AssetType;
+import com.example.rbac.admin.products.service.ProductAssetStorageService.StoredAsset;
+import com.example.rbac.admin.uploadedfile.service.UploadedFileService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.Resource;

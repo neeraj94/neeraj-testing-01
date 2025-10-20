@@ -1,8 +1,8 @@
 package com.example.rbac.admin.brands.controller;
 
-import com.example.rbac.brands.dto.BrandDto;
-import com.example.rbac.brands.dto.BrandRequest;
-import com.example.rbac.brands.service.BrandService;
+import com.example.rbac.admin.brands.dto.BrandDto;
+import com.example.rbac.admin.brands.dto.BrandRequest;
+import com.example.rbac.admin.brands.service.BrandService;
 import com.example.rbac.common.pagination.PageResponse;
 import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;

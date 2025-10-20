@@ -1,16 +1,16 @@
 package com.example.rbac.admin.users.controller;
 
 import com.example.rbac.common.pagination.PageResponse;
-import com.example.rbac.users.dto.AssignRolesRequest;
-import com.example.rbac.users.dto.CreateUserRequest;
-import com.example.rbac.users.dto.UpdateUserRequest;
-import com.example.rbac.users.dto.UpdateUserPermissionsRequest;
-import com.example.rbac.users.dto.UserDto;
-import com.example.rbac.users.dto.UserRecentViewDto;
-import com.example.rbac.users.dto.UserSummaryResponse;
-import com.example.rbac.users.dto.UpdateUserStatusRequest;
-import com.example.rbac.users.service.UserService;
-import com.example.rbac.users.service.UserRecentViewService;
+import com.example.rbac.admin.users.dto.AssignRolesRequest;
+import com.example.rbac.admin.users.dto.CreateUserRequest;
+import com.example.rbac.admin.users.dto.UpdateUserRequest;
+import com.example.rbac.admin.users.dto.UpdateUserPermissionsRequest;
+import com.example.rbac.admin.users.dto.UserDto;
+import com.example.rbac.admin.users.dto.UserRecentViewDto;
+import com.example.rbac.admin.users.dto.UserSummaryResponse;
+import com.example.rbac.admin.users.dto.UpdateUserStatusRequest;
+import com.example.rbac.admin.users.service.UserService;
+import com.example.rbac.admin.users.service.UserRecentViewService;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 

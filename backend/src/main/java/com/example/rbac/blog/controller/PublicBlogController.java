@@ -1,9 +1,9 @@
 package com.example.rbac.blog.controller;
 
-import com.example.rbac.blog.dto.BlogCategoryDto;
-import com.example.rbac.blog.dto.PublicBlogPostDto;
-import com.example.rbac.blog.service.BlogCategoryService;
-import com.example.rbac.blog.service.BlogPostService;
+import com.example.rbac.admin.blog.dto.BlogCategoryDto;
+import com.example.rbac.admin.blog.dto.PublicBlogPostDto;
+import com.example.rbac.admin.blog.service.BlogCategoryService;
+import com.example.rbac.admin.blog.service.BlogPostService;
 import com.example.rbac.common.pagination.PageResponse;
 import org.springframework.web.bind.annotation.*;
 

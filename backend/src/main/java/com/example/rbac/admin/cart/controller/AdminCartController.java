@@ -1,9 +1,9 @@
 package com.example.rbac.admin.cart.controller;
 
-import com.example.rbac.cart.dto.AdminCartSummaryDto;
-import com.example.rbac.cart.service.CartService;
+import com.example.rbac.admin.cart.dto.AdminCartSummaryDto;
+import com.example.rbac.admin.cart.service.CartService;
 import com.example.rbac.common.pagination.PageResponse;
-import com.example.rbac.users.model.UserPrincipal;
+import com.example.rbac.admin.users.model.UserPrincipal;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;

@@ -1,9 +1,9 @@
 package com.example.rbac.admin.badges.category.controller;
 
-import com.example.rbac.badges.category.dto.BadgeCategoryDto;
-import com.example.rbac.badges.category.dto.BadgeCategoryOptionDto;
-import com.example.rbac.badges.category.dto.BadgeCategoryRequest;
-import com.example.rbac.badges.category.service.BadgeCategoryService;
+import com.example.rbac.admin.badges.category.dto.BadgeCategoryDto;
+import com.example.rbac.admin.badges.category.dto.BadgeCategoryOptionDto;
+import com.example.rbac.admin.badges.category.dto.BadgeCategoryRequest;
+import com.example.rbac.admin.badges.category.service.BadgeCategoryService;
 import com.example.rbac.common.pagination.PageResponse;
 import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;

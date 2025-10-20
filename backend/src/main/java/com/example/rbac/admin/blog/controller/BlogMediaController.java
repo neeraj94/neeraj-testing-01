@@ -1,11 +1,11 @@
 package com.example.rbac.admin.blog.controller;
 
-import com.example.rbac.blog.dto.BlogMediaUploadResponse;
-import com.example.rbac.blog.service.BlogMediaStorageService;
-import com.example.rbac.blog.service.BlogMediaStorageService.StoredMedia;
+import com.example.rbac.admin.blog.dto.BlogMediaUploadResponse;
+import com.example.rbac.admin.blog.service.BlogMediaStorageService;
+import com.example.rbac.admin.blog.service.BlogMediaStorageService.StoredMedia;
 import com.example.rbac.common.exception.ApiException;
-import com.example.rbac.uploadedfile.model.UploadedFileModule;
-import com.example.rbac.uploadedfile.service.UploadedFileService;
+import com.example.rbac.admin.uploadedfile.model.UploadedFileModule;
+import com.example.rbac.admin.uploadedfile.service.UploadedFileService;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;

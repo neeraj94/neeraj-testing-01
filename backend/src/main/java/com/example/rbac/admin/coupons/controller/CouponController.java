@@ -1,10 +1,10 @@
 package com.example.rbac.admin.coupons.controller;
 
 import com.example.rbac.common.pagination.PageResponse;
-import com.example.rbac.coupons.dto.*;
-import com.example.rbac.coupons.model.CouponType;
-import com.example.rbac.coupons.service.CouponService;
-import com.example.rbac.products.model.DiscountType;
+import com.example.rbac.admin.coupons.dto.*;
+import com.example.rbac.admin.coupons.model.CouponType;
+import com.example.rbac.admin.coupons.service.CouponService;
+import com.example.rbac.admin.products.model.DiscountType;
 import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;

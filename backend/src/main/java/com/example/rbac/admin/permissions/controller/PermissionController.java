@@ -1,9 +1,9 @@
 package com.example.rbac.admin.permissions.controller;
 
 import com.example.rbac.common.pagination.PageResponse;
-import com.example.rbac.permissions.dto.PermissionDto;
-import com.example.rbac.permissions.dto.PermissionRequest;
-import com.example.rbac.permissions.service.PermissionService;
+import com.example.rbac.admin.permissions.dto.PermissionDto;
+import com.example.rbac.admin.permissions.dto.PermissionRequest;
+import com.example.rbac.admin.permissions.service.PermissionService;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 

@@ -1,8 +1,8 @@
 package com.example.rbac.admin.badges.controller;
 
-import com.example.rbac.badges.dto.BadgeDto;
-import com.example.rbac.badges.dto.BadgeRequest;
-import com.example.rbac.badges.service.BadgeService;
+import com.example.rbac.admin.badges.dto.BadgeDto;
+import com.example.rbac.admin.badges.dto.BadgeRequest;
+import com.example.rbac.admin.badges.service.BadgeService;
 import com.example.rbac.common.pagination.PageResponse;
 import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;

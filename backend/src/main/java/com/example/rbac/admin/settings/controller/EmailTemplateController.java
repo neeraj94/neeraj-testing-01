@@ -1,9 +1,9 @@
 package com.example.rbac.admin.settings.controller;
 
-import com.example.rbac.settings.dto.EmailTemplateDetailDto;
-import com.example.rbac.settings.dto.EmailTemplateListResponse;
-import com.example.rbac.settings.dto.EmailTemplateUpdateRequest;
-import com.example.rbac.settings.service.EmailTemplateService;
+import com.example.rbac.admin.settings.dto.EmailTemplateDetailDto;
+import com.example.rbac.admin.settings.dto.EmailTemplateListResponse;
+import com.example.rbac.admin.settings.dto.EmailTemplateUpdateRequest;
+import com.example.rbac.admin.settings.service.EmailTemplateService;
 import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;

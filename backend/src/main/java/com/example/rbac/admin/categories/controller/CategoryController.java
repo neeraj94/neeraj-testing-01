@@ -1,9 +1,9 @@
 package com.example.rbac.admin.categories.controller;
 
-import com.example.rbac.categories.dto.CategoryDto;
-import com.example.rbac.categories.dto.CategoryOptionDto;
-import com.example.rbac.categories.dto.CategoryRequest;
-import com.example.rbac.categories.service.CategoryService;
+import com.example.rbac.admin.categories.dto.CategoryDto;
+import com.example.rbac.admin.categories.dto.CategoryOptionDto;
+import com.example.rbac.admin.categories.dto.CategoryRequest;
+import com.example.rbac.admin.categories.service.CategoryService;
 import com.example.rbac.common.pagination.PageResponse;
 import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;

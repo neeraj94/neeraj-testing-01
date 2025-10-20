@@ -1,8 +1,8 @@
 package com.example.rbac.admin.attributes.controller;
 
-import com.example.rbac.attributes.dto.AttributeDto;
-import com.example.rbac.attributes.dto.AttributeRequest;
-import com.example.rbac.attributes.service.AttributeService;
+import com.example.rbac.admin.attributes.dto.AttributeDto;
+import com.example.rbac.admin.attributes.dto.AttributeRequest;
+import com.example.rbac.admin.attributes.service.AttributeService;
 import com.example.rbac.common.pagination.PageResponse;
 import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;

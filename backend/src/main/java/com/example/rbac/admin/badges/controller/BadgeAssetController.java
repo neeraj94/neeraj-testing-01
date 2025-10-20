@@ -1,10 +1,10 @@
 package com.example.rbac.admin.badges.controller;
 
-import com.example.rbac.badges.dto.BadgeIconUploadResponse;
-import com.example.rbac.badges.service.BadgeIconStorageService;
-import com.example.rbac.badges.service.BadgeIconStorageService.StoredIcon;
-import com.example.rbac.uploadedfile.model.UploadedFileModule;
-import com.example.rbac.uploadedfile.service.UploadedFileService;
+import com.example.rbac.admin.badges.dto.BadgeIconUploadResponse;
+import com.example.rbac.admin.badges.service.BadgeIconStorageService;
+import com.example.rbac.admin.badges.service.BadgeIconStorageService.StoredIcon;
+import com.example.rbac.admin.uploadedfile.model.UploadedFileModule;
+import com.example.rbac.admin.uploadedfile.service.UploadedFileService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import jakarta.servlet.http.HttpServletResponse;

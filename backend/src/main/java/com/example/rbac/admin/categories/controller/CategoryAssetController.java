@@ -1,10 +1,10 @@
 package com.example.rbac.admin.categories.controller;
 
-import com.example.rbac.categories.service.CategoryAssetStorageService;
-import com.example.rbac.categories.service.CategoryAssetStorageService.AssetType;
-import com.example.rbac.categories.service.CategoryAssetStorageService.StoredAsset;
-import com.example.rbac.uploadedfile.model.UploadedFileModule;
-import com.example.rbac.uploadedfile.service.UploadedFileService;
+import com.example.rbac.admin.categories.service.CategoryAssetStorageService;
+import com.example.rbac.admin.categories.service.CategoryAssetStorageService.AssetType;
+import com.example.rbac.admin.categories.service.CategoryAssetStorageService.StoredAsset;
+import com.example.rbac.admin.uploadedfile.model.UploadedFileModule;
+import com.example.rbac.admin.uploadedfile.service.UploadedFileService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.Resource;

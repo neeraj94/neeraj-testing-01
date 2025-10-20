@@ -1,9 +1,9 @@
 package com.example.rbac.admin.products.controller;
 
 import com.example.rbac.common.pagination.PageResponse;
-import com.example.rbac.products.dto.ProductReviewDto;
-import com.example.rbac.products.dto.ProductReviewRequest;
-import com.example.rbac.products.service.ProductReviewService;
+import com.example.rbac.admin.products.dto.ProductReviewDto;
+import com.example.rbac.admin.products.dto.ProductReviewRequest;
+import com.example.rbac.admin.products.service.ProductReviewService;
 import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;

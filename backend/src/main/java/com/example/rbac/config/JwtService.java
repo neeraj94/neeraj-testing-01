@@ -1,7 +1,7 @@
 package com.example.rbac.config;
 
 import com.example.rbac.common.security.DefaultUserPermissions;
-import com.example.rbac.users.model.User;
+import com.example.rbac.admin.users.model.User;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;

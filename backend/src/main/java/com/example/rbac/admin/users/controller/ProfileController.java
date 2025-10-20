@@ -1,9 +1,9 @@
 package com.example.rbac.admin.users.controller;
 
-import com.example.rbac.users.dto.ProfileUpdateRequest;
-import com.example.rbac.users.dto.UserDto;
-import com.example.rbac.users.model.UserPrincipal;
-import com.example.rbac.users.service.UserService;
+import com.example.rbac.admin.users.dto.ProfileUpdateRequest;
+import com.example.rbac.admin.users.dto.UserDto;
+import com.example.rbac.admin.users.model.UserPrincipal;
+import com.example.rbac.admin.users.service.UserService;
 import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;

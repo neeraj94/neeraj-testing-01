@@ -1,9 +1,9 @@
 package com.example.rbac.coupons.controller;
 
 import com.example.rbac.common.pagination.PageResponse;
-import com.example.rbac.coupons.dto.PublicCouponDto;
-import com.example.rbac.coupons.model.CouponType;
-import com.example.rbac.coupons.service.CouponService;
+import com.example.rbac.admin.coupons.dto.PublicCouponDto;
+import com.example.rbac.admin.coupons.model.CouponType;
+import com.example.rbac.admin.coupons.service.CouponService;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;

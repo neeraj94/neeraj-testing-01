@@ -1,9 +1,9 @@
 package com.example.rbac.admin.shipping.controller;
 
 import com.example.rbac.common.pagination.PageResponse;
-import com.example.rbac.shipping.dto.ShippingAreaRateDto;
-import com.example.rbac.shipping.dto.ShippingAreaRateRequest;
-import com.example.rbac.shipping.service.ShippingAreaRateService;
+import com.example.rbac.admin.shipping.dto.ShippingAreaRateDto;
+import com.example.rbac.admin.shipping.dto.ShippingAreaRateRequest;
+import com.example.rbac.admin.shipping.service.ShippingAreaRateService;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;

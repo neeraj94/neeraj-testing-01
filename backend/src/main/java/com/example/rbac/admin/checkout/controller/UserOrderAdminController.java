@@ -1,8 +1,8 @@
 package com.example.rbac.admin.checkout.controller;
 
-import com.example.rbac.checkout.dto.OrderDetailDto;
-import com.example.rbac.checkout.dto.OrderListItemDto;
-import com.example.rbac.checkout.service.CheckoutService;
+import com.example.rbac.admin.checkout.dto.OrderDetailDto;
+import com.example.rbac.admin.checkout.dto.OrderListItemDto;
+import com.example.rbac.admin.checkout.service.CheckoutService;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;

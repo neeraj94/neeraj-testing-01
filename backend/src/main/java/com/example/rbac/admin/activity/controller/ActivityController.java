@@ -1,10 +1,10 @@
 package com.example.rbac.admin.activity.controller;
 
-import com.example.rbac.activity.dto.ActivityFilterOptionsDto;
-import com.example.rbac.activity.dto.ActivityLogDetailDto;
-import com.example.rbac.activity.dto.ActivityLogDto;
-import com.example.rbac.activity.dto.ActivityLogFilter;
-import com.example.rbac.activity.service.ActivityLogService;
+import com.example.rbac.admin.activity.dto.ActivityFilterOptionsDto;
+import com.example.rbac.admin.activity.dto.ActivityLogDetailDto;
+import com.example.rbac.admin.activity.dto.ActivityLogDto;
+import com.example.rbac.admin.activity.dto.ActivityLogFilter;
+import com.example.rbac.admin.activity.service.ActivityLogService;
 import com.example.rbac.common.pagination.PageResponse;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.GetMapping;

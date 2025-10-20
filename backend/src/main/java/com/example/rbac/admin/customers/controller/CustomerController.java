@@ -1,9 +1,9 @@
 package com.example.rbac.admin.customers.controller;
 
 import com.example.rbac.common.pagination.PageResponse;
-import com.example.rbac.customers.dto.CustomerDto;
-import com.example.rbac.customers.dto.CustomerRequest;
-import com.example.rbac.customers.service.CustomerService;
+import com.example.rbac.admin.customers.dto.CustomerDto;
+import com.example.rbac.admin.customers.dto.CustomerRequest;
+import com.example.rbac.admin.customers.service.CustomerService;
 import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;

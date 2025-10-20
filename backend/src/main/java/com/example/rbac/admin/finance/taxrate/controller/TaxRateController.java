@@ -1,9 +1,9 @@
 package com.example.rbac.admin.finance.taxrate.controller;
 
 import com.example.rbac.common.pagination.PageResponse;
-import com.example.rbac.finance.taxrate.dto.TaxRateDto;
-import com.example.rbac.finance.taxrate.dto.TaxRateRequest;
-import com.example.rbac.finance.taxrate.service.TaxRateService;
+import com.example.rbac.admin.finance.taxrate.dto.TaxRateDto;
+import com.example.rbac.admin.finance.taxrate.dto.TaxRateRequest;
+import com.example.rbac.admin.finance.taxrate.service.TaxRateService;
 import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;

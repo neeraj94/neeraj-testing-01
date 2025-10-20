@@ -1,10 +1,10 @@
 package com.example.rbac.admin.roles.controller;
 
 import com.example.rbac.common.pagination.PageResponse;
-import com.example.rbac.roles.dto.AssignPermissionsRequest;
-import com.example.rbac.roles.dto.RoleDto;
-import com.example.rbac.roles.dto.RoleRequest;
-import com.example.rbac.roles.service.RoleService;
+import com.example.rbac.admin.roles.dto.AssignPermissionsRequest;
+import com.example.rbac.admin.roles.dto.RoleDto;
+import com.example.rbac.admin.roles.dto.RoleRequest;
+import com.example.rbac.admin.roles.service.RoleService;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 

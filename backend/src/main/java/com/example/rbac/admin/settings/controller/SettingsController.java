@@ -1,9 +1,9 @@
 package com.example.rbac.admin.settings.controller;
 
-import com.example.rbac.settings.dto.SettingsResponse;
-import com.example.rbac.settings.dto.SettingsThemeDto;
-import com.example.rbac.settings.dto.SettingsUpdateRequest;
-import com.example.rbac.settings.service.SettingsService;
+import com.example.rbac.admin.settings.dto.SettingsResponse;
+import com.example.rbac.admin.settings.dto.SettingsThemeDto;
+import com.example.rbac.admin.settings.dto.SettingsUpdateRequest;
+import com.example.rbac.admin.settings.service.SettingsService;
 import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;

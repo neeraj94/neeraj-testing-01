@@ -1,14 +1,14 @@
 package com.example.rbac.auth.controller;
 
-import com.example.rbac.auth.dto.AuthResponse;
-import com.example.rbac.auth.dto.LoginRequest;
-import com.example.rbac.auth.dto.RefreshTokenRequest;
-import com.example.rbac.auth.dto.SignupRequest;
-import com.example.rbac.auth.dto.VerificationRequest;
-import com.example.rbac.auth.dto.VerificationResponse;
-import com.example.rbac.auth.service.AuthService;
-import com.example.rbac.users.dto.UserDto;
-import com.example.rbac.users.model.UserPrincipal;
+import com.example.rbac.admin.auth.dto.AuthResponse;
+import com.example.rbac.admin.auth.dto.LoginRequest;
+import com.example.rbac.admin.auth.dto.RefreshTokenRequest;
+import com.example.rbac.admin.auth.dto.SignupRequest;
+import com.example.rbac.admin.auth.dto.VerificationRequest;
+import com.example.rbac.admin.auth.dto.VerificationResponse;
+import com.example.rbac.admin.auth.service.AuthService;
+import com.example.rbac.admin.users.dto.UserDto;
+import com.example.rbac.admin.users.model.UserPrincipal;
 import jakarta.validation.Valid;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;

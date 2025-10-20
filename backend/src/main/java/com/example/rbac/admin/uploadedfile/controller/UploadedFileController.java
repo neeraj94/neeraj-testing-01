@@ -1,15 +1,15 @@
 package com.example.rbac.admin.uploadedfile.controller;
 
 import com.example.rbac.common.pagination.PageResponse;
-import com.example.rbac.uploadedfile.dto.UploadedFileDeleteRequest;
-import com.example.rbac.uploadedfile.dto.UploadedFileDto;
-import com.example.rbac.uploadedfile.dto.UploadedFileModuleDto;
-import com.example.rbac.uploadedfile.dto.UploadedFileUploaderDto;
+import com.example.rbac.admin.uploadedfile.dto.UploadedFileDeleteRequest;
+import com.example.rbac.admin.uploadedfile.dto.UploadedFileDto;
+import com.example.rbac.admin.uploadedfile.dto.UploadedFileModuleDto;
+import com.example.rbac.admin.uploadedfile.dto.UploadedFileUploaderDto;
 import com.example.rbac.common.exception.ApiException;
-import com.example.rbac.uploadedfile.dto.UploadedFileUploadResponse;
-import com.example.rbac.uploadedfile.model.UploadedFileModule;
-import com.example.rbac.uploadedfile.service.UploadedFileService;
-import com.example.rbac.uploadedfile.service.UploadedFileStorageService;
+import com.example.rbac.admin.uploadedfile.dto.UploadedFileUploadResponse;
+import com.example.rbac.admin.uploadedfile.model.UploadedFileModule;
+import com.example.rbac.admin.uploadedfile.service.UploadedFileService;
+import com.example.rbac.admin.uploadedfile.service.UploadedFileStorageService;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.Valid;

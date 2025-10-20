@@ -1,9 +1,9 @@
 package com.example.rbac.admin.setup.controller;
 
-import com.example.rbac.setup.dto.MenuLayoutResponse;
-import com.example.rbac.setup.dto.MenuLayoutUpdateRequest;
-import com.example.rbac.setup.service.SetupService;
-import com.example.rbac.users.model.UserPrincipal;
+import com.example.rbac.admin.setup.dto.MenuLayoutResponse;
+import com.example.rbac.admin.setup.dto.MenuLayoutUpdateRequest;
+import com.example.rbac.admin.setup.service.SetupService;
+import com.example.rbac.admin.users.model.UserPrincipal;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;

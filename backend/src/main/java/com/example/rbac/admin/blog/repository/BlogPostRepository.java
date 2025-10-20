@@ -1,0 +1,30 @@
+package com.example.rbac.admin.blog.repository;
+
+import com.example.rbac.admin.blog.model.BlogPost;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.data.jpa.repository.EntityGraph;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+
+import java.util.Optional;
+
+public interface BlogPostRepository extends JpaRepository<BlogPost, Long>, JpaSpecificationExecutor<BlogPost> {
+
+    @EntityGraph(attributePaths = "category")
+    Optional<BlogPost> findBySlugIgnoreCase(String slug);
+
+    @EntityGraph(attributePaths = "category")
+    Optional<BlogPost> findBySlugIgnoreCaseAndPublishedTrueAndPublishedAtIsNotNull(String slug);
+
+    boolean existsBySlugIgnoreCase(String slug);
+
+    boolean existsBySlugIgnoreCaseAndIdNot(String slug, Long id);
+
+    long countByCategoryId(Long categoryId);
+
+    @Override
+    @EntityGraph(attributePaths = "category")
+    Page<BlogPost> findAll(Specification<BlogPost> spec, Pageable pageable);
+}

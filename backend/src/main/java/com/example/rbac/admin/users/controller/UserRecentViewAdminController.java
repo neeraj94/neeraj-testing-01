@@ -1,7 +1,7 @@
 package com.example.rbac.admin.users.controller;
 
-import com.example.rbac.users.dto.UserRecentViewDto;
-import com.example.rbac.users.service.UserRecentViewService;
+import com.example.rbac.admin.users.dto.UserRecentViewDto;
+import com.example.rbac.admin.users.service.UserRecentViewService;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
