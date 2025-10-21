@@ -146,6 +146,7 @@ const UsersPage = ({
   const [panelMode, setPanelMode] = useState<PanelMode>('empty');
   const [activeTab, setActiveTab] = useState<DetailTab>('profile');
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
+  const [hydratedDetailUserId, setHydratedDetailUserId] = useState<number | null>(null);
   const [form, setForm] = useState<UserFormState>(emptyForm);
   const [formError, setFormError] = useState<string | null>(null);
   const [statusUpdateId, setStatusUpdateId] = useState<number | null>(null);
@@ -599,6 +600,10 @@ const UsersPage = ({
   const detailUser = selectedUserQuery.data;
 
   useEffect(() => {
+    if (panelMode !== 'detail') {
+      setHydratedDetailUserId(null);
+      return;
+    }
     if (panelMode === 'detail' && selectedUserQuery.data) {
       const detail = selectedUserQuery.data;
       const assignedRoleIds = detail.roles
@@ -635,9 +640,12 @@ const UsersPage = ({
         revokedPermissions: sanitizedRevoked
       });
       setFormError(null);
-      setActiveTab('profile');
+      if (hydratedDetailUserId !== detail.id) {
+        setActiveTab('profile');
+        setHydratedDetailUserId(detail.id);
+      }
     }
-  }, [panelMode, selectedUserQuery.data, roleIdByKey, roles]);
+  }, [panelMode, selectedUserQuery.data, roleIdByKey, roles, hydratedDetailUserId]);
 
   const invalidateUsers = () => {
     queryClient.invalidateQueries({ queryKey: ['users', 'list'] });
