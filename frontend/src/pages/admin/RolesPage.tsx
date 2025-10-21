@@ -10,6 +10,7 @@ import {
   CAPABILITY_COLUMNS,
   PERMISSION_AUDIENCE_HEADERS,
   PERMISSION_AUDIENCE_ORDER,
+  type PermissionAudience,
   type PermissionGroup,
   type PermissionOption,
   buildPermissionGroups
@@ -76,15 +77,23 @@ const isCustomerRole = (role: Role) => role.key.toUpperCase() === CUSTOMER_ROLE_
 
 const compareText = (a: string, b: string) => a.localeCompare(b, undefined, { sensitivity: 'base' });
 
-const PermissionMatrix = ({
-  groups,
-  selected,
-  onToggle
-}: {
+type PermissionMatrixProps = {
   groups: PermissionGroup[];
   selected: number[];
   onToggle: (permissionId: number, checked: boolean, options?: ToggleOptions) => void;
-}) => {
+  lockPublicRows?: boolean;
+  sectionTitleOverrides?: Partial<Record<PermissionAudience, string>>;
+  publicBadgeLabel?: string | null;
+};
+
+const PermissionMatrix = ({
+  groups,
+  selected,
+  onToggle,
+  lockPublicRows = true,
+  sectionTitleOverrides,
+  publicBadgeLabel = 'Default'
+}: PermissionMatrixProps) => {
   if (!groups.length) {
     return (
       <div className="px-6 py-8 text-center text-sm text-slate-500">
@@ -100,7 +109,7 @@ const PermissionMatrix = ({
 
   const grouped = PERMISSION_AUDIENCE_ORDER.map((audience) => ({
     audience,
-    title: PERMISSION_AUDIENCE_HEADERS[audience],
+    title: sectionTitleOverrides?.[audience] ?? PERMISSION_AUDIENCE_HEADERS[audience],
     rows: groups.filter((group) => group.category === audience)
   })).filter((entry) => entry.rows.length > 0);
 
@@ -137,16 +146,17 @@ const PermissionMatrix = ({
               </tr>
               {section.rows.map((group) => {
                 const isPublicSection = section.audience === 'public';
+                const isLocked = lockPublicRows && isPublicSection;
 
                 return (
                   <tr key={`${section.audience}-${group.feature}`}>
                     <td className="whitespace-nowrap px-6 py-4 text-sm font-semibold text-slate-800">
                       {group.feature}
-                      {isPublicSection && (
+                      {isPublicSection && publicBadgeLabel ? (
                         <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium uppercase tracking-wide text-slate-500">
-                          Default
+                          {publicBadgeLabel}
                         </span>
-                      )}
+                      ) : null}
                     </td>
                     {visibleColumns.map((column) => {
                       const option = group.slots[column.slot];
@@ -158,8 +168,8 @@ const PermissionMatrix = ({
                         );
                       }
 
-                      const checked = isPublicSection ? true : selectedSet.has(option.id);
-                      const disabled = isPublicSection;
+                      const checked = isLocked ? true : selectedSet.has(option.id);
+                      const disabled = isLocked;
 
                       return (
                         <td key={column.slot} className="px-6 py-4 text-center">
@@ -170,7 +180,7 @@ const PermissionMatrix = ({
                               checked={checked}
                               disabled={disabled}
                               onChange={(event) => {
-                                if (isPublicSection) {
+                                if (isLocked) {
                                   return;
                                 }
                                 onToggle(option.id, event.target.checked);
@@ -186,7 +196,7 @@ const PermissionMatrix = ({
                         {group.extras.length ? (
                           <div className="space-y-2">
                             {group.extras.map((option) => {
-                              const checked = isPublicSection ? true : selectedSet.has(option.id);
+                              const checked = isLocked ? true : selectedSet.has(option.id);
                               return (
                                 <label
                                   key={option.id}
@@ -196,9 +206,9 @@ const PermissionMatrix = ({
                                     type="checkbox"
                                     className="mt-1 h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary disabled:cursor-not-allowed"
                                     checked={checked}
-                                    disabled={isPublicSection}
+                                    disabled={isLocked}
                                     onChange={(event) => {
-                                      if (isPublicSection) {
+                                      if (isLocked) {
                                         return;
                                       }
                                       onToggle(option.id, event.target.checked);
@@ -263,12 +273,16 @@ const DEFAULT_CAPABILITY_DESCRIPTIONS: Record<string, { title: string; descripti
   }
 };
 
-const DefaultPermissionSection = ({
+const CustomerPermissionContent = ({
   groups,
-  publicEndpoints
+  publicEndpoints,
+  selected,
+  onToggle
 }: {
   groups: PermissionGroup[];
   publicEndpoints: PublicEndpoint[];
+  selected: number[];
+  onToggle: (permissionId: number, checked: boolean, options?: ToggleOptions) => void;
 }) => {
   const capabilityMap = new Map<string, { title: string; description: string }>();
 
@@ -305,8 +319,11 @@ const DefaultPermissionSection = ({
   const infoBlock = (
     <div className="space-y-4 text-sm text-slate-500">
       <div>
-        <p className="font-medium text-slate-700">Default customer capabilities</p>
-        <p>Every registered customer automatically receives the following abilities. They cannot be revoked per role:</p>
+        <p className="font-medium text-slate-700">Customer storefront defaults</p>
+        <p>
+          Every registered customer automatically receives these capabilities within the storefront experience. They remain
+          available here so internal teams can extend them to support or staff roles when necessary.
+        </p>
         {capabilityEntries.length ? (
           <ul className="mt-3 space-y-2 pl-5">
             {capabilityEntries.map((entry) => (
@@ -316,7 +333,7 @@ const DefaultPermissionSection = ({
             ))}
           </ul>
         ) : (
-          <p className="mt-3 text-xs text-slate-400">No default user capabilities are configured.</p>
+          <p className="mt-3 text-xs text-slate-400">No customer capabilities are currently published.</p>
         )}
       </div>
       <div>
@@ -352,46 +369,23 @@ const DefaultPermissionSection = ({
     </div>
   );
 
-  if (!groups.length) {
-    return <div className="px-6 py-6">{infoBlock}</div>;
-  }
-
   return (
-    <div className="space-y-6 px-6 py-6">
-      {infoBlock}
-      <div className="space-y-4">
-        {groups.map((group) => {
-          const slotOptions = Object.values(group.slots).filter(Boolean) as PermissionOption[];
-          const extras = group.extras ?? [];
-          const allOptions = [...slotOptions, ...extras];
-
-          return (
-            <div key={group.feature} className="space-y-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                <h4 className="text-sm font-semibold text-slate-800">{group.feature}</h4>
-                <span className="inline-flex items-center rounded-full bg-slate-200 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-600">
-                  Default
-                </span>
-              </div>
-              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                {allOptions.map((option) => (
-                  <div
-                    key={option.id}
-                    className="flex items-start gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-sm"
-                  >
-                    <span className="mt-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
-                      ✓
-                    </span>
-                    <div className="text-sm text-slate-600">
-                      <span className="block font-medium text-slate-800">{option.label}</span>
-                      <span className="text-xs uppercase tracking-wide text-slate-400">{option.key}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          );
-        })}
+    <div className="space-y-6">
+      <div className="px-6 py-6">{infoBlock}</div>
+      <div className="border-t border-slate-200" />
+      <div className="space-y-4 px-6 pb-6">
+        <p className="text-sm text-slate-500">
+          Assign customer-specific permissions to internal roles only when they must impersonate or directly assist a
+          customer. These capabilities are never added to admin roles automatically.
+        </p>
+        <PermissionMatrix
+          groups={groups}
+          selected={selected}
+          onToggle={onToggle}
+          lockPublicRows={false}
+          sectionTitleOverrides={{ public: 'Customer-Specific Permissions' }}
+          publicBadgeLabel={null}
+        />
       </div>
     </div>
   );
@@ -454,6 +448,7 @@ const RolesPage = () => {
   const [createError, setCreateError] = useState<string | null>(null);
   const [editError, setEditError] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
+  const [permissionTab, setPermissionTab] = useState<'admin' | 'customer'>('admin');
 
   const openRoleForEditing = useCallback(
     (role: Role) => {
@@ -520,7 +515,7 @@ const RolesPage = () => {
     () => permissionGroups.filter((group) => group.category === 'admin' || group.category === 'system'),
     [permissionGroups]
   );
-  const defaultPermissionGroups = useMemo(
+  const customerPermissionGroups = useMemo(
     () => buildPermissionGroups(defaultPermissions).filter((group) => group.category === 'public'),
     [defaultPermissions]
   );
@@ -533,9 +528,19 @@ const RolesPage = () => {
   });
   const permissionLookup = useMemo(() => {
     const lookup = new Map<string, Permission>();
-    permissions.forEach((permission) => lookup.set(permission.key, permission));
+    [...permissions, ...defaultPermissions].forEach((permission) => lookup.set(permission.key, permission));
     return lookup;
-  }, [permissions]);
+  }, [permissions, defaultPermissions]);
+
+  const allAssignablePermissions = useMemo(() => {
+    const registry = new Map<number, Permission>();
+    [...permissions, ...defaultPermissions].forEach((permission) => {
+      if (permission?.id != null) {
+        registry.set(permission.id, permission);
+      }
+    });
+    return Array.from(registry.values());
+  }, [permissions, defaultPermissions]);
 
   const roles = rolesResponse.data?.content ?? [];
   const totalElements = rolesResponse.data?.totalElements ?? roles.length;
@@ -562,6 +567,7 @@ const RolesPage = () => {
       setKeyTouched(false);
       setRolePermissions([]);
       setCreateError(null);
+      setPermissionTab('admin');
     }
   }, [view]);
 
@@ -572,15 +578,17 @@ const RolesPage = () => {
       return;
     }
     setEditForm({ name: editingRole.name, key: editingRole.key });
-    if (permissions.length) {
-      const ids = permissions
+    if (allAssignablePermissions.length) {
+      const ids = allAssignablePermissions
         .filter((permission) => editingRole.permissions.includes(permission.key as PermissionKey))
-        .map((permission) => permission.id);
+        .map((permission) => permission.id)
+        .filter((id): id is number => id != null);
       setEditingPermissions(ids);
     } else {
       setEditingPermissions([]);
     }
-  }, [editingRole, permissions]);
+    setPermissionTab('admin');
+  }, [editingRole, allAssignablePermissions]);
 
   const handleSortChange = (field: RoleSortField) => {
     setSort((prev) => {
@@ -1204,30 +1212,57 @@ const RolesPage = () => {
               </div>
             </div>
 
-            <div className="space-y-6">
-              <section className="rounded-2xl border border-slate-200">
-                <div className="border-b border-slate-200 px-6 py-4">
-                  <h3 className="text-base font-semibold text-slate-800">Admin &amp; system permissions</h3>
-                  <p className="text-sm text-slate-500">
-                    Select the administrative features and management capabilities that this role should unlock.
-                  </p>
+            <section className="rounded-2xl border border-slate-200">
+              <div className="border-b border-slate-200 px-6 py-4">
+                <h3 className="text-base font-semibold text-slate-800">Role permissions</h3>
+                <p className="text-sm text-slate-500">
+                  Choose which capabilities this role should unlock for team members or supporting staff.
+                </p>
+                <div className="mt-4 inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1 text-sm font-medium text-slate-500">
+                  <button
+                    type="button"
+                    onClick={() => setPermissionTab('admin')}
+                    className={`rounded-md px-3 py-1.5 transition ${
+                      permissionTab === 'admin'
+                        ? 'bg-white text-slate-800 shadow-sm'
+                        : 'hover:text-slate-700'
+                    }`}
+                  >
+                    Admin &amp; System Permissions
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPermissionTab('customer')}
+                    className={`rounded-md px-3 py-1.5 transition ${
+                      permissionTab === 'customer'
+                        ? 'bg-white text-slate-800 shadow-sm'
+                        : 'hover:text-slate-700'
+                    }`}
+                  >
+                    Customer-Specific Permissions
+                  </button>
                 </div>
-                <PermissionMatrix
-                  groups={adminPermissionGroups}
+              </div>
+              {permissionTab === 'admin' ? (
+                <div className="space-y-4 px-6 py-6">
+                  <p className="text-sm text-slate-500">
+                    Select the administrative features and management capabilities that this role should grant.
+                  </p>
+                  <PermissionMatrix
+                    groups={adminPermissionGroups}
+                    selected={rolePermissions}
+                    onToggle={(id, checked, options) => togglePermission(id, checked, setRolePermissions, options)}
+                  />
+                </div>
+              ) : (
+                <CustomerPermissionContent
+                  groups={customerPermissionGroups}
+                  publicEndpoints={publicEndpoints}
                   selected={rolePermissions}
                   onToggle={(id, checked, options) => togglePermission(id, checked, setRolePermissions, options)}
                 />
-              </section>
-              <section className="rounded-2xl border border-slate-200">
-                <div className="border-b border-slate-200 px-6 py-4">
-                  <h3 className="text-base font-semibold text-slate-800">Default user permissions</h3>
-                </div>
-                <DefaultPermissionSection
-                  groups={defaultPermissionGroups}
-                  publicEndpoints={publicEndpoints}
-                />
-              </section>
-            </div>
+              )}
+            </section>
           </div>
         </form>
       ) : isEditView && editingRole ? (
@@ -1288,28 +1323,53 @@ const RolesPage = () => {
               </div>
             </div>
 
-            <div className="space-y-6">
-              <section className="rounded-2xl border border-slate-200">
-                <div className="border-b border-slate-200 px-6 py-4">
-                  <h4 className="text-base font-semibold text-slate-800">Admin &amp; system permissions</h4>
-                  <p className="text-sm text-slate-500">Update the administrative capabilities granted to this role.</p>
+            <section className="rounded-2xl border border-slate-200">
+              <div className="border-b border-slate-200 px-6 py-4">
+                <h4 className="text-base font-semibold text-slate-800">Role permissions</h4>
+                <p className="text-sm text-slate-500">Update which capabilities this role grants by default.</p>
+                <div className="mt-4 inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1 text-sm font-medium text-slate-500">
+                  <button
+                    type="button"
+                    onClick={() => setPermissionTab('admin')}
+                    className={`rounded-md px-3 py-1.5 transition ${
+                      permissionTab === 'admin'
+                        ? 'bg-white text-slate-800 shadow-sm'
+                        : 'hover:text-slate-700'
+                    }`}
+                  >
+                    Admin &amp; System Permissions
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPermissionTab('customer')}
+                    className={`rounded-md px-3 py-1.5 transition ${
+                      permissionTab === 'customer'
+                        ? 'bg-white text-slate-800 shadow-sm'
+                        : 'hover:text-slate-700'
+                    }`}
+                  >
+                    Customer-Specific Permissions
+                  </button>
                 </div>
-                <PermissionMatrix
-                  groups={adminPermissionGroups}
+              </div>
+              {permissionTab === 'admin' ? (
+                <div className="space-y-4 px-6 py-6">
+                  <p className="text-sm text-slate-500">Update the administrative capabilities granted to this role.</p>
+                  <PermissionMatrix
+                    groups={adminPermissionGroups}
+                    selected={editingPermissions}
+                    onToggle={(id, checked, options) => togglePermission(id, checked, setEditingPermissions, options)}
+                  />
+                </div>
+              ) : (
+                <CustomerPermissionContent
+                  groups={customerPermissionGroups}
+                  publicEndpoints={publicEndpoints}
                   selected={editingPermissions}
                   onToggle={(id, checked, options) => togglePermission(id, checked, setEditingPermissions, options)}
                 />
-              </section>
-              <section className="rounded-2xl border border-slate-200">
-                <div className="border-b border-slate-200 px-6 py-4">
-                  <h4 className="text-base font-semibold text-slate-800">Default user permissions</h4>
-                </div>
-                <DefaultPermissionSection
-                  groups={defaultPermissionGroups}
-                  publicEndpoints={publicEndpoints}
-                />
-              </section>
-            </div>
+              )}
+            </section>
           </div>
         </form>
       ) : null}

@@ -12,7 +12,7 @@ import java.util.List;
 
 @RestController
 @PublicEndpoint("Blog content delivery")
-@RequestMapping("/api/v1/blog/public")
+@RequestMapping({"/api/v1/blog/public", "/api/v1/client/blog/public"})
 public class PublicBlogController {
 
     private final BlogPostService blogPostService;
