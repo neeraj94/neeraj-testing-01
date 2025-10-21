@@ -14,7 +14,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -58,15 +57,12 @@ public class BlogMediaController {
             throw new ApiException(HttpStatus.BAD_REQUEST, "Unsupported media type");
         }
         StoredMedia stored = blogMediaStorageService.store(file);
-        String url = ServletUriComponentsBuilder.fromCurrentContextPath()
-                .path("/blog/media/")
-                .path(stored.key())
-                .toUriString();
+        String url = blogMediaStorageService.publicUrlForKey(stored.key());
         recordUpload(resolveModule(usage), stored, url);
         return new BlogMediaUploadResponse(stored.key(), url, stored.originalFilename(), stored.mimeType(), stored.sizeBytes());
     }
 
-    @GetMapping("/{key}")
+    @GetMapping("/{key:.+}")
     public ResponseEntity<Resource> load(@PathVariable("key") String key) throws IOException {
         Resource resource = blogMediaStorageService.load(key);
         String contentType = Files.probeContentType(resource.getFile().toPath());
