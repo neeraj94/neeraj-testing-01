@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, createSearchParams, useLocation, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../services/http';
 import type {
@@ -90,10 +90,16 @@ const CheckoutPage = () => {
     if (!auth.accessToken || auth.portal !== 'client') {
       const redirectTarget = `${location.pathname}${location.search}`;
       rememberPostLoginRedirect(redirectTarget, '/checkout');
-      navigate('/login', {
-        replace: true,
-        state: { from: redirectTarget, fallback: '/checkout' }
-      });
+      navigate(
+        {
+          pathname: '/login',
+          search: createSearchParams({ redirect: redirectTarget, fallback: '/checkout' }).toString()
+        },
+        {
+          replace: true,
+          state: { from: redirectTarget, fallback: '/checkout' }
+        }
+      );
     }
   }, [auth.accessToken, auth.portal, location.pathname, location.search, navigate]);
 

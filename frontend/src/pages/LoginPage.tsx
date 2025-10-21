@@ -24,6 +24,9 @@ const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const state = (location.state as LocationState | null) ?? null;
+  const searchParams = new URLSearchParams(location.search);
+  const queryRedirect = searchParams.get('redirect') ?? undefined;
+  const queryFallback = searchParams.get('fallback') ?? undefined;
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -37,7 +40,14 @@ const LoginPage = () => {
         console.warn('Unable to merge guest cart after login', error);
       }
       const { target, fallback } = consumePostLoginRedirect();
-      const destination = state?.from ?? target ?? state?.fallback ?? fallback ?? '/';
+      const destination =
+        state?.from ??
+        target ??
+        queryRedirect ??
+        state?.fallback ??
+        fallback ??
+        queryFallback ??
+        '/';
       navigate(destination, { replace: true });
     } else if (customerLogin.rejected.match(result)) {
       const message = result.payload ?? 'Unable to sign in right now.';

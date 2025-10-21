@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, createSearchParams, useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../app/hooks';
 import { selectBaseCurrency } from '../features/settings/selectors';
 import {
@@ -247,7 +247,13 @@ const CartPage = () => {
                   onClick={() => {
                     if (!auth.accessToken || auth.portal !== 'client') {
                       rememberPostLoginRedirect('/checkout', '/cart');
-                      navigate('/login', { state: { from: '/checkout', fallback: '/cart' } });
+                      navigate(
+                        {
+                          pathname: '/login',
+                          search: createSearchParams({ redirect: '/checkout', fallback: '/cart' }).toString()
+                        },
+                        { state: { from: '/checkout', fallback: '/cart' } }
+                      );
                       return;
                     }
                     navigate('/checkout');
