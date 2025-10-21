@@ -14,6 +14,9 @@ import java.util.List;
 @RequestMapping("/shipping")
 public class ShippingLocationController {
 
+    private static final String SHIPPING_LOCATION_READ_ACCESS =
+            "hasAnyAuthority('SHIPPING_VIEW', 'SHIPPING_MANAGE', 'USER_VIEW', 'USER_VIEW_GLOBAL', 'USER_CREATE', 'USER_UPDATE', 'USER_DELETE')";
+
     private final ShippingLocationService shippingLocationService;
 
     public ShippingLocationController(ShippingLocationService shippingLocationService) {
@@ -21,13 +24,13 @@ public class ShippingLocationController {
     }
 
     @GetMapping("/countries")
-    @PreAuthorize("hasAnyAuthority('SHIPPING_VIEW', 'SHIPPING_MANAGE')")
+    @PreAuthorize(SHIPPING_LOCATION_READ_ACCESS)
     public List<ShippingCountryDto> listCountries() {
         return shippingLocationService.listCountries();
     }
 
     @GetMapping("/countries/options")
-    @PreAuthorize("hasAnyAuthority('SHIPPING_VIEW', 'SHIPPING_MANAGE')")
+    @PreAuthorize(SHIPPING_LOCATION_READ_ACCESS)
     public List<ShippingOptionDto> countryOptions() {
         return shippingLocationService.countryOptions();
     }
@@ -66,13 +69,13 @@ public class ShippingLocationController {
     }
 
     @GetMapping("/countries/{countryId}/states")
-    @PreAuthorize("hasAnyAuthority('SHIPPING_VIEW', 'SHIPPING_MANAGE')")
+    @PreAuthorize(SHIPPING_LOCATION_READ_ACCESS)
     public List<ShippingStateDto> listStates(@PathVariable Long countryId) {
         return shippingLocationService.listStates(countryId);
     }
 
     @GetMapping("/countries/{countryId}/states/options")
-    @PreAuthorize("hasAnyAuthority('SHIPPING_VIEW', 'SHIPPING_MANAGE')")
+    @PreAuthorize(SHIPPING_LOCATION_READ_ACCESS)
     public List<ShippingOptionDto> stateOptions(@PathVariable Long countryId) {
         return shippingLocationService.stateOptions(countryId);
     }
@@ -112,13 +115,13 @@ public class ShippingLocationController {
     }
 
     @GetMapping("/states/{stateId}/cities")
-    @PreAuthorize("hasAnyAuthority('SHIPPING_VIEW', 'SHIPPING_MANAGE')")
+    @PreAuthorize(SHIPPING_LOCATION_READ_ACCESS)
     public List<ShippingCityDto> listCities(@PathVariable Long stateId) {
         return shippingLocationService.listCities(stateId);
     }
 
     @GetMapping("/rates/quote")
-    @PreAuthorize("hasAnyAuthority('SHIPPING_VIEW', 'SHIPPING_MANAGE')")
+    @PreAuthorize(SHIPPING_LOCATION_READ_ACCESS)
     public ShippingRateQuoteDto quoteShippingRate(@RequestParam(name = "countryId", required = false) Long countryId,
                                                   @RequestParam(name = "stateId", required = false) Long stateId,
                                                   @RequestParam(name = "cityId", required = false) Long cityId) {
@@ -126,7 +129,7 @@ public class ShippingLocationController {
     }
 
     @GetMapping("/states/{stateId}/cities/options")
-    @PreAuthorize("hasAnyAuthority('SHIPPING_VIEW', 'SHIPPING_MANAGE')")
+    @PreAuthorize(SHIPPING_LOCATION_READ_ACCESS)
     public List<ShippingOptionDto> cityOptions(@PathVariable Long stateId) {
         return shippingLocationService.cityOptions(stateId);
     }

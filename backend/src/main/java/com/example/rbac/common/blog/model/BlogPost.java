@@ -1,4 +1,4 @@
-package com.example.rbac.admin.blog.model;
+package com.example.rbac.common.blog.model;
 
 import jakarta.persistence.*;
 
