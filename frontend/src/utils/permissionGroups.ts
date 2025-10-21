@@ -1,6 +1,6 @@
 import type { Permission } from '../types/models';
 
-export type CapabilitySlot = 'viewOwn' | 'viewGlobal' | 'create' | 'edit' | 'delete' | 'manage' | 'export';
+export type CapabilitySlot = 'viewGlobal' | 'create' | 'edit' | 'delete' | 'manage' | 'export';
 
 export type PermissionAudience = 'admin' | 'system' | 'public';
 
@@ -18,7 +18,6 @@ export type PermissionGroup = {
 };
 
 export const CAPABILITY_COLUMNS: Array<{ slot: CapabilitySlot; label: string }> = [
-  { slot: 'viewOwn', label: 'View (Own)' },
   { slot: 'viewGlobal', label: 'View (Global)' },
   { slot: 'create', label: 'Create' },
   { slot: 'edit', label: 'Edit' },
@@ -43,6 +42,8 @@ const AUDIENCE_PREFIXES: Array<{
   { prefix: 'CUSTOMER_', audience: 'public' },
   { prefix: 'PUBLIC_', audience: 'public' }
 ];
+
+const HIDDEN_PERMISSION_KEYS = new Set(['USER_VIEW', 'USER_VIEW_OWN']);
 
 const FEATURE_KEY_OVERRIDES: Record<string, string> = {
   COUPON: 'COUPONS',
@@ -120,11 +121,6 @@ const FEATURE_LABEL_OVERRIDES: Record<string, string> = {
   UPLOADED_FILES: 'Uploaded Files'
 };
 
-const KEY_SLOT_OVERRIDES: Record<string, CapabilitySlot> = {
-  USER_VIEW: 'viewOwn',
-  USER_VIEW_OWN: 'viewOwn'
-};
-
 const ADMIN_FEATURE_ORDER = [
   'Activity Log',
   'Attributes',
@@ -164,7 +160,6 @@ const SYSTEM_FEATURE_KEYS = new Set([
 ]);
 
 const CAPABILITY_PATTERNS: Array<{ slot: CapabilitySlot; regex: RegExp }> = [
-  { slot: 'viewOwn', regex: /_VIEW_OWN$/i },
   { slot: 'viewGlobal', regex: /_VIEW_GLOBAL$/i },
   { slot: 'viewGlobal', regex: /_VIEW_ALL$/i },
   { slot: 'viewGlobal', regex: /_VIEW$/i },
@@ -190,6 +185,9 @@ const formatFeatureName = (value: string) =>
     .join(' ');
 
 const stripCapabilitySuffix = (key: string) => {
+  if (/_VIEW_OWN$/i.test(key)) {
+    return key.replace(/_VIEW_OWN$/i, '');
+  }
   for (const pattern of CAPABILITY_PATTERNS) {
     if (pattern.regex.test(key)) {
       return key.replace(pattern.regex, '');
@@ -279,6 +277,10 @@ export const buildPermissionGroups = (permissions: Permission[]): PermissionGrou
       return;
     }
 
+    if (HIDDEN_PERMISSION_KEYS.has(keyUpper) || /_VIEW_OWN$/i.test(keyUpper)) {
+      return;
+    }
+
     const audienceInfo = determineAudience(keyUpper);
     if (audienceInfo.audience === 'admin' && keyUpper.startsWith('CHECKOUT_')) {
       return;
@@ -316,11 +318,6 @@ export const buildPermissionGroups = (permissions: Permission[]): PermissionGrou
 
     const isManage = /_MANAGE$/i.test(keyUpper);
     let matchedSlot: CapabilitySlot | null = null;
-
-    const overrideSlot = KEY_SLOT_OVERRIDES[keyUpper];
-    if (overrideSlot) {
-      matchedSlot = overrideSlot;
-    }
 
     if (!isManage) {
       for (const pattern of CAPABILITY_PATTERNS) {

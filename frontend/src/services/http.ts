@@ -13,8 +13,10 @@ const adminBaseURL = `${baseURL}/admin`;
 const api = axios.create({ baseURL });
 const adminApi = axios.create({ baseURL: adminBaseURL });
 
+type Portal = 'admin' | 'client';
+
 let storeRef: Store<RootState> | null = null;
-let refreshListener: ((payload: AuthResponse) => void) | null = null;
+let refreshListener: ((payload: AuthResponse, portal: Portal) => void) | null = null;
 let logoutListener: (() => void) | null = null;
 
 export const injectStore = (store: Store<RootState>) => {
@@ -22,7 +24,7 @@ export const injectStore = (store: Store<RootState>) => {
 };
 
 export const registerAuthListeners = (
-  onRefresh: (payload: AuthResponse) => void,
+  onRefresh: (payload: AuthResponse, portal: Portal) => void,
   onLogout: () => void
 ) => {
   refreshListener = onRefresh;
@@ -58,8 +60,18 @@ const withAuth = (client: AxiosInstance) => {
         const refreshToken = storeRef.getState().auth.refreshToken;
         if (refreshToken) {
           try {
-            const { data } = await adminApi.post<AuthResponse>('/auth/refresh', { refreshToken });
-            refreshListener?.(data);
+            const state = storeRef.getState();
+            const activePortal: Portal =
+              state.auth.portal === 'admin' || state.auth.portal === 'client'
+                ? state.auth.portal
+                : client === adminApi
+                ? 'admin'
+                : 'client';
+            const refreshClient = activePortal === 'client' ? api : adminApi;
+            const { data } = await refreshClient.post<AuthResponse>('/auth/refresh', {
+              refreshToken
+            });
+            refreshListener?.(data, activePortal);
             originalRequest.headers = originalRequest.headers ?? {};
             originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
             return client(originalRequest);

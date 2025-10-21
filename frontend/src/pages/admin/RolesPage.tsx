@@ -136,9 +136,6 @@ const PermissionMatrix = ({
                 </td>
               </tr>
               {section.rows.map((group) => {
-                const viewGlobalId = group.slots.viewGlobal?.id;
-                const viewOwnId = group.slots.viewOwn?.id;
-                const viewGlobalSelected = viewGlobalId ? selectedSet.has(viewGlobalId) : false;
                 const isPublicSection = section.audience === 'public';
 
                 return (
@@ -162,8 +159,7 @@ const PermissionMatrix = ({
                       }
 
                       const checked = isPublicSection ? true : selectedSet.has(option.id);
-                      const disableOwn = column.slot === 'viewOwn' && viewGlobalSelected;
-                      const disabled = isPublicSection || disableOwn;
+                      const disabled = isPublicSection;
 
                       return (
                         <td key={column.slot} className="px-6 py-4 text-center">
@@ -177,12 +173,7 @@ const PermissionMatrix = ({
                                 if (isPublicSection) {
                                   return;
                                 }
-                                onToggle(option.id, event.target.checked, {
-                                  deselect:
-                                    event.target.checked && column.slot === 'viewGlobal' && viewOwnId
-                                      ? [viewOwnId]
-                                      : undefined
-                                });
+                                onToggle(option.id, event.target.checked);
                               }}
                             />
                             <span className="sr-only">{`${group.feature} – ${column.label}`}</span>
@@ -238,20 +229,35 @@ const PermissionMatrix = ({
 };
 
 const DEFAULT_CAPABILITY_DESCRIPTIONS: Record<string, { title: string; description: string }> = {
-  CUSTOMER_PROFILE_MANAGE: {
-    title: 'Self Profile Management',
-    description: 'Update personal information, account credentials, and profile imagery without admin intervention.'
+  CUSTOMER_VIEW_PROFILE: {
+    title: 'Profile Visibility',
+    description: 'Review personal account information, saved details, and tailored storefront preferences.'
   },
-  CUSTOMER_ADDRESS_MANAGE: {
-    title: 'Self Address Management',
-    description: 'Add, edit, and remove saved addresses that are used during checkout and order fulfillment.'
+  CUSTOMER_MANAGE_PROFILE: {
+    title: 'Profile Management',
+    description: 'Update personal information, reset credentials, and adjust communication preferences without assistance.'
   },
-  CUSTOMER_CHECKOUT: {
-    title: 'Self Checkout & Orders',
-    description:
-      'Manage items in their own cart, place new orders, and complete checkout flows for personal purchases only.'
+  CUSTOMER_MANAGE_ADDRESSES: {
+    title: 'Address Book Management',
+    description: 'Add, edit, and remove shipping or billing addresses that will be available during checkout.'
   },
-  CUSTOMER_RECENTLY_VIEWED: {
+  CUSTOMER_MANAGE_CART: {
+    title: 'Cart Management',
+    description: 'Curate their own shopping cart by adding products, changing quantities, or removing items.'
+  },
+  CUSTOMER_MANAGE_CHECKOUT: {
+    title: 'Checkout Access',
+    description: 'Access checkout steps, apply shipping selections, and review totals prior to placing an order.'
+  },
+  CUSTOMER_PLACE_ORDER: {
+    title: 'Order Placement',
+    description: 'Submit new orders for the items currently in their cart once checkout details are confirmed.'
+  },
+  CUSTOMER_VIEW_ORDER_HISTORY: {
+    title: 'Order History',
+    description: 'View past purchases, monitor fulfillment status, and review invoices or receipts.'
+  },
+  CUSTOMER_VIEW_RECENTLY_VIEWED_PRODUCTS: {
     title: 'Recently Viewed Products',
     description: 'Maintain a private browsing history so customers can quickly revisit products they explored earlier.'
   }

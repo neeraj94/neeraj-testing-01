@@ -34,7 +34,7 @@ public class CheckoutController {
     }
 
     @GetMapping("/addresses")
-    @PreAuthorize("hasAuthority('CUSTOMER_ADDRESS_MANAGE')")
+    @PreAuthorize("hasAuthority('CUSTOMER_MANAGE_ADDRESSES')")
     public List<CheckoutAddressDto> listAddresses() {
         Long userId = checkoutService.resolveCurrentUserId();
         return checkoutService.listAddresses(userId);
@@ -42,14 +42,14 @@ public class CheckoutController {
 
     @PostMapping("/addresses")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAuthority('CUSTOMER_ADDRESS_MANAGE')")
+    @PreAuthorize("hasAuthority('CUSTOMER_MANAGE_ADDRESSES')")
     public CheckoutAddressDto createAddress(@RequestBody CheckoutAddressRequest request) {
         Long userId = checkoutService.resolveCurrentUserId();
         return checkoutService.createAddress(userId, request);
     }
 
     @PutMapping("/addresses/{id}")
-    @PreAuthorize("hasAuthority('CUSTOMER_ADDRESS_MANAGE')")
+    @PreAuthorize("hasAuthority('CUSTOMER_MANAGE_ADDRESSES')")
     public CheckoutAddressDto updateAddress(@PathVariable("id") Long addressId,
                                             @RequestBody CheckoutAddressRequest request) {
         Long userId = checkoutService.resolveCurrentUserId();
@@ -57,31 +57,31 @@ public class CheckoutController {
     }
 
     @GetMapping("/payment-methods")
-    @PreAuthorize("hasAuthority('CUSTOMER_CHECKOUT')")
+    @PreAuthorize("hasAuthority('CUSTOMER_MANAGE_CHECKOUT')")
     public List<PaymentMethodDto> listPaymentMethods() {
         return checkoutService.listPaymentMethodsForCustomer();
     }
 
     @GetMapping("/regions/countries")
-    @PreAuthorize("hasAuthority('CUSTOMER_CHECKOUT')")
+    @PreAuthorize("hasAuthority('CUSTOMER_MANAGE_CHECKOUT')")
     public List<ShippingOptionDto> listCountriesForCheckout() {
         return checkoutService.listEnabledCountries();
     }
 
     @GetMapping("/regions/countries/{countryId}/states")
-    @PreAuthorize("hasAuthority('CUSTOMER_CHECKOUT')")
+    @PreAuthorize("hasAuthority('CUSTOMER_MANAGE_CHECKOUT')")
     public List<ShippingOptionDto> listStatesForCheckout(@PathVariable Long countryId) {
         return checkoutService.listEnabledStates(countryId);
     }
 
     @GetMapping("/regions/states/{stateId}/cities")
-    @PreAuthorize("hasAuthority('CUSTOMER_CHECKOUT')")
+    @PreAuthorize("hasAuthority('CUSTOMER_MANAGE_CHECKOUT')")
     public List<ShippingOptionDto> listCitiesForCheckout(@PathVariable Long stateId) {
         return checkoutService.listEnabledCities(stateId);
     }
 
     @PostMapping("/summary")
-    @PreAuthorize("hasAuthority('CUSTOMER_CHECKOUT')")
+    @PreAuthorize("hasAuthority('CUSTOMER_MANAGE_CHECKOUT')")
     public OrderSummaryDto previewOrder(@RequestBody CheckoutOrderRequest request) {
         Long userId = checkoutService.resolveCurrentUserId();
         return checkoutService.buildSummary(userId, request).getOrderSummary();
@@ -89,21 +89,21 @@ public class CheckoutController {
 
     @PostMapping("/orders")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAuthority('CUSTOMER_CHECKOUT')")
+    @PreAuthorize("hasAuthority('CUSTOMER_PLACE_ORDER')")
     public CheckoutOrderResponse placeOrder(@RequestBody CheckoutOrderRequest request) {
         Long userId = checkoutService.resolveCurrentUserId();
         return checkoutService.placeOrder(userId, request);
     }
 
     @GetMapping("/orders/{orderId}")
-    @PreAuthorize("hasAuthority('CUSTOMER_CHECKOUT')")
+    @PreAuthorize("hasAuthority('CUSTOMER_VIEW_ORDER_HISTORY')")
     public OrderDetailDto getOrder(@PathVariable Long orderId) {
         Long userId = checkoutService.resolveCurrentUserId();
         return checkoutService.getOrderDetailForUser(userId, orderId);
     }
 
     @GetMapping("/summary")
-    @PreAuthorize("hasAuthority('CUSTOMER_CHECKOUT')")
+    @PreAuthorize("hasAuthority('CUSTOMER_MANAGE_CHECKOUT')")
     public CheckoutSummaryDto fullSummary() {
         Long userId = checkoutService.resolveCurrentUserId();
         return checkoutService.buildSummary(userId, new CheckoutOrderRequest());

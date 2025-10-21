@@ -11,12 +11,13 @@ public final class DefaultUserPermissions {
     static {
         LinkedHashSet<String> defaults = new LinkedHashSet<>();
         defaults.add("CUSTOMER_VIEW_PROFILE");
-        defaults.add("CUSTOMER_PROFILE_MANAGE");
-        defaults.add("CUSTOMER_ADDRESS_MANAGE");
+        defaults.add("CUSTOMER_MANAGE_PROFILE");
+        defaults.add("CUSTOMER_MANAGE_ADDRESSES");
         defaults.add("CUSTOMER_MANAGE_CART");
-        defaults.add("CUSTOMER_CHECKOUT");
+        defaults.add("CUSTOMER_MANAGE_CHECKOUT");
         defaults.add("CUSTOMER_PLACE_ORDER");
-        defaults.add("CUSTOMER_RECENTLY_VIEWED");
+        defaults.add("CUSTOMER_VIEW_ORDER_HISTORY");
+        defaults.add("CUSTOMER_VIEW_RECENTLY_VIEWED_PRODUCTS");
         DEFAULT_PERMISSIONS = Collections.unmodifiableSet(defaults);
     }
 

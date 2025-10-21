@@ -8,7 +8,7 @@ import type {
   SettingsResponse,
   SettingsThemeResponse
 } from '../../types/settings';
-import { login, logout, signup, tokensRefreshed } from '../auth/authSlice';
+import { adminLogin, customerLogin, logout, signup, tokensRefreshed } from '../auth/authSlice';
 
 const PRIMARY_COLOR_CODE = 'appearance.primary_color';
 const APPLICATION_NAME_CODE = 'general.site_name';
@@ -157,7 +157,14 @@ const settingsSlice = createSlice({
       .addCase(updateSettings.rejected, (state, action) => {
         state.error = action.payload ?? action.error.message ?? 'Unable to update settings.';
       })
-      .addCase(login.fulfilled, (state, action) => {
+      .addCase(adminLogin.fulfilled, (state, action) => {
+        if (action.payload.theme) {
+          state.theme.primaryColor = normalizeHexColor(action.payload.theme.primaryColor);
+          state.theme.applicationName = action.payload.theme.applicationName || 'RBAC Portal';
+          state.theme.baseCurrency = action.payload.theme.baseCurrency || 'USD';
+        }
+      })
+      .addCase(customerLogin.fulfilled, (state, action) => {
         if (action.payload.theme) {
           state.theme.primaryColor = normalizeHexColor(action.payload.theme.primaryColor);
           state.theme.applicationName = action.payload.theme.applicationName || 'RBAC Portal';
@@ -172,10 +179,10 @@ const settingsSlice = createSlice({
         }
       })
       .addCase(tokensRefreshed, (state, action) => {
-        if (action.payload.theme) {
-          state.theme.primaryColor = normalizeHexColor(action.payload.theme.primaryColor);
-          state.theme.applicationName = action.payload.theme.applicationName || 'RBAC Portal';
-          state.theme.baseCurrency = action.payload.theme.baseCurrency || 'USD';
+        if (action.payload.auth.theme) {
+          state.theme.primaryColor = normalizeHexColor(action.payload.auth.theme.primaryColor);
+          state.theme.applicationName = action.payload.auth.theme.applicationName || 'RBAC Portal';
+          state.theme.baseCurrency = action.payload.auth.theme.baseCurrency || 'USD';
         }
       })
       .addCase(logout, (state) => {
