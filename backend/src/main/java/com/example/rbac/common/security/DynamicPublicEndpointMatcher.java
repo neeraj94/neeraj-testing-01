@@ -22,15 +22,11 @@ public class DynamicPublicEndpointMatcher implements RequestMatcher {
     @Override
     public boolean matches(HttpServletRequest request) {
         String path = request.getRequestURI();
-        String requestMethod = request.getMethod();
+        HttpMethod requestMethod = HttpMethod.resolve(request.getMethod());
         List<PublicEndpointDefinition> endpoints = PublicEndpointRegistry.getEndpoints();
         for (PublicEndpointDefinition endpoint : endpoints) {
             if (!endpoint.matchesAllMethods()) {
-                HttpMethod endpointMethod = endpoint.method();
-                if (endpointMethod == null) {
-                    continue;
-                }
-                if (requestMethod == null || !endpointMethod.name().equalsIgnoreCase(requestMethod)) {
+                if (requestMethod == null || !requestMethod.equals(endpoint.method())) {
                     continue;
                 }
             }
