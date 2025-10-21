@@ -95,7 +95,7 @@ public class ClientAuthService extends BaseAuthService {
 
     @Transactional
     public AuthResponse login(LoginRequest request) {
-        AuthResult result = loginInternal(request.getEmail(), request.getPassword());
+        AuthResult result = loginInternal(request.getEmail(), request.getPassword(), false);
         return buildAuthResponse(result.user(), result.refreshToken());
     }
 

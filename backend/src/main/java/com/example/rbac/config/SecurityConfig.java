@@ -84,7 +84,7 @@ public class SecurityConfig {
                     auth.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll();
                     auth.requestMatchers(new DynamicPublicEndpointMatcher()).permitAll();
 
-                    auth.requestMatchers("/api/v1/public/**", "/api/public/endpoints").permitAll()
+                    auth.requestMatchers("/api/v1/public/**", "/api/v1/client/public/**", "/api/public/endpoints").permitAll()
                             .requestMatchers("/api/v1/client/auth/signup", "/api/v1/client/auth/login").permitAll()
                             .requestMatchers("/api/v1/admin/auth/**").permitAll()
                             .requestMatchers(HttpMethod.GET, "/api/v1/admin/uploaded-files/**").hasAnyAuthority(
