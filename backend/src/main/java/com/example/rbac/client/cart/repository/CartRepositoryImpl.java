@@ -12,11 +12,11 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public class CartRepositoryCustomImpl implements CartRepositoryCustom {
+public class CartRepositoryImpl implements CartRepositoryCustom {
 
     private final EntityManager entityManager;
 
-    public CartRepositoryCustomImpl(EntityManager entityManager) {
+    public CartRepositoryImpl(EntityManager entityManager) {
         this.entityManager = entityManager;
     }
 
