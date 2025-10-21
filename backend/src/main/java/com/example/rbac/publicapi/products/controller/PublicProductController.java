@@ -2,6 +2,7 @@ package com.example.rbac.publicapi.products.controller;
 
 import com.example.rbac.common.exception.ApiException;
 import com.example.rbac.common.security.PublicEndpoint;
+import com.example.rbac.common.web.PublicApiPaths;
 import com.example.rbac.admin.products.dto.storefront.PublicProductAvailability;
 import com.example.rbac.admin.products.dto.storefront.PublicProductDetailDto;
 import com.example.rbac.admin.products.dto.storefront.PublicProductSearchCriteria;

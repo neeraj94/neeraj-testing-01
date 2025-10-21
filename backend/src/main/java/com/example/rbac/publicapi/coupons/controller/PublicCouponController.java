@@ -2,6 +2,7 @@ package com.example.rbac.publicapi.coupons.controller;
 
 import com.example.rbac.common.pagination.PageResponse;
 import com.example.rbac.common.security.PublicEndpoint;
+import com.example.rbac.common.web.PublicApiPaths;
 import com.example.rbac.admin.coupons.dto.PublicCouponDto;
 import com.example.rbac.admin.coupons.model.CouponType;
 import com.example.rbac.admin.coupons.service.CouponService;
