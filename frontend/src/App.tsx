@@ -4,6 +4,7 @@ import Layout from './components/Layout';
 import AdminLoginPage from './pages/admin/AdminLoginPage';
 import CustomerLoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
+import VerifyAccountPage from './pages/VerifyAccountPage';
 import DashboardPage from './pages/admin/DashboardPage';
 import UsersPage from './pages/admin/UsersPage';
 import RolesPage from './pages/admin/RolesPage';
@@ -149,6 +150,7 @@ const App = () => {
     '/admin/login',
     '/login',
     '/signup',
+    '/verify-account',
     '/categories',
     '/brands',
     '/products',
@@ -176,6 +178,7 @@ const App = () => {
       <Route path="/admin/login" element={<AdminLoginPage />} />
       <Route path="/login" element={<CustomerLoginPage />} />
       <Route path="/signup" element={<SignupPage />} />
+      <Route path="/verify-account" element={<VerifyAccountPage />} />
       <Route path="/blog" element={<PublicBlogListPage />} />
       <Route path="/blog/:slug" element={<PublicBlogPostPage />} />
       <Route path="/categories" element={<PublicCategoriesPage />} />

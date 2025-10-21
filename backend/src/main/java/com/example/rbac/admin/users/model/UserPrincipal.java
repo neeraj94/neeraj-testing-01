@@ -35,7 +35,9 @@ public class UserPrincipal implements UserDetails {
                 .map(permission -> permission.getKey())
                 .collect(Collectors.toSet());
         perms.removeAll(revoked);
-        perms.addAll(DefaultUserPermissions.getPermissions());
+        if (hasCustomerRole()) {
+            perms.addAll(DefaultUserPermissions.getCustomerPermissions());
+        }
         return perms.stream().map(SimpleGrantedAuthority::new).collect(Collectors.toSet());
     }
 
@@ -71,5 +73,10 @@ public class UserPrincipal implements UserDetails {
 
     public Set<String> getRoleKeys() {
         return user.getRoles().stream().map(Role::getKey).collect(Collectors.toSet());
+    }
+
+    private boolean hasCustomerRole() {
+        return user.getRoles().stream()
+                .anyMatch(role -> role.getKey() != null && role.getKey().equalsIgnoreCase("CUSTOMER"));
     }
 }
