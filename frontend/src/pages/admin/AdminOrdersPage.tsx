@@ -98,7 +98,7 @@ const AdminOrdersPage = () => {
     }
   });
 
-  const selectedOrder = orderDetailQuery.data ?? null;
+  const selectedOrderDetail = orderDetailQuery.data ?? null;
 
   if (ordersQuery.isLoading) {
     return (
@@ -196,24 +196,28 @@ const AdminOrdersPage = () => {
                   </Button>
                 </div>
               </section>
-            ) : selectedOrder ? (
+            ) : selectedOrderDetail ? (
               <div className="space-y-4">
                 {canDeleteOrders && (
                   <div className="flex justify-end">
                     <Button
                       type="button"
-                      onClick={() => void handleDeleteOrder(selectedOrder.id, selectedOrder.orderNumber)}
-                      disabled={deletingOrderId === selectedOrder.id && deleteOrderMutation.isPending}
+                      onClick={() =>
+                        void handleDeleteOrder(selectedOrderDetail.id, selectedOrderDetail.orderNumber)
+                      }
+                      disabled={
+                        deletingOrderId === selectedOrderDetail.id && deleteOrderMutation.isPending
+                      }
                       className="inline-flex items-center justify-center rounded-lg border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-600 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      {deletingOrderId === selectedOrder.id && deleteOrderMutation.isPending
+                      {deletingOrderId === selectedOrderDetail.id && deleteOrderMutation.isPending
                         ? 'Deleting…'
                         : 'Delete order'}
                     </Button>
                   </div>
                 )}
                 <OrderDetailPanel
-                  order={selectedOrder}
+                  order={selectedOrderDetail}
                   baseCurrency={baseCurrency}
                   onClose={() => setSelectedOrderId(null)}
                 />
