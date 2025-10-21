@@ -77,6 +77,7 @@ const AdminOrdersPage = () => {
   });
 
   const orders = ordersQuery.data ?? [];
+  const selectedOrder = orderDetailQuery.data ?? null;
 
   useEffect(() => {
     if (!orders.length) {
