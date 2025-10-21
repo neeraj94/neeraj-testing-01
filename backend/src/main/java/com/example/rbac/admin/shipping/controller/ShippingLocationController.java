@@ -14,6 +14,9 @@ import java.util.List;
 @RequestMapping("/shipping")
 public class ShippingLocationController {
 
+    private static final String SHIPPING_LOCATION_OPTION_ACCESS =
+            "hasAnyAuthority('SHIPPING_VIEW', 'SHIPPING_MANAGE', 'USER_VIEW', 'USER_VIEW_GLOBAL', 'USER_CREATE', 'USER_UPDATE', 'USER_DELETE')";
+
     private final ShippingLocationService shippingLocationService;
 
     public ShippingLocationController(ShippingLocationService shippingLocationService) {
@@ -27,7 +30,7 @@ public class ShippingLocationController {
     }
 
     @GetMapping("/countries/options")
-    @PreAuthorize("hasAnyAuthority('SHIPPING_VIEW', 'SHIPPING_MANAGE')")
+    @PreAuthorize(SHIPPING_LOCATION_OPTION_ACCESS)
     public List<ShippingOptionDto> countryOptions() {
         return shippingLocationService.countryOptions();
     }
@@ -72,7 +75,7 @@ public class ShippingLocationController {
     }
 
     @GetMapping("/countries/{countryId}/states/options")
-    @PreAuthorize("hasAnyAuthority('SHIPPING_VIEW', 'SHIPPING_MANAGE')")
+    @PreAuthorize(SHIPPING_LOCATION_OPTION_ACCESS)
     public List<ShippingOptionDto> stateOptions(@PathVariable Long countryId) {
         return shippingLocationService.stateOptions(countryId);
     }
@@ -126,7 +129,7 @@ public class ShippingLocationController {
     }
 
     @GetMapping("/states/{stateId}/cities/options")
-    @PreAuthorize("hasAnyAuthority('SHIPPING_VIEW', 'SHIPPING_MANAGE')")
+    @PreAuthorize(SHIPPING_LOCATION_OPTION_ACCESS)
     public List<ShippingOptionDto> cityOptions(@PathVariable Long stateId) {
         return shippingLocationService.cityOptions(stateId);
     }
