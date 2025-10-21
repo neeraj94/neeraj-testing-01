@@ -5,11 +5,13 @@ import com.example.rbac.admin.blog.dto.PublicBlogPostDto;
 import com.example.rbac.admin.blog.service.BlogCategoryService;
 import com.example.rbac.admin.blog.service.BlogPostService;
 import com.example.rbac.common.pagination.PageResponse;
+import com.example.rbac.common.security.PublicEndpoint;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
+@PublicEndpoint("Blog content delivery")
 @RequestMapping("/api/v1/blog/public")
 public class PublicBlogController {
 

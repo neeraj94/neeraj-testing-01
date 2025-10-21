@@ -6,7 +6,7 @@ import com.example.rbac.admin.users.dto.UserDto;
 import com.example.rbac.admin.users.mapper.UserMapper;
 import com.example.rbac.admin.users.model.User;
 import com.example.rbac.admin.users.repository.UserRepository;
-import com.example.rbac.client.auth.token.RefreshTokenRepository;
+import com.example.rbac.common.auth.token.RefreshTokenRepository;
 import com.example.rbac.common.auth.dto.AuthResponse;
 import com.example.rbac.common.auth.service.BaseAuthService;
 import com.example.rbac.common.exception.ApiException;

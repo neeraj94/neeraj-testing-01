@@ -7,14 +7,18 @@ const rawBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/a
 
 const sanitizeBaseUrl = (value: string): string => value.trim().replace(/\/+$/, '');
 
-const baseURL = sanitizeBaseUrl(rawBaseUrl);
-const adminBaseURL = `${baseURL}/admin`;
+const rootBaseURL = sanitizeBaseUrl(rawBaseUrl);
+const clientBaseURL = `${rootBaseURL}/client`;
+const adminBaseURL = `${rootBaseURL}/admin`;
 
-const api = axios.create({ baseURL });
+const api = axios.create({ baseURL: clientBaseURL });
 const adminApi = axios.create({ baseURL: adminBaseURL });
+const rootApi = axios.create({ baseURL: rootBaseURL });
+
+type Portal = 'admin' | 'client';
 
 let storeRef: Store<RootState> | null = null;
-let refreshListener: ((payload: AuthResponse) => void) | null = null;
+let refreshListener: ((payload: AuthResponse, portal: Portal) => void) | null = null;
 let logoutListener: (() => void) | null = null;
 
 export const injectStore = (store: Store<RootState>) => {
@@ -22,7 +26,7 @@ export const injectStore = (store: Store<RootState>) => {
 };
 
 export const registerAuthListeners = (
-  onRefresh: (payload: AuthResponse) => void,
+  onRefresh: (payload: AuthResponse, portal: Portal) => void,
   onLogout: () => void
 ) => {
   refreshListener = onRefresh;
@@ -58,8 +62,18 @@ const withAuth = (client: AxiosInstance) => {
         const refreshToken = storeRef.getState().auth.refreshToken;
         if (refreshToken) {
           try {
-            const { data } = await adminApi.post<AuthResponse>('/auth/refresh', { refreshToken });
-            refreshListener?.(data);
+            const state = storeRef.getState();
+            const activePortal: Portal =
+              state.auth.portal === 'admin' || state.auth.portal === 'client'
+                ? state.auth.portal
+                : client === adminApi
+                ? 'admin'
+                : 'client';
+            const refreshClient = activePortal === 'client' ? api : adminApi;
+            const { data } = await refreshClient.post<AuthResponse>('/auth/refresh', {
+              refreshToken
+            });
+            refreshListener?.(data, activePortal);
             originalRequest.headers = originalRequest.headers ?? {};
             originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
             return client(originalRequest);
@@ -76,4 +90,4 @@ const withAuth = (client: AxiosInstance) => {
 withAuth(api);
 withAuth(adminApi);
 
-export { api, adminApi };
+export { api, adminApi, rootApi };

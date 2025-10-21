@@ -1,11 +1,11 @@
 import { FormEvent, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../app/hooks';
-import { login } from '../../features/auth/authSlice';
+import { adminLogin } from '../../features/auth/authSlice';
 import { useToast } from '../../components/ToastProvider';
 import { selectApplicationName } from '../../features/settings/selectors';
 
-const LoginPage = () => {
+const AdminLoginPage = () => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const { status, error } = useAppSelector((state) => state.auth);
@@ -19,11 +19,11 @@ const LoginPage = () => {
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     setFormError(null);
-    const result = await dispatch(login({ email, password }));
-    if (login.fulfilled.match(result)) {
+    const result = await dispatch(adminLogin({ email, password }));
+    if (adminLogin.fulfilled.match(result)) {
       notify({ type: 'success', message: 'Signed in successfully.' });
       navigate('/admin');
-    } else if (login.rejected.match(result)) {
+    } else if (adminLogin.rejected.match(result)) {
       const message = result.payload ?? 'Unable to sign in right now.';
       setFormError(message);
       notify({ type: 'error', message });
@@ -101,9 +101,9 @@ const LoginPage = () => {
           </button>
         </form>
         <p className="mt-6 text-center text-sm text-slate-500">
-          Don&apos;t have an account?{' '}
-          <Link to="/signup" className="text-primary hover:underline">
-            Create one
+          Looking for the customer portal?{' '}
+          <Link to="/login" className="text-primary hover:underline">
+            Sign in here
           </Link>
         </p>
       </div>
@@ -111,4 +111,4 @@ const LoginPage = () => {
   );
 };
 
-export default LoginPage;
+export default AdminLoginPage;

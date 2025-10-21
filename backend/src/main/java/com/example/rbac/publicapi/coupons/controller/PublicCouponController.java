@@ -1,6 +1,7 @@
 package com.example.rbac.publicapi.coupons.controller;
 
 import com.example.rbac.common.pagination.PageResponse;
+import com.example.rbac.common.security.PublicEndpoint;
 import com.example.rbac.admin.coupons.dto.PublicCouponDto;
 import com.example.rbac.admin.coupons.model.CouponType;
 import com.example.rbac.admin.coupons.service.CouponService;
@@ -10,6 +11,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@PublicEndpoint("Storefront coupon lookup")
 @RequestMapping("/api/v1/public/coupons")
 public class PublicCouponController {
 

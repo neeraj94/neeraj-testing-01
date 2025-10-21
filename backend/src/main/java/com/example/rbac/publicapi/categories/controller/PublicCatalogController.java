@@ -4,6 +4,7 @@ import com.example.rbac.admin.brands.dto.PublicBrandDto;
 import com.example.rbac.admin.brands.service.BrandService;
 import com.example.rbac.admin.categories.dto.PublicCategoryDto;
 import com.example.rbac.admin.categories.service.CategoryService;
+import com.example.rbac.common.security.PublicEndpoint;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
+@PublicEndpoint("Storefront catalog browser")
 @RequestMapping("/api/v1/public/catalog")
 public class PublicCatalogController {
 
