@@ -2,6 +2,7 @@ package com.example.rbac.publicapi.products.controller;
 
 import com.example.rbac.common.exception.ApiException;
 import com.example.rbac.common.security.PublicEndpoint;
+import com.example.rbac.common.web.PublicApiPaths;
 import com.example.rbac.admin.products.dto.storefront.PublicProductAvailability;
 import com.example.rbac.admin.products.dto.storefront.PublicProductDetailDto;
 import com.example.rbac.admin.products.dto.storefront.PublicProductSearchCriteria;
@@ -24,7 +25,7 @@ import java.util.stream.Collectors;
 
 @RestController
 @PublicEndpoint("Storefront product catalog")
-@RequestMapping("/api/v1/public/products")
+@RequestMapping(PublicApiPaths.expose("/public/products"))
 public class PublicProductController {
 
     private final PublicProductService publicProductService;

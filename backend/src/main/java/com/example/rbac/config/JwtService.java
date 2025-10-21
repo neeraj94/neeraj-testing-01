@@ -85,8 +85,15 @@ public class JwtService {
                             .map(permission -> permission.getKey())
                             .collect(Collectors.toSet());
                     permissions.removeAll(revoked);
-                    permissions.addAll(DefaultUserPermissions.getPermissions());
+                    if (hasCustomerRole(user)) {
+                        permissions.addAll(DefaultUserPermissions.getCustomerPermissions());
+                    }
                     return permissions;
                 }));
+    }
+
+    private boolean hasCustomerRole(User user) {
+        return user.getRoles().stream()
+                .anyMatch(role -> role.getKey() != null && role.getKey().equalsIgnoreCase("CUSTOMER"));
     }
 }

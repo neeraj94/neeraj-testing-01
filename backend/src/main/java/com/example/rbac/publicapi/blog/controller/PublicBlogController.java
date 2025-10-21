@@ -6,13 +6,14 @@ import com.example.rbac.admin.blog.service.BlogCategoryService;
 import com.example.rbac.admin.blog.service.BlogPostService;
 import com.example.rbac.common.pagination.PageResponse;
 import com.example.rbac.common.security.PublicEndpoint;
+import com.example.rbac.common.web.PublicApiPaths;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
 @PublicEndpoint("Blog content delivery")
-@RequestMapping("/api/v1/blog/public")
+@RequestMapping(PublicApiPaths.expose("/blog/public"))
 public class PublicBlogController {
 
     private final BlogPostService blogPostService;

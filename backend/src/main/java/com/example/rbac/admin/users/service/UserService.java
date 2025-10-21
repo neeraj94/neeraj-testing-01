@@ -7,6 +7,7 @@ import com.example.rbac.admin.roles.model.Role;
 import com.example.rbac.admin.roles.repository.RoleRepository;
 import com.example.rbac.admin.permissions.model.Permission;
 import com.example.rbac.admin.permissions.repository.PermissionRepository;
+import com.example.rbac.admin.uploadedfile.repository.UploadedFileRepository;
 import com.example.rbac.admin.users.dto.AssignRolesRequest;
 import com.example.rbac.admin.users.dto.CreateUserRequest;
 import com.example.rbac.admin.users.dto.ProfileUpdateRequest;
@@ -66,6 +67,7 @@ public class UserService {
     private final UserMapper userMapper;
     private final ActivityRecorder activityRecorder;
     private final UserVerificationService userVerificationService;
+    private final UploadedFileRepository uploadedFileRepository;
 
     public UserService(UserRepository userRepository,
                        RoleRepository roleRepository,
@@ -73,7 +75,8 @@ public class UserService {
                        PermissionRepository permissionRepository,
                        UserMapper userMapper,
                        ActivityRecorder activityRecorder,
-                       UserVerificationService userVerificationService) {
+                       UserVerificationService userVerificationService,
+                       UploadedFileRepository uploadedFileRepository) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
@@ -81,6 +84,7 @@ public class UserService {
         this.userMapper = userMapper;
         this.activityRecorder = activityRecorder;
         this.userVerificationService = userVerificationService;
+        this.uploadedFileRepository = uploadedFileRepository;
     }
 
     @PreAuthorize(USER_VIEW_AUTHORITY)
@@ -238,9 +242,11 @@ public class UserService {
     }
 
     @PreAuthorize(USER_DELETE_AUTHORITY)
+    @Transactional
     public void delete(Long id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "User not found"));
+        uploadedFileRepository.clearUploaderForUser(user.getId());
         userRepository.delete(user);
         activityRecorder.record("Users", "DELETE", "Deleted user " + user.getEmail(), "SUCCESS", buildUserContext(user));
     }
