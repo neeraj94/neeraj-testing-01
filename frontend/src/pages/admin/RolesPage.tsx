@@ -507,8 +507,24 @@ const RolesPage = () => {
   } = useQuery<Permission[]>({
     queryKey: ['permissions', 'options'],
     queryFn: async () => {
-      const { data } = await adminApi.get<Pagination<Permission>>('/permissions?size=500');
-      return data.content;
+      const aggregated: Permission[] = [];
+      const pageSize = 200;
+      let page = 0;
+      let totalPages = 0;
+
+      do {
+        const params = new URLSearchParams({
+          page: String(page),
+          size: String(pageSize)
+        });
+        const { data } = await adminApi.get<Pagination<Permission>>(`/permissions?${params.toString()}`);
+        aggregated.push(...(data.content ?? []));
+
+        totalPages = Math.max(data.totalPages, 0);
+        page += 1;
+      } while (page < totalPages);
+
+      return aggregated;
     }
   });
 
