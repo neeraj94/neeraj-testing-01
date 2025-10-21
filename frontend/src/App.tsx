@@ -186,6 +186,7 @@ const App = () => {
       <Route path="/products" element={<PublicProductsPage />} />
       <Route path="/coupons" element={<PublicCouponsPage />} />
       <Route path="/cart" element={<CartPage />} />
+      <Route path="/checkout" element={<CheckoutPage />} />
       <Route path="/order-confirmation/:orderId" element={<OrderConfirmationPage />} />
       <Route path="/products/showcase" element={<Navigate to="/product/demo-product" replace />} />
       <Route path="/product/:slug" element={<PublicProductPage />} />
@@ -292,7 +293,6 @@ const App = () => {
           <Route path="403" element={<ForbiddenPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Route>
-        <Route path="/checkout" element={<CheckoutPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/admin/login" replace />} />
     </Routes>
