@@ -12,7 +12,7 @@
         <div class="sidebar__brand">
           <div class="sidebar__badge">RBAC Commerce</div>
           <h1>API Reference</h1>
-          <p>Auto-generated documentation for every controller endpoint exposed by the RBAC Commerce backend.</p>
+          <p>Explore every endpoint exposed by the RBAC Commerce backend, grouped by Admin, Client, and Public modules.</p>
         </div>
         <div class="sidebar__controls">
           <label class="control">
@@ -33,118 +33,270 @@
             <input id="authToken" type="text" spellcheck="false" placeholder="Optional token for private endpoints" />
           </label>
         </div>
-        <nav class="sidebar__nav" aria-label="Controllers">
-          <h2>Controllers</h2>
+        <nav class="sidebar__nav" aria-label="Modules">
+          <h2>Modules</h2>
           <ul class="sidebar__tree" role="tree">
-            <li><a href="#module-activity" data-endpoint-link="module-activity">Activity APIs</a></li>
-<li><a href="#module-attribute" data-endpoint-link="module-attribute">Attribute APIs</a></li>
-<li><a href="#module-auth" data-endpoint-link="module-auth">Auth APIs</a></li>
-<li><a href="#module-badge" data-endpoint-link="module-badge">Badge APIs</a></li>
-<li><a href="#module-badgeasset" data-endpoint-link="module-badgeasset">Badge Asset APIs</a></li>
-<li><a href="#module-badgecategory" data-endpoint-link="module-badgecategory">Badge Category APIs</a></li>
-<li><a href="#module-badgecategoryasset" data-endpoint-link="module-badgecategoryasset">Badge Category Asset APIs</a></li>
-<li><a href="#module-blogcategory" data-endpoint-link="module-blogcategory">Blog Category APIs</a></li>
-<li><a href="#module-blogmedia" data-endpoint-link="module-blogmedia">Blog Media APIs</a></li>
-<li><a href="#module-blogpost" data-endpoint-link="module-blogpost">Blog Post APIs</a></li>
-<li><a href="#module-brand" data-endpoint-link="module-brand">Brand APIs</a></li>
-<li><a href="#module-brandasset" data-endpoint-link="module-brandasset">Brand Asset APIs</a></li>
-<li><a href="#module-cart" data-endpoint-link="module-cart">Cart APIs</a></li>
-<li><a href="#module-category" data-endpoint-link="module-category">Category APIs</a></li>
-<li><a href="#module-categoryasset" data-endpoint-link="module-categoryasset">Category Asset APIs</a></li>
-<li><a href="#module-checkout" data-endpoint-link="module-checkout">Checkout APIs</a></li>
-<li><a href="#module-coupon" data-endpoint-link="module-coupon">Coupon APIs</a></li>
-<li><a href="#module-customer" data-endpoint-link="module-customer">Customer APIs</a></li>
-<li><a href="#module-emailsettings" data-endpoint-link="module-emailsettings">Email Settings APIs</a></li>
-<li><a href="#module-emailtemplate" data-endpoint-link="module-emailtemplate">Email Template APIs</a></li>
-<li><a href="#module-gallery" data-endpoint-link="module-gallery">Gallery APIs</a></li>
-<li><a href="#module-navigation" data-endpoint-link="module-navigation">Navigation APIs</a></li>
-<li><a href="#module-orderadmin" data-endpoint-link="module-orderadmin">Order Admin APIs</a></li>
-<li><a href="#module-paymentadmin" data-endpoint-link="module-paymentadmin">Payment Admin APIs</a></li>
-<li><a href="#module-permission" data-endpoint-link="module-permission">Permission APIs</a></li>
-<li><a href="#module-product" data-endpoint-link="module-product">Product APIs</a></li>
-<li><a href="#module-productasset" data-endpoint-link="module-productasset">Product Asset APIs</a></li>
-<li><a href="#module-productreview" data-endpoint-link="module-productreview">Product Review APIs</a></li>
-<li><a href="#module-profile" data-endpoint-link="module-profile">Profile APIs</a></li>
-<li><a href="#module-publicblog" data-endpoint-link="module-publicblog">Public Blog APIs</a></li>
-<li><a href="#module-publiccatalog" data-endpoint-link="module-publiccatalog">Public Catalog APIs</a></li>
-<li><a href="#module-publiccoupon" data-endpoint-link="module-publiccoupon">Public Coupon APIs</a></li>
-<li><a href="#module-publicproduct" data-endpoint-link="module-publicproduct">Public Product APIs</a></li>
-<li><a href="#module-role" data-endpoint-link="module-role">Role APIs</a></li>
-<li><a href="#module-settings" data-endpoint-link="module-settings">Settings APIs</a></li>
-<li><a href="#module-setup" data-endpoint-link="module-setup">Setup APIs</a></li>
-<li><a href="#module-shippingarearate" data-endpoint-link="module-shippingarearate">Shipping Area Rate APIs</a></li>
-<li><a href="#module-shippinglocation" data-endpoint-link="module-shippinglocation">Shipping Location APIs</a></li>
-<li><a href="#module-taxrate" data-endpoint-link="module-taxrate">Tax Rate APIs</a></li>
-<li><a href="#module-uploadedfile" data-endpoint-link="module-uploadedfile">Uploaded File APIs</a></li>
-<li><a href="#module-useraddressadmin" data-endpoint-link="module-useraddressadmin">User Address Admin APIs</a></li>
-<li><a href="#module-user" data-endpoint-link="module-user">User APIs</a></li>
-<li><a href="#module-usercart" data-endpoint-link="module-usercart">User Cart APIs</a></li>
-<li><a href="#module-userorderadmin" data-endpoint-link="module-userorderadmin">User Order Admin APIs</a></li>
-<li><a href="#module-wedge" data-endpoint-link="module-wedge">Wedge APIs</a></li>
-<li><a href="#module-wedgeasset" data-endpoint-link="module-wedgeasset">Wedge Asset APIs</a></li>
+            
+<li class="sidebar__group" role="presentation">
+  <div class="sidebar__group-title">Admin Endpoints</div>
+  <ul role="group">
+    <li role="treeitem"><a href="#module-users" data-endpoint-link="module-users">User Management APIs</a></li>
+<li role="treeitem"><a href="#module-roles" data-endpoint-link="module-roles">Role APIs</a></li>
+<li role="treeitem"><a href="#module-permissions" data-endpoint-link="module-permissions">Permission APIs</a></li>
+<li role="treeitem"><a href="#module-products" data-endpoint-link="module-products">Product &amp; Asset APIs</a></li>
+<li role="treeitem"><a href="#module-reviews" data-endpoint-link="module-reviews">Product Review APIs</a></li>
+<li role="treeitem"><a href="#module-categories" data-endpoint-link="module-categories">Categories &amp; Brands APIs</a></li>
+<li role="treeitem"><a href="#module-coupons" data-endpoint-link="module-coupons">Coupon Management APIs</a></li>
+<li role="treeitem"><a href="#module-gallery" data-endpoint-link="module-gallery">Media Gallery APIs</a></li>
+<li role="treeitem"><a href="#module-settings" data-endpoint-link="module-settings">Platform Settings APIs</a></li>
+<li role="treeitem"><a href="#module-shipping" data-endpoint-link="module-shipping">Shipping &amp; Logistics APIs</a></li>
+  </ul>
+</li>
+
+
+<li class="sidebar__group" role="presentation">
+  <div class="sidebar__group-title">Client Endpoints</div>
+  <ul role="group">
+    <li role="treeitem"><a href="#module-auth" data-endpoint-link="module-auth">Authentication APIs</a></li>
+  </ul>
+</li>
+
+
+<li class="sidebar__group" role="presentation">
+  <div class="sidebar__group-title">Public API Endpoints</div>
+  <ul role="group">
+    <li role="treeitem"><a href="#module-public" data-endpoint-link="module-public">Public Storefront APIs</a></li>
+  </ul>
+</li>
 
           </ul>
         </nav>
       </aside>
       <main class="docs__content content" id="docsContent" tabindex="-1">
         <header class="hero">
-          <h2>Design, test, and ship with confidence</h2>
-          <p>Each module is derived from the live Spring controllers. Open a controller to explore every route, generate cURL examples, and execute requests without leaving the docs.</p>
+          <h2>API Reference</h2>
+          <p>Dive into module-specific references, or jump directly to the Admin, Client, or Public API sections below.</p>
           <p><strong>Selected base URL:</strong> <span data-base-display>https://sandbox.api.rbac-commerce.dev</span></p>
         </header>
-        <section class="module-grid">
-          <article class="module-card" id="module-activity"><h3>Activity APIs</h3><p>Endpoints implemented by the Activity controller.</p><p class="module-card__path">Base path: <code>/api/v1/activity</code></p><ul class="module-card__endpoints"><li><span class="sidebar__method">GET</span><code>/api/v1/activity</code></li><li><span class="sidebar__method">GET</span><code>/api/v1/activity/{id}</code></li><li><span class="sidebar__method">GET</span><code>/api/v1/activity/filters</code></li></ul><p><a class="button button--inline" href="activity.html">Open reference</a></p></article>
-<article class="module-card" id="module-attribute"><h3>Attribute APIs</h3><p>Endpoints implemented by the Attribute controller.</p><p class="module-card__path">Base path: <code>/api/v1/attributes</code></p><ul class="module-card__endpoints"><li><span class="sidebar__method">GET</span><code>/api/v1/attributes</code></li><li><span class="sidebar__method">GET</span><code>/api/v1/attributes/{id}</code></li><li><span class="sidebar__method">POST</span><code>/api/v1/attributes</code></li><li><span class="sidebar__method">PUT</span><code>/api/v1/attributes/{id}</code></li><li><span class="sidebar__method">DELETE</span><code>/api/v1/attributes/{id}</code></li></ul><p><a class="button button--inline" href="attribute.html">Open reference</a></p></article>
-<article class="module-card" id="module-auth"><h3>Auth APIs</h3><p>Endpoints implemented by the Auth controller.</p><p class="module-card__path">Base path: <code>/api/v1/client/auth</code></p><ul class="module-card__endpoints"><li><span class="sidebar__method">POST</span><code>/api/v1/client/auth/signup</code></li><li><span class="sidebar__method">POST</span><code>/api/v1/client/auth/login</code></li><li><span class="sidebar__method">POST</span><code>/api/v1/client/auth/refresh</code></li><li><span class="sidebar__method">POST</span><code>/api/v1/client/auth/logout</code></li><li><span class="sidebar__method">GET</span><code>/api/v1/client/auth/me</code></li><li><span class="sidebar__method">POST</span><code>/api/v1/client/auth/verify</code></li></ul><p><a class="button button--inline" href="auth.html">Open reference</a></p><p class="module-card__more">…and 1 more endpoints.</p></article>
-<article class="module-card" id="module-badge"><h3>Badge APIs</h3><p>Endpoints implemented by the Badge controller.</p><p class="module-card__path">Base path: <code>/api/v1/badges</code></p><ul class="module-card__endpoints"><li><span class="sidebar__method">GET</span><code>/api/v1/badges</code></li><li><span class="sidebar__method">GET</span><code>/api/v1/badges/{id}</code></li><li><span class="sidebar__method">POST</span><code>/api/v1/badges</code></li><li><span class="sidebar__method">PUT</span><code>/api/v1/badges/{id}</code></li><li><span class="sidebar__method">DELETE</span><code>/api/v1/badges/{id}</code></li></ul><p><a class="button button--inline" href="badge.html">Open reference</a></p></article>
-<article class="module-card" id="module-badgeasset"><h3>Badge Asset APIs</h3><p>Endpoints implemented by the Badge Asset controller.</p><p class="module-card__path">Base path: <code>/api/v1/badges/assets</code></p><ul class="module-card__endpoints"><li><span class="sidebar__method">POST</span><code>/api/v1/badges/assets</code></li><li><span class="sidebar__method">GET</span><code>/api/v1/badges/assets/{key}</code></li></ul><p><a class="button button--inline" href="badgeasset.html">Open reference</a></p></article>
-<article class="module-card" id="module-badgecategory"><h3>Badge Category APIs</h3><p>Endpoints implemented by the Badge Category controller.</p><p class="module-card__path">Base path: <code>/api/v1/badge-categories</code></p><ul class="module-card__endpoints"><li><span class="sidebar__method">GET</span><code>/api/v1/badge-categories</code></li><li><span class="sidebar__method">GET</span><code>/api/v1/badge-categories/{id}</code></li><li><span class="sidebar__method">POST</span><code>/api/v1/badge-categories</code></li><li><span class="sidebar__method">PUT</span><code>/api/v1/badge-categories/{id}</code></li><li><span class="sidebar__method">DELETE</span><code>/api/v1/badge-categories/{id}</code></li><li><span class="sidebar__method">GET</span><code>/api/v1/badge-categories/options</code></li></ul><p><a class="button button--inline" href="badgecategory.html">Open reference</a></p></article>
-<article class="module-card" id="module-badgecategoryasset"><h3>Badge Category Asset APIs</h3><p>Endpoints implemented by the Badge Category Asset controller.</p><p class="module-card__path">Base path: <code>/api/v1/badge-categories/assets</code></p><ul class="module-card__endpoints"><li><span class="sidebar__method">POST</span><code>/api/v1/badge-categories/assets</code></li><li><span class="sidebar__method">GET</span><code>/api/v1/badge-categories/assets/{key}</code></li></ul><p><a class="button button--inline" href="badgecategoryasset.html">Open reference</a></p></article>
-<article class="module-card" id="module-blogcategory"><h3>Blog Category APIs</h3><p>Endpoints implemented by the Blog Category controller.</p><p class="module-card__path">Base path: <code>/api/v1/blog/categories</code></p><ul class="module-card__endpoints"><li><span class="sidebar__method">GET</span><code>/api/v1/blog/categories</code></li><li><span class="sidebar__method">GET</span><code>/api/v1/blog/categories/all</code></li><li><span class="sidebar__method">GET</span><code>/api/v1/blog/categories/{id}</code></li><li><span class="sidebar__method">POST</span><code>/api/v1/blog/categories</code></li><li><span class="sidebar__method">PUT</span><code>/api/v1/blog/categories/{id}</code></li><li><span class="sidebar__method">DELETE</span><code>/api/v1/blog/categories/{id}</code></li></ul><p><a class="button button--inline" href="blogcategory.html">Open reference</a></p></article>
-<article class="module-card" id="module-blogmedia"><h3>Blog Media APIs</h3><p>Endpoints implemented by the Blog Media controller.</p><p class="module-card__path">Base path: <code>/api/v1/blog/media</code></p><ul class="module-card__endpoints"><li><span class="sidebar__method">POST</span><code>/api/v1/blog/media</code></li><li><span class="sidebar__method">GET</span><code>/api/v1/blog/media/{key}</code></li></ul><p><a class="button button--inline" href="blogmedia.html">Open reference</a></p></article>
-<article class="module-card" id="module-blogpost"><h3>Blog Post APIs</h3><p>Endpoints implemented by the Blog Post controller.</p><p class="module-card__path">Base path: <code>/api/v1/blog/posts</code></p><ul class="module-card__endpoints"><li><span class="sidebar__method">GET</span><code>/api/v1/blog/posts</code></li><li><span class="sidebar__method">GET</span><code>/api/v1/blog/posts/{id}</code></li><li><span class="sidebar__method">POST</span><code>/api/v1/blog/posts</code></li><li><span class="sidebar__method">PUT</span><code>/api/v1/blog/posts/{id}</code></li><li><span class="sidebar__method">DELETE</span><code>/api/v1/blog/posts/{id}</code></li></ul><p><a class="button button--inline" href="blogpost.html">Open reference</a></p></article>
-<article class="module-card" id="module-brand"><h3>Brand APIs</h3><p>Endpoints implemented by the Brand controller.</p><p class="module-card__path">Base path: <code>/api/v1/brands</code></p><ul class="module-card__endpoints"><li><span class="sidebar__method">GET</span><code>/api/v1/brands</code></li><li><span class="sidebar__method">GET</span><code>/api/v1/brands/{id}</code></li><li><span class="sidebar__method">POST</span><code>/api/v1/brands</code></li><li><span class="sidebar__method">PUT</span><code>/api/v1/brands/{id}</code></li><li><span class="sidebar__method">DELETE</span><code>/api/v1/brands/{id}</code></li></ul><p><a class="button button--inline" href="brand.html">Open reference</a></p></article>
-<article class="module-card" id="module-brandasset"><h3>Brand Asset APIs</h3><p>Endpoints implemented by the Brand Asset controller.</p><p class="module-card__path">Base path: <code>/api/v1/brands/assets</code></p><ul class="module-card__endpoints"><li><span class="sidebar__method">POST</span><code>/api/v1/brands/assets</code></li><li><span class="sidebar__method">GET</span><code>/api/v1/brands/assets/{key:.+}</code></li></ul><p><a class="button button--inline" href="brandasset.html">Open reference</a></p></article>
-<article class="module-card" id="module-cart"><h3>Cart APIs</h3><p>Endpoints implemented by the Cart controller.</p><p class="module-card__path">Base path: <code>/api/v1/client/cart</code></p><ul class="module-card__endpoints"><li><span class="sidebar__method">GET</span><code>/api/v1/client/cart</code></li><li><span class="sidebar__method">POST</span><code>/api/v1/client/cart/items</code></li><li><span class="sidebar__method">PUT</span><code>/api/v1/client/cart/items/{itemId}</code></li><li><span class="sidebar__method">DELETE</span><code>/api/v1/client/cart/items/{itemId}</code></li><li><span class="sidebar__method">POST</span><code>/api/v1/client/cart/merge</code></li></ul><p><a class="button button--inline" href="cart.html">Open reference</a></p></article>
-<article class="module-card" id="module-category"><h3>Category APIs</h3><p>Endpoints implemented by the Category controller.</p><p class="module-card__path">Base path: <code>/api/v1/categories</code></p><ul class="module-card__endpoints"><li><span class="sidebar__method">GET</span><code>/api/v1/categories</code></li><li><span class="sidebar__method">GET</span><code>/api/v1/categories/{id}</code></li><li><span class="sidebar__method">GET</span><code>/api/v1/categories/options</code></li><li><span class="sidebar__method">POST</span><code>/api/v1/categories</code></li><li><span class="sidebar__method">PUT</span><code>/api/v1/categories/{id}</code></li><li><span class="sidebar__method">DELETE</span><code>/api/v1/categories/{id}</code></li></ul><p><a class="button button--inline" href="category.html">Open reference</a></p></article>
-<article class="module-card" id="module-categoryasset"><h3>Category Asset APIs</h3><p>Endpoints implemented by the Category Asset controller.</p><p class="module-card__path">Base path: <code>/api/v1/categories/assets</code></p><ul class="module-card__endpoints"><li><span class="sidebar__method">POST</span><code>/api/v1/categories/assets/{type}</code></li><li><span class="sidebar__method">GET</span><code>/api/v1/categories/assets/{type}/{key:.+}</code></li></ul><p><a class="button button--inline" href="categoryasset.html">Open reference</a></p></article>
-<article class="module-card" id="module-checkout"><h3>Checkout APIs</h3><p>Endpoints implemented by the Checkout controller.</p><p class="module-card__path">Base path: <code>/api/v1/client/checkout</code></p><ul class="module-card__endpoints"><li><span class="sidebar__method">GET</span><code>/api/v1/client/checkout/addresses</code></li><li><span class="sidebar__method">POST</span><code>/api/v1/client/checkout/addresses</code></li><li><span class="sidebar__method">PUT</span><code>/api/v1/client/checkout/addresses/{id}</code></li><li><span class="sidebar__method">GET</span><code>/api/v1/client/checkout/payment-methods</code></li><li><span class="sidebar__method">GET</span><code>/api/v1/client/checkout/regions/countries</code></li><li><span class="sidebar__method">GET</span><code>/api/v1/client/checkout/regions/countries/{countryId}/states</code></li></ul><p><a class="button button--inline" href="checkout.html">Open reference</a></p><p class="module-card__more">…and 5 more endpoints.</p></article>
-<article class="module-card" id="module-coupon"><h3>Coupon APIs</h3><p>Endpoints implemented by the Coupon controller.</p><p class="module-card__path">Base path: <code>/api/v1/coupons</code></p><ul class="module-card__endpoints"><li><span class="sidebar__method">GET</span><code>/api/v1/coupons</code></li><li><span class="sidebar__method">GET</span><code>/api/v1/coupons/{id}</code></li><li><span class="sidebar__method">POST</span><code>/api/v1/coupons</code></li><li><span class="sidebar__method">PUT</span><code>/api/v1/coupons/{id}</code></li><li><span class="sidebar__method">DELETE</span><code>/api/v1/coupons/{id}</code></li><li><span class="sidebar__method">GET</span><code>/api/v1/coupons/reference/products</code></li></ul><p><a class="button button--inline" href="coupon.html">Open reference</a></p><p class="module-card__more">…and 2 more endpoints.</p></article>
-<article class="module-card" id="module-customer"><h3>Customer APIs</h3><p>Endpoints implemented by the Customer controller.</p><p class="module-card__path">Base path: <code>/api/v1/customers</code></p><ul class="module-card__endpoints"><li><span class="sidebar__method">GET</span><code>/api/v1/customers</code></li><li><span class="sidebar__method">POST</span><code>/api/v1/customers</code></li><li><span class="sidebar__method">GET</span><code>/api/v1/customers/{id}</code></li><li><span class="sidebar__method">PUT</span><code>/api/v1/customers/{id}</code></li><li><span class="sidebar__method">DELETE</span><code>/api/v1/customers/{id}</code></li></ul><p><a class="button button--inline" href="customer.html">Open reference</a></p></article>
-<article class="module-card" id="module-emailsettings"><h3>Email Settings APIs</h3><p>Endpoints implemented by the Email Settings controller.</p><p class="module-card__path">Base path: <code>/api/v1/settings/email</code></p><ul class="module-card__endpoints"><li><span class="sidebar__method">GET</span><code>/api/v1/settings/email</code></li><li><span class="sidebar__method">POST</span><code>/api/v1/settings/email/test</code></li></ul><p><a class="button button--inline" href="emailsettings.html">Open reference</a></p></article>
-<article class="module-card" id="module-emailtemplate"><h3>Email Template APIs</h3><p>Endpoints implemented by the Email Template controller.</p><p class="module-card__path">Base path: <code>/api/v1/settings/email/templates</code></p><ul class="module-card__endpoints"><li><span class="sidebar__method">GET</span><code>/api/v1/settings/email/templates</code></li><li><span class="sidebar__method">GET</span><code>/api/v1/settings/email/templates/{id}</code></li><li><span class="sidebar__method">PUT</span><code>/api/v1/settings/email/templates/{id}</code></li></ul><p><a class="button button--inline" href="emailtemplate.html">Open reference</a></p></article>
-<article class="module-card" id="module-gallery"><h3>Gallery APIs</h3><p>Endpoints implemented by the Gallery controller.</p><p class="module-card__path">Base path: <code>/api/v1/gallery</code></p><ul class="module-card__endpoints"><li><span class="sidebar__method">GET</span><code>/api/v1/gallery/files</code></li><li><span class="sidebar__method">GET</span><code>/api/v1/gallery/settings</code></li><li><span class="sidebar__method">POST</span><code>/api/v1/gallery/files</code></li><li><span class="sidebar__method">PATCH</span><code>/api/v1/gallery/files/{id}</code></li><li><span class="sidebar__method">DELETE</span><code>/api/v1/gallery/files/{id}</code></li><li><span class="sidebar__method">POST</span><code>/api/v1/gallery/files/bulk-delete</code></li></ul><p><a class="button button--inline" href="gallery.html">Open reference</a></p><p class="module-card__more">…and 5 more endpoints.</p></article>
-<article class="module-card" id="module-navigation"><h3>Navigation APIs</h3><p>Endpoints implemented by the Navigation controller.</p><p class="module-card__path">Base path: <code>/api/v1/navigation</code></p><ul class="module-card__endpoints"><li><span class="sidebar__method">GET</span><code>/api/v1/navigation/menu</code></li></ul><p><a class="button button--inline" href="navigation.html">Open reference</a></p></article>
-<article class="module-card" id="module-orderadmin"><h3>Order Admin APIs</h3><p>Endpoints implemented by the Order Admin controller.</p><p class="module-card__path">Base path: <code>/api/v1/admin/orders</code></p><ul class="module-card__endpoints"><li><span class="sidebar__method">GET</span><code>/api/v1/admin/orders</code></li><li><span class="sidebar__method">GET</span><code>/api/v1/admin/orders/{orderId}</code></li></ul><p><a class="button button--inline" href="orderadmin.html">Open reference</a></p></article>
-<article class="module-card" id="module-paymentadmin"><h3>Payment Admin APIs</h3><p>Endpoints implemented by the Payment Admin controller.</p><p class="module-card__path">Base path: <code>/api/v1/admin/payments</code></p><ul class="module-card__endpoints"><li><span class="sidebar__method">GET</span><code>/api/v1/admin/payments/methods</code></li><li><span class="sidebar__method">PUT</span><code>/api/v1/admin/payments/methods/{key}</code></li></ul><p><a class="button button--inline" href="paymentadmin.html">Open reference</a></p></article>
-<article class="module-card" id="module-permission"><h3>Permission APIs</h3><p>Endpoints implemented by the Permission controller.</p><p class="module-card__path">Base path: <code>/api/v1/permissions</code></p><ul class="module-card__endpoints"><li><span class="sidebar__method">GET</span><code>/api/v1/permissions</code></li><li><span class="sidebar__method">POST</span><code>/api/v1/permissions</code></li><li><span class="sidebar__method">PUT</span><code>/api/v1/permissions/{id}</code></li><li><span class="sidebar__method">DELETE</span><code>/api/v1/permissions/{id}</code></li></ul><p><a class="button button--inline" href="permission.html">Open reference</a></p></article>
-<article class="module-card" id="module-product"><h3>Product APIs</h3><p>Endpoints implemented by the Product controller.</p><p class="module-card__path">Base path: <code>/api/v1/products</code></p><ul class="module-card__endpoints"><li><span class="sidebar__method">GET</span><code>/api/v1/products</code></li><li><span class="sidebar__method">GET</span><code>/api/v1/products/{id}</code></li><li><span class="sidebar__method">POST</span><code>/api/v1/products</code></li><li><span class="sidebar__method">PUT</span><code>/api/v1/products/{id}</code></li><li><span class="sidebar__method">DELETE</span><code>/api/v1/products/{id}</code></li></ul><p><a class="button button--inline" href="product.html">Open reference</a></p></article>
-<article class="module-card" id="module-productasset"><h3>Product Asset APIs</h3><p>Endpoints implemented by the Product Asset controller.</p><p class="module-card__path">Base path: <code>/api/v1/products/assets</code></p><ul class="module-card__endpoints"><li><span class="sidebar__method">POST</span><code>/api/v1/products/assets/{type}</code></li><li><span class="sidebar__method">GET</span><code>/api/v1/products/assets/{type}/{key:.+}</code></li></ul><p><a class="button button--inline" href="productasset.html">Open reference</a></p></article>
-<article class="module-card" id="module-productreview"><h3>Product Review APIs</h3><p>Endpoints implemented by the Product Review controller.</p><p class="module-card__path">Base path: <code>/api/v1/product-reviews</code></p><ul class="module-card__endpoints"><li><span class="sidebar__method">GET</span><code>/api/v1/product-reviews</code></li><li><span class="sidebar__method">GET</span><code>/api/v1/product-reviews/{id}</code></li><li><span class="sidebar__method">POST</span><code>/api/v1/product-reviews</code></li><li><span class="sidebar__method">PUT</span><code>/api/v1/product-reviews/{id}</code></li><li><span class="sidebar__method">DELETE</span><code>/api/v1/product-reviews/{id}</code></li></ul><p><a class="button button--inline" href="productreview.html">Open reference</a></p></article>
-<article class="module-card" id="module-profile"><h3>Profile APIs</h3><p>Endpoints implemented by the Profile controller.</p><p class="module-card__path">Base path: <code>/api/v1/profile</code></p><ul class="module-card__endpoints"><li><span class="sidebar__method">PUT</span><code>/api/v1/profile</code></li></ul><p><a class="button button--inline" href="profile.html">Open reference</a></p></article>
-<article class="module-card" id="module-publicblog"><h3>Public Blog APIs</h3><p>Endpoints implemented by the Public Blog controller.</p><p class="module-card__path">Base path: <code>/api/v1/blog/public</code></p><ul class="module-card__endpoints"><li><span class="sidebar__method">GET</span><code>/api/v1/blog/public/posts</code></li><li><span class="sidebar__method">GET</span><code>/api/v1/blog/public/posts/{slug}</code></li><li><span class="sidebar__method">GET</span><code>/api/v1/blog/public/categories</code></li></ul><p><a class="button button--inline" href="publicblog.html">Open reference</a></p></article>
-<article class="module-card" id="module-publiccatalog"><h3>Public Catalog APIs</h3><p>Endpoints implemented by the Public Catalog controller.</p><p class="module-card__path">Base path: <code>/api/v1/public/catalog</code></p><ul class="module-card__endpoints"><li><span class="sidebar__method">GET</span><code>/api/v1/public/catalog/categories</code></li><li><span class="sidebar__method">GET</span><code>/api/v1/public/catalog/brands</code></li></ul><p><a class="button button--inline" href="publiccatalog.html">Open reference</a></p></article>
-<article class="module-card" id="module-publiccoupon"><h3>Public Coupon APIs</h3><p>Endpoints implemented by the Public Coupon controller.</p><p class="module-card__path">Base path: <code>/api/v1/public/coupons</code></p><ul class="module-card__endpoints"><li><span class="sidebar__method">GET</span><code>/api/v1/public/coupons</code></li></ul><p><a class="button button--inline" href="publiccoupon.html">Open reference</a></p></article>
-<article class="module-card" id="module-publicproduct"><h3>Public Product APIs</h3><p>Endpoints implemented by the Public Product controller.</p><p class="module-card__path">Base path: <code>/api/v1/public/products</code></p><ul class="module-card__endpoints"><li><span class="sidebar__method">GET</span><code>/api/v1/public/products/{slug}</code></li></ul><p><a class="button button--inline" href="publicproduct.html">Open reference</a></p></article>
-<article class="module-card" id="module-role"><h3>Role APIs</h3><p>Endpoints implemented by the Role controller.</p><p class="module-card__path">Base path: <code>/api/v1/roles</code></p><ul class="module-card__endpoints"><li><span class="sidebar__method">GET</span><code>/api/v1/roles</code></li><li><span class="sidebar__method">POST</span><code>/api/v1/roles</code></li><li><span class="sidebar__method">GET</span><code>/api/v1/roles/{id}</code></li><li><span class="sidebar__method">PUT</span><code>/api/v1/roles/{id}</code></li><li><span class="sidebar__method">DELETE</span><code>/api/v1/roles/{id}</code></li><li><span class="sidebar__method">POST</span><code>/api/v1/roles/{id}/permissions</code></li></ul><p><a class="button button--inline" href="role.html">Open reference</a></p><p class="module-card__more">…and 1 more endpoints.</p></article>
-<article class="module-card" id="module-settings"><h3>Settings APIs</h3><p>Endpoints implemented by the Settings controller.</p><p class="module-card__path">Base path: <code>/api/v1/settings</code></p><ul class="module-card__endpoints"><li><span class="sidebar__method">GET</span><code>/api/v1/settings</code></li><li><span class="sidebar__method">PATCH</span><code>/api/v1/settings</code></li><li><span class="sidebar__method">GET</span><code>/api/v1/settings/theme</code></li></ul><p><a class="button button--inline" href="settings.html">Open reference</a></p></article>
-<article class="module-card" id="module-setup"><h3>Setup APIs</h3><p>Endpoints implemented by the Setup controller.</p><p class="module-card__path">Base path: <code>/api/v1/setup</code></p><ul class="module-card__endpoints"><li><span class="sidebar__method">GET</span><code>/api/v1/setup/menu</code></li><li><span class="sidebar__method">PUT</span><code>/api/v1/setup/menu</code></li></ul><p><a class="button button--inline" href="setup.html">Open reference</a></p></article>
-<article class="module-card" id="module-shippingarearate"><h3>Shipping Area Rate APIs</h3><p>Endpoints implemented by the Shipping Area Rate controller.</p><p class="module-card__path">Base path: <code>/api/v1/shipping/area-rates</code></p><ul class="module-card__endpoints"><li><span class="sidebar__method">GET</span><code>/api/v1/shipping/area-rates</code></li><li><span class="sidebar__method">GET</span><code>/api/v1/shipping/area-rates/{id}</code></li><li><span class="sidebar__method">POST</span><code>/api/v1/shipping/area-rates</code></li><li><span class="sidebar__method">PUT</span><code>/api/v1/shipping/area-rates/{id}</code></li><li><span class="sidebar__method">DELETE</span><code>/api/v1/shipping/area-rates/{id}</code></li></ul><p><a class="button button--inline" href="shippingarearate.html">Open reference</a></p></article>
-<article class="module-card" id="module-shippinglocation"><h3>Shipping Location APIs</h3><p>Endpoints implemented by the Shipping Location controller.</p><p class="module-card__path">Base path: <code>/api/v1/shipping</code></p><ul class="module-card__endpoints"><li><span class="sidebar__method">GET</span><code>/api/v1/shipping/countries</code></li><li><span class="sidebar__method">GET</span><code>/api/v1/shipping/countries/options</code></li><li><span class="sidebar__method">POST</span><code>/api/v1/shipping/countries</code></li><li><span class="sidebar__method">PUT</span><code>/api/v1/shipping/countries/{id}</code></li><li><span class="sidebar__method">PUT</span><code>/api/v1/shipping/countries/{id}/settings</code></li><li><span class="sidebar__method">PUT</span><code>/api/v1/shipping/countries/bulk-settings</code></li></ul><p><a class="button button--inline" href="shippinglocation.html">Open reference</a></p><p class="module-card__more">…and 16 more endpoints.</p></article>
-<article class="module-card" id="module-taxrate"><h3>Tax Rate APIs</h3><p>Endpoints implemented by the Tax Rate controller.</p><p class="module-card__path">Base path: <code>/api/v1/tax-rates</code></p><ul class="module-card__endpoints"><li><span class="sidebar__method">GET</span><code>/api/v1/tax-rates</code></li><li><span class="sidebar__method">GET</span><code>/api/v1/tax-rates/{id}</code></li><li><span class="sidebar__method">POST</span><code>/api/v1/tax-rates</code></li><li><span class="sidebar__method">PUT</span><code>/api/v1/tax-rates/{id}</code></li><li><span class="sidebar__method">DELETE</span><code>/api/v1/tax-rates/{id}</code></li></ul><p><a class="button button--inline" href="taxrate.html">Open reference</a></p></article>
-<article class="module-card" id="module-uploadedfile"><h3>Uploaded File APIs</h3><p>Endpoints implemented by the Uploaded File controller.</p><p class="module-card__path">Base path: <code>/api/v1/uploaded-files</code></p><ul class="module-card__endpoints"><li><span class="sidebar__method">GET</span><code>/api/v1/uploaded-files</code></li><li><span class="sidebar__method">GET</span><code>/api/v1/uploaded-files/{id}</code></li><li><span class="sidebar__method">GET</span><code>/api/v1/uploaded-files/modules</code></li><li><span class="sidebar__method">GET</span><code>/api/v1/uploaded-files/uploaders</code></li><li><span class="sidebar__method">POST</span><code>/api/v1/uploaded-files/upload</code></li><li><span class="sidebar__method">GET</span><code>/api/v1/uploaded-files/assets/{key:.+}</code></li></ul><p><a class="button button--inline" href="uploadedfile.html">Open reference</a></p><p class="module-card__more">…and 1 more endpoints.</p></article>
-<article class="module-card" id="module-useraddressadmin"><h3>User Address Admin APIs</h3><p>Endpoints implemented by the User Address Admin controller.</p><p class="module-card__path">Base path: <code>/api/v1/admin/users</code></p><ul class="module-card__endpoints"><li><span class="sidebar__method">GET</span><code>/api/v1/admin/users/{userId}/addresses</code></li><li><span class="sidebar__method">POST</span><code>/api/v1/admin/users/{userId}/addresses</code></li><li><span class="sidebar__method">PUT</span><code>/api/v1/admin/users/{userId}/addresses/{addressId}</code></li></ul><p><a class="button button--inline" href="useraddressadmin.html">Open reference</a></p></article>
-<article class="module-card" id="module-user"><h3>User APIs</h3><p>Endpoints implemented by the User controller.</p><p class="module-card__path">Base path: <code>/api/v1/users</code></p><ul class="module-card__endpoints"><li><span class="sidebar__method">GET</span><code>/api/v1/users</code></li><li><span class="sidebar__method">GET</span><code>/api/v1/users/summary</code></li><li><span class="sidebar__method">POST</span><code>/api/v1/users</code></li><li><span class="sidebar__method">GET</span><code>/api/v1/users/{id}</code></li><li><span class="sidebar__method">PUT</span><code>/api/v1/users/{id}</code></li><li><span class="sidebar__method">PATCH</span><code>/api/v1/users/{id}/status</code></li></ul><p><a class="button button--inline" href="user.html">Open reference</a></p><p class="module-card__more">…and 7 more endpoints.</p></article>
-<article class="module-card" id="module-usercart"><h3>User Cart APIs</h3><p>Endpoints implemented by the User Cart controller.</p><p class="module-card__path">Base path: <code>/api/v1/users/{userId}/cart</code></p><ul class="module-card__endpoints"><li><span class="sidebar__method">GET</span><code>/api/v1/users/{userId}/cart</code></li><li><span class="sidebar__method">POST</span><code>/api/v1/users/{userId}/cart/items</code></li><li><span class="sidebar__method">PATCH</span><code>/api/v1/users/{userId}/cart/items/{itemId}</code></li><li><span class="sidebar__method">DELETE</span><code>/api/v1/users/{userId}/cart/items/{itemId}</code></li></ul><p><a class="button button--inline" href="usercart.html">Open reference</a></p></article>
-<article class="module-card" id="module-userorderadmin"><h3>User Order Admin APIs</h3><p>Endpoints implemented by the User Order Admin controller.</p><p class="module-card__path">Base path: <code>/api/v1/admin/users/{userId}/orders</code></p><ul class="module-card__endpoints"><li><span class="sidebar__method">GET</span><code>/api/v1/admin/users/{userId}/orders</code></li><li><span class="sidebar__method">GET</span><code>/api/v1/admin/users/{userId}/orders/{orderId}</code></li></ul><p><a class="button button--inline" href="userorderadmin.html">Open reference</a></p></article>
-<article class="module-card" id="module-wedge"><h3>Wedge APIs</h3><p>Endpoints implemented by the Wedge controller.</p><p class="module-card__path">Base path: <code>/api/v1/wedges</code></p><ul class="module-card__endpoints"><li><span class="sidebar__method">GET</span><code>/api/v1/wedges</code></li><li><span class="sidebar__method">GET</span><code>/api/v1/wedges/{id}</code></li><li><span class="sidebar__method">POST</span><code>/api/v1/wedges</code></li><li><span class="sidebar__method">PUT</span><code>/api/v1/wedges/{id}</code></li><li><span class="sidebar__method">DELETE</span><code>/api/v1/wedges/{id}</code></li></ul><p><a class="button button--inline" href="wedge.html">Open reference</a></p></article>
-<article class="module-card" id="module-wedgeasset"><h3>Wedge Asset APIs</h3><p>Endpoints implemented by the Wedge Asset controller.</p><p class="module-card__path">Base path: <code>/api/v1/wedges/assets</code></p><ul class="module-card__endpoints"><li><span class="sidebar__method">POST</span><code>/api/v1/wedges/assets</code></li><li><span class="sidebar__method">GET</span><code>/api/v1/wedges/assets/{key:.+}</code></li></ul><p><a class="button button--inline" href="wedgeasset.html">Open reference</a></p></article>
+        
+<section class="module-group" id="group-admin">
+  <h2>Admin Endpoints</h2>
+  <p>Configuration, catalog, marketing, and operational APIs used by dashboard administrators.</p>
+  <div class="module-grid">
+    
+<article class="module-card" id="module-users">
+  <h3>User Management APIs</h3>
+  <p>CRUD, status controls, role assignment, and profile updates for internal and customer accounts.</p>
+  <p class="module-card__path">Base path: <code>/api/v1</code></p>
+  <ul class="module-card__endpoints">
+    <li><span class="sidebar__method">GET</span><code>/api/v1/users</code></li>
+    <li><span class="sidebar__method">GET</span><code>/api/v1/users/summary</code></li>
+    <li><span class="sidebar__method">POST</span><code>/api/v1/users</code></li>
+    <li><span class="sidebar__method">GET</span><code>/api/v1/users/{id}</code></li>
+    <li><span class="sidebar__method">PUT</span><code>/api/v1/users/{id}</code></li>
+  </ul>
+  <p><a class="button button--inline" href="users.html">Open reference</a></p>
+  <p class="module-card__more">…and 8 more endpoints.</p>
+</article>
 
-        </section>
+    
+<article class="module-card" id="module-roles">
+  <h3>Role APIs</h3>
+  <p>Manage reusable role definitions and bind permissions for RBAC.</p>
+  <p class="module-card__path">Base path: <code>/api/v1/roles</code></p>
+  <ul class="module-card__endpoints">
+    <li><span class="sidebar__method">GET</span><code>/api/v1/roles</code></li>
+    <li><span class="sidebar__method">POST</span><code>/api/v1/roles</code></li>
+    <li><span class="sidebar__method">GET</span><code>/api/v1/roles/{id}</code></li>
+    <li><span class="sidebar__method">PUT</span><code>/api/v1/roles/{id}</code></li>
+    <li><span class="sidebar__method">DELETE</span><code>/api/v1/roles/{id}</code></li>
+  </ul>
+  <p><a class="button button--inline" href="roles.html">Open reference</a></p>
+  <p class="module-card__more">…and 2 more endpoints.</p>
+</article>
+
+    
+<article class="module-card" id="module-permissions">
+  <h3>Permission APIs</h3>
+  <p>CRUD over fine-grained permissions powering RBAC overrides.</p>
+  <p class="module-card__path">Base path: <code>/api/v1/permissions</code></p>
+  <ul class="module-card__endpoints">
+    <li><span class="sidebar__method">GET</span><code>/api/v1/permissions</code></li>
+    <li><span class="sidebar__method">POST</span><code>/api/v1/permissions</code></li>
+    <li><span class="sidebar__method">PUT</span><code>/api/v1/permissions/{id}</code></li>
+    <li><span class="sidebar__method">DELETE</span><code>/api/v1/permissions/{id}</code></li>
+  </ul>
+  <p><a class="button button--inline" href="permissions.html">Open reference</a></p>
+  
+</article>
+
+    
+<article class="module-card" id="module-products">
+  <h3>Product &amp; Asset APIs</h3>
+  <p>Administrative product CRUD, variant authoring, and media asset uploads.</p>
+  <p class="module-card__path">Base path: <code>/api/v1</code></p>
+  <ul class="module-card__endpoints">
+    <li><span class="sidebar__method">GET</span><code>/api/v1/products</code></li>
+    <li><span class="sidebar__method">GET</span><code>/api/v1/products/{id}</code></li>
+    <li><span class="sidebar__method">POST</span><code>/api/v1/products</code></li>
+    <li><span class="sidebar__method">PUT</span><code>/api/v1/products/{id}</code></li>
+    <li><span class="sidebar__method">DELETE</span><code>/api/v1/products/{id}</code></li>
+  </ul>
+  <p><a class="button button--inline" href="products.html">Open reference</a></p>
+  <p class="module-card__more">…and 2 more endpoints.</p>
+</article>
+
+    
+<article class="module-card" id="module-reviews">
+  <h3>Product Review APIs</h3>
+  <p>Moderate customer reviews, toggle visibility, and inject staff replies.</p>
+  <p class="module-card__path">Base path: <code>/api/v1/product-reviews</code></p>
+  <ul class="module-card__endpoints">
+    <li><span class="sidebar__method">GET</span><code>/api/v1/product-reviews</code></li>
+    <li><span class="sidebar__method">GET</span><code>/api/v1/product-reviews/{id}</code></li>
+    <li><span class="sidebar__method">POST</span><code>/api/v1/product-reviews</code></li>
+    <li><span class="sidebar__method">PUT</span><code>/api/v1/product-reviews/{id}</code></li>
+    <li><span class="sidebar__method">DELETE</span><code>/api/v1/product-reviews/{id}</code></li>
+  </ul>
+  <p><a class="button button--inline" href="reviews.html">Open reference</a></p>
+  
+</article>
+
+    
+<article class="module-card" id="module-categories">
+  <h3>Categories &amp; Brands APIs</h3>
+  <p>Manage taxonomy trees, category media, and brand registries for the storefront.</p>
+  <p class="module-card__path">Base path: <code>/api/v1</code></p>
+  <ul class="module-card__endpoints">
+    <li><span class="sidebar__method">GET</span><code>/api/v1/categories</code></li>
+    <li><span class="sidebar__method">GET</span><code>/api/v1/categories/{id}</code></li>
+    <li><span class="sidebar__method">GET</span><code>/api/v1/categories/options</code></li>
+    <li><span class="sidebar__method">POST</span><code>/api/v1/categories</code></li>
+    <li><span class="sidebar__method">PUT</span><code>/api/v1/categories/{id}</code></li>
+  </ul>
+  <p><a class="button button--inline" href="categories.html">Open reference</a></p>
+  <p class="module-card__more">…and 7 more endpoints.</p>
+</article>
+
+    
+<article class="module-card" id="module-coupons">
+  <h3>Coupon Management APIs</h3>
+  <p>Create, update, and reference discount coupons with product/category targeting.</p>
+  <p class="module-card__path">Base path: <code>/api/v1/coupons</code></p>
+  <ul class="module-card__endpoints">
+    <li><span class="sidebar__method">GET</span><code>/api/v1/coupons</code></li>
+    <li><span class="sidebar__method">GET</span><code>/api/v1/coupons/{id}</code></li>
+    <li><span class="sidebar__method">POST</span><code>/api/v1/coupons</code></li>
+    <li><span class="sidebar__method">PUT</span><code>/api/v1/coupons/{id}</code></li>
+    <li><span class="sidebar__method">DELETE</span><code>/api/v1/coupons/{id}</code></li>
+  </ul>
+  <p><a class="button button--inline" href="coupons.html">Open reference</a></p>
+  <p class="module-card__more">…and 3 more endpoints.</p>
+</article>
+
+    
+<article class="module-card" id="module-gallery">
+  <h3>Media Gallery APIs</h3>
+  <p>Centralised asset library supporting upload, metadata, and folder management.</p>
+  <p class="module-card__path">Base path: <code>/api/v1/gallery</code></p>
+  <ul class="module-card__endpoints">
+    <li><span class="sidebar__method">GET</span><code>/api/v1/gallery/files</code></li>
+    <li><span class="sidebar__method">GET</span><code>/api/v1/gallery/settings</code></li>
+    <li><span class="sidebar__method">POST</span><code>/api/v1/gallery/files</code></li>
+    <li><span class="sidebar__method">PATCH</span><code>/api/v1/gallery/files/{id}</code></li>
+    <li><span class="sidebar__method">DELETE</span><code>/api/v1/gallery/files/{id}</code></li>
+  </ul>
+  <p><a class="button button--inline" href="gallery.html">Open reference</a></p>
+  <p class="module-card__more">…and 6 more endpoints.</p>
+</article>
+
+    
+<article class="module-card" id="module-settings">
+  <h3>Platform Settings APIs</h3>
+  <p>Storefront configuration, email settings, and template management.</p>
+  <p class="module-card__path">Base path: <code>/api/v1/settings</code></p>
+  <ul class="module-card__endpoints">
+    <li><span class="sidebar__method">GET</span><code>/api/v1/settings</code></li>
+    <li><span class="sidebar__method">PATCH</span><code>/api/v1/settings</code></li>
+    <li><span class="sidebar__method">GET</span><code>/api/v1/settings/theme</code></li>
+    <li><span class="sidebar__method">GET</span><code>/api/v1/settings/email</code></li>
+    <li><span class="sidebar__method">POST</span><code>/api/v1/settings/email/test</code></li>
+  </ul>
+  <p><a class="button button--inline" href="settings.html">Open reference</a></p>
+  <p class="module-card__more">…and 3 more endpoints.</p>
+</article>
+
+    
+<article class="module-card" id="module-shipping">
+  <h3>Shipping &amp; Logistics APIs</h3>
+  <p>Manage shippable regions, granular rate cards, and delivery rules.</p>
+  <p class="module-card__path">Base path: <code>/api/v1/shipping</code></p>
+  <ul class="module-card__endpoints">
+    <li><span class="sidebar__method">GET</span><code>/api/v1/shipping/countries</code></li>
+    <li><span class="sidebar__method">POST</span><code>/api/v1/shipping/countries</code></li>
+    <li><span class="sidebar__method">PUT</span><code>/api/v1/shipping/countries/{id}</code></li>
+    <li><span class="sidebar__method">PUT</span><code>/api/v1/shipping/countries/bulk-settings</code></li>
+    <li><span class="sidebar__method">DELETE</span><code>/api/v1/shipping/countries/{id}</code></li>
+  </ul>
+  <p><a class="button button--inline" href="shipping.html">Open reference</a></p>
+  <p class="module-card__more">…and 12 more endpoints.</p>
+</article>
+
+  </div>
+</section>
+
+
+<section class="module-group" id="group-client">
+  <h2>Client Endpoints</h2>
+  <p>Authenticated shopper-facing APIs consumed by the storefront client once a user signs in.</p>
+  <div class="module-grid">
+    
+<article class="module-card" id="module-auth">
+  <h3>Authentication APIs</h3>
+  <p>Token issuance, refresh, logout, and verification flows used by the dashboard and storefront.</p>
+  <p class="module-card__path">Base path: <code>/api/v1/client/auth</code></p>
+  <ul class="module-card__endpoints">
+    <li><span class="sidebar__method">POST</span><code>/api/v1/client/auth/signup</code></li>
+    <li><span class="sidebar__method">POST</span><code>/api/v1/client/auth/login</code></li>
+    <li><span class="sidebar__method">POST</span><code>/api/v1/client/auth/refresh</code></li>
+    <li><span class="sidebar__method">POST</span><code>/api/v1/client/auth/logout</code></li>
+    <li><span class="sidebar__method">GET</span><code>/api/v1/client/auth/me</code></li>
+  </ul>
+  <p><a class="button button--inline" href="auth.html">Open reference</a></p>
+  <p class="module-card__more">…and 2 more endpoints.</p>
+</article>
+
+  </div>
+</section>
+
+
+<section class="module-group" id="group-public">
+  <h2>Public API Endpoints</h2>
+  <p>Anonymous storefront APIs powering landing pages, product discovery, and promotional content.</p>
+  <div class="module-grid">
+    
+<article class="module-card" id="module-public">
+  <h3>Public Storefront APIs</h3>
+  <p>Anonymous endpoints powering the storefront product listings, detail pages, and promotions.</p>
+  <p class="module-card__path">Base path: <code>/api/v1/public</code></p>
+  <ul class="module-card__endpoints">
+    <li><span class="sidebar__method">GET</span><code>/api/v1/public/home</code></li>
+    <li><span class="sidebar__method">GET</span><code>/api/v1/public/products</code></li>
+    <li><span class="sidebar__method">GET</span><code>/api/v1/public/products/{slug}</code></li>
+    <li><span class="sidebar__method">GET</span><code>/api/v1/public/categories</code></li>
+    <li><span class="sidebar__method">GET</span><code>/api/v1/public/coupons</code></li>
+  </ul>
+  <p><a class="button button--inline" href="public.html">Open reference</a></p>
+  <p class="module-card__more">…and 1 more endpoint.</p>
+</article>
+
+  </div>
+</section>
+
       </main>
     </div>
     <footer class="docs__footer">
-      <p>Documentation generated from source on demand.</p>
+      <a href="https://github.com/neeraj94/neeraj-testing-01">View source on GitHub</a>
     </footer>
     <script src="app.js" defer></script>
   </body>

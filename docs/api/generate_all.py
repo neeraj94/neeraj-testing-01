@@ -1,11 +1,462 @@
 from pathlib import Path
 import sys
+import json
+import copy
+import re
+from collections import defaultdict
+from http import HTTPStatus
+from html import escape
 
 CURRENT_DIR = Path(__file__).resolve().parent
 if str(CURRENT_DIR) not in sys.path:
     sys.path.insert(0, str(CURRENT_DIR))
 
 from _builder import write_module
+
+GROUP_ORDER = ["Admin", "Client", "Public"]
+DOC_GROUP_LABELS = {
+    "Admin": "Admin Endpoints",
+    "Client": "Client Endpoints",
+    "Public": "Public API Endpoints",
+}
+POSTMAN_GROUP_LABELS = {
+    "Admin": "Admin",
+    "Client": "Client",
+    "Public": "Public APIs",
+}
+GROUP_DESCRIPTIONS = {
+    "Admin": "Configuration, catalog, marketing, and operational APIs used by dashboard administrators.",
+    "Client": "Authenticated shopper-facing APIs consumed by the storefront client once a user signs in.",
+    "Public": "Anonymous storefront APIs powering landing pages, product discovery, and promotional content.",
+}
+MODULE_GROUPS = {
+    "auth.html": "Client",
+    "users.html": "Admin",
+    "roles.html": "Admin",
+    "permissions.html": "Admin",
+    "products.html": "Admin",
+    "reviews.html": "Admin",
+    "categories.html": "Admin",
+    "coupons.html": "Admin",
+    "gallery.html": "Admin",
+    "settings.html": "Admin",
+    "shipping.html": "Admin",
+    "public.html": "Public",
+}
+
+INDEX_TEMPLATE = """<!DOCTYPE html>
+<html lang=\"en\">
+  <head>
+    <meta charset=\"UTF-8\" />
+    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />
+    <title>API Reference</title>
+    <link rel=\"stylesheet\" href=\"styles.css\" />
+  </head>
+  <body class=\"page\">
+    <div class=\"docs\">
+      <aside class=\"docs__nav sidebar\" aria-label=\"API navigation\">
+        <div class=\"sidebar__brand\">
+          <div class=\"sidebar__badge\">RBAC Commerce</div>
+          <h1>API Reference</h1>
+          <p>Explore every endpoint exposed by the RBAC Commerce backend, grouped by Admin, Client, and Public modules.</p>
+        </div>
+        <div class=\"sidebar__controls\">
+          <label class=\"control\">
+            <span class=\"control__label\">Environment</span>
+            <select id=\"environmentSelect\">
+              <option value=\"https://sandbox.api.rbac-commerce.dev\">Sandbox</option>
+              <option value=\"https://staging.api.rbac-commerce.dev\">Staging</option>
+              <option value=\"https://api.rbac-commerce.dev\">Production</option>
+              <option value=\"custom\">Custom…</option>
+            </select>
+          </label>
+          <label class=\"control\" id=\"customUrlControl\" hidden>
+            <span class=\"control__label\">Custom base URL</span>
+            <input id=\"baseUrl\" type=\"url\" spellcheck=\"false\" value=\"https://sandbox.api.rbac-commerce.dev\" />
+          </label>
+          <label class=\"control\">
+            <span class=\"control__label\">Bearer token</span>
+            <input id=\"authToken\" type=\"text\" spellcheck=\"false\" placeholder=\"Optional token for private endpoints\" />
+          </label>
+        </div>
+        <nav class=\"sidebar__nav\" aria-label=\"Modules\">
+          <h2>Modules</h2>
+          <ul class=\"sidebar__tree\" role=\"tree\">
+            {nav_groups}
+          </ul>
+        </nav>
+      </aside>
+      <main class=\"docs__content content\" id=\"docsContent\" tabindex=\"-1\">
+        <header class=\"hero\">
+          <h2>API Reference</h2>
+          <p>Dive into module-specific references, or jump directly to the Admin, Client, or Public API sections below.</p>
+          <p><strong>Selected base URL:</strong> <span data-base-display>https://sandbox.api.rbac-commerce.dev</span></p>
+        </header>
+        {sections}
+      </main>
+    </div>
+    <footer class=\"docs__footer\">
+      <a href=\"https://github.com/neeraj94/neeraj-testing-01\">View source on GitHub</a>
+    </footer>
+    <script src=\"app.js\" defer></script>
+  </body>
+</html>
+"""
+
+NAV_GROUP_TEMPLATE = """
+<li class=\"sidebar__group\" role=\"presentation\">
+  <div class=\"sidebar__group-title\">{label}</div>
+  <ul role=\"group\">
+    {links}
+  </ul>
+</li>
+"""
+
+NAV_LINK_TEMPLATE = '<li role="treeitem"><a href="#{slug}" data-endpoint-link="{slug}">{title}</a></li>'
+
+GROUP_SECTION_TEMPLATE = """
+<section class=\"module-group\" id=\"{group_id}\">
+  <h2>{heading}</h2>
+  <p>{description}</p>
+  <div class=\"module-grid\">
+    {cards}
+  </div>
+</section>
+"""
+
+MODULE_CARD_TEMPLATE = """
+<article class=\"module-card\" id=\"{slug}\">
+  <h3>{title}</h3>
+  <p>{summary}</p>
+  <p class=\"module-card__path\">Base path: <code>{base}</code></p>
+  <ul class=\"module-card__endpoints\">
+    {endpoints}
+  </ul>
+  <p><a class=\"button button--inline\" href=\"{file}\">Open reference</a></p>
+  {more}
+</article>
+"""
+
+ROOT_DIR = CURRENT_DIR.parent.parent
+
+
+def slug_for(file_name: str) -> str:
+    stem = Path(file_name).stem.lower()
+    slug = re.sub(r"[^a-z0-9]+", "-", stem).strip("-")
+    return f"module-{slug}" if slug else "module-reference"
+
+
+def status_text(code: int) -> str:
+    try:
+        return HTTPStatus(code).phrase
+    except ValueError:
+        return f"HTTP {code}"
+
+
+def format_path_for_raw(path: str) -> str:
+    def replace(match) -> str:
+        token = match.group(1)
+        clean = token.split(":")[0]
+        return f":{clean}"
+
+    return re.sub(r"\{([^}]+)\}", replace, path)
+
+
+def build_path_segments(path: str) -> list:
+    segments = []
+    for part in path.strip("/").split("/"):
+        if not part:
+            continue
+        if part.startswith("{") and part.endswith("}"):
+            clean = part[1:-1].split(":")[0]
+            segments.append(f":{clean}")
+        else:
+            segments.append(part)
+    return segments
+
+
+def sample_for_param(name: str) -> str:
+    lower = name.lower()
+    if "page" in lower:
+        return "0"
+    if "size" in lower or "limit" in lower:
+        return "20"
+    if "search" in lower or "query" in lower:
+        return "aurora"
+    if "sort" in lower:
+        return "name"
+    if "direction" in lower or "order" in lower:
+        return "asc"
+    if "status" in lower:
+        return "ACTIVE"
+    if "token" in lower:
+        return "sample-token"
+    if "country" in lower:
+        return "1"
+    if "state" in lower:
+        return "10"
+    if "city" in lower:
+        return "201"
+    if lower.endswith("ids"):
+        return "1,2"
+    if lower.endswith("id"):
+        return "1"
+    if "slug" in lower:
+        return "aurora-lamp"
+    if "email" in lower:
+        return "user@example.com"
+    return ""
+
+
+def prepare_headers(raw_headers, requires_auth: bool, method_has_body: bool, body_value) -> list:
+    prepared = []
+    seen = set()
+    for key, value in raw_headers or []:
+        lower = key.lower()
+        if lower in seen:
+            continue
+        prepared.append({"key": key, "value": value, "type": "text"})
+        seen.add(lower)
+
+    if requires_auth and "authorization" not in seen:
+        prepared.insert(0, {"key": "Authorization", "value": "Bearer {{authToken}}", "type": "text"})
+        seen.add("authorization")
+
+    if "accept" not in seen:
+        prepared.append({"key": "Accept", "value": "application/json", "type": "text"})
+        seen.add("accept")
+
+    body_present = False
+    if isinstance(body_value, str):
+        body_present = body_value.strip() != ""
+    elif body_value is not None:
+        body_present = True
+
+    if method_has_body and body_present and "content-type" not in seen:
+        prepared.append({"key": "Content-Type", "value": "application/json", "type": "text"})
+        seen.add("content-type")
+
+    return prepared
+
+
+def write_index(modules) -> None:
+    grouped = defaultdict(list)
+    for module in modules:
+        grouped[module["group"]].append(module)
+
+    nav_groups = []
+    sections = []
+
+    for group in GROUP_ORDER:
+        items = grouped.get(group, [])
+        if not items:
+            continue
+
+        label = DOC_GROUP_LABELS[group]
+        links = "\n".join(
+            NAV_LINK_TEMPLATE.format(slug=escape(module["slug"]), title=escape(module["title"]))
+            for module in items
+        )
+        nav_groups.append(
+            NAV_GROUP_TEMPLATE.format(label=escape(label), links=links)
+        )
+
+        cards = []
+        for module in items:
+            previews = []
+            for endpoint in module["endpoints"][:5]:
+                full_path = module["base"] + endpoint["path"]
+                previews.append(
+                    f"<li><span class=\"sidebar__method\">{escape(endpoint['method'])}</span><code>{escape(full_path)}</code></li>"
+                )
+            if not previews:
+                previews.append("<li><em>No documented endpoints.</em></li>")
+
+            remaining = max(len(module["endpoints"]) - 5, 0)
+            more_html = ""
+            if remaining:
+                suffix = "s" if remaining != 1 else ""
+                more_html = f"<p class=\"module-card__more\">…and {remaining} more endpoint{suffix}.</p>"
+
+            cards.append(
+                MODULE_CARD_TEMPLATE.format(
+                    slug=escape(module["slug"]),
+                    title=escape(module["title"]),
+                    summary=escape(module["summary"]),
+                    base=escape(module["base"]),
+                    endpoints="\n    ".join(previews),
+                    file=escape(module["file"]),
+                    more=more_html,
+                )
+            )
+
+        sections.append(
+            GROUP_SECTION_TEMPLATE.format(
+                group_id=f"group-{group.lower()}",
+                heading=escape(label),
+                description=escape(GROUP_DESCRIPTIONS[group]),
+                cards="\n    ".join(cards),
+            )
+        )
+
+    index_html = INDEX_TEMPLATE.format(
+        nav_groups="\n".join(nav_groups),
+        sections="\n".join(sections),
+    )
+    (CURRENT_DIR / "index.html").write_text(index_html)
+
+
+def write_postman_collection(modules) -> None:
+    grouped = defaultdict(list)
+    for module in modules:
+        grouped[module["group"]].append(module)
+
+    collection = {
+        "info": {
+            "name": "RBAC Commerce API",
+            "description": "Complete RBAC Commerce API organised by Admin, Client, and Public modules.",
+            "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+        },
+        "item": [],
+        "variable": [
+            {"key": "baseUrl", "value": "http://localhost:8080", "type": "string"},
+            {"key": "authToken", "value": "", "type": "string"},
+        ],
+    }
+
+    for group in GROUP_ORDER:
+        modules_in_group = grouped.get(group, [])
+        if not modules_in_group:
+            continue
+
+        folder = {
+            "name": POSTMAN_GROUP_LABELS[group],
+            "description": GROUP_DESCRIPTIONS[group],
+            "item": [],
+        }
+
+        for module in modules_in_group:
+            module_folder = {
+                "name": module["title"],
+                "description": f"{module['summary']}\n\nBase path: {module['base']}",
+                "item": [],
+            }
+
+            for endpoint in module["endpoints"]:
+                method = endpoint["method"].upper()
+                requires_auth = endpoint.get("auth", "Bearer").lower() != "public"
+                raw_headers = endpoint.get("headers") or []
+                body_value = endpoint.get("body") if "body" in endpoint else None
+                method_has_body = method in {"POST", "PUT", "PATCH", "DELETE"}
+
+                headers = prepare_headers(raw_headers, requires_auth, method_has_body, body_value)
+
+                url_path = module["base"] + endpoint["path"]
+                url = {
+                    "raw": "{{baseUrl}}" + format_path_for_raw(url_path),
+                    "host": ["{{baseUrl}}"],
+                    "path": build_path_segments(url_path),
+                }
+
+                if endpoint.get("params"):
+                    url["query"] = [
+                        {
+                            "key": name,
+                            "value": sample_for_param(name),
+                            "description": desc,
+                        }
+                        for name, desc in endpoint["params"]
+                    ]
+
+                request_body = None
+                if "body" in endpoint and endpoint["body"] is not None:
+                    payload = endpoint["body"]
+                    if isinstance(payload, str):
+                        raw_body = payload
+                    else:
+                        raw_body = json.dumps(payload, indent=2)
+                    request_body = {
+                        "mode": "raw",
+                        "raw": raw_body,
+                        "options": {"raw": {"language": "json"}},
+                    }
+
+                description = (
+                    f"{endpoint['description']}\n\nAuth: "
+                    f"{'Bearer token required' if requires_auth else 'No authentication required'}"
+                )
+
+                request = {
+                    "name": endpoint["name"],
+                    "request": {
+                        "method": method,
+                        "header": headers,
+                        "url": url,
+                        "description": description,
+                    },
+                    "response": [],
+                }
+
+                if request_body is not None:
+                    request["request"]["body"] = request_body
+
+                if requires_auth:
+                    request["request"]["auth"] = {
+                        "type": "bearer",
+                        "bearer": [
+                            {"key": "token", "value": "{{authToken}}", "type": "string"}
+                        ],
+                    }
+
+                original_request = copy.deepcopy(request["request"])
+
+                success_status = endpoint["success"]["status"]
+                success_body = endpoint["success"].get("body")
+                success_headers = []
+                success_payload = ""
+                if success_body is not None:
+                    success_payload = json.dumps(success_body, indent=2)
+                    success_headers.append({"key": "Content-Type", "value": "application/json"})
+
+                request["response"].append(
+                    {
+                        "name": f"{endpoint['name']} - Success",
+                        "originalRequest": original_request,
+                        "status": status_text(success_status),
+                        "code": success_status,
+                        "header": success_headers,
+                        "body": success_payload,
+                    }
+                )
+
+                for status_code, message, example in endpoint.get("errors", []):
+                    error_headers = []
+                    error_payload = ""
+                    if example is not None:
+                        error_payload = json.dumps(example, indent=2)
+                        error_headers.append({"key": "Content-Type", "value": "application/json"})
+
+                    request["response"].append(
+                        {
+                            "name": f"{endpoint['name']} - {message}",
+                            "originalRequest": original_request,
+                            "status": status_text(status_code),
+                            "code": status_code,
+                            "header": error_headers,
+                            "body": error_payload,
+                            "description": message,
+                        }
+                    )
+
+                module_folder["item"].append(request)
+
+            folder["item"].append(module_folder)
+
+        collection["item"].append(folder)
+
+    output_path = ROOT_DIR / "backend" / "src" / "main" / "resources" / "postman" / "collection.json"
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(json.dumps(collection, indent=2))
 
 page = lambda item: {
     "content": [item],
@@ -1224,4 +1675,9 @@ modules.append({
 })
 
 for module in modules:
+    module["group"] = MODULE_GROUPS.get(module["file"], "Admin")
+    module["slug"] = slug_for(module["file"])
     write_module(module)
+
+write_index(modules)
+write_postman_collection(modules)
