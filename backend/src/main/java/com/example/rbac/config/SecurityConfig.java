@@ -81,7 +81,7 @@ public class SecurityConfig {
             "USER_DELETE",
             "ORDER_VIEW_GLOBAL",
             "ORDER_CREATE",
-            "ORDER_UPDATE"
+            "ORDER_EDIT"
     };
 
     public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter) {

@@ -10,11 +10,11 @@ public class OrderPermissionEvaluator {
 
     private static final String VIEW_GLOBAL = "ORDER_VIEW_GLOBAL";
     private static final String CREATE = "ORDER_CREATE";
-    private static final String UPDATE = "ORDER_UPDATE";
+    private static final String EDIT = "ORDER_EDIT";
     private static final String DELETE = "ORDER_DELETE";
 
     public boolean canViewOrders() {
-        return hasAuthority(VIEW_GLOBAL);
+        return hasAnyAuthority(VIEW_GLOBAL, CREATE, EDIT, DELETE);
     }
 
     public boolean canViewOrdersForUser(Long userId) {
@@ -26,7 +26,7 @@ public class OrderPermissionEvaluator {
     }
 
     public boolean canUpdateOrders() {
-        return hasAuthority(UPDATE);
+        return hasAuthority(EDIT);
     }
 
     public boolean canDeleteOrders() {
@@ -41,6 +41,26 @@ public class OrderPermissionEvaluator {
         for (GrantedAuthority grantedAuthority : authentication.getAuthorities()) {
             if (authority.equals(grantedAuthority.getAuthority())) {
                 return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean hasAnyAuthority(String... authorities) {
+        if (authorities == null || authorities.length == 0) {
+            return false;
+        }
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null) {
+            return false;
+        }
+        for (String authority : authorities) {
+            if (authority != null) {
+                for (GrantedAuthority grantedAuthority : authentication.getAuthorities()) {
+                    if (authority.equals(grantedAuthority.getAuthority())) {
+                        return true;
+                    }
+                }
             }
         }
         return false;
