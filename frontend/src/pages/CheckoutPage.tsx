@@ -21,6 +21,7 @@ import Button from '../components/Button';
 import Spinner from '../components/Spinner';
 import InfoTooltip from '../components/InfoTooltip';
 import { formatCurrency } from '../utils/currency';
+import { rememberPostLoginRedirect } from '../utils/postLoginRedirect';
 import { useAppDispatch, useAppSelector } from '../app/hooks';
 import { selectBaseCurrency } from '../features/settings/selectors';
 import { fetchCart, selectCart } from '../features/cart/cartSlice';
@@ -87,7 +88,12 @@ const CheckoutPage = () => {
 
   useEffect(() => {
     if (!auth.accessToken || auth.portal !== 'client') {
-      navigate('/login', { replace: true, state: { from: `${location.pathname}${location.search}` } });
+      const redirectTarget = `${location.pathname}${location.search}`;
+      rememberPostLoginRedirect(redirectTarget, '/checkout');
+      navigate('/login', {
+        replace: true,
+        state: { from: redirectTarget, fallback: '/checkout' }
+      });
     }
   }, [auth.accessToken, auth.portal, location.pathname, location.search, navigate]);
 

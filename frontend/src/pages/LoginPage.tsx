@@ -5,9 +5,11 @@ import { customerLogin } from '../features/auth/authSlice';
 import { syncGuestCart } from '../features/cart/cartSlice';
 import { useToast } from '../components/ToastProvider';
 import { selectApplicationName } from '../features/settings/selectors';
+import { consumePostLoginRedirect } from '../utils/postLoginRedirect';
 
 type LocationState = {
   from?: string;
+  fallback?: string;
 };
 
 const LoginPage = () => {
@@ -34,7 +36,9 @@ const LoginPage = () => {
       } catch (error) {
         console.warn('Unable to merge guest cart after login', error);
       }
-      navigate(state?.from ?? '/', { replace: true });
+      const { target, fallback } = consumePostLoginRedirect();
+      const destination = state?.from ?? target ?? state?.fallback ?? fallback ?? '/';
+      navigate(destination, { replace: true });
     } else if (customerLogin.rejected.match(result)) {
       const message = result.payload ?? 'Unable to sign in right now.';
       setFormError(message);

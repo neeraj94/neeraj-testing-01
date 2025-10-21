@@ -13,6 +13,7 @@ import {
 import type { CartItem } from '../types/cart';
 import { useToast } from '../components/ToastProvider';
 import { formatCurrency } from '../utils/currency';
+import { rememberPostLoginRedirect } from '../utils/postLoginRedirect';
 
 const CartPage = () => {
   const dispatch = useAppDispatch();
@@ -245,7 +246,8 @@ const CartPage = () => {
                   disabled={cart.items.length === 0}
                   onClick={() => {
                     if (!auth.accessToken || auth.portal !== 'client') {
-                      navigate('/login', { state: { from: '/checkout' } });
+                      rememberPostLoginRedirect('/checkout', '/cart');
+                      navigate('/login', { state: { from: '/checkout', fallback: '/cart' } });
                       return;
                     }
                     navigate('/checkout');
