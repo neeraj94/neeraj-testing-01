@@ -169,8 +169,15 @@ public class UserRecentViewService {
 
         Set<Long> emittedProductIds = new LinkedHashSet<>();
         List<UserRecentViewDto> result = new ArrayList<>();
+        List<UserRecentView> staleDuringMapping = new ArrayList<>();
         for (UserRecentView entry : validEntries) {
-            Product productRef = entry.getProduct();
+            Product productRef;
+            try {
+                productRef = entry.getProduct();
+            } catch (org.hibernate.HibernateException ex) {
+                staleDuringMapping.add(entry);
+                continue;
+            }
             Long productId = productRef != null ? productRef.getId() : null;
             if (productId == null) {
                 continue;
@@ -204,6 +211,10 @@ public class UserRecentViewService {
                 break;
             }
         }
+        if (!staleDuringMapping.isEmpty()) {
+            recentViewRepository.deleteAll(staleDuringMapping);
+            recentViewRepository.flush();
+        }
         return result;
     }
 
@@ -214,7 +225,13 @@ public class UserRecentViewService {
         List<UserRecentView> valid = new ArrayList<>();
         List<UserRecentView> stale = new ArrayList<>();
         for (UserRecentView entry : entries) {
-            Product product = entry.getProduct();
+            Product product;
+            try {
+                product = entry.getProduct();
+            } catch (org.hibernate.HibernateException ex) {
+                stale.add(entry);
+                continue;
+            }
             if (product == null || product.getId() == null) {
                 stale.add(entry);
                 continue;
