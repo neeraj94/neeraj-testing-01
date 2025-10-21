@@ -109,30 +109,35 @@ public class UserService {
         Pageable pageable = buildPageable(page, size, sort, direction);
         String normalizedSearch = search != null ? search.trim() : null;
         boolean hasSearch = normalizedSearch != null && !normalizedSearch.isEmpty();
-        Page<User> result;
-        switch (audience) {
+        Page<User> result = switch (audience) {
             case CUSTOMERS -> {
+                Page<User> pageResult;
                 if (hasSearch) {
-                    result = userRepository.searchCustomersByRoleKey(CUSTOMER_ROLE_KEY, normalizedSearch, pageable);
+                    pageResult = userRepository.searchCustomersByRoleKey(CUSTOMER_ROLE_KEY, normalizedSearch, pageable);
                 } else {
-                    result = userRepository.findCustomersByRoleKey(CUSTOMER_ROLE_KEY, pageable);
+                    pageResult = userRepository.findCustomersByRoleKey(CUSTOMER_ROLE_KEY, pageable);
                 }
+                yield pageResult;
             }
             case STAFF -> {
+                Page<User> pageResult;
                 if (hasSearch) {
-                    result = userRepository.searchStaffWithoutRole(CUSTOMER_ROLE_KEY, normalizedSearch, pageable);
+                    pageResult = userRepository.searchStaffWithoutRole(CUSTOMER_ROLE_KEY, normalizedSearch, pageable);
                 } else {
-                    result = userRepository.findStaffWithoutRole(CUSTOMER_ROLE_KEY, pageable);
+                    pageResult = userRepository.findStaffWithoutRole(CUSTOMER_ROLE_KEY, pageable);
                 }
+                yield pageResult;
             }
             case ALL -> {
+                Page<User> pageResult;
                 if (hasSearch) {
-                    result = userRepository.findByEmailContainingIgnoreCaseOrFullNameContainingIgnoreCase(normalizedSearch, normalizedSearch, pageable);
+                    pageResult = userRepository.findByEmailContainingIgnoreCaseOrFullNameContainingIgnoreCase(normalizedSearch, normalizedSearch, pageable);
                 } else {
-                    result = userRepository.findAll(pageable);
+                    pageResult = userRepository.findAll(pageable);
                 }
+                yield pageResult;
             }
-        }
+        };
         return PageResponse.from(result.map(userMapper::toDto));
     }
 
