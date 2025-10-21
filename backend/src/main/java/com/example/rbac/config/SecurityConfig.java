@@ -82,6 +82,7 @@ public class SecurityConfig {
                 .cors(Customizer.withDefaults())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> {
+                    auth.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll();
                     for (PublicEndpointDefinition endpoint : PublicEndpointRegistry.getEndpoints()) {
                         if (endpoint.matchesAllMethods()) {
                             auth.requestMatchers(endpoint.pattern()).permitAll();

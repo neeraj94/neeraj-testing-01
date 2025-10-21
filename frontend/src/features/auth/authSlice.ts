@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { adminApi, api } from '../../services/http';
-import type { AuthResponse, UserSummary } from '../../types/auth';
+import type { AuthResponse, SignupResponse, UserSummary } from '../../types/auth';
 import { safeLocalStorage } from '../../utils/storage';
 import type { RootState } from '../../app/store';
 
@@ -95,11 +95,17 @@ export const customerLogin = createAsyncThunk<
 });
 
 export const signup = createAsyncThunk<
-  AuthResponse,
-  { email: string; password: string; firstName: string; lastName: string }
->('auth/signup', async (payload) => {
-  const { data } = await api.post<AuthResponse>('/auth/signup', payload);
-  return data;
+  SignupResponse,
+  { email: string; password: string; firstName: string; lastName: string },
+  { rejectValue: string }
+>('auth/signup', async (payload, { rejectWithValue }) => {
+  try {
+    const { data } = await api.post<SignupResponse>('/auth/signup', payload);
+    return data;
+  } catch (error) {
+    const message = extractErrorMessage(error);
+    return rejectWithValue(message ?? 'Unable to create your account. Please try again.');
+  }
 });
 
 export const loadCurrentUser = createAsyncThunk<
@@ -167,10 +173,29 @@ const authSlice = createSlice({
         state.status = 'failed';
         state.error = action.payload ?? action.error.message ?? 'Unable to sign in.';
       })
+      .addCase(signup.pending, (state) => {
+        state.status = 'loading';
+        state.error = undefined;
+      })
       .addCase(signup.fulfilled, (state, action) => {
         state.status = 'idle';
         state.error = undefined;
-        applyAuthPayload(state, action.payload, 'client');
+        if (action.payload.verificationRequired) {
+          state.user = null;
+          state.accessToken = null;
+          state.refreshToken = null;
+          state.permissions = [];
+          state.directPermissions = [];
+          state.revokedPermissions = [];
+          state.roles = [];
+          state.portal = null;
+          safeLocalStorage.removeItem(refreshTokenKey);
+          safeLocalStorage.removeItem(portalStorageKey);
+        }
+      })
+      .addCase(signup.rejected, (state, action) => {
+        state.status = 'failed';
+        state.error = action.payload ?? action.error.message ?? 'Unable to create your account.';
       })
       .addCase(loadCurrentUser.fulfilled, (state, action) => {
         state.user = action.payload;
