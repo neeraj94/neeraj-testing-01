@@ -1,9 +1,9 @@
 package com.example.rbac.publicapi.blog.controller;
 
-import com.example.rbac.admin.blog.dto.BlogCategoryDto;
-import com.example.rbac.admin.blog.dto.PublicBlogPostDto;
-import com.example.rbac.admin.blog.service.BlogCategoryService;
-import com.example.rbac.admin.blog.service.BlogPostService;
+import com.example.rbac.publicapi.blog.dto.BlogCategoryDto;
+import com.example.rbac.publicapi.blog.dto.PublicBlogPostDto;
+import com.example.rbac.publicapi.blog.service.PublicBlogCategoryService;
+import com.example.rbac.publicapi.blog.service.PublicBlogPostService;
 import com.example.rbac.common.pagination.PageResponse;
 import com.example.rbac.common.security.PublicEndpoint;
 import com.example.rbac.common.web.PublicApiPaths;
@@ -16,10 +16,10 @@ import java.util.List;
 @RequestMapping({"/api/v1/blog/public", "/api/v1/client/blog/public"})
 public class PublicBlogController {
 
-    private final BlogPostService blogPostService;
-    private final BlogCategoryService blogCategoryService;
+    private final PublicBlogPostService blogPostService;
+    private final PublicBlogCategoryService blogCategoryService;
 
-    public PublicBlogController(BlogPostService blogPostService, BlogCategoryService blogCategoryService) {
+    public PublicBlogController(PublicBlogPostService blogPostService, PublicBlogCategoryService blogCategoryService) {
         this.blogPostService = blogPostService;
         this.blogCategoryService = blogCategoryService;
     }

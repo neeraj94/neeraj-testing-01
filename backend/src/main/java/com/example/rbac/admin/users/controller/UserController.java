@@ -6,26 +6,20 @@ import com.example.rbac.admin.users.dto.CreateUserRequest;
 import com.example.rbac.admin.users.dto.UpdateUserRequest;
 import com.example.rbac.admin.users.dto.UpdateUserPermissionsRequest;
 import com.example.rbac.admin.users.dto.UserDto;
-import com.example.rbac.admin.users.dto.UserRecentViewDto;
 import com.example.rbac.admin.users.dto.UserSummaryResponse;
 import com.example.rbac.admin.users.dto.UpdateUserStatusRequest;
 import com.example.rbac.admin.users.service.UserService;
-import com.example.rbac.admin.users.service.UserRecentViewService;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/users")
 public class UserController {
 
     private final UserService userService;
-    private final UserRecentViewService userRecentViewService;
 
-    public UserController(UserService userService, UserRecentViewService userRecentViewService) {
+    public UserController(UserService userService) {
         this.userService = userService;
-        this.userRecentViewService = userRecentViewService;
     }
 
     @GetMapping
@@ -95,8 +89,4 @@ public class UserController {
         return userService.unlockUser(id);
     }
 
-    @GetMapping("/{id}/recent-views")
-    public List<UserRecentViewDto> recentViews(@PathVariable("id") Long id) {
-        return userRecentViewService.getRecentViewsForUser(id);
-    }
 }

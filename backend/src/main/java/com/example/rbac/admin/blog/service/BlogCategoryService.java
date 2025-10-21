@@ -4,7 +4,7 @@ import com.example.rbac.admin.activity.service.ActivityRecorder;
 import com.example.rbac.admin.blog.dto.BlogCategoryDto;
 import com.example.rbac.admin.blog.dto.BlogCategoryRequest;
 import com.example.rbac.admin.blog.mapper.BlogCategoryMapper;
-import com.example.rbac.admin.blog.model.BlogCategory;
+import com.example.rbac.common.blog.model.BlogCategory;
 import com.example.rbac.admin.blog.repository.BlogCategoryRepository;
 import com.example.rbac.admin.blog.repository.BlogPostRepository;
 import com.example.rbac.common.exception.ApiException;

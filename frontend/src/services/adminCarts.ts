@@ -13,7 +13,7 @@ export const fetchAdminCarts = async ({
   search?: string;
   sort?: string;
 }): Promise<Pagination<AdminCartSummary>> => {
-  const { data } = await adminApi.get<Pagination<AdminCartSummary>>('/admin/carts', {
+  const { data } = await adminApi.get<Pagination<AdminCartSummary>>('/carts', {
     params: {
       page,
       size,
