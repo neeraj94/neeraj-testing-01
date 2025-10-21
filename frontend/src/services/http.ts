@@ -17,8 +17,6 @@ const rootApi = axios.create({ baseURL: rootBaseURL });
 
 type Portal = 'admin' | 'client';
 
-type Portal = 'admin' | 'client';
-
 let storeRef: Store<RootState> | null = null;
 let refreshListener: ((payload: AuthResponse, portal: Portal) => void) | null = null;
 let logoutListener: (() => void) | null = null;
