@@ -1,6 +1,7 @@
 package com.example.rbac.config;
 
-import com.example.rbac.common.security.DynamicPublicEndpointMatcher;
+import com.example.rbac.common.security.PublicEndpointDefinition;
+import com.example.rbac.common.security.PublicEndpointRegistry;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -82,7 +83,13 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> {
                     auth.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll();
-                    auth.requestMatchers(new DynamicPublicEndpointMatcher()).permitAll();
+                    for (PublicEndpointDefinition endpoint : PublicEndpointRegistry.getEndpoints()) {
+                        if (endpoint.matchesAllMethods()) {
+                            auth.requestMatchers(endpoint.pattern()).permitAll();
+                        } else {
+                            auth.requestMatchers(endpoint.method(), endpoint.pattern()).permitAll();
+                        }
+                    }
 
                     auth.requestMatchers("/api/v1/public/**", "/api/public/endpoints").permitAll()
                             .requestMatchers("/api/v1/client/auth/signup", "/api/v1/client/auth/login").permitAll()
