@@ -171,13 +171,6 @@ const settingsSlice = createSlice({
           state.theme.baseCurrency = action.payload.theme.baseCurrency || 'USD';
         }
       })
-      .addCase(signup.fulfilled, (state, action) => {
-        if (action.payload.theme) {
-          state.theme.primaryColor = normalizeHexColor(action.payload.theme.primaryColor);
-          state.theme.applicationName = action.payload.theme.applicationName || 'RBAC Portal';
-          state.theme.baseCurrency = action.payload.theme.baseCurrency || 'USD';
-        }
-      })
       .addCase(tokensRefreshed, (state, action) => {
         if (action.payload.auth.theme) {
           state.theme.primaryColor = normalizeHexColor(action.payload.auth.theme.primaryColor);

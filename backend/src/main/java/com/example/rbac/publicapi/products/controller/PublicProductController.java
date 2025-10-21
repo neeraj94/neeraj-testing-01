@@ -24,7 +24,7 @@ import java.util.stream.Collectors;
 
 @RestController
 @PublicEndpoint("Storefront product catalog")
-@RequestMapping("/api/v1/public/products")
+@RequestMapping({"/api/v1/public/products", "/api/v1/client/public/products"})
 public class PublicProductController {
 
     private final PublicProductService publicProductService;

@@ -26,6 +26,46 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @EntityGraph(attributePaths = {"roles", "roles.permissions", "directPermissions", "revokedPermissions"})
     Page<User> findAll(Pageable pageable);
 
+    @Query("""
+            SELECT DISTINCT u FROM User u
+            JOIN u.roles r
+            WHERE UPPER(r.key) = UPPER(:roleKey)
+            """)
+    @EntityGraph(attributePaths = {"roles", "roles.permissions", "directPermissions", "revokedPermissions"})
+    Page<User> findCustomersByRoleKey(@Param("roleKey") String roleKey, Pageable pageable);
+
+    @Query("""
+            SELECT DISTINCT u FROM User u
+            JOIN u.roles r
+            WHERE UPPER(r.key) = UPPER(:roleKey)
+              AND (LOWER(u.email) LIKE LOWER(CONCAT('%', :term, '%'))
+                   OR LOWER(u.fullName) LIKE LOWER(CONCAT('%', :term, '%')))
+            """)
+    @EntityGraph(attributePaths = {"roles", "roles.permissions", "directPermissions", "revokedPermissions"})
+    Page<User> searchCustomersByRoleKey(@Param("roleKey") String roleKey, @Param("term") String term, Pageable pageable);
+
+    @Query("""
+            SELECT DISTINCT u FROM User u
+            WHERE NOT EXISTS (
+                SELECT r FROM u.roles r WHERE UPPER(r.key) = UPPER(:excludedRole)
+            )
+            """)
+    @EntityGraph(attributePaths = {"roles", "roles.permissions", "directPermissions", "revokedPermissions"})
+    Page<User> findStaffWithoutRole(@Param("excludedRole") String excludedRole, Pageable pageable);
+
+    @Query("""
+            SELECT DISTINCT u FROM User u
+            WHERE NOT EXISTS (
+                SELECT r FROM u.roles r WHERE UPPER(r.key) = UPPER(:excludedRole)
+            )
+              AND (LOWER(u.email) LIKE LOWER(CONCAT('%', :term, '%'))
+                   OR LOWER(u.fullName) LIKE LOWER(CONCAT('%', :term, '%')))
+            """)
+    @EntityGraph(attributePaths = {"roles", "roles.permissions", "directPermissions", "revokedPermissions"})
+    Page<User> searchStaffWithoutRole(@Param("excludedRole") String excludedRole,
+                                      @Param("term") String term,
+                                      Pageable pageable);
+
     long countByActiveTrue();
 
     long countByActiveFalse();

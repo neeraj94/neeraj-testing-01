@@ -2,11 +2,14 @@ import { FormEvent, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../app/hooks';
 import { customerLogin } from '../features/auth/authSlice';
+import { syncGuestCart } from '../features/cart/cartSlice';
 import { useToast } from '../components/ToastProvider';
 import { selectApplicationName } from '../features/settings/selectors';
+import { consumePostLoginRedirect } from '../utils/postLoginRedirect';
 
 type LocationState = {
   from?: string;
+  fallback?: string;
 };
 
 const LoginPage = () => {
@@ -21,6 +24,9 @@ const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const state = (location.state as LocationState | null) ?? null;
+  const searchParams = new URLSearchParams(location.search);
+  const queryRedirect = searchParams.get('redirect') ?? undefined;
+  const queryFallback = searchParams.get('fallback') ?? undefined;
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -28,7 +34,21 @@ const LoginPage = () => {
     const result = await dispatch(customerLogin({ email, password }));
     if (customerLogin.fulfilled.match(result)) {
       notify({ type: 'success', message: 'Signed in successfully.' });
-      navigate(state?.from ?? '/', { replace: true });
+      try {
+        await dispatch(syncGuestCart()).unwrap();
+      } catch (error) {
+        console.warn('Unable to merge guest cart after login', error);
+      }
+      const { target, fallback } = consumePostLoginRedirect();
+      const destination =
+        state?.from ??
+        target ??
+        queryRedirect ??
+        state?.fallback ??
+        fallback ??
+        queryFallback ??
+        '/';
+      navigate(destination, { replace: true });
     } else if (customerLogin.rejected.match(result)) {
       const message = result.payload ?? 'Unable to sign in right now.';
       setFormError(message);

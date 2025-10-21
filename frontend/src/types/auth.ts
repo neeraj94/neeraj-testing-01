@@ -42,3 +42,9 @@ export interface AuthResponse {
   revokedPermissions: PermissionKey[];
   theme: SettingsThemeResponse;
 }
+
+export interface SignupResponse {
+  verificationRequired: boolean;
+  message: string;
+  email: string;
+}

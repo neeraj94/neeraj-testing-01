@@ -7,6 +7,8 @@ import { selectApplicationName } from '../features/settings/selectors';
 const SignupPage = () => {
   const dispatch = useAppDispatch();
   const applicationName = useAppSelector(selectApplicationName);
+  const authStatus = useAppSelector((state) => state.auth.status);
+  const authError = useAppSelector((state) => state.auth.error);
   const navigate = useNavigate();
   const [form, setForm] = useState({ email: '', password: '', firstName: '', lastName: '' });
 
@@ -14,7 +16,7 @@ const SignupPage = () => {
     event.preventDefault();
     const result = await dispatch(signup(form));
     if (signup.fulfilled.match(result)) {
-      navigate('/', { replace: true });
+      navigate('/verify-account', { replace: true, state: { email: form.email } });
     }
   };
 
@@ -25,6 +27,11 @@ const SignupPage = () => {
         <p className="mt-2 text-sm text-slate-500">
           Sign up to explore {applicationName || 'the dashboard'}.
         </p>
+        {authError && (
+          <div className="mt-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {authError}
+          </div>
+        )}
         <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
@@ -72,9 +79,10 @@ const SignupPage = () => {
           </div>
           <button
             type="submit"
-            className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-blue-600"
+            className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-70"
+            disabled={authStatus === 'loading'}
           >
-            Sign up
+            {authStatus === 'loading' ? 'Creating account…' : 'Sign up'}
           </button>
         </form>
         <p className="mt-6 text-center text-sm text-slate-500">

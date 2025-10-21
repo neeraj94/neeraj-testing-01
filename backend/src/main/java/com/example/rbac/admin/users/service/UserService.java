@@ -7,12 +7,14 @@ import com.example.rbac.admin.roles.model.Role;
 import com.example.rbac.admin.roles.repository.RoleRepository;
 import com.example.rbac.admin.permissions.model.Permission;
 import com.example.rbac.admin.permissions.repository.PermissionRepository;
+import com.example.rbac.admin.uploadedfile.repository.UploadedFileRepository;
 import com.example.rbac.admin.users.dto.AssignRolesRequest;
 import com.example.rbac.admin.users.dto.CreateUserRequest;
 import com.example.rbac.admin.users.dto.ProfileUpdateRequest;
 import com.example.rbac.admin.users.dto.UpdateUserRequest;
 import com.example.rbac.admin.users.dto.UpdateUserPermissionsRequest;
 import com.example.rbac.admin.users.dto.UpdateUserStatusRequest;
+import com.example.rbac.admin.users.dto.UserAudience;
 import com.example.rbac.admin.users.dto.UserDto;
 import com.example.rbac.admin.users.dto.UserSummaryResponse;
 import com.example.rbac.admin.users.mapper.UserMapper;
@@ -66,6 +68,7 @@ public class UserService {
     private final UserMapper userMapper;
     private final ActivityRecorder activityRecorder;
     private final UserVerificationService userVerificationService;
+    private final UploadedFileRepository uploadedFileRepository;
 
     public UserService(UserRepository userRepository,
                        RoleRepository roleRepository,
@@ -73,7 +76,8 @@ public class UserService {
                        PermissionRepository permissionRepository,
                        UserMapper userMapper,
                        ActivityRecorder activityRecorder,
-                       UserVerificationService userVerificationService) {
+                       UserVerificationService userVerificationService,
+                       UploadedFileRepository uploadedFileRepository) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
@@ -81,10 +85,17 @@ public class UserService {
         this.userMapper = userMapper;
         this.activityRecorder = activityRecorder;
         this.userVerificationService = userVerificationService;
+        this.uploadedFileRepository = uploadedFileRepository;
     }
 
     @PreAuthorize(USER_VIEW_AUTHORITY)
-    public PageResponse<UserDto> list(String search, int page, int size, String sort, String direction) {
+    public PageResponse<UserDto> list(String search,
+                                      int page,
+                                      int size,
+                                      String sort,
+                                      String direction,
+                                      String audienceValue) {
+        UserAudience audience = UserAudience.fromValue(audienceValue);
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (!hasAuthority(authentication, "USER_VIEW_GLOBAL")) {
             Long currentUserId = resolveCurrentUserId(authentication)
@@ -96,12 +107,37 @@ public class UserService {
         }
 
         Pageable pageable = buildPageable(page, size, sort, direction);
-        Page<User> result;
-        if (search != null && !search.isBlank()) {
-            result = userRepository.findByEmailContainingIgnoreCaseOrFullNameContainingIgnoreCase(search, search, pageable);
-        } else {
-            result = userRepository.findAll(pageable);
-        }
+        String normalizedSearch = search != null ? search.trim() : null;
+        boolean hasSearch = normalizedSearch != null && !normalizedSearch.isEmpty();
+        Page<User> result = switch (audience) {
+            case CUSTOMERS -> {
+                Page<User> pageResult;
+                if (hasSearch) {
+                    pageResult = userRepository.searchCustomersByRoleKey(CUSTOMER_ROLE_KEY, normalizedSearch, pageable);
+                } else {
+                    pageResult = userRepository.findCustomersByRoleKey(CUSTOMER_ROLE_KEY, pageable);
+                }
+                yield pageResult;
+            }
+            case STAFF -> {
+                Page<User> pageResult;
+                if (hasSearch) {
+                    pageResult = userRepository.searchStaffWithoutRole(CUSTOMER_ROLE_KEY, normalizedSearch, pageable);
+                } else {
+                    pageResult = userRepository.findStaffWithoutRole(CUSTOMER_ROLE_KEY, pageable);
+                }
+                yield pageResult;
+            }
+            case ALL -> {
+                Page<User> pageResult;
+                if (hasSearch) {
+                    pageResult = userRepository.findByEmailContainingIgnoreCaseOrFullNameContainingIgnoreCase(normalizedSearch, normalizedSearch, pageable);
+                } else {
+                    pageResult = userRepository.findAll(pageable);
+                }
+                yield pageResult;
+            }
+        };
         return PageResponse.from(result.map(userMapper::toDto));
     }
 
@@ -238,9 +274,11 @@ public class UserService {
     }
 
     @PreAuthorize(USER_DELETE_AUTHORITY)
+    @Transactional
     public void delete(Long id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "User not found"));
+        uploadedFileRepository.clearUploaderForUser(user.getId());
         userRepository.delete(user);
         activityRecorder.record("Users", "DELETE", "Deleted user " + user.getEmail(), "SUCCESS", buildUserContext(user));
     }
