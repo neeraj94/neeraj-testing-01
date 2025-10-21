@@ -7,11 +7,15 @@ const rawBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/a
 
 const sanitizeBaseUrl = (value: string): string => value.trim().replace(/\/+$/, '');
 
-const baseURL = sanitizeBaseUrl(rawBaseUrl);
-const adminBaseURL = `${baseURL}/admin`;
+const rootBaseURL = sanitizeBaseUrl(rawBaseUrl);
+const clientBaseURL = `${rootBaseURL}/client`;
+const adminBaseURL = `${rootBaseURL}/admin`;
 
-const api = axios.create({ baseURL });
+const api = axios.create({ baseURL: clientBaseURL });
 const adminApi = axios.create({ baseURL: adminBaseURL });
+const rootApi = axios.create({ baseURL: rootBaseURL });
+
+type Portal = 'admin' | 'client';
 
 type Portal = 'admin' | 'client';
 
@@ -88,4 +92,4 @@ const withAuth = (client: AxiosInstance) => {
 withAuth(api);
 withAuth(adminApi);
 
-export { api, adminApi };
+export { api, adminApi, rootApi };

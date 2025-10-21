@@ -1,7 +1,7 @@
 import { Dispatch, FormEvent, Fragment, SetStateAction, useCallback, useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import type { AxiosError } from 'axios';
-import { adminApi } from '../../services/http';
+import { adminApi, rootApi } from '../../services/http';
 import type { Pagination, Permission, Role } from '../../types/models';
 import type { PermissionKey } from '../../types/auth';
 import { useToast } from '../../components/ToastProvider';
@@ -292,10 +292,12 @@ const DefaultPermissionSection = ({
   });
 
   const capabilityEntries = Array.from(capabilityMap.values()).sort((a, b) => a.title.localeCompare(b.title));
+  const normalizeMethod = (method: string | null | undefined) => (method ?? 'ALL').toUpperCase();
   const sortedPublicEndpoints = [...publicEndpoints].sort((a, b) => {
-    const methodCompare = a.method.localeCompare(b.method, undefined, { sensitivity: 'base' });
-    if (methodCompare !== 0) {
-      return methodCompare;
+    const methodA = normalizeMethod(a.method);
+    const methodB = normalizeMethod(b.method);
+    if (methodA !== methodB) {
+      return methodA.localeCompare(methodB);
     }
     return a.pattern.localeCompare(b.pattern);
   });
@@ -333,7 +335,9 @@ const DefaultPermissionSection = ({
               <tbody className="divide-y divide-slate-200 bg-white">
                 {sortedPublicEndpoints.map((endpoint) => (
                   <tr key={`${endpoint.method}-${endpoint.pattern}`}>
-                    <td className="px-4 py-2 font-mono text-xs uppercase tracking-wide text-slate-500">{endpoint.method}</td>
+                    <td className="px-4 py-2 font-mono text-xs uppercase tracking-wide text-slate-500">
+                      {normalizeMethod(endpoint.method)}
+                    </td>
                     <td className="px-4 py-2 font-mono text-xs text-slate-700">{endpoint.pattern}</td>
                     <td className="px-4 py-2 text-slate-600">{endpoint.description}</td>
                   </tr>
@@ -523,7 +527,7 @@ const RolesPage = () => {
   const { data: publicEndpoints = [] } = useQuery<PublicEndpoint[]>({
     queryKey: ['system', 'public-endpoints'],
     queryFn: async () => {
-      const { data } = await adminApi.get<PublicEndpoint[]>('/system/public-endpoints');
+      const { data } = await rootApi.get<PublicEndpoint[]>('/api/public/endpoints');
       return data;
     }
   });

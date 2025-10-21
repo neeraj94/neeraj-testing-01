@@ -1,4 +1,4 @@
-package com.example.rbac.client.auth.token;
+package com.example.rbac.common.auth.token;
 
 import com.example.rbac.admin.users.model.User;
 import jakarta.persistence.*;

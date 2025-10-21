@@ -16,7 +16,7 @@ import com.example.rbac.client.auth.dto.RefreshTokenRequest;
 import com.example.rbac.client.auth.dto.SignupRequest;
 import com.example.rbac.client.auth.dto.VerificationRequest;
 import com.example.rbac.client.auth.dto.VerificationResponse;
-import com.example.rbac.client.auth.token.RefreshTokenRepository;
+import com.example.rbac.common.auth.token.RefreshTokenRepository;
 import com.example.rbac.common.auth.dto.AuthResponse;
 import com.example.rbac.common.auth.service.BaseAuthService;
 import com.example.rbac.common.exception.ApiException;
