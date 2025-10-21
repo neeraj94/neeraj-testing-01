@@ -27,6 +27,9 @@ import java.util.List;
 @RequestMapping({"/client/checkout", "/checkout"})
 public class CheckoutController {
 
+    private static final String CHECKOUT_REGION_ACCESS =
+            "hasAnyAuthority('CUSTOMER_MANAGE_CHECKOUT', 'USER_VIEW', 'USER_VIEW_GLOBAL', 'USER_CREATE', 'USER_UPDATE', 'USER_DELETE')";
+
     private final CheckoutService checkoutService;
 
     public CheckoutController(CheckoutService checkoutService) {
@@ -63,19 +66,19 @@ public class CheckoutController {
     }
 
     @GetMapping("/regions/countries")
-    @PreAuthorize("hasAuthority('CUSTOMER_MANAGE_CHECKOUT')")
+    @PreAuthorize(CHECKOUT_REGION_ACCESS)
     public List<ShippingOptionDto> listCountriesForCheckout() {
         return checkoutService.listEnabledCountries();
     }
 
     @GetMapping("/regions/countries/{countryId}/states")
-    @PreAuthorize("hasAuthority('CUSTOMER_MANAGE_CHECKOUT')")
+    @PreAuthorize(CHECKOUT_REGION_ACCESS)
     public List<ShippingOptionDto> listStatesForCheckout(@PathVariable Long countryId) {
         return checkoutService.listEnabledStates(countryId);
     }
 
     @GetMapping("/regions/states/{stateId}/cities")
-    @PreAuthorize("hasAuthority('CUSTOMER_MANAGE_CHECKOUT')")
+    @PreAuthorize(CHECKOUT_REGION_ACCESS)
     public List<ShippingOptionDto> listCitiesForCheckout(@PathVariable Long stateId) {
         return checkoutService.listEnabledCities(stateId);
     }
