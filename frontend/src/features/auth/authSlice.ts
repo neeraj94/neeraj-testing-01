@@ -3,6 +3,9 @@ import { createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { adminApi, api } from '../../services/http';
 import type { AuthResponse, UserSummary } from '../../types/auth';
 import { safeLocalStorage } from '../../utils/storage';
+import type { RootState } from '../../app/store';
+
+export type Portal = 'admin' | 'client';
 
 interface AuthState {
   user: UserSummary | null;
@@ -13,10 +16,19 @@ interface AuthState {
   directPermissions: string[];
   revokedPermissions: string[];
   status: 'idle' | 'loading' | 'failed';
+  portal: Portal | null;
   error?: string;
 }
 
 const refreshTokenKey = 'rbac.refreshToken';
+const portalStorageKey = 'rbac.portal';
+
+const parsePortal = (value: string | null): Portal | null => {
+  if (value === 'admin' || value === 'client') {
+    return value;
+  }
+  return null;
+};
 
 const initialState: AuthState = {
   user: null,
@@ -26,40 +38,80 @@ const initialState: AuthState = {
   permissions: [],
   directPermissions: [],
   revokedPermissions: [],
-  status: 'idle'
+  status: 'idle',
+  portal: parsePortal(safeLocalStorage.getItem(portalStorageKey))
 };
 
-export const login = createAsyncThunk<
+const applyAuthPayload = (state: AuthState, payload: AuthResponse, portal: Portal) => {
+  state.user = payload.user;
+  state.accessToken = payload.accessToken;
+  state.refreshToken = payload.refreshToken;
+  state.roles = payload.roles;
+  state.permissions = payload.permissions;
+  state.directPermissions = payload.directPermissions;
+  state.revokedPermissions = payload.revokedPermissions;
+  state.portal = portal;
+  safeLocalStorage.setItem(refreshTokenKey, payload.refreshToken);
+  safeLocalStorage.setItem(portalStorageKey, portal);
+};
+
+const extractErrorMessage = (error: unknown): string | undefined => {
+  if (axios.isAxiosError(error)) {
+    const data = error.response?.data;
+    if (typeof data === 'object' && data !== null) {
+      const payload = data as { message?: string; error?: string };
+      return payload.message ?? payload.error;
+    }
+  }
+  return undefined;
+};
+
+export const adminLogin = createAsyncThunk<
   AuthResponse,
   { email: string; password: string },
   { rejectValue: string }
->('auth/login', async (credentials, { rejectWithValue }) => {
+>('auth/adminLogin', async (credentials, { rejectWithValue }) => {
   try {
     const { data } = await adminApi.post<AuthResponse>('/auth/login', credentials);
     return data;
   } catch (error) {
-    if (axios.isAxiosError(error)) {
-      const message =
-        typeof error.response?.data === 'object' && error.response?.data !== null
-          ? (error.response?.data as { message?: string; error?: string }).message ??
-            (error.response?.data as { message?: string; error?: string }).error
-          : undefined;
-      return rejectWithValue(message ?? 'Invalid email or password. Please try again.');
-    }
-    return rejectWithValue('Unable to sign in right now. Please try again later.');
+    const message = extractErrorMessage(error);
+    return rejectWithValue(message ?? 'Invalid email or password. Please try again.');
   }
 });
 
-export const signup = createAsyncThunk<AuthResponse, { email: string; password: string; firstName: string; lastName: string }>(
-  'auth/signup',
-  async (payload) => {
-    const { data } = await api.post<AuthResponse>('/auth/signup', payload);
+export const customerLogin = createAsyncThunk<
+  AuthResponse,
+  { email: string; password: string },
+  { rejectValue: string }
+>('auth/customerLogin', async (credentials, { rejectWithValue }) => {
+  try {
+    const { data } = await api.post<AuthResponse>('/auth/login', credentials);
     return data;
+  } catch (error) {
+    const message = extractErrorMessage(error);
+    return rejectWithValue(message ?? 'Invalid email or password. Please try again.');
   }
-);
+});
 
-export const loadCurrentUser = createAsyncThunk<UserSummary>('auth/me', async () => {
-    const { data } = await adminApi.get<UserSummary>('/auth/me');
+export const signup = createAsyncThunk<
+  AuthResponse,
+  { email: string; password: string; firstName: string; lastName: string }
+>('auth/signup', async (payload) => {
+  const { data } = await api.post<AuthResponse>('/auth/signup', payload);
+  return data;
+});
+
+export const loadCurrentUser = createAsyncThunk<
+  UserSummary,
+  void,
+  { state: RootState }
+>('auth/me', async (_, { getState }) => {
+  const state = getState();
+  const resolvedPortal =
+    state.auth.portal ?? parsePortal(safeLocalStorage.getItem(portalStorageKey)) ?? 'client';
+  const client = resolvedPortal === 'client' ? api : adminApi;
+  const { data } = await client.get<UserSummary>('/auth/me');
   return data;
 });
 
@@ -75,53 +127,50 @@ const authSlice = createSlice({
       state.revokedPermissions = [];
       state.roles = [];
       state.refreshToken = null;
+      state.portal = null;
       state.status = 'idle';
       state.error = undefined;
       safeLocalStorage.removeItem(refreshTokenKey);
+      safeLocalStorage.removeItem(portalStorageKey);
     },
-    tokensRefreshed(state, action: PayloadAction<AuthResponse>) {
-      state.accessToken = action.payload.accessToken;
-      state.refreshToken = action.payload.refreshToken;
-      safeLocalStorage.setItem(refreshTokenKey, action.payload.refreshToken);
-      if (action.payload.user) {
-        state.user = action.payload.user;
-        state.roles = action.payload.roles;
-        state.permissions = action.payload.permissions;
-        state.directPermissions = action.payload.directPermissions;
-        state.revokedPermissions = action.payload.revokedPermissions;
-      }
+    tokensRefreshed(state, action: PayloadAction<{ auth: AuthResponse; portal: Portal }>) {
+      applyAuthPayload(state, action.payload.auth, action.payload.portal);
+      state.status = 'idle';
+      state.error = undefined;
     }
   },
   extraReducers: (builder) => {
     builder
-      .addCase(login.pending, (state) => {
+      .addCase(adminLogin.pending, (state) => {
         state.status = 'loading';
         state.error = undefined;
       })
-      .addCase(login.fulfilled, (state, action) => {
+      .addCase(adminLogin.fulfilled, (state, action) => {
         state.status = 'idle';
-        state.user = action.payload.user;
-        state.accessToken = action.payload.accessToken;
-        state.refreshToken = action.payload.refreshToken;
-        state.roles = action.payload.roles;
-        state.permissions = action.payload.permissions;
-        state.directPermissions = action.payload.directPermissions;
-        state.revokedPermissions = action.payload.revokedPermissions;
-        safeLocalStorage.setItem(refreshTokenKey, action.payload.refreshToken);
+        state.error = undefined;
+        applyAuthPayload(state, action.payload, 'admin');
       })
-      .addCase(login.rejected, (state, action) => {
+      .addCase(adminLogin.rejected, (state, action) => {
+        state.status = 'failed';
+        state.error = action.payload ?? action.error.message ?? 'Unable to sign in.';
+      })
+      .addCase(customerLogin.pending, (state) => {
+        state.status = 'loading';
+        state.error = undefined;
+      })
+      .addCase(customerLogin.fulfilled, (state, action) => {
+        state.status = 'idle';
+        state.error = undefined;
+        applyAuthPayload(state, action.payload, 'client');
+      })
+      .addCase(customerLogin.rejected, (state, action) => {
         state.status = 'failed';
         state.error = action.payload ?? action.error.message ?? 'Unable to sign in.';
       })
       .addCase(signup.fulfilled, (state, action) => {
-        state.user = action.payload.user;
-        state.accessToken = action.payload.accessToken;
-        state.refreshToken = action.payload.refreshToken;
-        state.roles = action.payload.roles;
-        state.permissions = action.payload.permissions;
-        state.directPermissions = action.payload.directPermissions;
-        state.revokedPermissions = action.payload.revokedPermissions;
-        safeLocalStorage.setItem(refreshTokenKey, action.payload.refreshToken);
+        state.status = 'idle';
+        state.error = undefined;
+        applyAuthPayload(state, action.payload, 'client');
       })
       .addCase(loadCurrentUser.fulfilled, (state, action) => {
         state.user = action.payload;

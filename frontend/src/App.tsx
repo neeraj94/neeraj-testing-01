@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import Layout from './components/Layout';
-import LoginPage from './pages/admin/LoginPage';
+import AdminLoginPage from './pages/admin/AdminLoginPage';
+import CustomerLoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 import DashboardPage from './pages/admin/DashboardPage';
 import UsersPage from './pages/admin/UsersPage';
@@ -24,9 +25,14 @@ import EcommerceHomePage from './pages/EcommerceHomePage';
 import ProtectedRoute from './routes/ProtectedRoute';
 import PermissionRoute from './routes/PermissionRoute';
 import { useAppDispatch, useAppSelector } from './app/hooks';
-import { loadCurrentUser, logout as logoutAction, tokensRefreshed } from './features/auth/authSlice';
+import {
+  loadCurrentUser,
+  logout as logoutAction,
+  tokensRefreshed,
+  type Portal
+} from './features/auth/authSlice';
 import { syncGuestCart } from './features/cart/cartSlice';
-import { adminApi } from './services/http';
+import { adminApi, api } from './services/http';
 import SettingsPage from './pages/admin/SettingsPage';
 import { fetchTheme } from './features/settings/settingsSlice';
 import { selectApplicationName, selectPrimaryColor } from './features/settings/selectors';
@@ -55,7 +61,7 @@ import AdminCartsPage from './pages/admin/AdminCartsPage';
 const App = () => {
   const dispatch = useAppDispatch();
   const location = useLocation();
-  const { accessToken, refreshToken, user } = useAppSelector((state) => state.auth);
+  const { accessToken, refreshToken, user, portal } = useAppSelector((state) => state.auth);
   const primaryColor = useAppSelector(selectPrimaryColor);
   const applicationName = useAppSelector(selectApplicationName);
   const [initializing, setInitializing] = useState<'idle' | 'checking'>(() =>
@@ -75,23 +81,30 @@ const App = () => {
   }, [applicationName]);
 
   useEffect(() => {
-    if (user?.id) {
+    if (user?.id && portal === 'client') {
       dispatch(syncGuestCart());
     }
-  }, [user?.id, dispatch]);
+  }, [user?.id, portal, dispatch]);
 
   useEffect(() => {
     let active = true;
 
     const restoreSession = async () => {
       if (!accessToken && refreshToken) {
+        const resolvedPortal: Portal =
+          portal === 'admin' || portal === 'client'
+            ? portal
+            : location.pathname.startsWith('/admin')
+            ? 'admin'
+            : 'client';
         setInitializing('checking');
         try {
-          const { data } = await adminApi.post('/auth/refresh', { refreshToken });
+          const client = resolvedPortal === 'client' ? api : adminApi;
+          const { data } = await client.post('/auth/refresh', { refreshToken });
           if (!active) {
             return;
           }
-          dispatch(tokensRefreshed(data));
+          dispatch(tokensRefreshed({ auth: data, portal: resolvedPortal }));
         } catch (error) {
           if (!active) {
             return;
@@ -129,7 +142,7 @@ const App = () => {
     return () => {
       active = false;
     };
-  }, [accessToken, refreshToken, dispatch]);
+  }, [accessToken, refreshToken, portal, location.pathname, dispatch]);
 
   const publicExact = [
     '/',
@@ -160,8 +173,8 @@ const App = () => {
   return (
     <Routes>
       <Route path="/" element={<EcommerceHomePage />} />
-      <Route path="/admin/login" element={<LoginPage />} />
-      <Route path="/login" element={<Navigate to="/admin/login" replace />} />
+      <Route path="/admin/login" element={<AdminLoginPage />} />
+      <Route path="/login" element={<CustomerLoginPage />} />
       <Route path="/signup" element={<SignupPage />} />
       <Route path="/blog" element={<PublicBlogListPage />} />
       <Route path="/blog/:slug" element={<PublicBlogPostPage />} />

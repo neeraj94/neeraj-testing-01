@@ -2,9 +2,12 @@ import { Navigate, Outlet } from 'react-router-dom';
 import { useAppSelector } from '../app/hooks';
 
 const ProtectedRoute = () => {
-  const { accessToken, refreshToken } = useAppSelector((state) => state.auth);
-  if (accessToken) {
+  const { accessToken, refreshToken, portal } = useAppSelector((state) => state.auth);
+  if (accessToken && portal === 'admin') {
     return <Outlet />;
+  }
+  if (accessToken && portal === 'client') {
+    return <Navigate to="/" replace />;
   }
   if (refreshToken) {
     return (

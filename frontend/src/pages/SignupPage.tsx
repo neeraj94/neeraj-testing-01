@@ -14,7 +14,7 @@ const SignupPage = () => {
     event.preventDefault();
     const result = await dispatch(signup(form));
     if (signup.fulfilled.match(result)) {
-      navigate('/admin/dashboard');
+      navigate('/', { replace: true });
     }
   };
 
@@ -79,7 +79,7 @@ const SignupPage = () => {
         </form>
         <p className="mt-6 text-center text-sm text-slate-500">
           Already have an account?{' '}
-          <Link to="/admin/login" className="text-primary hover:underline">
+          <Link to="/login" className="text-primary hover:underline">
             Sign in
           </Link>
         </p>
