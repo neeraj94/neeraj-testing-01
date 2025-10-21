@@ -24,19 +24,33 @@ public class UserPrincipal implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        Set<String> perms = user.getRoles().stream()
+        Set<String> authorities = user.getRoles().stream()
                 .flatMap(role -> role.getPermissions().stream())
                 .map(permission -> permission.getKey())
                 .collect(Collectors.toSet());
-        perms.addAll(user.getDirectPermissions().stream()
+
+        authorities.addAll(user.getDirectPermissions().stream()
                 .map(permission -> permission.getKey())
                 .collect(Collectors.toSet()));
+
         Set<String> revoked = user.getRevokedPermissions().stream()
                 .map(permission -> permission.getKey())
                 .collect(Collectors.toSet());
-        perms.removeAll(revoked);
-        perms.addAll(DefaultUserPermissions.getPermissions());
-        return perms.stream().map(SimpleGrantedAuthority::new).collect(Collectors.toSet());
+        authorities.removeAll(revoked);
+
+        if (hasCustomerRole()) {
+            authorities.addAll(DefaultUserPermissions.getCustomerPermissions());
+        }
+
+        user.getRoles().stream()
+                .map(Role::getKey)
+                .filter(key -> key != null && !key.isBlank())
+                .map(key -> "ROLE_" + key.trim().toUpperCase())
+                .forEach(authorities::add);
+
+        return authorities.stream()
+                .map(SimpleGrantedAuthority::new)
+                .collect(Collectors.toSet());
     }
 
     @Override
@@ -71,5 +85,10 @@ public class UserPrincipal implements UserDetails {
 
     public Set<String> getRoleKeys() {
         return user.getRoles().stream().map(Role::getKey).collect(Collectors.toSet());
+    }
+
+    private boolean hasCustomerRole() {
+        return user.getRoles().stream()
+                .anyMatch(role -> role.getKey() != null && role.getKey().equalsIgnoreCase("CUSTOMER"));
     }
 }

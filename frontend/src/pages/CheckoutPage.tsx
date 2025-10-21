@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../services/http';
 import type {
@@ -51,6 +51,8 @@ const CheckoutPage = () => {
   const cart = useAppSelector(selectCart);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const location = useLocation();
+  const auth = useAppSelector((state) => state.auth);
 
   const [activeStep, setActiveStep] = useState<StepKey>('shipping');
   const [shippingAddressId, setShippingAddressId] = useState<number | null>(null);
@@ -82,6 +84,12 @@ const CheckoutPage = () => {
 
   const currencyCode = baseCurrency ?? 'USD';
   const formatMoney = (value?: number | null) => (value == null ? null : formatCurrency(value, currencyCode));
+
+  useEffect(() => {
+    if (!auth.accessToken || auth.portal !== 'client') {
+      navigate('/login', { replace: true, state: { from: `${location.pathname}${location.search}` } });
+    }
+  }, [auth.accessToken, auth.portal, location.pathname, location.search, navigate]);
 
   const resetAddressForm = (type: AddressType) => {
     setAddressForm({ ...defaultAddressForm, type });
@@ -144,8 +152,10 @@ const CheckoutPage = () => {
   };
 
   useEffect(() => {
-    dispatch(fetchCart());
-  }, [dispatch]);
+    if (auth.accessToken && auth.portal === 'client') {
+      dispatch(fetchCart());
+    }
+  }, [auth.accessToken, auth.portal, dispatch]);
 
   const countriesQuery = useQuery<CheckoutRegionOption[]>({
     queryKey: ['checkout', 'regions', 'countries'],
