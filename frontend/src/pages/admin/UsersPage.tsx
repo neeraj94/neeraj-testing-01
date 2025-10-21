@@ -133,6 +133,10 @@ const UsersPage = ({
   const { notify } = useToast();
   const confirm = useConfirm();
   const { permissions: grantedPermissions, user: currentUser, roles: currentRoles } = useAppSelector((state) => state.auth);
+  const canViewOrders = useMemo(
+    () => hasAnyPermission((grantedPermissions ?? []) as PermissionKey[], ['ORDER_VIEW_GLOBAL']),
+    [grantedPermissions]
+  );
   const baseCurrency = useAppSelector(selectBaseCurrency);
 
   const [page, setPage] = useState(0);
@@ -183,6 +187,18 @@ const UsersPage = ({
       setAudienceFilter(lockedAudience);
     }
   }, [lockedAudience, audienceFilter]);
+
+  useEffect(() => {
+    if (!canViewOrders && activeTab === 'orders') {
+      setActiveTab('profile');
+    }
+  }, [canViewOrders, activeTab]);
+
+  useEffect(() => {
+    if (!canViewOrders) {
+      setSelectedUserOrderId(null);
+    }
+  }, [canViewOrders]);
 
   const audienceSelectionLocked = Boolean(lockedAudience && lockedAudience !== 'all');
 
@@ -771,7 +787,7 @@ const UsersPage = ({
       const { data } = await adminApi.get<OrderListItem[]>(`/users/${selectedUserId}/orders`);
       return data;
     },
-    enabled: panelMode === 'detail' && activeTab === 'orders' && selectedUserId != null
+    enabled: panelMode === 'detail' && activeTab === 'orders' && selectedUserId != null && canViewOrders
   });
 
   const userOrderDetailQuery = useQuery<OrderDetail>({
@@ -786,7 +802,8 @@ const UsersPage = ({
       panelMode === 'detail' &&
       activeTab === 'orders' &&
       selectedUserId != null &&
-      selectedUserOrderId != null
+      selectedUserOrderId != null &&
+      canViewOrders
   });
 
   const addressCountriesQuery = useQuery<CheckoutRegionOption[]>({
@@ -3328,12 +3345,11 @@ const UsersPage = ({
       { key: 'access', label: 'Roles & permissions' }
     ];
     if (!isCreate) {
-      tabs.push(
-        { key: 'addresses', label: 'Addresses' },
-        { key: 'orders', label: 'Orders' },
-        { key: 'cart', label: 'Cart' },
-        { key: 'recent', label: 'Recently viewed' }
-      );
+      tabs.push({ key: 'addresses', label: 'Addresses' });
+      if (canViewOrders) {
+        tabs.push({ key: 'orders', label: 'Orders' });
+      }
+      tabs.push({ key: 'cart', label: 'Cart' }, { key: 'recent', label: 'Recently viewed' });
     }
 
     const handlePanelSubmit = () => {
