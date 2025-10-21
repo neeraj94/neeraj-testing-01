@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, createSearchParams, useLocation, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../services/http';
 import type {
@@ -21,6 +21,7 @@ import Button from '../components/Button';
 import Spinner from '../components/Spinner';
 import InfoTooltip from '../components/InfoTooltip';
 import { formatCurrency } from '../utils/currency';
+import { rememberPostLoginRedirect } from '../utils/postLoginRedirect';
 import { useAppDispatch, useAppSelector } from '../app/hooks';
 import { selectBaseCurrency } from '../features/settings/selectors';
 import { fetchCart, selectCart } from '../features/cart/cartSlice';
@@ -51,6 +52,8 @@ const CheckoutPage = () => {
   const cart = useAppSelector(selectCart);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const location = useLocation();
+  const auth = useAppSelector((state) => state.auth);
 
   const [activeStep, setActiveStep] = useState<StepKey>('shipping');
   const [shippingAddressId, setShippingAddressId] = useState<number | null>(null);
@@ -82,6 +85,23 @@ const CheckoutPage = () => {
 
   const currencyCode = baseCurrency ?? 'USD';
   const formatMoney = (value?: number | null) => (value == null ? null : formatCurrency(value, currencyCode));
+
+  useEffect(() => {
+    if (!auth.accessToken || auth.portal !== 'client') {
+      const redirectTarget = `${location.pathname}${location.search}`;
+      rememberPostLoginRedirect(redirectTarget, '/checkout');
+      navigate(
+        {
+          pathname: '/login',
+          search: createSearchParams({ redirect: redirectTarget, fallback: '/checkout' }).toString()
+        },
+        {
+          replace: true,
+          state: { from: redirectTarget, fallback: '/checkout' }
+        }
+      );
+    }
+  }, [auth.accessToken, auth.portal, location.pathname, location.search, navigate]);
 
   const resetAddressForm = (type: AddressType) => {
     setAddressForm({ ...defaultAddressForm, type });
@@ -144,8 +164,10 @@ const CheckoutPage = () => {
   };
 
   useEffect(() => {
-    dispatch(fetchCart());
-  }, [dispatch]);
+    if (auth.accessToken && auth.portal === 'client') {
+      dispatch(fetchCart());
+    }
+  }, [auth.accessToken, auth.portal, dispatch]);
 
   const countriesQuery = useQuery<CheckoutRegionOption[]>({
     queryKey: ['checkout', 'regions', 'countries'],

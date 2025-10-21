@@ -33,7 +33,7 @@ public class AdminAuthService extends BaseAuthService {
 
     @Transactional
     public AuthResponse login(String email, String password) {
-        AuthResult result = loginInternal(email, password);
+        AuthResult result = loginInternal(email, password, false);
         return buildAuthResponse(result.user(), result.refreshToken());
     }
 

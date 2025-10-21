@@ -4,8 +4,10 @@ import Layout from './components/Layout';
 import AdminLoginPage from './pages/admin/AdminLoginPage';
 import CustomerLoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
+import VerifyAccountPage from './pages/VerifyAccountPage';
 import DashboardPage from './pages/admin/DashboardPage';
 import UsersPage from './pages/admin/UsersPage';
+import CustomersPage from './pages/admin/CustomersPage';
 import RolesPage from './pages/admin/RolesPage';
 import PermissionsPage from './pages/admin/PermissionsPage';
 import ProfilePage from './pages/admin/ProfilePage';
@@ -149,6 +151,7 @@ const App = () => {
     '/admin/login',
     '/login',
     '/signup',
+    '/verify-account',
     '/categories',
     '/brands',
     '/products',
@@ -176,6 +179,7 @@ const App = () => {
       <Route path="/admin/login" element={<AdminLoginPage />} />
       <Route path="/login" element={<CustomerLoginPage />} />
       <Route path="/signup" element={<SignupPage />} />
+      <Route path="/verify-account" element={<VerifyAccountPage />} />
       <Route path="/blog" element={<PublicBlogListPage />} />
       <Route path="/blog/:slug" element={<PublicBlogPostPage />} />
       <Route path="/categories" element={<PublicCategoriesPage />} />
@@ -183,6 +187,7 @@ const App = () => {
       <Route path="/products" element={<PublicProductsPage />} />
       <Route path="/coupons" element={<PublicCouponsPage />} />
       <Route path="/cart" element={<CartPage />} />
+      <Route path="/checkout" element={<CheckoutPage />} />
       <Route path="/order-confirmation/:orderId" element={<OrderConfirmationPage />} />
       <Route path="/products/showcase" element={<Navigate to="/product/demo-product" replace />} />
       <Route path="/product/:slug" element={<PublicProductPage />} />
@@ -197,7 +202,20 @@ const App = () => {
               />
             }
           >
-            <Route path="users" element={<UsersPage />} />
+            <Route
+              path="staff"
+              element={
+                <UsersPage
+                  lockedAudience="internal"
+                  titleOverride="Staff members"
+                  descriptionOverride="Audit and manage administrators, managers, and support staff across the platform."
+                />
+              }
+            />
+            <Route path="users" element={<Navigate to="/admin/staff" replace />} />
+          </Route>
+          <Route element={<PermissionRoute required={['CUSTOMER_VIEW']} />}>
+            <Route path="customers" element={<CustomersPage />} />
           </Route>
           <Route element={<PermissionRoute required={['ROLE_VIEW', 'ROLE_VIEW_GLOBAL', 'ROLE_VIEW_OWN']} />}>
             <Route path="roles" element={<RolesPage />} />
@@ -289,7 +307,6 @@ const App = () => {
           <Route path="403" element={<ForbiddenPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Route>
-        <Route path="/checkout" element={<CheckoutPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/admin/login" replace />} />
     </Routes>

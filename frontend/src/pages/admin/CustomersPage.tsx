@@ -14,10 +14,19 @@ import { exportDataset, type ExportFormat } from '../../utils/exporters';
 const CustomersPage = () => {
   const { permissions } = useAppSelector((state) => state.auth);
   const grantedPermissions = permissions as PermissionKey[];
-  const canCreate = hasAnyPermission(grantedPermissions, ['USER_CREATE']);
-  const canDelete = hasAnyPermission(grantedPermissions, ['USER_DELETE']);
-  const canExport = hasAnyPermission(grantedPermissions, ['USERS_EXPORT']);
+  const canView = hasAnyPermission(grantedPermissions, ['CUSTOMER_VIEW']);
+  const canCreate = hasAnyPermission(grantedPermissions, ['CUSTOMER_CREATE']);
+  const canDelete = hasAnyPermission(grantedPermissions, ['CUSTOMER_DELETE']);
+  const canExport = canView;
   const { notify } = useToast();
+
+  if (!canView) {
+    return (
+      <div className="rounded-lg border border-slate-200 bg-white p-6 text-sm text-slate-600 shadow-sm">
+        You do not have permission to view customer records.
+      </div>
+    );
+  }
 
   const {
     data: customers = [],
@@ -28,7 +37,8 @@ const CustomersPage = () => {
     queryFn: async () => {
       const { data } = await adminApi.get<Pagination<Customer>>('/customers');
       return data.content;
-    }
+    },
+    enabled: canView
   });
 
   const [form, setForm] = useState({ name: '', email: '', phone: '', address: '' });

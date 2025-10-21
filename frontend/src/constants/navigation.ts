@@ -38,12 +38,21 @@ export const DEFAULT_NAVIGATION_MENU: NavigationNode[] = [
     permissions: [],
     children: [
       {
-        key: 'users',
-        label: 'Users',
+        key: 'staff',
+        label: 'Staff members',
         icon: '👥',
-        path: '/admin/users',
+        path: '/admin/staff',
         group: false,
         permissions: ['USER_VIEW_GLOBAL', 'USER_VIEW', 'USER_VIEW_OWN'],
+        children: []
+      },
+      {
+        key: 'customers',
+        label: 'Customers',
+        icon: '🛒',
+        path: '/admin/customers',
+        group: false,
+        permissions: ['CUSTOMER_VIEW'],
         children: []
       },
       {

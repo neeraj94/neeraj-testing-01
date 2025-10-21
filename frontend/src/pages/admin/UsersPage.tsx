@@ -44,6 +44,13 @@ const SLOT_LABELS = CAPABILITY_COLUMNS.reduce<Record<string, string>>((map, colu
 const formatDateTime = (value: string) =>
   new Date(value).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
 
+type UsersPageProps = {
+  defaultAudience?: 'all' | 'internal' | 'customer';
+  lockedAudience?: 'all' | 'internal' | 'customer';
+  titleOverride?: string;
+  descriptionOverride?: string;
+};
+
 const PencilIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
     <path d="M15.414 2.586a2 2 0 0 0-2.828 0L3 12.172V17h4.828l9.586-9.586a2 2 0 0 0 0-2.828l-2-2Zm-2.121 1.415 2 2L13 8.293l-2-2 2.293-2.292ZM5 13.414 11.293 7.12l1.586 1.586L6.586 15H5v-1.586Z" />
@@ -115,7 +122,12 @@ const compareText = (a: string, b: string) => a.localeCompare(b, undefined, { se
 const isCustomerAccount = (user: User) =>
   user.roles.some((role) => role.toUpperCase() === CUSTOMER_ROLE_KEY);
 
-const UsersPage = () => {
+const UsersPage = ({
+  defaultAudience = 'all',
+  lockedAudience,
+  titleOverride,
+  descriptionOverride
+}: UsersPageProps = {}) => {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const { notify } = useToast();
@@ -128,7 +140,9 @@ const UsersPage = () => {
   const [searchDraft, setSearchDraft] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
-  const [audienceFilter, setAudienceFilter] = useState<'all' | 'internal' | 'customer'>('all');
+  const [audienceFilter, setAudienceFilter] = useState<'all' | 'internal' | 'customer'>(
+    lockedAudience ?? defaultAudience
+  );
   const [panelMode, setPanelMode] = useState<PanelMode>('empty');
   const [activeTab, setActiveTab] = useState<DetailTab>('profile');
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
@@ -162,6 +176,14 @@ const UsersPage = () => {
   const [addressFormOpen, setAddressFormOpen] = useState(false);
   const [addressForm, setAddressForm] = useState(createEmptyAddressForm());
   const [editingAddressId, setEditingAddressId] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (lockedAudience && audienceFilter !== lockedAudience) {
+      setAudienceFilter(lockedAudience);
+    }
+  }, [lockedAudience, audienceFilter]);
+
+  const audienceSelectionLocked = Boolean(lockedAudience && lockedAudience !== 'all');
 
   const clampQuantity = (value: number) => {
     if (!Number.isFinite(value)) {
@@ -534,7 +556,18 @@ const UsersPage = () => {
   });
 
   const usersQuery = useQuery<Pagination<User>>({
-    queryKey: ['users', 'list', { page, pageSize, searchTerm, sortField: sort.field, sortDirection: sort.direction }],
+    queryKey: [
+      'users',
+      'list',
+      {
+        page,
+        pageSize,
+        searchTerm,
+        sortField: sort.field,
+        sortDirection: sort.direction,
+        audience: audienceFilter
+      }
+    ],
     queryFn: async () => {
       const serverSortable: UserSortField[] = ['name', 'email', 'status'];
       const serverSortField = serverSortable.includes(sort.field) ? sort.field : 'name';
@@ -542,7 +575,8 @@ const UsersPage = () => {
         page,
         size: pageSize,
         sort: serverSortField,
-        direction: serverSortField === sort.field ? sort.direction : 'asc'
+        direction: serverSortField === sort.field ? sort.direction : 'asc',
+        audience: audienceFilter
       };
       if (searchTerm.trim()) {
         params.search = searchTerm.trim();
@@ -1406,6 +1440,13 @@ const UsersPage = () => {
     });
   };
 
+  const handleAudienceSelect = (value: 'all' | 'internal' | 'customer') => {
+    if (audienceSelectionLocked) {
+      return;
+    }
+    setAudienceFilter(value);
+  };
+
   const clearPanel = () => {
     setPanelMode('empty');
     setSelectedUserId(null);
@@ -1482,6 +1523,34 @@ const UsersPage = () => {
   const filteredUsers = useMemo(() => applyFilters(users), [users, statusFilter, audienceFilter]);
   const sortedUsers = useMemo(() => sortUsersList(filteredUsers), [filteredUsers, sort]);
 
+  const resolvedAudience = lockedAudience ?? audienceFilter;
+  const headerTitle =
+    titleOverride ??
+    (resolvedAudience === 'customer'
+      ? 'Customers'
+      : resolvedAudience === 'internal'
+      ? 'Staff members'
+      : 'Users & customers');
+  const headerDescription =
+    descriptionOverride ??
+    (resolvedAudience === 'customer'
+      ? 'Review customer profiles, carts, and orders so support teams can help shoppers quickly.'
+      : resolvedAudience === 'internal'
+      ? 'Manage administrators, managers, and staff accounts with consistent, audited permissions.'
+      : 'Manage internal teammates and customer contacts from a single, permission-aware workspace.');
+  const exportFileName =
+    resolvedAudience === 'customer'
+      ? 'customers'
+      : resolvedAudience === 'internal'
+      ? 'staff-members'
+      : 'users-and-customers';
+  const exportTitle =
+    resolvedAudience === 'customer'
+      ? 'Customers directory'
+      : resolvedAudience === 'internal'
+      ? 'Staff members directory'
+      : 'Users & customers';
+
   const fetchAllUsers = async (): Promise<User[]> => {
     const serverSortable: UserSortField[] = ['name', 'email', 'status'];
     const serverSortField = serverSortable.includes(sort.field) ? sort.field : 'name';
@@ -1490,7 +1559,8 @@ const UsersPage = () => {
     const baseParams: Record<string, unknown> = {
       size,
       sort: serverSortField,
-      direction
+      direction,
+      audience: audienceFilter
     };
     if (searchTerm.trim()) {
       baseParams.search = searchTerm.trim();
@@ -1541,13 +1611,7 @@ const UsersPage = () => {
         groups: user.roles.length ? user.roles.join(', ') : '—',
         audience: isCustomerAccount(user) ? 'Customer' : 'Internal'
       }));
-      exportDataset({
-        format,
-        columns,
-        rows,
-        fileName: 'users-and-customers',
-        title: 'Users & customers'
-      });
+      exportDataset({ format, columns, rows, fileName: exportFileName, title: exportTitle });
     } catch (error) {
       notify({ type: 'error', message: 'Unable to export users. Please try again.' });
     } finally {
@@ -1652,8 +1716,9 @@ const UsersPage = () => {
           <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Audience</label>
           <select
             value={audienceFilter}
-            onChange={(event) => setAudienceFilter(event.target.value as typeof audienceFilter)}
-            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none"
+            onChange={(event) => handleAudienceSelect(event.target.value as typeof audienceFilter)}
+            disabled={audienceSelectionLocked}
+            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none disabled:cursor-not-allowed disabled:bg-slate-100"
           >
             <option value="all">All users</option>
             <option value="internal">Internal</option>
@@ -3248,11 +3313,12 @@ const UsersPage = () => {
     const headerSubtitle = isCreate
       ? 'Provision access for an internal teammate or customer contact.'
       : detailUser?.email ?? '';
+    const detailIsCustomer = detailUser ? isCustomerAccount(detailUser) : lockedAudience === 'customer';
     const tabs: Array<{ key: DetailTab; label: string }> = [
       { key: 'profile', label: 'Profile details' },
       { key: 'access', label: 'Roles & permissions' }
     ];
-    if (!isCreate) {
+    if (!isCreate && detailIsCustomer) {
       tabs.push(
         { key: 'addresses', label: 'Addresses' },
         { key: 'orders', label: 'Orders' },
@@ -3380,14 +3446,18 @@ const UsersPage = () => {
               renderProfileTab(isEditable, isCreate)
             ) : activeTab === 'access' ? (
               renderAccessTab(isEditable)
-            ) : activeTab === 'addresses' ? (
+            ) : detailIsCustomer && activeTab === 'addresses' ? (
               renderAddressesTab()
-            ) : activeTab === 'orders' ? (
+            ) : detailIsCustomer && activeTab === 'orders' ? (
               renderOrdersTab()
-            ) : activeTab === 'cart' ? (
+            ) : detailIsCustomer && activeTab === 'cart' ? (
               renderCartTab()
-            ) : (
+            ) : detailIsCustomer && activeTab === 'recent' ? (
               renderRecentTab()
+            ) : (
+              <p className="text-sm text-slate-500">
+                Select a tab to manage profile information or access rights.
+              </p>
             )}
           </div>
         </div>
@@ -3396,13 +3466,13 @@ const UsersPage = () => {
             <p className="text-sm text-rose-600">{formError}</p>
           ) : (
             <span className="text-xs text-slate-500">
-              {activeTab === 'cart'
+              {detailIsCustomer && activeTab === 'cart'
                 ? 'Cart adjustments are saved automatically.'
-                : activeTab === 'recent'
+                : detailIsCustomer && activeTab === 'recent'
                 ? 'Recent views update automatically whenever the customer browses products.'
-                : activeTab === 'orders'
+                : detailIsCustomer && activeTab === 'orders'
                 ? 'Orders sync automatically once shoppers complete checkout.'
-                : activeTab === 'addresses'
+                : detailIsCustomer && activeTab === 'addresses'
                 ? 'Addresses sync automatically whenever shoppers update them during checkout.'
                 : 'Changes apply immediately after saving and will not modify the underlying role definitions.'}
             </span>
@@ -3479,8 +3549,8 @@ const UsersPage = () => {
   return (
     <div className="space-y-6 px-6 py-6">
       <PageHeader
-        title="Users & customers"
-        description="Manage internal teammates and customer contacts from a single, permission-aware workspace."
+        title={headerTitle}
+        description={headerDescription}
         actions={
           isDirectoryView ? (
             <>
