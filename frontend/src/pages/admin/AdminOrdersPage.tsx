@@ -98,6 +98,8 @@ const AdminOrdersPage = () => {
     }
   });
 
+  const selectedOrder = orderDetailQuery.data ?? null;
+
   if (ordersQuery.isLoading) {
     return (
       <div className="flex h-full items-center justify-center">
