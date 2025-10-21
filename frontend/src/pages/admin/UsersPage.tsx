@@ -3328,24 +3328,26 @@ const UsersPage = ({
       );
     }
 
+    const handlePanelSubmit = () => {
+      if (!isEditable) {
+        return;
+      }
+      setFormError(null);
+      if (isCreate) {
+        createUser.mutate();
+        return;
+      }
+      if (activeTab === 'profile') {
+        updateUser.mutate();
+        return;
+      }
+      if (activeTab === 'access') {
+        updatePermissions.mutate();
+      }
+    };
+
     return (
-      <form
-        className="flex flex-col gap-6 rounded-2xl border border-slate-200 bg-white shadow-sm"
-        onSubmit={(event) => {
-          event.preventDefault();
-          if (!isEditable) {
-            return;
-          }
-          setFormError(null);
-          if (isCreate) {
-            createUser.mutate();
-          } else if (activeTab === 'profile') {
-            updateUser.mutate();
-          } else if (activeTab === 'access') {
-            updatePermissions.mutate();
-          }
-        }}
-      >
+      <div className="flex flex-col gap-6 rounded-2xl border border-slate-200 bg-white shadow-sm" role="form">
         <header className="flex flex-col gap-4 border-b border-slate-200 bg-slate-50 px-6 py-5 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-start gap-4">
             <button
@@ -3517,7 +3519,8 @@ const UsersPage = ({
             )}
             {((isCreate && isEditable) || (!isCreate && isEditable && (activeTab === 'profile' || activeTab === 'access'))) && (
               <button
-                type="submit"
+                type="button"
+                onClick={handlePanelSubmit}
                 disabled={!isEditable || isSaving}
                 title={!isEditable ? 'You do not have permission to update this user.' : undefined}
                 className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-60"
@@ -3537,7 +3540,7 @@ const UsersPage = ({
             )}
           </div>
         </footer>
-      </form>
+      </div>
     );
   };
 
