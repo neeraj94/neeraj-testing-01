@@ -194,15 +194,10 @@ public class CheckoutService {
     @Transactional(readOnly = true)
     public List<OrderListItemDto> listOrdersForAdmin(UserPrincipal principal) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (hasAuthority(authentication, "USER_VIEW_GLOBAL")) {
-            return orderService.listOrders();
+        if (!hasOrderAccess(authentication)) {
+            throw new AccessDeniedException("Access to orders is restricted.");
         }
-        if (!hasAuthority(authentication, "USER_VIEW") && !hasAuthority(authentication, "USER_VIEW_OWN")) {
-            throw new AccessDeniedException("Access to other orders is restricted.");
-        }
-        Long userId = resolveCurrentUserId(principal)
-                .orElseThrow(() -> new AccessDeniedException("Unable to determine current user context."));
-        return orderService.listOrdersForUser(userId);
+        return orderService.listOrders();
     }
 
     @Transactional(readOnly = true)
@@ -218,15 +213,10 @@ public class CheckoutService {
     @Transactional(readOnly = true)
     public OrderDetailDto getOrderDetailForAdmin(Long orderId, UserPrincipal principal) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (hasAuthority(authentication, "USER_VIEW_GLOBAL")) {
-            return orderService.getOrder(orderId);
+        if (!hasOrderAccess(authentication)) {
+            throw new AccessDeniedException("Access to orders is restricted.");
         }
-        if (!hasAuthority(authentication, "USER_VIEW") && !hasAuthority(authentication, "USER_VIEW_OWN")) {
-            throw new AccessDeniedException("Access to other orders is restricted.");
-        }
-        Long userId = resolveCurrentUserId(principal)
-                .orElseThrow(() -> new AccessDeniedException("Unable to determine current user context."));
-        return orderService.getOrderForUser(userId, orderId);
+        return orderService.getOrder(orderId);
     }
 
     @Transactional(readOnly = true)
@@ -244,6 +234,13 @@ public class CheckoutService {
             }
         }
         return false;
+    }
+
+    private boolean hasOrderAccess(Authentication authentication) {
+        return hasAuthority(authentication, "ORDER_VIEW_GLOBAL")
+                || hasAuthority(authentication, "ORDER_EDIT")
+                || hasAuthority(authentication, "ORDER_CREATE")
+                || hasAuthority(authentication, "ORDER_DELETE");
     }
 
     private Optional<Long> resolveCurrentUserId(UserPrincipal principal) {

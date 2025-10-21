@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useEffect, useMemo, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { adminApi } from '../../services/http';
 import type { OrderDetail, OrderListItem } from '../../types/orders';
+import type { PermissionKey } from '../../types/auth';
 import Spinner from '../../components/Spinner';
 import { formatCurrency } from '../../utils/currency';
 import { useAppSelector } from '../../app/hooks';
@@ -9,13 +10,63 @@ import { selectBaseCurrency } from '../../features/settings/selectors';
 import OrderDetailPanel from '../../components/orders/OrderDetailPanel';
 import Button from '../../components/Button';
 import { extractErrorMessage } from '../../utils/errors';
+import { hasAnyPermission } from '../../utils/permissions';
+import { useToast } from '../../components/ToastProvider';
+import { useConfirm } from '../../components/ConfirmDialogProvider';
 
 const formatDateTime = (value: string) =>
   new Date(value).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
 
 const AdminOrdersPage = () => {
   const baseCurrency = useAppSelector(selectBaseCurrency);
+  const permissions = (useAppSelector((state) => state.auth.permissions) ?? []) as PermissionKey[];
+  const { notify } = useToast();
+  const confirm = useConfirm();
+  const queryClient = useQueryClient();
+  const canDeleteOrders = useMemo(() => hasAnyPermission(permissions, ['ORDER_DELETE']), [permissions]);
   const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
+  const [deletingOrderId, setDeletingOrderId] = useState<number | null>(null);
+
+  const deleteOrderMutation = useMutation({
+    mutationFn: async (orderId: number) => {
+      await adminApi.delete(`/orders/${orderId}`);
+    },
+    onMutate: (orderId) => {
+      setDeletingOrderId(orderId);
+    },
+    onSuccess: (_, orderId) => {
+      notify({ title: 'Order deleted', message: 'The order was removed successfully.', type: 'success' });
+      setSelectedOrderId((current) => (current === orderId ? null : current));
+      queryClient.invalidateQueries({ queryKey: ['orders', 'admin'] });
+      queryClient.invalidateQueries({ queryKey: ['orders', 'admin', 'detail', orderId] });
+    },
+    onError: (error) => {
+      notify({
+        title: 'Unable to delete order',
+        message: extractErrorMessage(error, 'Try again later.'),
+        type: 'error'
+      });
+    },
+    onSettled: () => {
+      setDeletingOrderId(null);
+    }
+  });
+
+  const handleDeleteOrder = async (orderId: number, orderNumber?: string | null) => {
+    if (!canDeleteOrders || deleteOrderMutation.isPending) {
+      return;
+    }
+    const confirmed = await confirm({
+      title: 'Delete order?',
+      description: `Delete order ${orderNumber && orderNumber.trim() ? orderNumber : `#${orderId}`}? This action cannot be undone.`,
+      confirmLabel: 'Delete order',
+      tone: 'danger'
+    });
+    if (!confirmed) {
+      return;
+    }
+    await deleteOrderMutation.mutateAsync(orderId);
+  };
 
   const ordersQuery = useQuery<OrderListItem[]>({
     queryKey: ['orders', 'admin'],
@@ -45,6 +96,8 @@ const AdminOrdersPage = () => {
       return data;
     }
   });
+
+  const selectedOrderDetail = orderDetailQuery.data ?? null;
 
   if (ordersQuery.isLoading) {
     return (
@@ -142,12 +195,32 @@ const AdminOrdersPage = () => {
                   </Button>
                 </div>
               </section>
-            ) : orderDetailQuery.data ? (
-              <OrderDetailPanel
-                order={orderDetailQuery.data}
-                baseCurrency={baseCurrency}
-                onClose={() => setSelectedOrderId(null)}
-              />
+            ) : selectedOrderDetail ? (
+              <div className="space-y-4">
+                {canDeleteOrders && (
+                  <div className="flex justify-end">
+                    <Button
+                      type="button"
+                      onClick={() =>
+                        void handleDeleteOrder(selectedOrderDetail.id, selectedOrderDetail.orderNumber)
+                      }
+                      disabled={
+                        deletingOrderId === selectedOrderDetail.id && deleteOrderMutation.isPending
+                      }
+                      className="inline-flex items-center justify-center rounded-lg border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-600 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {deletingOrderId === selectedOrderDetail.id && deleteOrderMutation.isPending
+                        ? 'Deleting…'
+                        : 'Delete order'}
+                    </Button>
+                  </div>
+                )}
+                <OrderDetailPanel
+                  order={selectedOrderDetail}
+                  baseCurrency={baseCurrency}
+                  onClose={() => setSelectedOrderId(null)}
+                />
+              </div>
             ) : null}
           </div>
         </div>

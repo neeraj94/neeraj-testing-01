@@ -242,7 +242,7 @@ export const DEFAULT_NAVIGATION_MENU: NavigationNode[] = [
         icon: '📦',
         path: '/admin/orders',
         group: false,
-        permissions: ['USER_VIEW_GLOBAL'],
+        permissions: ['ORDER_VIEW_GLOBAL', 'ORDER_CREATE', 'ORDER_EDIT', 'ORDER_DELETE'],
         children: []
       },
       {
