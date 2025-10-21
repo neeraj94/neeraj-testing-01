@@ -14,10 +14,11 @@ import com.example.rbac.admin.users.service.UserVerificationService;
 import com.example.rbac.client.auth.dto.LoginRequest;
 import com.example.rbac.client.auth.dto.RefreshTokenRequest;
 import com.example.rbac.client.auth.dto.SignupRequest;
+import com.example.rbac.client.auth.dto.SignupResponse;
 import com.example.rbac.client.auth.dto.VerificationRequest;
 import com.example.rbac.client.auth.dto.VerificationResponse;
-import com.example.rbac.common.auth.token.RefreshTokenRepository;
 import com.example.rbac.common.auth.dto.AuthResponse;
+import com.example.rbac.common.auth.token.RefreshTokenRepository;
 import com.example.rbac.common.auth.service.BaseAuthService;
 import com.example.rbac.common.exception.ApiException;
 import com.example.rbac.common.security.DefaultUserPermissions;
@@ -67,7 +68,7 @@ public class ClientAuthService extends BaseAuthService {
     }
 
     @Transactional
-    public AuthResponse signup(SignupRequest request) {
+    public SignupResponse signup(SignupRequest request) {
         String email = Optional.ofNullable(request.getEmail()).orElse("").trim();
         getUserRepository().findByEmail(email).ifPresent(existing -> {
             throw new ApiException(HttpStatus.BAD_REQUEST, "Email already in use");
@@ -87,17 +88,14 @@ public class ClientAuthService extends BaseAuthService {
         user.getRoles().add(customerRole);
         user = getUserRepository().save(user);
         user = getUserRepository().findDetailedById(user.getId()).orElseThrow();
-
-        AuthResult result = issueTokens(user);
-        AuthResponse response = buildAuthResponse(result.user(), result.refreshToken());
         getActivityRecorder().recordForUser(user, "Authentication", "SIGNUP", "User registered", "SUCCESS", buildAuthContext(user));
         userVerificationService.initiateVerification(user);
-        return response;
+        return new SignupResponse(true, "User registered successfully. Verification required.", user.getEmail());
     }
 
     @Transactional
     public AuthResponse login(LoginRequest request) {
-        AuthResult result = loginInternal(request.getEmail(), request.getPassword());
+        AuthResult result = loginInternal(request.getEmail(), request.getPassword(), false);
         return buildAuthResponse(result.user(), result.refreshToken());
     }
 
@@ -139,8 +137,9 @@ public class ClientAuthService extends BaseAuthService {
         Role role = new Role();
         role.setKey(CUSTOMER_ROLE_KEY);
         role.setName(CUSTOMER_ROLE_NAME);
-        Set<Permission> permissions = new HashSet<>(permissionRepository.findByKeyIn(DefaultUserPermissions.getPermissions()));
-        LinkedHashSet<String> missing = new LinkedHashSet<>(DefaultUserPermissions.getPermissions());
+        Set<String> defaults = new LinkedHashSet<>(DefaultUserPermissions.getCustomerPermissions());
+        Set<Permission> permissions = new HashSet<>(permissionRepository.findByKeyIn(defaults));
+        LinkedHashSet<String> missing = new LinkedHashSet<>(defaults);
         permissions.stream()
                 .map(Permission::getKey)
                 .map(key -> key == null ? null : key.trim().toUpperCase())

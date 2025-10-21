@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, createSearchParams, useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../app/hooks';
 import { selectBaseCurrency } from '../features/settings/selectors';
 import {
@@ -13,6 +13,7 @@ import {
 import type { CartItem } from '../types/cart';
 import { useToast } from '../components/ToastProvider';
 import { formatCurrency } from '../utils/currency';
+import { rememberPostLoginRedirect } from '../utils/postLoginRedirect';
 
 const CartPage = () => {
   const dispatch = useAppDispatch();
@@ -20,6 +21,7 @@ const CartPage = () => {
   const { notify } = useToast();
   const cart = useAppSelector(selectCart);
   const source = useAppSelector(selectCartSource);
+  const auth = useAppSelector((state) => state.auth);
   const baseCurrency = useAppSelector(selectBaseCurrency);
   const currencyCode = baseCurrency ?? 'USD';
   const isAuthenticatedCart = source === 'authenticated';
@@ -242,7 +244,20 @@ const CartPage = () => {
                   type="button"
                   className="mt-6 w-full rounded-full bg-primary px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-primary/30 transition hover:-translate-y-0.5 hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-60"
                   disabled={cart.items.length === 0}
-                  onClick={() => navigate('/checkout')}
+                  onClick={() => {
+                    if (!auth.accessToken || auth.portal !== 'client') {
+                      rememberPostLoginRedirect('/checkout', '/cart');
+                      navigate(
+                        {
+                          pathname: '/login',
+                          search: createSearchParams({ redirect: '/checkout', fallback: '/cart' }).toString()
+                        },
+                        { state: { from: '/checkout', fallback: '/cart' } }
+                      );
+                      return;
+                    }
+                    navigate('/checkout');
+                  }}
                 >
                   Proceed to checkout
                 </button>

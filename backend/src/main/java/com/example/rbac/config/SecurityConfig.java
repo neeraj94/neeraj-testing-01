@@ -1,7 +1,6 @@
 package com.example.rbac.config;
 
-import com.example.rbac.common.security.PublicEndpointDefinition;
-import com.example.rbac.common.security.PublicEndpointRegistry;
+import com.example.rbac.common.security.DynamicPublicEndpointMatcher;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -82,15 +81,10 @@ public class SecurityConfig {
                 .cors(Customizer.withDefaults())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> {
-                    for (PublicEndpointDefinition endpoint : PublicEndpointRegistry.getEndpoints()) {
-                        if (endpoint.matchesAllMethods()) {
-                            auth.requestMatchers(endpoint.pattern()).permitAll();
-                        } else {
-                            auth.requestMatchers(endpoint.method(), endpoint.pattern()).permitAll();
-                        }
-                    }
+                    auth.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll();
+                    auth.requestMatchers(new DynamicPublicEndpointMatcher()).permitAll();
 
-                    auth.requestMatchers("/api/v1/public/**", "/api/public/endpoints").permitAll()
+                    auth.requestMatchers("/api/v1/public/**", "/api/v1/client/public/**", "/api/public/endpoints").permitAll()
                             .requestMatchers("/api/v1/client/auth/signup", "/api/v1/client/auth/login").permitAll()
                             .requestMatchers("/api/v1/admin/auth/**").permitAll()
                             .requestMatchers(HttpMethod.GET, "/api/v1/admin/uploaded-files/**").hasAnyAuthority(

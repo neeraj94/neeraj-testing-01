@@ -33,8 +33,9 @@ public class UserController {
                                       @RequestParam(name = "page", defaultValue = "0") int page,
                                       @RequestParam(name = "size", defaultValue = "20") int size,
                                       @RequestParam(name = "sort", defaultValue = "name") String sort,
-                                      @RequestParam(name = "direction", defaultValue = "asc") String direction) {
-        return userService.list(search, page, size, sort, direction);
+                                      @RequestParam(name = "direction", defaultValue = "asc") String direction,
+                                      @RequestParam(name = "audience", required = false, defaultValue = "all") String audience) {
+        return userService.list(search, page, size, sort, direction, audience);
     }
 
     @GetMapping("/summary")
