@@ -260,11 +260,18 @@ public class SetupService {
             )),
             MenuDefinition.group("access", "Access Control", "🔐", List.of(
                     MenuDefinition.item(
-                            "users",
-                            "Users",
+                            "staff",
+                            "Staff members",
                             "👥",
-                            "/admin/users",
+                            "/admin/staff",
                             List.of("USER_VIEW", "USER_VIEW_GLOBAL", "USER_CREATE", "USER_UPDATE", "USER_DELETE")
+                    ),
+                    MenuDefinition.item(
+                            "customers",
+                            "Customers",
+                            "🛒",
+                            "/admin/customers",
+                            List.of("USER_VIEW_GLOBAL", "USER_VIEW", "USER_VIEW_OWN")
                     ),
                     MenuDefinition.item(
                             "roles",
