@@ -5,6 +5,7 @@ import com.example.rbac.admin.brands.service.BrandService;
 import com.example.rbac.admin.categories.dto.PublicCategoryDto;
 import com.example.rbac.admin.categories.service.CategoryService;
 import com.example.rbac.common.security.PublicEndpoint;
+import com.example.rbac.common.web.PublicApiPaths;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
