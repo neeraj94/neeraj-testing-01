@@ -269,7 +269,13 @@ const App = () => {
           <Route element={<PermissionRoute required={['PAYMENT_VIEW']} />}>
             <Route path="payments" element={<AdminPaymentPage />} />
           </Route>
-          <Route element={<PermissionRoute required={['ORDER_VIEW_GLOBAL']} />}>
+          <Route
+            element={
+              <PermissionRoute
+                required={['ORDER_VIEW_GLOBAL', 'ORDER_CREATE', 'ORDER_EDIT', 'ORDER_DELETE']}
+              />
+            }
+          >
             <Route path="orders" element={<AdminOrdersPage />} />
           </Route>
           <Route element={<PermissionRoute required={['USER_VIEW_GLOBAL']} />}>

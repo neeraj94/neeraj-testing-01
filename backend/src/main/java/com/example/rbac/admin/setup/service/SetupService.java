@@ -398,7 +398,7 @@ public class SetupService {
                             "Orders",
                             "📦",
                             "/admin/orders",
-                            List.of("ORDER_VIEW_GLOBAL")
+                            List.of("ORDER_VIEW_GLOBAL", "ORDER_CREATE", "ORDER_EDIT", "ORDER_DELETE")
                     ),
                     MenuDefinition.item(
                             "payments",

@@ -134,7 +134,11 @@ const UsersPage = ({
   const confirm = useConfirm();
   const { permissions: grantedPermissions, user: currentUser, roles: currentRoles } = useAppSelector((state) => state.auth);
   const canViewOrders = useMemo(
-    () => hasAnyPermission((grantedPermissions ?? []) as PermissionKey[], ['ORDER_VIEW_GLOBAL']),
+    () =>
+      hasAnyPermission(
+        (grantedPermissions ?? []) as PermissionKey[],
+        ['ORDER_VIEW_GLOBAL', 'ORDER_CREATE', 'ORDER_EDIT', 'ORDER_DELETE']
+      ),
     [grantedPermissions]
   );
   const baseCurrency = useAppSelector(selectBaseCurrency);
