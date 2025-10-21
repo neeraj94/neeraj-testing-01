@@ -63,6 +63,10 @@ public abstract class BaseAuthService {
 
     @Transactional
     protected AuthResult loginInternal(String email, String password) {
+        return loginInternal(email, password, true);
+    }
+
+    protected AuthResult loginInternal(String email, String password, boolean requireEmailVerification) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "Invalid credentials"));
 
@@ -110,7 +114,7 @@ public abstract class BaseAuthService {
 
         resetLoginState(user);
 
-        if (user.getEmailVerifiedAt() == null) {
+        if (requireEmailVerification && user.getEmailVerifiedAt() == null) {
             HashMap<String, Object> context = new HashMap<>(buildAuthContext(user));
             context.put("reason", "UNVERIFIED");
             context.put("loginAttempts", user.getLoginAttempts());
