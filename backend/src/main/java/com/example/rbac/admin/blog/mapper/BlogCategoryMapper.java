@@ -1,7 +1,7 @@
 package com.example.rbac.admin.blog.mapper;
 
 import com.example.rbac.admin.blog.dto.BlogCategoryDto;
-import com.example.rbac.admin.blog.model.BlogCategory;
+import com.example.rbac.common.blog.model.BlogCategory;
 import org.springframework.stereotype.Component;
 
 @Component

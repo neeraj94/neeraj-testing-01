@@ -6,6 +6,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -20,9 +21,14 @@ import java.util.UUID;
 public class BlogMediaStorageService {
 
     private final Path storageRoot;
+    private final String publicBaseUrl;
 
-    public BlogMediaStorageService(@Value("${app.blog.storage-path:storage/blog}") String storagePath) {
+    public BlogMediaStorageService(
+            @Value("${app.blog.storage-path:storage/blog}") String storagePath,
+            @Value("${app.blog.public-base-url:${APP_PUBLIC_BASE_URL:http://localhost:8080}}") String publicBaseUrl
+    ) {
         this.storageRoot = Paths.get(storagePath).toAbsolutePath().normalize();
+        this.publicBaseUrl = normalizeBaseUrl(publicBaseUrl);
         try {
             Files.createDirectories(this.storageRoot);
         } catch (IOException ex) {
@@ -81,6 +87,29 @@ public class BlogMediaStorageService {
             return null;
         }
         return filename.substring(index + 1).toLowerCase();
+    }
+
+    public String publicUrlForKey(String key) {
+        if (!StringUtils.hasText(key)) {
+            return null;
+        }
+        String path = "/api/v1/blog/media/" + key.trim();
+        if (!StringUtils.hasText(publicBaseUrl)) {
+            return path;
+        }
+        String normalizedPath = path.startsWith("/") ? path : "/" + path;
+        return publicBaseUrl + normalizedPath;
+    }
+
+    private String normalizeBaseUrl(String value) {
+        if (!StringUtils.hasText(value)) {
+            return null;
+        }
+        String normalized = value.trim();
+        while (normalized.endsWith("/")) {
+            normalized = normalized.substring(0, normalized.length() - 1);
+        }
+        return normalized;
     }
 
     public record StoredMedia(String key, String originalFilename, String mimeType, long sizeBytes) {

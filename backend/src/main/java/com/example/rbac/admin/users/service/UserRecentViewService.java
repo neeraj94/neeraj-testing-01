@@ -13,6 +13,7 @@ import com.example.rbac.admin.users.model.UserPrincipal;
 import com.example.rbac.admin.users.model.UserRecentView;
 import com.example.rbac.admin.users.repository.UserRecentViewRepository;
 import org.hibernate.Hibernate;
+import org.hibernate.proxy.HibernateProxy;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -169,27 +170,28 @@ public class UserRecentViewService {
 
         Set<Long> emittedProductIds = new LinkedHashSet<>();
         List<UserRecentViewDto> result = new ArrayList<>();
+        List<UserRecentView> staleDuringMapping = new ArrayList<>();
         for (UserRecentView entry : validEntries) {
-            Product productRef = entry.getProduct();
-            Long productId = productRef != null ? productRef.getId() : null;
+            Product productRef;
+            try {
+                productRef = entry.getProduct();
+            } catch (org.hibernate.HibernateException ex) {
+                staleDuringMapping.add(entry);
+                continue;
+            }
+            Long productId = resolveProductId(productRef);
             if (productId == null) {
                 continue;
             }
             if (!emittedProductIds.add(productId)) {
                 continue;
             }
-            Product product = productsById.getOrDefault(productId, productRef);
+            Product productCandidate = productsById.getOrDefault(productId, productRef);
+            Product product = resolveProduct(productId, productCandidate);
             if (product == null) {
+                staleDuringMapping.add(entry);
                 continue;
             }
-            if (!Hibernate.isInitialized(product)) {
-                product = productRepository.findById(productId).orElse(product);
-            }
-            if (product == null) {
-                continue;
-            }
-            Hibernate.initialize(product);
-            initializeRecommendationAssociations(product);
             UserRecentViewDto dto = new UserRecentViewDto();
             dto.setProductId(product.getId());
             dto.setProductName(product.getName());
@@ -204,6 +206,10 @@ public class UserRecentViewService {
                 break;
             }
         }
+        if (!staleDuringMapping.isEmpty()) {
+            recentViewRepository.deleteAll(staleDuringMapping);
+            recentViewRepository.flush();
+        }
         return result;
     }
 
@@ -214,8 +220,15 @@ public class UserRecentViewService {
         List<UserRecentView> valid = new ArrayList<>();
         List<UserRecentView> stale = new ArrayList<>();
         for (UserRecentView entry : entries) {
-            Product product = entry.getProduct();
-            if (product == null || product.getId() == null) {
+            Product product;
+            try {
+                product = entry.getProduct();
+            } catch (org.hibernate.HibernateException ex) {
+                stale.add(entry);
+                continue;
+            }
+            Long productId = resolveProductId(product);
+            if (product == null || productId == null) {
                 stale.add(entry);
                 continue;
             }
@@ -283,6 +296,43 @@ public class UserRecentViewService {
             }
         }
         return false;
+    }
+
+    private Long resolveProductId(Product productRef) {
+        if (productRef == null) {
+            return null;
+        }
+        if (productRef instanceof HibernateProxy proxy) {
+            Object identifier = proxy.getHibernateLazyInitializer().getIdentifier();
+            if (identifier instanceof Long id) {
+                return id;
+            }
+        }
+        return productRef.getId();
+    }
+
+    private Product resolveProduct(Long productId, Product candidate) {
+        if (productId == null) {
+            return null;
+        }
+        try {
+            Product product = candidate;
+            if (product instanceof HibernateProxy proxy) {
+                Object implementation = proxy.getHibernateLazyInitializer().getImplementation();
+                product = implementation instanceof Product resolved ? resolved : null;
+            }
+            if (product == null || !Hibernate.isInitialized(product)) {
+                product = productRepository.findById(productId).orElse(product);
+            }
+            if (product == null) {
+                return null;
+            }
+            Hibernate.initialize(product);
+            initializeRecommendationAssociations(product);
+            return product;
+        } catch (RuntimeException ex) {
+            return null;
+        }
     }
 
     private String resolveThumbnailUrl(Product product, ProductVariant variant) {

@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Authentication APIs</title>
+    <title>Coupon Management APIs</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body class="page">
@@ -11,9 +11,9 @@
       <aside class="docs__nav sidebar" aria-label="API navigation">
         <div class="sidebar__brand">
           <div class="sidebar__badge">RBAC Commerce</div>
-          <h1>Authentication APIs</h1>
-          <p>Token issuance, refresh, logout, and verification flows used by the dashboard and storefront.</p>
-          <p class="sidebar__hint">Base path: <code>/api/v1/client/auth</code></p>
+          <h1>Coupon Management APIs</h1>
+          <p>Create, update, and reference discount coupons with product/category targeting.</p>
+          <p class="sidebar__hint">Base path: <code>/api/v1/coupons</code></p>
         </div>
         <div class="sidebar__controls">
           <label class="control">
@@ -37,454 +37,23 @@
         <nav class="sidebar__nav" aria-label="Endpoints">
           <h2>Endpoints</h2>
           <ul class="sidebar__tree" role="tree">
-            <li role="treeitem"><a href="#post-signup" data-endpoint-link="post-signup"><span class="sidebar__method">POST</span>Sign up</a></li><li role="treeitem"><a href="#post-login" data-endpoint-link="post-login"><span class="sidebar__method">POST</span>Login</a></li><li role="treeitem"><a href="#post-refresh" data-endpoint-link="post-refresh"><span class="sidebar__method">POST</span>Refresh token</a></li><li role="treeitem"><a href="#post-logout" data-endpoint-link="post-logout"><span class="sidebar__method">POST</span>Logout</a></li><li role="treeitem"><a href="#get-me" data-endpoint-link="get-me"><span class="sidebar__method">GET</span>Current user</a></li><li role="treeitem"><a href="#post-verify" data-endpoint-link="post-verify"><span class="sidebar__method">POST</span>Verify email (body)</a></li><li role="treeitem"><a href="#get-verify" data-endpoint-link="get-verify"><span class="sidebar__method">GET</span>Verify email (link)</a></li>
+            <li role="treeitem"><a href="#get-root" data-endpoint-link="get-root"><span class="sidebar__method">GET</span>List coupons</a></li><li role="treeitem"><a href="#get-id" data-endpoint-link="get-id"><span class="sidebar__method">GET</span>Get coupon</a></li><li role="treeitem"><a href="#post-root" data-endpoint-link="post-root"><span class="sidebar__method">POST</span>Create coupon</a></li><li role="treeitem"><a href="#put-id" data-endpoint-link="put-id"><span class="sidebar__method">PUT</span>Update coupon</a></li><li role="treeitem"><a href="#delete-id" data-endpoint-link="delete-id"><span class="sidebar__method">DELETE</span>Delete coupon</a></li><li role="treeitem"><a href="#get-reference-products" data-endpoint-link="get-reference-products"><span class="sidebar__method">GET</span>Product reference options</a></li><li role="treeitem"><a href="#get-reference-categories" data-endpoint-link="get-reference-categories"><span class="sidebar__method">GET</span>Category reference options</a></li><li role="treeitem"><a href="#get-reference-users" data-endpoint-link="get-reference-users"><span class="sidebar__method">GET</span>User reference options</a></li>
           </ul>
         </nav>
       </aside>
       <main class="docs__content content" id="docsContent" tabindex="-1">
         <header class="hero">
-          <h2>Authentication APIs</h2>
-          <p>Token issuance, refresh, logout, and verification flows used by the dashboard and storefront.</p>
+          <h2>Coupon Management APIs</h2>
+          <p>Create, update, and reference discount coupons with product/category targeting.</p>
           <p><strong>Selected base URL:</strong> <span data-base-display>https://sandbox.api.rbac-commerce.dev</span></p>
         </header>
-        <article class="endpoint" id="post-signup" data-endpoint-id="post-signup" data-method="POST" data-base-path="/api/v1/client/auth" data-path="/signup" data-auth="Public" data-headers='[[&quot;Content-Type&quot;, &quot;application/json&quot;], [&quot;Accept&quot;, &quot;application/json&quot;]]' data-body='{&quot;email&quot;: &quot;alex@example.com&quot;, &quot;password&quot;: &quot;P@ssw0rd!&quot;, &quot;firstName&quot;: &quot;Alex&quot;, &quot;lastName&quot;: &quot;Doe&quot;, &quot;role&quot;: &quot;CUSTOMER&quot;}'>
-  <div class="endpoint__header">
-    <div class="endpoint__title">
-      <span class="http-badge http-badge--post">POST</span>
-      <div>
-        <h3>Sign up</h3>
-        <p><code>/api/v1/client/auth/signup</code></p>
-      </div>
-    </div>
-    <span class="auth-badge auth-badge--public">Public</span>
-  </div>
-  <div class="endpoint__layout">
-    <div class="endpoint__body">
-      <section class="endpoint__section">
-        <h4>Summary</h4>
-        <p>Registers a new dashboard operator or storefront customer depending on the supplied role.</p>
-      </section>
-      <section class="endpoint__section"><h4>Authentication</h4><p>No authentication required.</p></section>
-      
-      <section class="endpoint__section">
-  <h4>Headers</h4>
-  <table>
-    <thead><tr><th>Name</th><th>Value</th></tr></thead>
-    <tbody><tr><td>Content-Type</td><td>application/json</td></tr><tr><td>Accept</td><td>application/json</td></tr></tbody>
-  </table>
-</section>
-
-      <section class="endpoint__section"><h4>Request body</h4><pre>{
-  &quot;email&quot;: &quot;alex@example.com&quot;,
-  &quot;password&quot;: &quot;P@ssw0rd!&quot;,
-  &quot;firstName&quot;: &quot;Alex&quot;,
-  &quot;lastName&quot;: &quot;Doe&quot;,
-  &quot;role&quot;: &quot;CUSTOMER&quot;
-}</pre></section>
-      <section class="endpoint__section">
-        <h4>Success response</h4>
-        <p class="status success">HTTP 201</p>
-        <pre>{
-  &quot;token&quot;: &quot;eyJhbGciOi...&quot;,
-  &quot;refreshToken&quot;: &quot;c9f7b...&quot;,
-  &quot;expiresIn&quot;: 3600,
-  &quot;user&quot;: {
-    &quot;id&quot;: 58,
-    &quot;email&quot;: &quot;alex@example.com&quot;,
-    &quot;firstName&quot;: &quot;Alex&quot;,
-    &quot;lastName&quot;: &quot;Doe&quot;,
-    &quot;roles&quot;: [
-      &quot;CUSTOMER&quot;
-    ]
-  }
-}</pre>
-      </section>
-      <section class="endpoint__section">
-        <h4>Error scenarios</h4>
-        <table>
-  <thead><tr><th>Status</th><th>Description</th><th>Example</th></tr></thead>
-  <tbody><tr><td class='status client'>HTTP 409</td><td>Email already registered</td><td><pre>{
-  &quot;error&quot;: &quot;Conflict&quot;,
-  &quot;message&quot;: &quot;EMAIL_IN_USE&quot;
-}</pre></td></tr><tr><td class='status client'>HTTP 400</td><td>Validation failed</td><td><pre>{
-  &quot;error&quot;: &quot;Bad Request&quot;,
-  &quot;message&quot;: &quot;Password must be at least 8 characters&quot;
-}</pre></td></tr></tbody>
-</table>
-
-      </section>
-    </div>
-    <div class="endpoint__panels">
-      <section class="panel">
-        <header class="panel__header">
-          <h4>cURL samples</h4>
-          <span class="panel__format">Interpolates current environment</span>
-        </header>
-        <div class="code-samples" data-endpoint="post-signup">
-          <div class="code-samples__tabs" role="tablist">
-            <button type="button" class="code-samples__tab is-active" role="tab" id="post-signup-bash-tab" aria-selected="true" data-tab-target="post-signup-bash">bash/zsh</button>
-            <button type="button" class="code-samples__tab" role="tab" id="post-signup-powershell-tab" aria-selected="false" data-tab-target="post-signup-powershell">PowerShell/CMD</button>
-          </div>
-          <pre id="post-signup-bash" class="code-block" role="tabpanel" aria-labelledby="post-signup-bash-tab" data-template="curl-bash" data-endpoint="post-signup"></pre>
-          <pre id="post-signup-powershell" class="code-block is-hidden" role="tabpanel" aria-labelledby="post-signup-powershell-tab" data-template="curl-powershell" data-endpoint="post-signup" hidden></pre>
-          <div class="panel__actions">
-            <button type="button" class="copy-button" data-copy>Copy</button>
-          </div>
-        </div>
-      </section>
-      <section class="panel panel--try">
-        <header class="panel__header">
-          <h4>Try it</h4>
-          <span class="panel__format">Send a real request with your environment</span>
-        </header>
-        <form class="try-form" data-try-form>
-          <label class="field">
-            <span class="field__label">Request URL</span>
-            <input type="url" spellcheck="false" data-try-url required />
-            <span class="field__hint">Update path parameters before sending.</span>
-          </label>
-          <label class="field">
-            <span class="field__label">Headers</span>
-            <textarea rows="3" spellcheck="false" data-try-headers></textarea>
-            <span class="field__hint">One header per line (<code>Name: Value</code>).</span>
-          </label>
-          <label class="field" data-try-body-wrapper>
-            <span class="field__label">Body</span>
-            <textarea rows="8" spellcheck="false" data-try-body></textarea>
-            <span class="field__hint">JSON payload; leave blank to omit.</span>
-          </label>
-          <button type="submit" class="button" data-try-submit>Send POST</button>
-        </form>
-        <div class="try-response" data-try-response hidden>
-          <div class="try-response__meta">
-            <span data-try-status>Waiting…</span>
-            <span data-try-duration></span>
-          </div>
-          <pre class="try-response__body" data-try-output></pre>
-        </div>
-      </section>
-    </div>
-  </div>
-</article>
-<article class="endpoint" id="post-login" data-endpoint-id="post-login" data-method="POST" data-base-path="/api/v1/client/auth" data-path="/login" data-auth="Public" data-headers='[[&quot;Content-Type&quot;, &quot;application/json&quot;]]' data-body='{&quot;email&quot;: &quot;alex@example.com&quot;, &quot;password&quot;: &quot;P@ssw0rd!&quot;}'>
-  <div class="endpoint__header">
-    <div class="endpoint__title">
-      <span class="http-badge http-badge--post">POST</span>
-      <div>
-        <h3>Login</h3>
-        <p><code>/api/v1/client/auth/login</code></p>
-      </div>
-    </div>
-    <span class="auth-badge auth-badge--public">Public</span>
-  </div>
-  <div class="endpoint__layout">
-    <div class="endpoint__body">
-      <section class="endpoint__section">
-        <h4>Summary</h4>
-        <p>Authenticates an existing user and returns a JWT access token and refresh token.</p>
-      </section>
-      <section class="endpoint__section"><h4>Authentication</h4><p>No authentication required.</p></section>
-      
-      <section class="endpoint__section">
-  <h4>Headers</h4>
-  <table>
-    <thead><tr><th>Name</th><th>Value</th></tr></thead>
-    <tbody><tr><td>Content-Type</td><td>application/json</td></tr></tbody>
-  </table>
-</section>
-
-      <section class="endpoint__section"><h4>Request body</h4><pre>{
-  &quot;email&quot;: &quot;alex@example.com&quot;,
-  &quot;password&quot;: &quot;P@ssw0rd!&quot;
-}</pre></section>
-      <section class="endpoint__section">
-        <h4>Success response</h4>
-        <p class="status success">HTTP 200</p>
-        <pre>{
-  &quot;token&quot;: &quot;eyJhbGciOi...&quot;,
-  &quot;refreshToken&quot;: &quot;c9f7b...&quot;,
-  &quot;expiresIn&quot;: 3600,
-  &quot;user&quot;: {
-    &quot;id&quot;: 58,
-    &quot;email&quot;: &quot;alex@example.com&quot;,
-    &quot;firstName&quot;: &quot;Alex&quot;,
-    &quot;lastName&quot;: &quot;Doe&quot;
-  }
-}</pre>
-      </section>
-      <section class="endpoint__section">
-        <h4>Error scenarios</h4>
-        <table>
-  <thead><tr><th>Status</th><th>Description</th><th>Example</th></tr></thead>
-  <tbody><tr><td class='status client'>HTTP 401</td><td>Invalid credentials</td><td><pre>{
-  &quot;error&quot;: &quot;Unauthorized&quot;,
-  &quot;message&quot;: &quot;INVALID_CREDENTIALS&quot;
-}</pre></td></tr></tbody>
-</table>
-
-      </section>
-    </div>
-    <div class="endpoint__panels">
-      <section class="panel">
-        <header class="panel__header">
-          <h4>cURL samples</h4>
-          <span class="panel__format">Interpolates current environment</span>
-        </header>
-        <div class="code-samples" data-endpoint="post-login">
-          <div class="code-samples__tabs" role="tablist">
-            <button type="button" class="code-samples__tab is-active" role="tab" id="post-login-bash-tab" aria-selected="true" data-tab-target="post-login-bash">bash/zsh</button>
-            <button type="button" class="code-samples__tab" role="tab" id="post-login-powershell-tab" aria-selected="false" data-tab-target="post-login-powershell">PowerShell/CMD</button>
-          </div>
-          <pre id="post-login-bash" class="code-block" role="tabpanel" aria-labelledby="post-login-bash-tab" data-template="curl-bash" data-endpoint="post-login"></pre>
-          <pre id="post-login-powershell" class="code-block is-hidden" role="tabpanel" aria-labelledby="post-login-powershell-tab" data-template="curl-powershell" data-endpoint="post-login" hidden></pre>
-          <div class="panel__actions">
-            <button type="button" class="copy-button" data-copy>Copy</button>
-          </div>
-        </div>
-      </section>
-      <section class="panel panel--try">
-        <header class="panel__header">
-          <h4>Try it</h4>
-          <span class="panel__format">Send a real request with your environment</span>
-        </header>
-        <form class="try-form" data-try-form>
-          <label class="field">
-            <span class="field__label">Request URL</span>
-            <input type="url" spellcheck="false" data-try-url required />
-            <span class="field__hint">Update path parameters before sending.</span>
-          </label>
-          <label class="field">
-            <span class="field__label">Headers</span>
-            <textarea rows="3" spellcheck="false" data-try-headers></textarea>
-            <span class="field__hint">One header per line (<code>Name: Value</code>).</span>
-          </label>
-          <label class="field" data-try-body-wrapper>
-            <span class="field__label">Body</span>
-            <textarea rows="8" spellcheck="false" data-try-body></textarea>
-            <span class="field__hint">JSON payload; leave blank to omit.</span>
-          </label>
-          <button type="submit" class="button" data-try-submit>Send POST</button>
-        </form>
-        <div class="try-response" data-try-response hidden>
-          <div class="try-response__meta">
-            <span data-try-status>Waiting…</span>
-            <span data-try-duration></span>
-          </div>
-          <pre class="try-response__body" data-try-output></pre>
-        </div>
-      </section>
-    </div>
-  </div>
-</article>
-<article class="endpoint" id="post-refresh" data-endpoint-id="post-refresh" data-method="POST" data-base-path="/api/v1/client/auth" data-path="/refresh" data-auth="Public" data-headers='[[&quot;Content-Type&quot;, &quot;application/json&quot;]]' data-body='{&quot;refreshToken&quot;: &quot;c9f7b...&quot;}'>
-  <div class="endpoint__header">
-    <div class="endpoint__title">
-      <span class="http-badge http-badge--post">POST</span>
-      <div>
-        <h3>Refresh token</h3>
-        <p><code>/api/v1/client/auth/refresh</code></p>
-      </div>
-    </div>
-    <span class="auth-badge auth-badge--public">Public</span>
-  </div>
-  <div class="endpoint__layout">
-    <div class="endpoint__body">
-      <section class="endpoint__section">
-        <h4>Summary</h4>
-        <p>Issues a new access token using a valid refresh token.</p>
-      </section>
-      <section class="endpoint__section"><h4>Authentication</h4><p>No authentication required.</p></section>
-      
-      <section class="endpoint__section">
-  <h4>Headers</h4>
-  <table>
-    <thead><tr><th>Name</th><th>Value</th></tr></thead>
-    <tbody><tr><td>Content-Type</td><td>application/json</td></tr></tbody>
-  </table>
-</section>
-
-      <section class="endpoint__section"><h4>Request body</h4><pre>{
-  &quot;refreshToken&quot;: &quot;c9f7b...&quot;
-}</pre></section>
-      <section class="endpoint__section">
-        <h4>Success response</h4>
-        <p class="status success">HTTP 200</p>
-        <pre>{
-  &quot;token&quot;: &quot;eyJhbGciOi...&quot;,
-  &quot;refreshToken&quot;: &quot;a8d4...&quot;,
-  &quot;expiresIn&quot;: 3600
-}</pre>
-      </section>
-      <section class="endpoint__section">
-        <h4>Error scenarios</h4>
-        <table>
-  <thead><tr><th>Status</th><th>Description</th><th>Example</th></tr></thead>
-  <tbody><tr><td class='status client'>HTTP 401</td><td>Refresh token expired</td><td><pre>{
-  &quot;error&quot;: &quot;Unauthorized&quot;,
-  &quot;message&quot;: &quot;REFRESH_TOKEN_EXPIRED&quot;
-}</pre></td></tr></tbody>
-</table>
-
-      </section>
-    </div>
-    <div class="endpoint__panels">
-      <section class="panel">
-        <header class="panel__header">
-          <h4>cURL samples</h4>
-          <span class="panel__format">Interpolates current environment</span>
-        </header>
-        <div class="code-samples" data-endpoint="post-refresh">
-          <div class="code-samples__tabs" role="tablist">
-            <button type="button" class="code-samples__tab is-active" role="tab" id="post-refresh-bash-tab" aria-selected="true" data-tab-target="post-refresh-bash">bash/zsh</button>
-            <button type="button" class="code-samples__tab" role="tab" id="post-refresh-powershell-tab" aria-selected="false" data-tab-target="post-refresh-powershell">PowerShell/CMD</button>
-          </div>
-          <pre id="post-refresh-bash" class="code-block" role="tabpanel" aria-labelledby="post-refresh-bash-tab" data-template="curl-bash" data-endpoint="post-refresh"></pre>
-          <pre id="post-refresh-powershell" class="code-block is-hidden" role="tabpanel" aria-labelledby="post-refresh-powershell-tab" data-template="curl-powershell" data-endpoint="post-refresh" hidden></pre>
-          <div class="panel__actions">
-            <button type="button" class="copy-button" data-copy>Copy</button>
-          </div>
-        </div>
-      </section>
-      <section class="panel panel--try">
-        <header class="panel__header">
-          <h4>Try it</h4>
-          <span class="panel__format">Send a real request with your environment</span>
-        </header>
-        <form class="try-form" data-try-form>
-          <label class="field">
-            <span class="field__label">Request URL</span>
-            <input type="url" spellcheck="false" data-try-url required />
-            <span class="field__hint">Update path parameters before sending.</span>
-          </label>
-          <label class="field">
-            <span class="field__label">Headers</span>
-            <textarea rows="3" spellcheck="false" data-try-headers></textarea>
-            <span class="field__hint">One header per line (<code>Name: Value</code>).</span>
-          </label>
-          <label class="field" data-try-body-wrapper>
-            <span class="field__label">Body</span>
-            <textarea rows="8" spellcheck="false" data-try-body></textarea>
-            <span class="field__hint">JSON payload; leave blank to omit.</span>
-          </label>
-          <button type="submit" class="button" data-try-submit>Send POST</button>
-        </form>
-        <div class="try-response" data-try-response hidden>
-          <div class="try-response__meta">
-            <span data-try-status>Waiting…</span>
-            <span data-try-duration></span>
-          </div>
-          <pre class="try-response__body" data-try-output></pre>
-        </div>
-      </section>
-    </div>
-  </div>
-</article>
-<article class="endpoint" id="post-logout" data-endpoint-id="post-logout" data-method="POST" data-base-path="/api/v1/client/auth" data-path="/logout" data-auth="Public" data-headers='[[&quot;Content-Type&quot;, &quot;application/json&quot;]]' data-body='{&quot;refreshToken&quot;: &quot;c9f7b...&quot;}'>
-  <div class="endpoint__header">
-    <div class="endpoint__title">
-      <span class="http-badge http-badge--post">POST</span>
-      <div>
-        <h3>Logout</h3>
-        <p><code>/api/v1/client/auth/logout</code></p>
-      </div>
-    </div>
-    <span class="auth-badge auth-badge--public">Public</span>
-  </div>
-  <div class="endpoint__layout">
-    <div class="endpoint__body">
-      <section class="endpoint__section">
-        <h4>Summary</h4>
-        <p>Revokes the supplied refresh token immediately.</p>
-      </section>
-      <section class="endpoint__section"><h4>Authentication</h4><p>No authentication required.</p></section>
-      
-      <section class="endpoint__section">
-  <h4>Headers</h4>
-  <table>
-    <thead><tr><th>Name</th><th>Value</th></tr></thead>
-    <tbody><tr><td>Content-Type</td><td>application/json</td></tr></tbody>
-  </table>
-</section>
-
-      <section class="endpoint__section"><h4>Request body</h4><pre>{
-  &quot;refreshToken&quot;: &quot;c9f7b...&quot;
-}</pre></section>
-      <section class="endpoint__section">
-        <h4>Success response</h4>
-        <p class="status success">HTTP 204</p>
-        <p>No body returned.</p>
-      </section>
-      <section class="endpoint__section">
-        <h4>Error scenarios</h4>
-        <table>
-  <thead><tr><th>Status</th><th>Description</th><th>Example</th></tr></thead>
-  <tbody><tr><td class='status client'>HTTP 400</td><td>Unknown refresh token</td><td><pre>{
-  &quot;error&quot;: &quot;Bad Request&quot;,
-  &quot;message&quot;: &quot;REFRESH_TOKEN_NOT_FOUND&quot;
-}</pre></td></tr></tbody>
-</table>
-
-      </section>
-    </div>
-    <div class="endpoint__panels">
-      <section class="panel">
-        <header class="panel__header">
-          <h4>cURL samples</h4>
-          <span class="panel__format">Interpolates current environment</span>
-        </header>
-        <div class="code-samples" data-endpoint="post-logout">
-          <div class="code-samples__tabs" role="tablist">
-            <button type="button" class="code-samples__tab is-active" role="tab" id="post-logout-bash-tab" aria-selected="true" data-tab-target="post-logout-bash">bash/zsh</button>
-            <button type="button" class="code-samples__tab" role="tab" id="post-logout-powershell-tab" aria-selected="false" data-tab-target="post-logout-powershell">PowerShell/CMD</button>
-          </div>
-          <pre id="post-logout-bash" class="code-block" role="tabpanel" aria-labelledby="post-logout-bash-tab" data-template="curl-bash" data-endpoint="post-logout"></pre>
-          <pre id="post-logout-powershell" class="code-block is-hidden" role="tabpanel" aria-labelledby="post-logout-powershell-tab" data-template="curl-powershell" data-endpoint="post-logout" hidden></pre>
-          <div class="panel__actions">
-            <button type="button" class="copy-button" data-copy>Copy</button>
-          </div>
-        </div>
-      </section>
-      <section class="panel panel--try">
-        <header class="panel__header">
-          <h4>Try it</h4>
-          <span class="panel__format">Send a real request with your environment</span>
-        </header>
-        <form class="try-form" data-try-form>
-          <label class="field">
-            <span class="field__label">Request URL</span>
-            <input type="url" spellcheck="false" data-try-url required />
-            <span class="field__hint">Update path parameters before sending.</span>
-          </label>
-          <label class="field">
-            <span class="field__label">Headers</span>
-            <textarea rows="3" spellcheck="false" data-try-headers></textarea>
-            <span class="field__hint">One header per line (<code>Name: Value</code>).</span>
-          </label>
-          <label class="field" data-try-body-wrapper>
-            <span class="field__label">Body</span>
-            <textarea rows="8" spellcheck="false" data-try-body></textarea>
-            <span class="field__hint">JSON payload; leave blank to omit.</span>
-          </label>
-          <button type="submit" class="button" data-try-submit>Send POST</button>
-        </form>
-        <div class="try-response" data-try-response hidden>
-          <div class="try-response__meta">
-            <span data-try-status>Waiting…</span>
-            <span data-try-duration></span>
-          </div>
-          <pre class="try-response__body" data-try-output></pre>
-        </div>
-      </section>
-    </div>
-  </div>
-</article>
-<article class="endpoint" id="get-me" data-endpoint-id="get-me" data-method="GET" data-base-path="/api/v1/client/auth" data-path="/me" data-auth="Bearer" data-headers='[[&quot;Authorization&quot;, &quot;Bearer &lt;token&gt;&quot;]]'>
+        <article class="endpoint" id="get-root" data-endpoint-id="get-root" data-method="GET" data-base-path="/api/v1/coupons" data-path="" data-auth="Bearer">
   <div class="endpoint__header">
     <div class="endpoint__title">
       <span class="http-badge http-badge--get">GET</span>
       <div>
-        <h3>Current user</h3>
-        <p><code>/api/v1/client/auth/me</code></p>
+        <h3>List coupons</h3>
+        <p><code>/api/v1/coupons</code></p>
       </div>
     </div>
     <span class="auth-badge auth-badge--protected">Protected</span>
@@ -493,47 +62,42 @@
     <div class="endpoint__body">
       <section class="endpoint__section">
         <h4>Summary</h4>
-        <p>Returns the profile of the authenticated principal.</p>
+        <p>Paginated coupon list with type, state, discount, and search filters.</p>
       </section>
       <section class="endpoint__section"><h4>Authentication</h4><p>Provide an <code>Authorization: Bearer &lt;token&gt;</code> header.</p></section>
-      
       <section class="endpoint__section">
-  <h4>Headers</h4>
+  <h4>Parameters</h4>
   <table>
-    <thead><tr><th>Name</th><th>Value</th></tr></thead>
-    <tbody><tr><td>Authorization</td><td>Bearer &lt;token&gt;</td></tr></tbody>
+    <thead><tr><th>Name</th><th>Description</th></tr></thead>
+    <tbody><tr><td>page</td><td>Page index</td></tr><tr><td>size</td><td>Page size</td></tr><tr><td>type</td><td>PRODUCT, CART, SIGNUP</td></tr><tr><td>state</td><td>Draft/Active/Expired</td></tr><tr><td>discountType</td><td>PERCENTAGE/FLAT</td></tr><tr><td>search</td><td>Search term</td></tr></tbody>
   </table>
 </section>
 
+      
       
       <section class="endpoint__section">
         <h4>Success response</h4>
         <p class="status success">HTTP 200</p>
         <pre>{
-  &quot;id&quot;: 12,
-  &quot;email&quot;: &quot;ops@example.com&quot;,
-  &quot;firstName&quot;: &quot;Operations&quot;,
-  &quot;lastName&quot;: &quot;Lead&quot;,
-  &quot;roles&quot;: [
-    &quot;ADMIN&quot;
+  &quot;content&quot;: [
+    {
+      &quot;id&quot;: 41,
+      &quot;name&quot;: &quot;New Year Glow&quot;,
+      &quot;code&quot;: &quot;NYGLOW10&quot;,
+      &quot;type&quot;: &quot;PRODUCT&quot;,
+      &quot;state&quot;: &quot;ACTIVE&quot;
+    }
   ],
-  &quot;permissions&quot;: [
-    &quot;PRODUCT_VIEW&quot;,
-    &quot;USER_VIEW_GLOBAL&quot;
-  ],
-  &quot;status&quot;: &quot;ACTIVE&quot;
+  &quot;page&quot;: 0,
+  &quot;size&quot;: 20,
+  &quot;totalElements&quot;: 1,
+  &quot;totalPages&quot;: 1,
+  &quot;last&quot;: true
 }</pre>
       </section>
       <section class="endpoint__section">
         <h4>Error scenarios</h4>
-        <table>
-  <thead><tr><th>Status</th><th>Description</th><th>Example</th></tr></thead>
-  <tbody><tr><td class='status client'>HTTP 401</td><td>Missing token</td><td><pre>{
-  &quot;error&quot;: &quot;Unauthorized&quot;,
-  &quot;message&quot;: &quot;TOKEN_REQUIRED&quot;
-}</pre></td></tr></tbody>
-</table>
-
+        <p>No specific error payloads documented.</p>
       </section>
     </div>
     <div class="endpoint__panels">
@@ -542,13 +106,13 @@
           <h4>cURL samples</h4>
           <span class="panel__format">Interpolates current environment</span>
         </header>
-        <div class="code-samples" data-endpoint="get-me">
+        <div class="code-samples" data-endpoint="get-root">
           <div class="code-samples__tabs" role="tablist">
-            <button type="button" class="code-samples__tab is-active" role="tab" id="get-me-bash-tab" aria-selected="true" data-tab-target="get-me-bash">bash/zsh</button>
-            <button type="button" class="code-samples__tab" role="tab" id="get-me-powershell-tab" aria-selected="false" data-tab-target="get-me-powershell">PowerShell/CMD</button>
+            <button type="button" class="code-samples__tab is-active" role="tab" id="get-root-bash-tab" aria-selected="true" data-tab-target="get-root-bash">bash/zsh</button>
+            <button type="button" class="code-samples__tab" role="tab" id="get-root-powershell-tab" aria-selected="false" data-tab-target="get-root-powershell">PowerShell/CMD</button>
           </div>
-          <pre id="get-me-bash" class="code-block" role="tabpanel" aria-labelledby="get-me-bash-tab" data-template="curl-bash" data-endpoint="get-me"></pre>
-          <pre id="get-me-powershell" class="code-block is-hidden" role="tabpanel" aria-labelledby="get-me-powershell-tab" data-template="curl-powershell" data-endpoint="get-me" hidden></pre>
+          <pre id="get-root-bash" class="code-block" role="tabpanel" aria-labelledby="get-root-bash-tab" data-template="curl-bash" data-endpoint="get-root"></pre>
+          <pre id="get-root-powershell" class="code-block is-hidden" role="tabpanel" aria-labelledby="get-root-powershell-tab" data-template="curl-powershell" data-endpoint="get-root" hidden></pre>
           <div class="panel__actions">
             <button type="button" class="copy-button" data-copy>Copy</button>
           </div>
@@ -588,51 +152,52 @@
     </div>
   </div>
 </article>
-<article class="endpoint" id="post-verify" data-endpoint-id="post-verify" data-method="POST" data-base-path="/api/v1/client/auth" data-path="/verify" data-auth="Public" data-headers='[[&quot;Content-Type&quot;, &quot;application/json&quot;]]' data-body='{&quot;token&quot;: &quot;VeR1Fy-123&quot;}'>
+<article class="endpoint" id="get-id" data-endpoint-id="get-id" data-method="GET" data-base-path="/api/v1/coupons" data-path="/{id}" data-auth="Bearer">
   <div class="endpoint__header">
     <div class="endpoint__title">
-      <span class="http-badge http-badge--post">POST</span>
+      <span class="http-badge http-badge--get">GET</span>
       <div>
-        <h3>Verify email (body)</h3>
-        <p><code>/api/v1/client/auth/verify</code></p>
+        <h3>Get coupon</h3>
+        <p><code>/api/v1/coupons/{id}</code></p>
       </div>
     </div>
-    <span class="auth-badge auth-badge--public">Public</span>
+    <span class="auth-badge auth-badge--protected">Protected</span>
   </div>
   <div class="endpoint__layout">
     <div class="endpoint__body">
       <section class="endpoint__section">
         <h4>Summary</h4>
-        <p>Confirms an email verification token when posted from the dashboard.</p>
+        <p>Returns the full coupon definition including eligibility lists.</p>
       </section>
-      <section class="endpoint__section"><h4>Authentication</h4><p>No authentication required.</p></section>
+      <section class="endpoint__section"><h4>Authentication</h4><p>Provide an <code>Authorization: Bearer &lt;token&gt;</code> header.</p></section>
       
-      <section class="endpoint__section">
-  <h4>Headers</h4>
-  <table>
-    <thead><tr><th>Name</th><th>Value</th></tr></thead>
-    <tbody><tr><td>Content-Type</td><td>application/json</td></tr></tbody>
-  </table>
-</section>
-
-      <section class="endpoint__section"><h4>Request body</h4><pre>{
-  &quot;token&quot;: &quot;VeR1Fy-123&quot;
-}</pre></section>
+      
+      
       <section class="endpoint__section">
         <h4>Success response</h4>
         <p class="status success">HTTP 200</p>
         <pre>{
-  &quot;verified&quot;: true,
-  &quot;email&quot;: &quot;alex@example.com&quot;
+  &quot;id&quot;: 41,
+  &quot;name&quot;: &quot;New Year Glow&quot;,
+  &quot;code&quot;: &quot;NYGLOW10&quot;,
+  &quot;type&quot;: &quot;PRODUCT&quot;,
+  &quot;discountType&quot;: &quot;PERCENTAGE&quot;,
+  &quot;discountValue&quot;: 10,
+  &quot;products&quot;: [
+    {
+      &quot;id&quot;: 101,
+      &quot;name&quot;: &quot;Aurora Lamp&quot;
+    }
+  ]
 }</pre>
       </section>
       <section class="endpoint__section">
         <h4>Error scenarios</h4>
         <table>
   <thead><tr><th>Status</th><th>Description</th><th>Example</th></tr></thead>
-  <tbody><tr><td class='status client'>HTTP 410</td><td>Expired token</td><td><pre>{
-  &quot;error&quot;: &quot;Gone&quot;,
-  &quot;message&quot;: &quot;VERIFICATION_TOKEN_EXPIRED&quot;
+  <tbody><tr><td class='status client'>HTTP 404</td><td>Coupon missing</td><td><pre>{
+  &quot;error&quot;: &quot;Not Found&quot;,
+  &quot;message&quot;: &quot;COUPON_NOT_FOUND&quot;
 }</pre></td></tr></tbody>
 </table>
 
@@ -644,13 +209,127 @@
           <h4>cURL samples</h4>
           <span class="panel__format">Interpolates current environment</span>
         </header>
-        <div class="code-samples" data-endpoint="post-verify">
+        <div class="code-samples" data-endpoint="get-id">
           <div class="code-samples__tabs" role="tablist">
-            <button type="button" class="code-samples__tab is-active" role="tab" id="post-verify-bash-tab" aria-selected="true" data-tab-target="post-verify-bash">bash/zsh</button>
-            <button type="button" class="code-samples__tab" role="tab" id="post-verify-powershell-tab" aria-selected="false" data-tab-target="post-verify-powershell">PowerShell/CMD</button>
+            <button type="button" class="code-samples__tab is-active" role="tab" id="get-id-bash-tab" aria-selected="true" data-tab-target="get-id-bash">bash/zsh</button>
+            <button type="button" class="code-samples__tab" role="tab" id="get-id-powershell-tab" aria-selected="false" data-tab-target="get-id-powershell">PowerShell/CMD</button>
           </div>
-          <pre id="post-verify-bash" class="code-block" role="tabpanel" aria-labelledby="post-verify-bash-tab" data-template="curl-bash" data-endpoint="post-verify"></pre>
-          <pre id="post-verify-powershell" class="code-block is-hidden" role="tabpanel" aria-labelledby="post-verify-powershell-tab" data-template="curl-powershell" data-endpoint="post-verify" hidden></pre>
+          <pre id="get-id-bash" class="code-block" role="tabpanel" aria-labelledby="get-id-bash-tab" data-template="curl-bash" data-endpoint="get-id"></pre>
+          <pre id="get-id-powershell" class="code-block is-hidden" role="tabpanel" aria-labelledby="get-id-powershell-tab" data-template="curl-powershell" data-endpoint="get-id" hidden></pre>
+          <div class="panel__actions">
+            <button type="button" class="copy-button" data-copy>Copy</button>
+          </div>
+        </div>
+      </section>
+      <section class="panel panel--try">
+        <header class="panel__header">
+          <h4>Try it</h4>
+          <span class="panel__format">Send a real request with your environment</span>
+        </header>
+        <form class="try-form" data-try-form>
+          <label class="field">
+            <span class="field__label">Request URL</span>
+            <input type="url" spellcheck="false" data-try-url required />
+            <span class="field__hint">Update path parameters before sending.</span>
+          </label>
+          <label class="field">
+            <span class="field__label">Headers</span>
+            <textarea rows="3" spellcheck="false" data-try-headers></textarea>
+            <span class="field__hint">One header per line (<code>Name: Value</code>).</span>
+          </label>
+          <label class="field" data-try-body-wrapper>
+            <span class="field__label">Body</span>
+            <textarea rows="8" spellcheck="false" data-try-body></textarea>
+            <span class="field__hint">JSON payload; leave blank to omit.</span>
+          </label>
+          <button type="submit" class="button" data-try-submit>Send GET</button>
+        </form>
+        <div class="try-response" data-try-response hidden>
+          <div class="try-response__meta">
+            <span data-try-status>Waiting…</span>
+            <span data-try-duration></span>
+          </div>
+          <pre class="try-response__body" data-try-output></pre>
+        </div>
+      </section>
+    </div>
+  </div>
+</article>
+<article class="endpoint" id="post-root" data-endpoint-id="post-root" data-method="POST" data-base-path="/api/v1/coupons" data-path="" data-auth="Bearer" data-headers='[[&quot;Content-Type&quot;, &quot;application/json&quot;]]' data-body='{&quot;name&quot;: &quot;New Year Glow&quot;, &quot;code&quot;: &quot;NYGLOW10&quot;, &quot;type&quot;: &quot;PRODUCT&quot;, &quot;discountType&quot;: &quot;PERCENTAGE&quot;, &quot;discountValue&quot;: 10, &quot;productIds&quot;: [101], &quot;categoryIds&quot;: [3], &quot;startDate&quot;: &quot;2025-01-01T00:00:00Z&quot;, &quot;endDate&quot;: &quot;2025-01-31T23:59:59Z&quot;}'>
+  <div class="endpoint__header">
+    <div class="endpoint__title">
+      <span class="http-badge http-badge--post">POST</span>
+      <div>
+        <h3>Create coupon</h3>
+        <p><code>/api/v1/coupons</code></p>
+      </div>
+    </div>
+    <span class="auth-badge auth-badge--protected">Protected</span>
+  </div>
+  <div class="endpoint__layout">
+    <div class="endpoint__body">
+      <section class="endpoint__section">
+        <h4>Summary</h4>
+        <p>Creates a coupon with optional product, category, or user targeting.</p>
+      </section>
+      <section class="endpoint__section"><h4>Authentication</h4><p>Provide an <code>Authorization: Bearer &lt;token&gt;</code> header.</p></section>
+      
+      <section class="endpoint__section">
+  <h4>Headers</h4>
+  <table>
+    <thead><tr><th>Name</th><th>Value</th></tr></thead>
+    <tbody><tr><td>Content-Type</td><td>application/json</td></tr></tbody>
+  </table>
+</section>
+
+      <section class="endpoint__section"><h4>Request body</h4><pre>{
+  &quot;name&quot;: &quot;New Year Glow&quot;,
+  &quot;code&quot;: &quot;NYGLOW10&quot;,
+  &quot;type&quot;: &quot;PRODUCT&quot;,
+  &quot;discountType&quot;: &quot;PERCENTAGE&quot;,
+  &quot;discountValue&quot;: 10,
+  &quot;productIds&quot;: [
+    101
+  ],
+  &quot;categoryIds&quot;: [
+    3
+  ],
+  &quot;startDate&quot;: &quot;2025-01-01T00:00:00Z&quot;,
+  &quot;endDate&quot;: &quot;2025-01-31T23:59:59Z&quot;
+}</pre></section>
+      <section class="endpoint__section">
+        <h4>Success response</h4>
+        <p class="status success">HTTP 201</p>
+        <pre>{
+  &quot;id&quot;: 41,
+  &quot;code&quot;: &quot;NYGLOW10&quot;
+}</pre>
+      </section>
+      <section class="endpoint__section">
+        <h4>Error scenarios</h4>
+        <table>
+  <thead><tr><th>Status</th><th>Description</th><th>Example</th></tr></thead>
+  <tbody><tr><td class='status client'>HTTP 409</td><td>Code exists</td><td><pre>{
+  &quot;error&quot;: &quot;Conflict&quot;,
+  &quot;message&quot;: &quot;COUPON_CODE_EXISTS&quot;
+}</pre></td></tr></tbody>
+</table>
+
+      </section>
+    </div>
+    <div class="endpoint__panels">
+      <section class="panel">
+        <header class="panel__header">
+          <h4>cURL samples</h4>
+          <span class="panel__format">Interpolates current environment</span>
+        </header>
+        <div class="code-samples" data-endpoint="post-root">
+          <div class="code-samples__tabs" role="tablist">
+            <button type="button" class="code-samples__tab is-active" role="tab" id="post-root-bash-tab" aria-selected="true" data-tab-target="post-root-bash">bash/zsh</button>
+            <button type="button" class="code-samples__tab" role="tab" id="post-root-powershell-tab" aria-selected="false" data-tab-target="post-root-powershell">PowerShell/CMD</button>
+          </div>
+          <pre id="post-root-bash" class="code-block" role="tabpanel" aria-labelledby="post-root-bash-tab" data-template="curl-bash" data-endpoint="post-root"></pre>
+          <pre id="post-root-powershell" class="code-block is-hidden" role="tabpanel" aria-labelledby="post-root-powershell-tab" data-template="curl-powershell" data-endpoint="post-root" hidden></pre>
           <div class="panel__actions">
             <button type="button" class="copy-button" data-copy>Copy</button>
           </div>
@@ -690,52 +369,49 @@
     </div>
   </div>
 </article>
-<article class="endpoint" id="get-verify" data-endpoint-id="get-verify" data-method="GET" data-base-path="/api/v1/client/auth" data-path="/verify" data-auth="Public">
+<article class="endpoint" id="put-id" data-endpoint-id="put-id" data-method="PUT" data-base-path="/api/v1/coupons" data-path="/{id}" data-auth="Bearer" data-headers='[[&quot;Content-Type&quot;, &quot;application/json&quot;]]' data-body='{&quot;name&quot;: &quot;New Year Glow&quot;, &quot;discountValue&quot;: 12, &quot;status&quot;: &quot;ACTIVE&quot;}'>
   <div class="endpoint__header">
     <div class="endpoint__title">
-      <span class="http-badge http-badge--get">GET</span>
+      <span class="http-badge http-badge--put">PUT</span>
       <div>
-        <h3>Verify email (link)</h3>
-        <p><code>/api/v1/client/auth/verify</code></p>
+        <h3>Update coupon</h3>
+        <p><code>/api/v1/coupons/{id}</code></p>
       </div>
     </div>
-    <span class="auth-badge auth-badge--public">Public</span>
+    <span class="auth-badge auth-badge--protected">Protected</span>
   </div>
   <div class="endpoint__layout">
     <div class="endpoint__body">
       <section class="endpoint__section">
         <h4>Summary</h4>
-        <p>Browser friendly verification endpoint. Accepts a &quot;token&quot; query string parameter.</p>
+        <p>Updates coupon meta, schedule, or eligibility lists.</p>
       </section>
-      <section class="endpoint__section"><h4>Authentication</h4><p>No authentication required.</p></section>
+      <section class="endpoint__section"><h4>Authentication</h4><p>Provide an <code>Authorization: Bearer &lt;token&gt;</code> header.</p></section>
+      
       <section class="endpoint__section">
-  <h4>Parameters</h4>
+  <h4>Headers</h4>
   <table>
-    <thead><tr><th>Name</th><th>Description</th></tr></thead>
-    <tbody><tr><td>token</td><td>Verification token returned in the email link</td></tr></tbody>
+    <thead><tr><th>Name</th><th>Value</th></tr></thead>
+    <tbody><tr><td>Content-Type</td><td>application/json</td></tr></tbody>
   </table>
 </section>
 
-      
-      
+      <section class="endpoint__section"><h4>Request body</h4><pre>{
+  &quot;name&quot;: &quot;New Year Glow&quot;,
+  &quot;discountValue&quot;: 12,
+  &quot;status&quot;: &quot;ACTIVE&quot;
+}</pre></section>
       <section class="endpoint__section">
         <h4>Success response</h4>
         <p class="status success">HTTP 200</p>
         <pre>{
-  &quot;verified&quot;: true,
-  &quot;email&quot;: &quot;alex@example.com&quot;
+  &quot;id&quot;: 41,
+  &quot;discountValue&quot;: 12
 }</pre>
       </section>
       <section class="endpoint__section">
         <h4>Error scenarios</h4>
-        <table>
-  <thead><tr><th>Status</th><th>Description</th><th>Example</th></tr></thead>
-  <tbody><tr><td class='status client'>HTTP 400</td><td>Missing token</td><td><pre>{
-  &quot;error&quot;: &quot;Bad Request&quot;,
-  &quot;message&quot;: &quot;TOKEN_REQUIRED&quot;
-}</pre></td></tr></tbody>
-</table>
-
+        <p>No specific error payloads documented.</p>
       </section>
     </div>
     <div class="endpoint__panels">
@@ -744,13 +420,383 @@
           <h4>cURL samples</h4>
           <span class="panel__format">Interpolates current environment</span>
         </header>
-        <div class="code-samples" data-endpoint="get-verify">
+        <div class="code-samples" data-endpoint="put-id">
           <div class="code-samples__tabs" role="tablist">
-            <button type="button" class="code-samples__tab is-active" role="tab" id="get-verify-bash-tab" aria-selected="true" data-tab-target="get-verify-bash">bash/zsh</button>
-            <button type="button" class="code-samples__tab" role="tab" id="get-verify-powershell-tab" aria-selected="false" data-tab-target="get-verify-powershell">PowerShell/CMD</button>
+            <button type="button" class="code-samples__tab is-active" role="tab" id="put-id-bash-tab" aria-selected="true" data-tab-target="put-id-bash">bash/zsh</button>
+            <button type="button" class="code-samples__tab" role="tab" id="put-id-powershell-tab" aria-selected="false" data-tab-target="put-id-powershell">PowerShell/CMD</button>
           </div>
-          <pre id="get-verify-bash" class="code-block" role="tabpanel" aria-labelledby="get-verify-bash-tab" data-template="curl-bash" data-endpoint="get-verify"></pre>
-          <pre id="get-verify-powershell" class="code-block is-hidden" role="tabpanel" aria-labelledby="get-verify-powershell-tab" data-template="curl-powershell" data-endpoint="get-verify" hidden></pre>
+          <pre id="put-id-bash" class="code-block" role="tabpanel" aria-labelledby="put-id-bash-tab" data-template="curl-bash" data-endpoint="put-id"></pre>
+          <pre id="put-id-powershell" class="code-block is-hidden" role="tabpanel" aria-labelledby="put-id-powershell-tab" data-template="curl-powershell" data-endpoint="put-id" hidden></pre>
+          <div class="panel__actions">
+            <button type="button" class="copy-button" data-copy>Copy</button>
+          </div>
+        </div>
+      </section>
+      <section class="panel panel--try">
+        <header class="panel__header">
+          <h4>Try it</h4>
+          <span class="panel__format">Send a real request with your environment</span>
+        </header>
+        <form class="try-form" data-try-form>
+          <label class="field">
+            <span class="field__label">Request URL</span>
+            <input type="url" spellcheck="false" data-try-url required />
+            <span class="field__hint">Update path parameters before sending.</span>
+          </label>
+          <label class="field">
+            <span class="field__label">Headers</span>
+            <textarea rows="3" spellcheck="false" data-try-headers></textarea>
+            <span class="field__hint">One header per line (<code>Name: Value</code>).</span>
+          </label>
+          <label class="field" data-try-body-wrapper>
+            <span class="field__label">Body</span>
+            <textarea rows="8" spellcheck="false" data-try-body></textarea>
+            <span class="field__hint">JSON payload; leave blank to omit.</span>
+          </label>
+          <button type="submit" class="button" data-try-submit>Send PUT</button>
+        </form>
+        <div class="try-response" data-try-response hidden>
+          <div class="try-response__meta">
+            <span data-try-status>Waiting…</span>
+            <span data-try-duration></span>
+          </div>
+          <pre class="try-response__body" data-try-output></pre>
+        </div>
+      </section>
+    </div>
+  </div>
+</article>
+<article class="endpoint" id="delete-id" data-endpoint-id="delete-id" data-method="DELETE" data-base-path="/api/v1/coupons" data-path="/{id}" data-auth="Bearer">
+  <div class="endpoint__header">
+    <div class="endpoint__title">
+      <span class="http-badge http-badge--delete">DELETE</span>
+      <div>
+        <h3>Delete coupon</h3>
+        <p><code>/api/v1/coupons/{id}</code></p>
+      </div>
+    </div>
+    <span class="auth-badge auth-badge--protected">Protected</span>
+  </div>
+  <div class="endpoint__layout">
+    <div class="endpoint__body">
+      <section class="endpoint__section">
+        <h4>Summary</h4>
+        <p>Deletes a coupon immediately.</p>
+      </section>
+      <section class="endpoint__section"><h4>Authentication</h4><p>Provide an <code>Authorization: Bearer &lt;token&gt;</code> header.</p></section>
+      
+      
+      
+      <section class="endpoint__section">
+        <h4>Success response</h4>
+        <p class="status success">HTTP 204</p>
+        <p>No body returned.</p>
+      </section>
+      <section class="endpoint__section">
+        <h4>Error scenarios</h4>
+        <p>No specific error payloads documented.</p>
+      </section>
+    </div>
+    <div class="endpoint__panels">
+      <section class="panel">
+        <header class="panel__header">
+          <h4>cURL samples</h4>
+          <span class="panel__format">Interpolates current environment</span>
+        </header>
+        <div class="code-samples" data-endpoint="delete-id">
+          <div class="code-samples__tabs" role="tablist">
+            <button type="button" class="code-samples__tab is-active" role="tab" id="delete-id-bash-tab" aria-selected="true" data-tab-target="delete-id-bash">bash/zsh</button>
+            <button type="button" class="code-samples__tab" role="tab" id="delete-id-powershell-tab" aria-selected="false" data-tab-target="delete-id-powershell">PowerShell/CMD</button>
+          </div>
+          <pre id="delete-id-bash" class="code-block" role="tabpanel" aria-labelledby="delete-id-bash-tab" data-template="curl-bash" data-endpoint="delete-id"></pre>
+          <pre id="delete-id-powershell" class="code-block is-hidden" role="tabpanel" aria-labelledby="delete-id-powershell-tab" data-template="curl-powershell" data-endpoint="delete-id" hidden></pre>
+          <div class="panel__actions">
+            <button type="button" class="copy-button" data-copy>Copy</button>
+          </div>
+        </div>
+      </section>
+      <section class="panel panel--try">
+        <header class="panel__header">
+          <h4>Try it</h4>
+          <span class="panel__format">Send a real request with your environment</span>
+        </header>
+        <form class="try-form" data-try-form>
+          <label class="field">
+            <span class="field__label">Request URL</span>
+            <input type="url" spellcheck="false" data-try-url required />
+            <span class="field__hint">Update path parameters before sending.</span>
+          </label>
+          <label class="field">
+            <span class="field__label">Headers</span>
+            <textarea rows="3" spellcheck="false" data-try-headers></textarea>
+            <span class="field__hint">One header per line (<code>Name: Value</code>).</span>
+          </label>
+          <label class="field" data-try-body-wrapper>
+            <span class="field__label">Body</span>
+            <textarea rows="8" spellcheck="false" data-try-body></textarea>
+            <span class="field__hint">JSON payload; leave blank to omit.</span>
+          </label>
+          <button type="submit" class="button" data-try-submit>Send DELETE</button>
+        </form>
+        <div class="try-response" data-try-response hidden>
+          <div class="try-response__meta">
+            <span data-try-status>Waiting…</span>
+            <span data-try-duration></span>
+          </div>
+          <pre class="try-response__body" data-try-output></pre>
+        </div>
+      </section>
+    </div>
+  </div>
+</article>
+<article class="endpoint" id="get-reference-products" data-endpoint-id="get-reference-products" data-method="GET" data-base-path="/api/v1/coupons" data-path="/reference/products" data-auth="Bearer">
+  <div class="endpoint__header">
+    <div class="endpoint__title">
+      <span class="http-badge http-badge--get">GET</span>
+      <div>
+        <h3>Product reference options</h3>
+        <p><code>/api/v1/coupons/reference/products</code></p>
+      </div>
+    </div>
+    <span class="auth-badge auth-badge--protected">Protected</span>
+  </div>
+  <div class="endpoint__layout">
+    <div class="endpoint__body">
+      <section class="endpoint__section">
+        <h4>Summary</h4>
+        <p>Searchable product dropdown used when targeting specific SKUs.</p>
+      </section>
+      <section class="endpoint__section"><h4>Authentication</h4><p>Provide an <code>Authorization: Bearer &lt;token&gt;</code> header.</p></section>
+      <section class="endpoint__section">
+  <h4>Parameters</h4>
+  <table>
+    <thead><tr><th>Name</th><th>Description</th></tr></thead>
+    <tbody><tr><td>search</td><td>Optional name/SKU</td></tr><tr><td>size</td><td>Maximum results</td></tr></tbody>
+  </table>
+</section>
+
+      
+      
+      <section class="endpoint__section">
+        <h4>Success response</h4>
+        <p class="status success">HTTP 200</p>
+        <pre>[
+  {
+    &quot;id&quot;: 101,
+    &quot;name&quot;: &quot;Aurora Lamp&quot;,
+    &quot;sku&quot;: &quot;AUR-LAMP-001&quot;
+  }
+]</pre>
+      </section>
+      <section class="endpoint__section">
+        <h4>Error scenarios</h4>
+        <p>No specific error payloads documented.</p>
+      </section>
+    </div>
+    <div class="endpoint__panels">
+      <section class="panel">
+        <header class="panel__header">
+          <h4>cURL samples</h4>
+          <span class="panel__format">Interpolates current environment</span>
+        </header>
+        <div class="code-samples" data-endpoint="get-reference-products">
+          <div class="code-samples__tabs" role="tablist">
+            <button type="button" class="code-samples__tab is-active" role="tab" id="get-reference-products-bash-tab" aria-selected="true" data-tab-target="get-reference-products-bash">bash/zsh</button>
+            <button type="button" class="code-samples__tab" role="tab" id="get-reference-products-powershell-tab" aria-selected="false" data-tab-target="get-reference-products-powershell">PowerShell/CMD</button>
+          </div>
+          <pre id="get-reference-products-bash" class="code-block" role="tabpanel" aria-labelledby="get-reference-products-bash-tab" data-template="curl-bash" data-endpoint="get-reference-products"></pre>
+          <pre id="get-reference-products-powershell" class="code-block is-hidden" role="tabpanel" aria-labelledby="get-reference-products-powershell-tab" data-template="curl-powershell" data-endpoint="get-reference-products" hidden></pre>
+          <div class="panel__actions">
+            <button type="button" class="copy-button" data-copy>Copy</button>
+          </div>
+        </div>
+      </section>
+      <section class="panel panel--try">
+        <header class="panel__header">
+          <h4>Try it</h4>
+          <span class="panel__format">Send a real request with your environment</span>
+        </header>
+        <form class="try-form" data-try-form>
+          <label class="field">
+            <span class="field__label">Request URL</span>
+            <input type="url" spellcheck="false" data-try-url required />
+            <span class="field__hint">Update path parameters before sending.</span>
+          </label>
+          <label class="field">
+            <span class="field__label">Headers</span>
+            <textarea rows="3" spellcheck="false" data-try-headers></textarea>
+            <span class="field__hint">One header per line (<code>Name: Value</code>).</span>
+          </label>
+          <label class="field" data-try-body-wrapper>
+            <span class="field__label">Body</span>
+            <textarea rows="8" spellcheck="false" data-try-body></textarea>
+            <span class="field__hint">JSON payload; leave blank to omit.</span>
+          </label>
+          <button type="submit" class="button" data-try-submit>Send GET</button>
+        </form>
+        <div class="try-response" data-try-response hidden>
+          <div class="try-response__meta">
+            <span data-try-status>Waiting…</span>
+            <span data-try-duration></span>
+          </div>
+          <pre class="try-response__body" data-try-output></pre>
+        </div>
+      </section>
+    </div>
+  </div>
+</article>
+<article class="endpoint" id="get-reference-categories" data-endpoint-id="get-reference-categories" data-method="GET" data-base-path="/api/v1/coupons" data-path="/reference/categories" data-auth="Bearer">
+  <div class="endpoint__header">
+    <div class="endpoint__title">
+      <span class="http-badge http-badge--get">GET</span>
+      <div>
+        <h3>Category reference options</h3>
+        <p><code>/api/v1/coupons/reference/categories</code></p>
+      </div>
+    </div>
+    <span class="auth-badge auth-badge--protected">Protected</span>
+  </div>
+  <div class="endpoint__layout">
+    <div class="endpoint__body">
+      <section class="endpoint__section">
+        <h4>Summary</h4>
+        <p>Searchable category dropdown for coupon targeting.</p>
+      </section>
+      <section class="endpoint__section"><h4>Authentication</h4><p>Provide an <code>Authorization: Bearer &lt;token&gt;</code> header.</p></section>
+      <section class="endpoint__section">
+  <h4>Parameters</h4>
+  <table>
+    <thead><tr><th>Name</th><th>Description</th></tr></thead>
+    <tbody><tr><td>search</td><td>Optional name</td></tr><tr><td>size</td><td>Maximum results</td></tr></tbody>
+  </table>
+</section>
+
+      
+      
+      <section class="endpoint__section">
+        <h4>Success response</h4>
+        <p class="status success">HTTP 200</p>
+        <pre>[
+  {
+    &quot;id&quot;: 3,
+    &quot;name&quot;: &quot;Lighting&quot;
+  }
+]</pre>
+      </section>
+      <section class="endpoint__section">
+        <h4>Error scenarios</h4>
+        <p>No specific error payloads documented.</p>
+      </section>
+    </div>
+    <div class="endpoint__panels">
+      <section class="panel">
+        <header class="panel__header">
+          <h4>cURL samples</h4>
+          <span class="panel__format">Interpolates current environment</span>
+        </header>
+        <div class="code-samples" data-endpoint="get-reference-categories">
+          <div class="code-samples__tabs" role="tablist">
+            <button type="button" class="code-samples__tab is-active" role="tab" id="get-reference-categories-bash-tab" aria-selected="true" data-tab-target="get-reference-categories-bash">bash/zsh</button>
+            <button type="button" class="code-samples__tab" role="tab" id="get-reference-categories-powershell-tab" aria-selected="false" data-tab-target="get-reference-categories-powershell">PowerShell/CMD</button>
+          </div>
+          <pre id="get-reference-categories-bash" class="code-block" role="tabpanel" aria-labelledby="get-reference-categories-bash-tab" data-template="curl-bash" data-endpoint="get-reference-categories"></pre>
+          <pre id="get-reference-categories-powershell" class="code-block is-hidden" role="tabpanel" aria-labelledby="get-reference-categories-powershell-tab" data-template="curl-powershell" data-endpoint="get-reference-categories" hidden></pre>
+          <div class="panel__actions">
+            <button type="button" class="copy-button" data-copy>Copy</button>
+          </div>
+        </div>
+      </section>
+      <section class="panel panel--try">
+        <header class="panel__header">
+          <h4>Try it</h4>
+          <span class="panel__format">Send a real request with your environment</span>
+        </header>
+        <form class="try-form" data-try-form>
+          <label class="field">
+            <span class="field__label">Request URL</span>
+            <input type="url" spellcheck="false" data-try-url required />
+            <span class="field__hint">Update path parameters before sending.</span>
+          </label>
+          <label class="field">
+            <span class="field__label">Headers</span>
+            <textarea rows="3" spellcheck="false" data-try-headers></textarea>
+            <span class="field__hint">One header per line (<code>Name: Value</code>).</span>
+          </label>
+          <label class="field" data-try-body-wrapper>
+            <span class="field__label">Body</span>
+            <textarea rows="8" spellcheck="false" data-try-body></textarea>
+            <span class="field__hint">JSON payload; leave blank to omit.</span>
+          </label>
+          <button type="submit" class="button" data-try-submit>Send GET</button>
+        </form>
+        <div class="try-response" data-try-response hidden>
+          <div class="try-response__meta">
+            <span data-try-status>Waiting…</span>
+            <span data-try-duration></span>
+          </div>
+          <pre class="try-response__body" data-try-output></pre>
+        </div>
+      </section>
+    </div>
+  </div>
+</article>
+<article class="endpoint" id="get-reference-users" data-endpoint-id="get-reference-users" data-method="GET" data-base-path="/api/v1/coupons" data-path="/reference/users" data-auth="Bearer">
+  <div class="endpoint__header">
+    <div class="endpoint__title">
+      <span class="http-badge http-badge--get">GET</span>
+      <div>
+        <h3>User reference options</h3>
+        <p><code>/api/v1/coupons/reference/users</code></p>
+      </div>
+    </div>
+    <span class="auth-badge auth-badge--protected">Protected</span>
+  </div>
+  <div class="endpoint__layout">
+    <div class="endpoint__body">
+      <section class="endpoint__section">
+        <h4>Summary</h4>
+        <p>Searches verified users when issuing signup coupons to a subset of accounts.</p>
+      </section>
+      <section class="endpoint__section"><h4>Authentication</h4><p>Provide an <code>Authorization: Bearer &lt;token&gt;</code> header.</p></section>
+      <section class="endpoint__section">
+  <h4>Parameters</h4>
+  <table>
+    <thead><tr><th>Name</th><th>Description</th></tr></thead>
+    <tbody><tr><td>search</td><td>Name or email</td></tr><tr><td>size</td><td>Maximum results</td></tr></tbody>
+  </table>
+</section>
+
+      
+      
+      <section class="endpoint__section">
+        <h4>Success response</h4>
+        <p class="status success">HTTP 200</p>
+        <pre>[
+  {
+    &quot;id&quot;: 44,
+    &quot;name&quot;: &quot;Priya S.&quot;,
+    &quot;email&quot;: &quot;priya@example.com&quot;
+  }
+]</pre>
+      </section>
+      <section class="endpoint__section">
+        <h4>Error scenarios</h4>
+        <p>No specific error payloads documented.</p>
+      </section>
+    </div>
+    <div class="endpoint__panels">
+      <section class="panel">
+        <header class="panel__header">
+          <h4>cURL samples</h4>
+          <span class="panel__format">Interpolates current environment</span>
+        </header>
+        <div class="code-samples" data-endpoint="get-reference-users">
+          <div class="code-samples__tabs" role="tablist">
+            <button type="button" class="code-samples__tab is-active" role="tab" id="get-reference-users-bash-tab" aria-selected="true" data-tab-target="get-reference-users-bash">bash/zsh</button>
+            <button type="button" class="code-samples__tab" role="tab" id="get-reference-users-powershell-tab" aria-selected="false" data-tab-target="get-reference-users-powershell">PowerShell/CMD</button>
+          </div>
+          <pre id="get-reference-users-bash" class="code-block" role="tabpanel" aria-labelledby="get-reference-users-bash-tab" data-template="curl-bash" data-endpoint="get-reference-users"></pre>
+          <pre id="get-reference-users-powershell" class="code-block is-hidden" role="tabpanel" aria-labelledby="get-reference-users-powershell-tab" data-template="curl-powershell" data-endpoint="get-reference-users" hidden></pre>
           <div class="panel__actions">
             <button type="button" class="copy-button" data-copy>Copy</button>
           </div>
