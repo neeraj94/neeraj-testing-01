@@ -201,7 +201,27 @@ const App = () => {
               />
             }
           >
-            <Route path="users" element={<UsersPage />} />
+            <Route
+              path="staff"
+              element={
+                <UsersPage
+                  lockedAudience="internal"
+                  titleOverride="Staff members"
+                  descriptionOverride="Audit and manage administrators, managers, and support staff across the platform."
+                />
+              }
+            />
+            <Route
+              path="customers"
+              element={
+                <UsersPage
+                  lockedAudience="customer"
+                  titleOverride="Customers"
+                  descriptionOverride="Review shopper accounts, carts, and orders to deliver tailored support."
+                />
+              }
+            />
+            <Route path="users" element={<Navigate to="/admin/staff" replace />} />
           </Route>
           <Route element={<PermissionRoute required={['ROLE_VIEW', 'ROLE_VIEW_GLOBAL', 'ROLE_VIEW_OWN']} />}>
             <Route path="roles" element={<RolesPage />} />

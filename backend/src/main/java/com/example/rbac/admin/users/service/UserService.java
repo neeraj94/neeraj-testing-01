@@ -14,6 +14,7 @@ import com.example.rbac.admin.users.dto.ProfileUpdateRequest;
 import com.example.rbac.admin.users.dto.UpdateUserRequest;
 import com.example.rbac.admin.users.dto.UpdateUserPermissionsRequest;
 import com.example.rbac.admin.users.dto.UpdateUserStatusRequest;
+import com.example.rbac.admin.users.dto.UserAudience;
 import com.example.rbac.admin.users.dto.UserDto;
 import com.example.rbac.admin.users.dto.UserSummaryResponse;
 import com.example.rbac.admin.users.mapper.UserMapper;
@@ -88,7 +89,13 @@ public class UserService {
     }
 
     @PreAuthorize(USER_VIEW_AUTHORITY)
-    public PageResponse<UserDto> list(String search, int page, int size, String sort, String direction) {
+    public PageResponse<UserDto> list(String search,
+                                      int page,
+                                      int size,
+                                      String sort,
+                                      String direction,
+                                      String audienceValue) {
+        UserAudience audience = UserAudience.fromValue(audienceValue);
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (!hasAuthority(authentication, "USER_VIEW_GLOBAL")) {
             Long currentUserId = resolveCurrentUserId(authentication)
@@ -100,11 +107,31 @@ public class UserService {
         }
 
         Pageable pageable = buildPageable(page, size, sort, direction);
+        String normalizedSearch = search != null ? search.trim() : null;
+        boolean hasSearch = normalizedSearch != null && !normalizedSearch.isEmpty();
         Page<User> result;
-        if (search != null && !search.isBlank()) {
-            result = userRepository.findByEmailContainingIgnoreCaseOrFullNameContainingIgnoreCase(search, search, pageable);
-        } else {
-            result = userRepository.findAll(pageable);
+        switch (audience) {
+            case CUSTOMERS -> {
+                if (hasSearch) {
+                    result = userRepository.searchCustomersByRoleKey(CUSTOMER_ROLE_KEY, normalizedSearch, pageable);
+                } else {
+                    result = userRepository.findCustomersByRoleKey(CUSTOMER_ROLE_KEY, pageable);
+                }
+            }
+            case STAFF -> {
+                if (hasSearch) {
+                    result = userRepository.searchStaffWithoutRole(CUSTOMER_ROLE_KEY, normalizedSearch, pageable);
+                } else {
+                    result = userRepository.findStaffWithoutRole(CUSTOMER_ROLE_KEY, pageable);
+                }
+            }
+            case ALL -> {
+                if (hasSearch) {
+                    result = userRepository.findByEmailContainingIgnoreCaseOrFullNameContainingIgnoreCase(normalizedSearch, normalizedSearch, pageable);
+                } else {
+                    result = userRepository.findAll(pageable);
+                }
+            }
         }
         return PageResponse.from(result.map(userMapper::toDto));
     }
