@@ -1,4 +1,4 @@
-package com.example.rbac.admin.config;
+package com.example.rbac.admin.system.controller;
 
 import com.example.rbac.common.security.PublicEndpointDefinition;
 import com.example.rbac.common.security.PublicEndpointRegistry;
@@ -11,7 +11,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/system")
-public class SystemInfoController {
+public class PublicEndpointAdminController {
 
     @GetMapping("/public-endpoints")
     @PreAuthorize("hasAuthority('ROLE_VIEW') or hasAuthority('PERMISSION_VIEW')")
