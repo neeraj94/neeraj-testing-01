@@ -48,8 +48,9 @@ const HIDDEN_PERMISSION_KEYS = new Set(['USER_VIEW', 'USER_VIEW_OWN']);
 const FEATURE_KEY_OVERRIDES: Record<string, string> = {
   COUPON: 'COUPONS',
   COUPONS: 'COUPONS',
-  ORDER: 'USER_MANAGEMENT',
-  ORDERS: 'USER_MANAGEMENT',
+  ORDER: 'ORDER_MANAGEMENT',
+  ORDERS: 'ORDER_MANAGEMENT',
+  ORDER_MANAGEMENT: 'ORDER_MANAGEMENT',
   PAYMENT: 'PAYMENTS',
   PAYMENTS: 'PAYMENTS',
   CHECKOUT: 'CHECKOUT',
@@ -69,8 +70,8 @@ const FEATURE_KEY_OVERRIDES: Record<string, string> = {
   USER_ADDRESSES: 'USER_MANAGEMENT',
   USER_CART: 'USER_MANAGEMENT',
   USER_CARTS: 'USER_MANAGEMENT',
-  USER_ORDER: 'USER_MANAGEMENT',
-  USER_ORDERS: 'USER_MANAGEMENT',
+  USER_ORDER: 'ORDER_MANAGEMENT',
+  USER_ORDERS: 'ORDER_MANAGEMENT',
   USER_RECENTLY: 'USER_MANAGEMENT',
   USER_RECENTLY_VIEWED: 'USER_MANAGEMENT',
   GALLERY_FILE: 'GALLERY',
@@ -105,6 +106,7 @@ const FEATURE_LABEL_OVERRIDES: Record<string, string> = {
   BRANDS: 'Brands',
   CHECKOUT: 'Checkout',
   COUPONS: 'Coupons',
+  ORDER_MANAGEMENT: 'Order Management',
   ORDERS: 'Orders',
   PAYMENTS: 'Payments',
   PERMISSIONS: 'Permissions',
@@ -131,6 +133,7 @@ const ADMIN_FEATURE_ORDER = [
   'Brands',
   'Categories',
   'Coupons',
+  'Order Management',
   'User Management',
   'Payments',
   'Permissions',
@@ -350,9 +353,49 @@ export const buildPermissionGroups = (permissions: Permission[]): PermissionGrou
     }
   });
 
+  const orderGroupKey = 'admin:ORDER_MANAGEMENT';
+  let orderGroup = map.get(orderGroupKey);
+  if (!orderGroup) {
+    orderGroup = { feature: 'Order Management', slots: {}, extras: [], category: 'admin' };
+    map.set(orderGroupKey, orderGroup);
+  } else if (!orderGroup.feature) {
+    orderGroup.feature = 'Order Management';
+  }
+  const ensuredOrderGroup = orderGroup;
+
   const userGroup = map.get('admin:USER_MANAGEMENT');
   if (userGroup) {
     userGroup.feature = 'User Management';
+
+    const redistributed: PermissionOption[] = [];
+    userGroup.extras = userGroup.extras.filter((option) => {
+      const keyUpper = (option.key ?? '').toUpperCase();
+      if (keyUpper.startsWith('ORDER_') || keyUpper.startsWith('USER_ORDER_')) {
+        redistributed.push(option);
+        return false;
+      }
+      return true;
+    });
+
+    redistributed.forEach((option) => {
+      let matchedSlot: CapabilitySlot | null = null;
+      for (const pattern of CAPABILITY_PATTERNS) {
+        if (pattern.regex.test(option.key)) {
+          matchedSlot = matchedSlot ?? pattern.slot;
+          if (matchedSlot === pattern.slot) {
+            break;
+          }
+        }
+      }
+
+      if (matchedSlot) {
+        if (!assignSlot(ensuredOrderGroup, matchedSlot, option)) {
+          ensuredOrderGroup.extras = addExtraOption(ensuredOrderGroup.extras, option);
+        }
+      } else {
+        ensuredOrderGroup.extras = addExtraOption(ensuredOrderGroup.extras, option);
+      }
+    });
   }
 
   return Array.from(map.values())

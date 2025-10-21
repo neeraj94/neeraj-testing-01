@@ -78,7 +78,10 @@ public class SecurityConfig {
             "USER_VIEW_GLOBAL",
             "USER_CREATE",
             "USER_UPDATE",
-            "USER_DELETE"
+            "USER_DELETE",
+            "ORDER_VIEW_GLOBAL",
+            "ORDER_CREATE",
+            "ORDER_EDIT"
     };
 
     public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter) {
