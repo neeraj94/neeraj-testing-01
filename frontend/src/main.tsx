@@ -14,7 +14,7 @@ import { ConfirmDialogProvider } from './components/ConfirmDialogProvider';
 
 injectStore(store);
 registerAuthListeners(
-  (payload) => store.dispatch(tokensRefreshed(payload)),
+  (payload, portal) => store.dispatch(tokensRefreshed({ auth: payload, portal })),
   () => {
     store.dispatch(logout());
     store.dispatch(resetCart());
