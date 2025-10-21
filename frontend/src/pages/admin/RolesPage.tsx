@@ -1,7 +1,7 @@
 import { Dispatch, FormEvent, Fragment, SetStateAction, useCallback, useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import type { AxiosError } from 'axios';
-import { adminApi, rootApi } from '../../services/http';
+import { adminApi } from '../../services/http';
 import type { Pagination, Permission, Role } from '../../types/models';
 import type { PermissionKey } from '../../types/auth';
 import { useToast } from '../../components/ToastProvider';
@@ -276,11 +276,15 @@ const DEFAULT_CAPABILITY_DESCRIPTIONS: Record<string, { title: string; descripti
 const CustomerPermissionContent = ({
   groups,
   publicEndpoints,
+  publicEndpointsLoading,
+  publicEndpointsError,
   selected,
   onToggle
 }: {
   groups: PermissionGroup[];
   publicEndpoints: PublicEndpoint[];
+  publicEndpointsLoading: boolean;
+  publicEndpointsError: string | null;
   selected: number[];
   onToggle: (permissionId: number, checked: boolean, options?: ToggleOptions) => void;
 }) => {
@@ -307,14 +311,16 @@ const CustomerPermissionContent = ({
 
   const capabilityEntries = Array.from(capabilityMap.values()).sort((a, b) => a.title.localeCompare(b.title));
   const normalizeMethod = (method: string | null | undefined) => (method ?? 'ALL').toUpperCase();
-  const sortedPublicEndpoints = [...publicEndpoints].sort((a, b) => {
-    const methodA = normalizeMethod(a.method);
-    const methodB = normalizeMethod(b.method);
-    if (methodA !== methodB) {
-      return methodA.localeCompare(methodB);
-    }
-    return a.pattern.localeCompare(b.pattern);
-  });
+  const sortedPublicEndpoints = useMemo(() => {
+    return [...publicEndpoints].sort((a, b) => {
+      const methodA = normalizeMethod(a.method);
+      const methodB = normalizeMethod(b.method);
+      if (methodA !== methodB) {
+        return methodA.localeCompare(methodB);
+      }
+      return a.pattern.localeCompare(b.pattern);
+    });
+  }, [publicEndpoints]);
 
   const infoBlock = (
     <div className="space-y-4 text-sm text-slate-500">
@@ -340,7 +346,11 @@ const CustomerPermissionContent = ({
         <p className="font-medium text-slate-700">Public endpoints</p>
         <p>These routes are available without authentication and should remain accessible to all visitors:</p>
         <div className="mt-3 overflow-hidden rounded-lg border border-slate-200">
-          {sortedPublicEndpoints.length ? (
+          {publicEndpointsLoading ? (
+            <div className="bg-white px-4 py-3 text-xs text-slate-400">Loading public endpoint catalog…</div>
+          ) : publicEndpointsError ? (
+            <div className="bg-red-50 px-4 py-3 text-xs text-red-600">{publicEndpointsError}</div>
+          ) : sortedPublicEndpoints.length ? (
             <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
               <thead className="bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
                 <tr>
@@ -356,7 +366,7 @@ const CustomerPermissionContent = ({
                       {normalizeMethod(endpoint.method)}
                     </td>
                     <td className="px-4 py-2 font-mono text-xs text-slate-700">{endpoint.pattern}</td>
-                    <td className="px-4 py-2 text-slate-600">{endpoint.description}</td>
+                    <td className="px-4 py-2 text-slate-600">{endpoint.description || '—'}</td>
                   </tr>
                 ))}
               </tbody>
@@ -519,13 +529,21 @@ const RolesPage = () => {
     () => buildPermissionGroups(defaultPermissions).filter((group) => group.category === 'public'),
     [defaultPermissions]
   );
-  const { data: publicEndpoints = [] } = useQuery<PublicEndpoint[]>({
+  const {
+    data: publicEndpoints = [],
+    isLoading: publicEndpointsLoading,
+    isError: publicEndpointsError,
+    error: publicEndpointsErrorDetails
+  } = useQuery<PublicEndpoint[]>({
     queryKey: ['system', 'public-endpoints'],
     queryFn: async () => {
-      const { data } = await rootApi.get<PublicEndpoint[]>('/api/public/endpoints');
+      const { data } = await adminApi.get<PublicEndpoint[]>('/system/public-endpoints');
       return data;
     }
   });
+  const publicEndpointErrorMessage = publicEndpointsError
+    ? getErrorMessage(publicEndpointsErrorDetails)
+    : null;
   const permissionLookup = useMemo(() => {
     const lookup = new Map<string, Permission>();
     [...permissions, ...defaultPermissions].forEach((permission) => lookup.set(permission.key, permission));
@@ -1258,6 +1276,8 @@ const RolesPage = () => {
                 <CustomerPermissionContent
                   groups={customerPermissionGroups}
                   publicEndpoints={publicEndpoints}
+                  publicEndpointsLoading={publicEndpointsLoading}
+                  publicEndpointsError={publicEndpointErrorMessage}
                   selected={rolePermissions}
                   onToggle={(id, checked, options) => togglePermission(id, checked, setRolePermissions, options)}
                 />
@@ -1365,6 +1385,8 @@ const RolesPage = () => {
                 <CustomerPermissionContent
                   groups={customerPermissionGroups}
                   publicEndpoints={publicEndpoints}
+                  publicEndpointsLoading={publicEndpointsLoading}
+                  publicEndpointsError={publicEndpointErrorMessage}
                   selected={editingPermissions}
                   onToggle={(id, checked, options) => togglePermission(id, checked, setEditingPermissions, options)}
                 />
