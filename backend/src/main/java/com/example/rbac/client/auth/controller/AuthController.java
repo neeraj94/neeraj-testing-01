@@ -4,6 +4,7 @@ import com.example.rbac.common.auth.dto.AuthResponse;
 import com.example.rbac.client.auth.dto.LoginRequest;
 import com.example.rbac.client.auth.dto.RefreshTokenRequest;
 import com.example.rbac.client.auth.dto.SignupRequest;
+import com.example.rbac.client.auth.dto.SignupResponse;
 import com.example.rbac.client.auth.dto.VerificationRequest;
 import com.example.rbac.client.auth.dto.VerificationResponse;
 import com.example.rbac.client.auth.service.ClientAuthService;
@@ -11,6 +12,8 @@ import com.example.rbac.admin.users.dto.UserDto;
 import com.example.rbac.admin.users.model.UserPrincipal;
 import jakarta.validation.Valid;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -24,8 +27,9 @@ public class AuthController {
     }
 
     @PostMapping("/signup")
-    public AuthResponse signup(@Valid @RequestBody SignupRequest request) {
-        return authService.signup(request);
+    public ResponseEntity<SignupResponse> signup(@Valid @RequestBody SignupRequest request) {
+        SignupResponse response = authService.signup(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @PostMapping("/login")

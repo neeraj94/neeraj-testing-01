@@ -6,13 +6,12 @@ import com.example.rbac.admin.permissions.model.Permission;
 import org.springframework.stereotype.Component;
 
 import java.util.LinkedHashSet;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 @Component
 public class RoleMapper {
-
-    private static final String CUSTOMER_PREFIX = "CUSTOMER_";
 
     public RoleDto toDto(Role role) {
         if (role == null) {
@@ -32,7 +31,7 @@ public class RoleMapper {
         }
         return permissions.stream()
                 .map(Permission::getKey)
-                .filter(key -> key != null && !key.toUpperCase().startsWith(CUSTOMER_PREFIX))
+                .filter(Objects::nonNull)
                 .collect(Collectors.toCollection(LinkedHashSet::new));
     }
 }
