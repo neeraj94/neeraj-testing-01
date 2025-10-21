@@ -71,6 +71,16 @@ public class SecurityConfig {
             "WEDGE_UPDATE"
     };
 
+    private static final String[] SHIPPING_LOCATION_READ_AUTHORITIES = {
+            "SHIPPING_VIEW",
+            "SHIPPING_MANAGE",
+            "USER_VIEW",
+            "USER_VIEW_GLOBAL",
+            "USER_CREATE",
+            "USER_UPDATE",
+            "USER_DELETE"
+    };
+
     public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
     }
@@ -96,7 +106,7 @@ public class SecurityConfig {
                             .requestMatchers(HttpMethod.GET, "/api/v1/admin/tax-rates/**").hasAuthority("TAX_RATE_VIEW")
                             .requestMatchers(HttpMethod.GET, "/api/v1/admin/shipping/countries/**",
                                     "/api/v1/admin/shipping/states/**",
-                                    "/api/v1/admin/shipping/cities/**").hasAnyAuthority("SHIPPING_VIEW", "SHIPPING_MANAGE")
+                                    "/api/v1/admin/shipping/cities/**").hasAnyAuthority(SHIPPING_LOCATION_READ_AUTHORITIES)
                             .requestMatchers(HttpMethod.POST, "/api/v1/admin/shipping/countries/**",
                                     "/api/v1/admin/shipping/states/**",
                                     "/api/v1/admin/shipping/cities/**").hasAuthority("SHIPPING_MANAGE")
