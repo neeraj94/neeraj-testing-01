@@ -31,7 +31,7 @@ public class PublicBlogPostService {
     public PageResponse<PublicBlogPostDto> listPublished(int page, int size, String categorySlug, String search) {
         Pageable pageable = PageRequest.of(Math.max(page, 0), Math.max(size, 1), Sort.by(Sort.Direction.DESC, "publishedAt"));
         Specification<BlogPost> specification = Specification
-                .where((root, query, builder) -> builder.isTrue(root.get("published")))
+                .<BlogPost>where((root, query, builder) -> builder.isTrue(root.get("published")))
                 .and((root, query, builder) -> builder.isNotNull(root.get("publishedAt")));
         if (categorySlug != null && !categorySlug.isBlank()) {
             String normalized = categorySlug.trim().toLowerCase();
