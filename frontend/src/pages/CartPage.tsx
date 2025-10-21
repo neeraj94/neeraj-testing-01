@@ -20,6 +20,7 @@ const CartPage = () => {
   const { notify } = useToast();
   const cart = useAppSelector(selectCart);
   const source = useAppSelector(selectCartSource);
+  const auth = useAppSelector((state) => state.auth);
   const baseCurrency = useAppSelector(selectBaseCurrency);
   const currencyCode = baseCurrency ?? 'USD';
   const isAuthenticatedCart = source === 'authenticated';
@@ -242,7 +243,13 @@ const CartPage = () => {
                   type="button"
                   className="mt-6 w-full rounded-full bg-primary px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-primary/30 transition hover:-translate-y-0.5 hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-60"
                   disabled={cart.items.length === 0}
-                  onClick={() => navigate('/checkout')}
+                  onClick={() => {
+                    if (!auth.accessToken || auth.portal !== 'client') {
+                      navigate('/login', { state: { from: '/checkout' } });
+                      return;
+                    }
+                    navigate('/checkout');
+                  }}
                 >
                   Proceed to checkout
                 </button>
