@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @PublicEndpoint("Storefront coupon lookup")
-@RequestMapping(PublicApiPaths.expose("/public/coupons"))
+@RequestMapping({"/api/v1/public/coupons", "/api/v1/client/public/coupons"})
 public class PublicCouponController {
 
     private final CouponService couponService;

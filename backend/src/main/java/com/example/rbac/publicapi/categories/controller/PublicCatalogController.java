@@ -14,7 +14,7 @@ import java.util.List;
 
 @RestController
 @PublicEndpoint("Storefront catalog browser")
-@RequestMapping(PublicApiPaths.expose("/public/catalog"))
+@RequestMapping({"/api/v1/public/catalog", "/api/v1/client/public/catalog"})
 public class PublicCatalogController {
 
     private final CategoryService categoryService;

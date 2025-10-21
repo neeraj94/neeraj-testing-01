@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @PublicEndpoint("Storefront theme settings")
-@RequestMapping(PublicApiPaths.expose("/settings"))
+@RequestMapping({"/api/v1/settings", "/api/v1/client/settings"})
 public class SettingsThemeController {
 
     private final SettingsService settingsService;
