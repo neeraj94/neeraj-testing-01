@@ -118,7 +118,7 @@ public class PublicProductService {
                                                         Product currentProduct) {
         User viewer = principal != null ? principal.getUser() : null;
         List<Product> recentProducts;
-        if (viewer != null && viewer.getId() != null && hasAuthority(principal, "CUSTOMER_RECENTLY_VIEWED")) {
+        if (viewer != null && viewer.getId() != null && hasAuthority(principal, "CUSTOMER_VIEW_RECENTLY_VIEWED_PRODUCTS")) {
             userRecentViewService.synchronizeGuestRecentViews(viewer, guestRecentProductIds, currentProduct.getId());
             userRecentViewService.recordView(viewer, currentProduct);
             recentProducts = userRecentViewService.findRecentProductsForUser(viewer.getId(), currentProduct.getId());

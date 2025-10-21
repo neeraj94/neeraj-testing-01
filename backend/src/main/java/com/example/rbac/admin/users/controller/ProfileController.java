@@ -23,7 +23,7 @@ public class ProfileController {
     }
 
     @PutMapping
-    @PreAuthorize("hasAuthority('CUSTOMER_PROFILE_MANAGE')")
+    @PreAuthorize("hasAuthority('CUSTOMER_MANAGE_PROFILE')")
     public UserDto updateProfile(@AuthenticationPrincipal UserPrincipal principal,
                                  @Valid @RequestBody ProfileUpdateRequest request) {
         return userService.updateProfile(principal.getUser(), request);
