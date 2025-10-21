@@ -784,7 +784,9 @@ const UsersPage = ({
   const addressCountriesQuery = useQuery<CheckoutRegionOption[]>({
     queryKey: ['admin', 'users', 'addresses', 'countries'],
     queryFn: async () => {
-      const { data } = await adminApi.get<CheckoutRegionOption[]>('/checkout/regions/countries');
+      const { data } = await adminApi.get<CheckoutRegionOption[]>(
+        '/shipping/countries/options'
+      );
       return data;
     },
     enabled: panelMode === 'detail' && activeTab === 'addresses' && addressFormOpen
@@ -794,7 +796,7 @@ const UsersPage = ({
     queryKey: ['admin', 'users', 'addresses', 'states', addressForm.countryId],
     queryFn: async () => {
       const { data } = await adminApi.get<CheckoutRegionOption[]>(
-        `/checkout/regions/countries/${addressForm.countryId}/states`
+        `/shipping/countries/${addressForm.countryId}/states/options`
       );
       return data;
     },
@@ -809,7 +811,7 @@ const UsersPage = ({
     queryKey: ['admin', 'users', 'addresses', 'cities', addressForm.stateId],
     queryFn: async () => {
       const { data } = await adminApi.get<CheckoutRegionOption[]>(
-        `/checkout/regions/states/${addressForm.stateId}/cities`
+        `/shipping/states/${addressForm.stateId}/cities/options`
       );
       return data;
     },

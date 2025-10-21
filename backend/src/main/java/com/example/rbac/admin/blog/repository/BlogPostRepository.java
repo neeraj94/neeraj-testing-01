@@ -1,6 +1,6 @@
 package com.example.rbac.admin.blog.repository;
 
-import com.example.rbac.admin.blog.model.BlogPost;
+import com.example.rbac.common.blog.model.BlogPost;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
