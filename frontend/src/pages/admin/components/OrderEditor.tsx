@@ -1,25 +1,24 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { AdminOrderPayload, OrderDetail } from '../../../types/orders';
-import type { CheckoutAddress, CheckoutOrderLine, PaymentMethod } from '../../../types/checkout';
+import type {
+  AdminOrderCustomerOption,
+  AdminOrderPayload,
+  AdminOrderProductOption,
+  OrderDetail
+} from '../../../types/orders';
+import type { CheckoutAddress, CheckoutOrderLine, PaymentMethod, ShippingQuote } from '../../../types/checkout';
 import { adminApi } from '../../../services/http';
 import Spinner from '../../../components/Spinner';
 import Button from '../../../components/Button';
 import { formatCurrency } from '../../../utils/currency';
 import { extractErrorMessage } from '../../../utils/errors';
 import { useToast } from '../../../components/ToastProvider';
+import OrderProductSearchSelect from './OrderProductSearchSelect';
+import type { CouponSummary } from '../../../types/coupon';
+import type { Pagination } from '../../../types/models';
+import type { DiscountType } from '../../../types/product';
 
 type OrderEditorMode = 'create' | 'edit';
-
-type CustomerSummary = {
-  id: number;
-  name?: string | null;
-  email?: string | null;
-};
-
-type PagedResponse<T> = {
-  content?: T[];
-};
 
 type AddressFormState = {
   id: number | null;
@@ -48,6 +47,22 @@ type OrderLineFormState = {
   variantId: string;
   variantSku: string;
   variantLabel: string;
+  productSku: string;
+  productVariety: string;
+  productSlot: string;
+  brandName: string;
+  taxRateId: string;
+  taxRateName: string;
+  thumbnailUrl: string;
+  selectedProduct: AdminOrderProductOption | null;
+};
+
+type CouponOption = {
+  id: number;
+  name: string;
+  code?: string | null;
+  discountType: DiscountType;
+  discountValue: number;
 };
 
 const createLineKey = () => `line-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
@@ -94,7 +109,15 @@ const createEmptyLine = (): OrderLineFormState => ({
   productSlug: '',
   variantId: '',
   variantSku: '',
-  variantLabel: ''
+  variantLabel: '',
+  productSku: '',
+  productVariety: '',
+  productSlot: '',
+  brandName: '',
+  taxRateId: '',
+  taxRateName: '',
+  thumbnailUrl: '',
+  selectedProduct: null
 });
 
 const parseAmountInput = (value: string): number => {
@@ -116,6 +139,33 @@ const roundCurrency = (value: number): number => {
   }
   return Math.round(value * 100) / 100;
 };
+
+const formatLineProductLabel = (line: OrderLineFormState): string => {
+  const segments: string[] = [];
+  const productName = line.name.trim();
+  if (productName) {
+    segments.push(productName);
+  }
+  const variantLabel = line.variantLabel.trim();
+  const variantSku = line.variantSku.trim();
+  const variant = variantLabel || variantSku;
+  if (variant && !segments.some((segment) => segment.includes(variant))) {
+    segments.push(variant);
+  }
+  let label = segments.join(' · ');
+  const sku = variantSku || line.productSku.trim();
+  if (sku && !label.includes(sku)) {
+    label = label ? `${label} (${sku})` : sku;
+  }
+  return label;
+};
+
+const ReadOnlyField = ({ label, value }: { label: string; value: ReactNode }) => (
+  <div className="flex flex-col rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+    <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{label}</span>
+    <span className="mt-1 break-words text-sm font-medium text-slate-900">{value ?? '—'}</span>
+  </div>
+);
 
 const isAddressEmpty = (form: AddressFormState): boolean =>
   !form.fullName.trim() &&
@@ -220,38 +270,54 @@ const OrderEditor = ({ mode, baseCurrency, onCancel, onSaved, initialOrder }: Or
           (line.lineTotal != null && line.quantity
             ? Number(line.lineTotal) / line.quantity
             : 0);
+        const taxRatePercent = line.taxRate != null ? line.taxRate * 100 : null;
         return {
           key: createLineKey(),
           productId: line.productId != null ? String(line.productId) : '',
           name: line.name ?? '',
           quantity: line.quantity != null ? String(line.quantity) : '1',
-          unitPrice: unitPrice != null ? String(unitPrice) : '0',
-          taxRate: line.taxRate != null ? String(line.taxRate * 100) : '',
+          unitPrice: unitPrice != null ? Number(unitPrice).toFixed(2) : '0',
+          taxRate: taxRatePercent != null ? taxRatePercent.toFixed(2) : '',
           productSlug: line.productSlug ?? '',
           variantId: line.variantId != null ? String(line.variantId) : '',
           variantSku: line.variantSku ?? '',
-          variantLabel: line.variantLabel ?? ''
+          variantLabel: line.variantLabel ?? '',
+          productSku: line.variantSku ?? '',
+          productVariety: '',
+          productSlot: '',
+          brandName: '',
+          taxRateId: '',
+          taxRateName: '',
+          thumbnailUrl: '',
+          selectedProduct: null
         } as OrderLineFormState;
       });
     }
     return [createEmptyLine()];
   });
   const [formError, setFormError] = useState<string | null>(null);
+  const [shippingManuallyEdited, setShippingManuallyEdited] = useState(mode === 'edit');
+  const [isFetchingShippingQuote, setIsFetchingShippingQuote] = useState(false);
+  const [shippingQuoteError, setShippingQuoteError] = useState<string | null>(null);
+  const [selectedCouponId, setSelectedCouponId] = useState<number | null>(
+    initialOrder?.summary?.appliedCoupon?.id ?? null
+  );
+  const [discountManuallyEdited, setDiscountManuallyEdited] = useState(false);
   const [selectedPaymentMethodKey, setSelectedPaymentMethodKey] = useState(
     initialOrder?.paymentMethod?.key ?? ''
   );
   const [selectedShippingAddressId, setSelectedShippingAddressId] = useState('');
   const [selectedBillingAddressId, setSelectedBillingAddressId] = useState('');
 
-  const customersQuery = useQuery<CustomerSummary[]>({
+  const customersQuery = useQuery<AdminOrderCustomerOption[]>({
     queryKey: ['orders', 'admin', 'customers'],
-    enabled: mode === 'create',
     queryFn: async () => {
-      const { data } = await adminApi.get<PagedResponse<CustomerSummary>>('/customers', {
-        params: { page: 0, size: 100 }
+      const { data } = await adminApi.get<AdminOrderCustomerOption[]>('/orders/customers', {
+        params: { limit: 200 }
       });
-      return Array.isArray(data?.content) ? data.content : [];
-    }
+      return Array.isArray(data) ? data : [];
+    },
+    staleTime: 60_000
   });
 
   const addressesQuery = useQuery<CheckoutAddress[]>({
@@ -280,20 +346,81 @@ const OrderEditor = ({ mode, baseCurrency, onCancel, onSaved, initialOrder }: Or
     [paymentMethods, selectedPaymentMethodKey]
   );
 
+  const couponsQuery = useQuery<Pagination<CouponSummary>>({
+    queryKey: ['orders', 'admin', 'coupons', 'active'],
+    queryFn: async () => {
+      const { data } = await adminApi.get<Pagination<CouponSummary>>('/coupons', {
+        params: { state: 'ENABLED', page: 0, size: 100 }
+      });
+      return data;
+    },
+    staleTime: 60_000
+  });
+
+  const couponOptions = useMemo<CouponOption[]>(() => {
+    const available = couponsQuery.data?.content ?? [];
+    const mapped = available.map((coupon) => ({
+      id: coupon.id,
+      name: coupon.name,
+      code: coupon.code,
+      discountType: coupon.discountType,
+      discountValue: coupon.discountValue
+    }));
+    const applied = initialOrder?.summary?.appliedCoupon;
+    if (applied && applied.id != null && !mapped.some((coupon) => coupon.id === applied.id)) {
+      mapped.unshift({
+        id: applied.id,
+        name: applied.name ?? applied.code ?? 'Applied coupon',
+        code: applied.code ?? null,
+        discountType: applied.discountType as DiscountType,
+        discountValue:
+          applied.discountValue != null
+            ? applied.discountValue
+            : applied.discountAmount != null
+              ? applied.discountAmount
+              : 0
+      });
+    }
+    return mapped;
+  }, [couponsQuery.data, initialOrder]);
+
+  const selectedCoupon = useMemo(
+    () => (selectedCouponId != null ? couponOptions.find((coupon) => coupon.id === selectedCouponId) ?? null : null),
+    [couponOptions, selectedCouponId]
+  );
+
   useEffect(() => {
     if (billingSameAsShipping) {
       setBillingAddress({ ...shippingAddress });
     }
   }, [billingSameAsShipping, shippingAddress]);
 
-  const customers = customersQuery.data ?? [];
+  const customers = useMemo(() => {
+    const list = customersQuery.data ?? [];
+    if (mode === 'edit' && initialCustomerId != null && initialOrder) {
+      if (!list.some((customer) => customer.id === initialCustomerId)) {
+        return [
+          {
+            id: initialCustomerId,
+            fullName:
+              initialOrder.customerName ??
+              initialOrder.customerEmail ??
+              `Customer #${initialCustomerId}`,
+            email: initialOrder.customerEmail ?? null
+          },
+          ...list
+        ];
+      }
+    }
+    return list;
+  }, [customersQuery.data, mode, initialCustomerId, initialOrder]);
 
   useEffect(() => {
     if (mode === 'create' && customerId != null) {
       const selected = customers.find((customer) => customer.id === customerId);
       if (selected) {
         setCustomerEmail(selected.email ?? '');
-        setCustomerName(selected.name ?? '');
+        setCustomerName(selected.fullName ?? '');
       }
     }
   }, [mode, customerId, customers]);
@@ -326,6 +453,73 @@ const OrderEditor = ({ mode, baseCurrency, onCancel, onSaved, initialOrder }: Or
   const grandTotal = Math.max(0, productTotal + taxTotal + shippingTotal - discountTotal);
 
   const currency = baseCurrency ?? 'USD';
+
+  useEffect(() => {
+    if (!selectedCoupon || discountManuallyEdited) {
+      return;
+    }
+    const baseAmount = productTotal + taxTotal + shippingTotal;
+    if (!Number.isFinite(baseAmount)) {
+      return;
+    }
+    let computed =
+      selectedCoupon.discountType === 'PERCENTAGE'
+        ? (baseAmount * selectedCoupon.discountValue) / 100
+        : selectedCoupon.discountValue;
+    computed = Math.max(0, computed);
+    setDiscountInput(roundCurrency(computed).toFixed(2));
+  }, [selectedCoupon, productTotal, taxTotal, shippingTotal, discountManuallyEdited]);
+
+  useEffect(() => {
+    if (shippingManuallyEdited) {
+      return;
+    }
+    const countryId = parseOptionalNumber(shippingAddress.countryId);
+    const stateId = parseOptionalNumber(shippingAddress.stateId);
+    const cityId = parseOptionalNumber(shippingAddress.cityId);
+    if (countryId == null && stateId == null && cityId == null) {
+      return;
+    }
+    let cancelled = false;
+    const fetchQuote = async () => {
+      setIsFetchingShippingQuote(true);
+      setShippingQuoteError(null);
+      try {
+        const { data } = await adminApi.get<ShippingQuote>('/shipping/rates/quote', {
+          params: {
+            countryId: countryId ?? undefined,
+            stateId: stateId ?? undefined,
+            cityId: cityId ?? undefined
+          }
+        });
+        if (cancelled) {
+          return;
+        }
+        const total =
+          data?.effectiveCost ?? data?.cityCost ?? data?.stateCost ?? data?.countryCost ?? 0;
+        setShippingTotalInput(String(total ?? 0));
+      } catch (error) {
+        if (!cancelled) {
+          setShippingQuoteError(
+            extractErrorMessage(error, 'Unable to resolve shipping rate automatically.')
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setIsFetchingShippingQuote(false);
+        }
+      }
+    };
+    void fetchQuote();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    shippingAddress.countryId,
+    shippingAddress.stateId,
+    shippingAddress.cityId,
+    shippingManuallyEdited
+  ]);
 
   const mutation = useMutation<OrderDetail, unknown, AdminOrderPayload>({
     mutationFn: async (payload) => {
@@ -368,6 +562,43 @@ const OrderEditor = ({ mode, baseCurrency, onCancel, onSaved, initialOrder }: Or
     []
   );
 
+  const handleProductSelect = useCallback((key: string, option: AdminOrderProductOption) => {
+    setLines((current) =>
+      current.map((line) => {
+        if (line.key !== key) {
+          return line;
+        }
+        const existingQuantity = Number.parseInt(line.quantity, 10);
+        const safeQuantity = Number.isFinite(existingQuantity) && existingQuantity > 0
+          ? line.quantity
+          : '1';
+        return {
+          ...line,
+          selectedProduct: option,
+          productId: option.productId != null ? String(option.productId) : '',
+          name: option.productName,
+          productSlug: option.productSlug ?? '',
+          variantId: option.variantId != null ? String(option.variantId) : '',
+          variantSku: option.variantSku ?? '',
+          variantLabel: option.variantLabel ?? '',
+          productSku: option.variantSku ?? option.productSku ?? '',
+          productVariety: option.productVariety ?? '',
+          productSlot: option.productSlot ?? '',
+          brandName: option.brandName ?? '',
+          taxRateId: option.taxRateId != null ? String(option.taxRateId) : '',
+          taxRateName: option.taxRateName ?? '',
+          thumbnailUrl: option.thumbnailUrl ?? '',
+          unitPrice: Number(option.unitPrice ?? 0).toFixed(2),
+          taxRate:
+            option.taxRate != null && Number.isFinite(option.taxRate)
+              ? (option.taxRate * 100).toFixed(2)
+              : '',
+          quantity: safeQuantity
+        };
+      })
+    );
+  }, []);
+
   const handleRemoveLine = (key: string) => {
     setLines((current) => (current.length > 1 ? current.filter((line) => line.key !== key) : current));
   };
@@ -391,6 +622,7 @@ const OrderEditor = ({ mode, baseCurrency, onCancel, onSaved, initialOrder }: Or
       if (billingSameAsShipping) {
         setBillingAddress(toAddressFormState(address));
       }
+      setShippingManuallyEdited(false);
     } else {
       setBillingAddress(toAddressFormState(address));
       setBillingSameAsShipping(false);
@@ -425,10 +657,12 @@ const OrderEditor = ({ mode, baseCurrency, onCancel, onSaved, initialOrder }: Or
         setFormError('Each line item must include a product name.');
         return;
       }
-      const productId = line.productId.trim()
-        ? Number(line.productId.trim())
-        : undefined;
-      if (productId !== undefined && !Number.isFinite(productId)) {
+      if (!line.productId.trim()) {
+        setFormError('Each line item must reference a product from the catalog.');
+        return;
+      }
+      const productId = Number(line.productId.trim());
+      if (!Number.isFinite(productId)) {
         setFormError('Product IDs must be numeric.');
         return;
       }
@@ -559,7 +793,7 @@ const OrderEditor = ({ mode, baseCurrency, onCancel, onSaved, initialOrder }: Or
                     <option value="">Select a customer…</option>
                     {customers.map((customer) => (
                       <option key={customer.id} value={customer.id}>
-                        {customer.name ?? customer.email ?? `Customer #${customer.id}`}
+                        {customer.fullName ?? customer.email ?? `Customer #${customer.id}`}
                       </option>
                     ))}
                   </select>
@@ -868,111 +1102,118 @@ const OrderEditor = ({ mode, baseCurrency, onCancel, onSaved, initialOrder }: Or
           <div className="space-y-4">
             {lines.map((line, index) => {
               const summary = lineSummaries[index];
+              const initialLabel = line.selectedProduct ? undefined : formatLineProductLabel(line);
+              const thumbnailUrl = line.selectedProduct?.thumbnailUrl ?? line.thumbnailUrl;
+              const productSlug = line.productSlug.trim();
+              const productIdDisplay = line.productId.trim() || '—';
+              const variantIdDisplay = line.variantId.trim() || '—';
+              const skuDisplay = line.variantSku.trim() || line.productSku.trim() || '—';
+              const variantDisplay =
+                line.variantLabel.trim() || line.variantSku.trim() || 'Default configuration';
+              const varietyDisplay = line.productVariety.trim() || '—';
+              const slotDisplay = line.productSlot.trim() || '—';
+              const brandDisplay = line.brandName.trim() || '—';
+              const taxRateNameDisplay = line.taxRateName.trim() || '—';
+              const unitPriceNumber = Number(line.unitPrice);
+              const unitPriceDisplay = formatCurrency(
+                Number.isFinite(unitPriceNumber) && unitPriceNumber >= 0 ? unitPriceNumber : 0,
+                currency
+              );
+              const taxRateNumber = Number(line.taxRate);
+              const taxRateDisplay =
+                line.taxRate.trim().length > 0 && Number.isFinite(taxRateNumber)
+                  ? `${taxRateNumber.toFixed(2)}%`
+                  : '—';
+              const metadataFields: { label: string; value: ReactNode }[] = [
+                { label: 'Variant', value: variantDisplay },
+                { label: 'SKU', value: skuDisplay },
+                { label: 'Product ID', value: productIdDisplay },
+                { label: 'Variant ID', value: variantIdDisplay },
+                { label: 'Variety', value: varietyDisplay },
+                { label: 'Slot', value: slotDisplay },
+                { label: 'Brand', value: brandDisplay },
+                { label: 'Tax code', value: taxRateNameDisplay }
+              ];
               return (
-                <div key={line.key} className="space-y-3 rounded-xl border border-slate-200 p-4">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-semibold text-slate-800">Item {index + 1}</p>
-                    {lines.length > 1 ? (
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveLine(line.key)}
+                <div key={line.key} className="space-y-4 rounded-xl border border-slate-200 p-4">
+                  <div className="flex flex-col gap-3 border-b border-slate-100 pb-4 md:flex-row md:items-start md:justify-between">
+                    <div className="flex flex-1 gap-3">
+                      <div className="h-14 w-14 flex-shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-slate-100">
+                        {thumbnailUrl ? (
+                          <img src={thumbnailUrl} alt="" className="h-full w-full object-cover" />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-[11px] uppercase tracking-wide text-slate-400">
+                            No image
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1 space-y-2">
+                        <OrderProductSearchSelect
+                          selected={line.selectedProduct}
+                          initialLabel={initialLabel}
+                          disabled={isSaving}
+                          currencyCode={currency}
+                          onSelect={(option) => handleProductSelect(line.key, option)}
+                        />
+                        <p className="text-xs text-slate-500">
+                          {productSlug ? (
+                            <>
+                              Slug:{' '}
+                              <code className="font-mono text-[11px] text-slate-600">{productSlug}</code>
+                            </>
+                          ) : (
+                            'Search and select a product to populate pricing and tax details.'
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between gap-3 md:flex-col md:items-end">
+                      <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        Item {index + 1}
+                      </span>
+                      {lines.length > 1 ? (
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveLine(line.key)}
+                          disabled={isSaving}
+                          className="text-xs font-semibold text-rose-600 transition hover:text-rose-700"
+                        >
+                          Remove
+                        </button>
+                      ) : null}
+                    </div>
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    <div className="flex flex-col">
+                      <label className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                        Quantity
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        step="1"
+                        value={line.quantity}
+                        onChange={(event) => handleLineChange(line.key, 'quantity', event.target.value)}
                         disabled={isSaving}
-                        className="text-xs font-semibold text-rose-600 transition hover:text-rose-700"
-                      >
-                        Remove
-                      </button>
-                    ) : null}
+                        className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                      />
+                    </div>
+                    <ReadOnlyField label="Unit price" value={unitPriceDisplay} />
+                    <ReadOnlyField label="Tax rate" value={taxRateDisplay} />
+                    <ReadOnlyField
+                      label="Line subtotal"
+                      value={formatCurrency(summary.subtotal, currency)}
+                    />
+                    <ReadOnlyField
+                      label="Tax amount"
+                      value={formatCurrency(summary.taxAmount, currency)}
+                    />
+                    <ReadOnlyField label="Line total" value={formatCurrency(summary.total, currency)} />
                   </div>
-                  <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-                    <input
-                      type="text"
-                      placeholder="Product name"
-                      value={line.name}
-                      onChange={(event) => handleLineChange(line.key, 'name', event.target.value)}
-                      disabled={isSaving}
-                      className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary md:col-span-2 lg:col-span-1"
-                    />
-                    <input
-                      type="number"
-                      min="1"
-                      step="1"
-                      placeholder="Quantity"
-                      value={line.quantity}
-                      onChange={(event) => handleLineChange(line.key, 'quantity', event.target.value)}
-                      disabled={isSaving}
-                      className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-                    />
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      placeholder="Unit price"
-                      value={line.unitPrice}
-                      onChange={(event) => handleLineChange(line.key, 'unitPrice', event.target.value)}
-                      disabled={isSaving}
-                      className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-                    />
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      placeholder="Tax rate %"
-                      value={line.taxRate}
-                      onChange={(event) => handleLineChange(line.key, 'taxRate', event.target.value)}
-                      disabled={isSaving}
-                      className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-                    />
-                    <input
-                      type="text"
-                      placeholder="Product ID"
-                      value={line.productId}
-                      onChange={(event) => handleLineChange(line.key, 'productId', event.target.value)}
-                      disabled={isSaving}
-                      className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-                    />
-                    <input
-                      type="text"
-                      placeholder="Variant ID"
-                      value={line.variantId}
-                      onChange={(event) => handleLineChange(line.key, 'variantId', event.target.value)}
-                      disabled={isSaving}
-                      className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-                    />
-                    <input
-                      type="text"
-                      placeholder="Variant SKU"
-                      value={line.variantSku}
-                      onChange={(event) => handleLineChange(line.key, 'variantSku', event.target.value)}
-                      disabled={isSaving}
-                      className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-                    />
-                    <input
-                      type="text"
-                      placeholder="Variant label"
-                      value={line.variantLabel}
-                      onChange={(event) => handleLineChange(line.key, 'variantLabel', event.target.value)}
-                      disabled={isSaving}
-                      className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-                    />
-                    <input
-                      type="text"
-                      placeholder="Product slug"
-                      value={line.productSlug}
-                      onChange={(event) => handleLineChange(line.key, 'productSlug', event.target.value)}
-                      disabled={isSaving}
-                      className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-                    />
-                  </div>
-                  <div className="rounded-lg bg-slate-50 px-4 py-3 text-xs text-slate-600">
-                    <p>
-                      Subtotal: <span className="font-semibold text-slate-900">{formatCurrency(summary.subtotal, currency)}</span>
-                    </p>
-                    <p>
-                      Tax: <span className="font-semibold text-slate-900">{formatCurrency(summary.taxAmount, currency)}</span>
-                    </p>
-                    <p>
-                      Line total: <span className="font-semibold text-slate-900">{formatCurrency(summary.total, currency)}</span>
-                    </p>
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    {metadataFields.map((field) => (
+                      <ReadOnlyField key={field.label} label={field.label} value={field.value} />
+                    ))}
                   </div>
                 </div>
               );
@@ -980,7 +1221,7 @@ const OrderEditor = ({ mode, baseCurrency, onCancel, onSaved, initialOrder }: Or
           </div>
         </section>
 
-        <section className="grid gap-4 md:grid-cols-2">
+        <section className="grid gap-4 md:grid-cols-3">
           <div className="space-y-2">
             <label className="text-sm font-semibold text-slate-800" htmlFor="order-shipping-total">
               Shipping total
@@ -991,10 +1232,22 @@ const OrderEditor = ({ mode, baseCurrency, onCancel, onSaved, initialOrder }: Or
               min="0"
               step="0.01"
               value={shippingTotalInput}
-              onChange={(event) => setShippingTotalInput(event.target.value)}
+              onChange={(event) => {
+                setShippingTotalInput(event.target.value);
+                setShippingManuallyEdited(true);
+              }}
               disabled={isSaving}
               className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
             />
+            {isFetchingShippingQuote ? (
+              <p className="text-xs text-slate-500">Fetching shipping estimate…</p>
+            ) : shippingQuoteError ? (
+              <p className="text-xs text-rose-600">{shippingQuoteError}</p>
+            ) : !shippingManuallyEdited ? (
+              <p className="text-xs text-slate-500">
+                Automatically updates from the selected shipping address.
+              </p>
+            ) : null}
           </div>
           <div className="space-y-2">
             <label className="text-sm font-semibold text-slate-800" htmlFor="order-discount-total">
@@ -1006,10 +1259,61 @@ const OrderEditor = ({ mode, baseCurrency, onCancel, onSaved, initialOrder }: Or
               min="0"
               step="0.01"
               value={discountInput}
-              onChange={(event) => setDiscountInput(event.target.value)}
+              onChange={(event) => {
+                setDiscountInput(event.target.value);
+                setDiscountManuallyEdited(true);
+              }}
               disabled={isSaving}
               className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
             />
+            {selectedCoupon && !discountManuallyEdited ? (
+              <p className="text-xs text-slate-500">
+                Calculated from coupon “{selectedCoupon.name}”.
+              </p>
+            ) : null}
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-slate-800" htmlFor="order-coupon">
+              Discount / Coupon
+            </label>
+            {couponsQuery.isLoading ? (
+              <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500">
+                <Spinner size="sm" /> Loading coupons…
+              </div>
+            ) : (
+              <select
+                id="order-coupon"
+                value={selectedCouponId ?? ''}
+                onChange={(event) => {
+                  const value = event.target.value;
+                  if (!value) {
+                    setSelectedCouponId(null);
+                    setDiscountInput('0');
+                    setDiscountManuallyEdited(false);
+                    return;
+                  }
+                  setSelectedCouponId(Number(value));
+                  setDiscountManuallyEdited(false);
+                }}
+                disabled={isSaving || !!couponsQuery.error}
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+              >
+                <option value="">No coupon</option>
+                {couponOptions.map((coupon) => (
+                  <option key={coupon.id} value={coupon.id}>
+                    {coupon.name} ·{' '}
+                    {coupon.discountType === 'PERCENTAGE'
+                      ? `${coupon.discountValue}%`
+                      : `-${formatCurrency(coupon.discountValue, currency)}`}
+                  </option>
+                ))}
+              </select>
+            )}
+            {couponsQuery.error ? (
+              <p className="text-xs text-rose-600">
+                {extractErrorMessage(couponsQuery.error, 'Unable to load coupons.')}
+              </p>
+            ) : null}
           </div>
         </section>
 
