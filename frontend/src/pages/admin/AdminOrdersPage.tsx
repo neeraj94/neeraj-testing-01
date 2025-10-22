@@ -102,6 +102,13 @@ const toTitleCase = (value: string) =>
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(' ');
 
+const toTitleCase = (value: string) =>
+  value
+    .toLowerCase()
+    .split(' ')
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+
 const AdminOrdersPage = () => {
   const baseCurrency = useAppSelector(selectBaseCurrency);
   const permissions = (useAppSelector((state) => state.auth.permissions) ?? []) as PermissionKey[];
