@@ -1,6 +1,6 @@
 package com.example.rbac.admin.checkout.dto;
 
-import com.example.rbac.admin.products.model.DiscountType;
+import com.example.rbac.admin.coupons.model.DiscountType;
 
 import java.math.BigDecimal;
 
