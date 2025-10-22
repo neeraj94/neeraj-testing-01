@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import StorefrontHeader from '../components/StorefrontHeader';
 import { api } from '../services/http';
 import type { StorefrontProductListItem, StorefrontProductSearchResponse } from '../types/storefront';
 import type { PublicCategory } from '../types/category';
@@ -279,10 +278,7 @@ const EcommerceHomePage = () => {
   );
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
-      <StorefrontHeader activeKey="home" />
-
-      <main>
+    <div className="space-y-20 pb-20 pt-10 text-slate-900">
         <section className="border-b border-slate-200 bg-white">
           <div className="mx-auto grid max-w-6xl gap-10 px-6 py-16 lg:grid-cols-[2fr,1fr]">
             <div className="relative overflow-hidden rounded-3xl border border-slate-200 bg-slate-900 text-white">
@@ -600,27 +596,6 @@ const EcommerceHomePage = () => {
             </form>
           </div>
         </section>
-      </main>
-
-      <footer className="border-t border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-6xl flex-col gap-6 px-6 py-10 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between">
-          <div>© {new Date().getFullYear()} Aurora Market. Crafted with purpose.</div>
-          <div className="flex flex-wrap items-center gap-4">
-            <a href="#" className="hover:text-slate-900">
-              Privacy Policy
-            </a>
-            <a href="#" className="hover:text-slate-900">
-              Terms
-            </a>
-            <a href="#" className="hover:text-slate-900">
-              Instagram
-            </a>
-            <a href="#" className="hover:text-slate-900">
-              Pinterest
-            </a>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 };

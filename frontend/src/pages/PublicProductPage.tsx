@@ -9,7 +9,6 @@ import { addCartItem, addGuestItem } from '../features/cart/cartSlice';
 import { useToast } from '../components/ToastProvider';
 import { selectBaseCurrency } from '../features/settings/selectors';
 import { formatCurrency as formatCurrencyValue } from '../utils/currency';
-import StorefrontHeader from '../components/StorefrontHeader';
 import type {
   PublicProductDetail,
   PublicProductOffer,
@@ -287,10 +286,9 @@ const PublicProductPage = () => {
   const canLoadMoreReviews = Boolean(product && reviewLimit < product.reviews.length);
 
   return (
-    <div className="min-h-screen bg-[#EEF2F7] text-slate-900">
-      <StorefrontHeader activeKey="products" />
+    <div className="min-h-screen bg-[#EEF2F7] pb-20 pt-12 text-slate-900">
 
-      <main className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
+      <div className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
         {productQuery.isLoading && (
           <div className="rounded-2xl border border-slate-200 bg-white p-16 text-center text-sm text-slate-500 shadow-sm">
             Loading product details…
@@ -544,7 +542,7 @@ const PublicProductPage = () => {
             )}
           </div>
         )}
-      </main>
+      </div>
     </div>
   );
 };

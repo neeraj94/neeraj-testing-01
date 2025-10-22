@@ -1,7 +1,6 @@
 import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import StorefrontHeader from '../components/StorefrontHeader';
 import Spinner from '../components/Spinner';
 import { useToast } from '../components/ToastProvider';
 import { useAppSelector } from '../app/hooks';
@@ -88,9 +87,8 @@ const MyOrdersPage = () => {
   const hasOrders = orders.length > 0;
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-16">
-      <StorefrontHeader />
-      <main className="mx-auto max-w-5xl px-4 py-10 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-slate-50 pb-20 pt-12">
+      <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 lg:px-8">
         <section className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
           <header className="border-b border-slate-200 pb-6">
             <h1 className="text-3xl font-semibold text-slate-900">My orders</h1>
@@ -175,7 +173,7 @@ const MyOrdersPage = () => {
             )}
           </div>
         </section>
-      </main>
+      </div>
     </div>
   );
 };

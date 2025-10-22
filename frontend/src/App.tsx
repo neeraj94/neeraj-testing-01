@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import Layout from './components/Layout';
+import StorefrontLayout from './components/StorefrontLayout';
 import AdminLoginPage from './pages/admin/AdminLoginPage';
 import CustomerLoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
@@ -59,6 +60,10 @@ import OrderConfirmationPage from './pages/OrderConfirmationPage';
 import MyAccountPage from './pages/MyAccountPage';
 import MyOrdersPage from './pages/MyOrdersPage';
 import CustomerOrderDetailPage from './pages/CustomerOrderDetailPage';
+import ContactPage from './pages/ContactPage';
+import TermsPage from './pages/TermsPage';
+import PrivacyPage from './pages/PrivacyPage';
+import RefundPolicyPage from './pages/RefundPolicyPage';
 import AdminPaymentPage from './pages/admin/AdminPaymentPage';
 import AdminOrdersPage from './pages/admin/AdminOrdersPage';
 import AdminOrderEditorPage from './pages/admin/AdminOrderEditorPage';
@@ -160,9 +165,16 @@ const App = () => {
     '/brands',
     '/products',
     '/products/showcase',
-    '/coupons'
+    '/coupons',
+    '/cart',
+    '/checkout',
+    '/order-confirmation',
+    '/contact',
+    '/terms',
+    '/privacy',
+    '/refunds'
   ];
-  const publicPrefixes = ['/blog', '/product', '/products'];
+  const publicPrefixes = ['/blog', '/product', '/products', '/order-confirmation'];
   const isPublicRoute =
     publicExact.includes(location.pathname) ||
     publicPrefixes.some((prefix) =>
@@ -179,27 +191,33 @@ const App = () => {
 
   return (
     <Routes>
-      <Route path="/" element={<EcommerceHomePage />} />
-      <Route path="/admin/login" element={<AdminLoginPage />} />
-      <Route path="/login" element={<CustomerLoginPage />} />
-      <Route path="/signup" element={<SignupPage />} />
-      <Route path="/verify-account" element={<VerifyAccountPage />} />
-      <Route path="/blog" element={<PublicBlogListPage />} />
-      <Route path="/blog/:slug" element={<PublicBlogPostPage />} />
-      <Route path="/categories" element={<PublicCategoriesPage />} />
-      <Route path="/brands" element={<PublicBrandsPage />} />
-      <Route path="/products" element={<PublicProductsPage />} />
-      <Route path="/coupons" element={<PublicCouponsPage />} />
-      <Route path="/cart" element={<CartPage />} />
-      <Route path="/checkout" element={<CheckoutPage />} />
-      <Route path="/order-confirmation/:orderId" element={<OrderConfirmationPage />} />
-      <Route path="/products/showcase" element={<Navigate to="/product/demo-product" replace />} />
-      <Route path="/product/:slug" element={<PublicProductPage />} />
-      <Route element={<CustomerRoute />}>
-        <Route path="/account" element={<MyAccountPage />} />
-        <Route path="/account/orders" element={<MyOrdersPage />} />
-        <Route path="/account/orders/:orderId" element={<CustomerOrderDetailPage />} />
+      <Route element={<StorefrontLayout />}>
+        <Route path="/" element={<EcommerceHomePage />} />
+        <Route path="/login" element={<CustomerLoginPage />} />
+        <Route path="/signup" element={<SignupPage />} />
+        <Route path="/verify-account" element={<VerifyAccountPage />} />
+        <Route path="/blog" element={<PublicBlogListPage />} />
+        <Route path="/blog/:slug" element={<PublicBlogPostPage />} />
+        <Route path="/categories" element={<PublicCategoriesPage />} />
+        <Route path="/brands" element={<PublicBrandsPage />} />
+        <Route path="/products" element={<PublicProductsPage />} />
+        <Route path="/coupons" element={<PublicCouponsPage />} />
+        <Route path="/cart" element={<CartPage />} />
+        <Route path="/checkout" element={<CheckoutPage />} />
+        <Route path="/order-confirmation/:orderId" element={<OrderConfirmationPage />} />
+        <Route path="/products/showcase" element={<Navigate to="/product/demo-product" replace />} />
+        <Route path="/product/:slug" element={<PublicProductPage />} />
+        <Route path="/contact" element={<ContactPage />} />
+        <Route path="/terms" element={<TermsPage />} />
+        <Route path="/privacy" element={<PrivacyPage />} />
+        <Route path="/refunds" element={<RefundPolicyPage />} />
+        <Route element={<CustomerRoute />}>
+          <Route path="/account" element={<MyAccountPage />} />
+          <Route path="/account/orders" element={<MyOrdersPage />} />
+          <Route path="/account/orders/:orderId" element={<CustomerOrderDetailPage />} />
+        </Route>
       </Route>
+      <Route path="/admin/login" element={<AdminLoginPage />} />
       <Route element={<ProtectedRoute />}>
         <Route path="/admin" element={<Layout />}>
           <Route index element={<Navigate to="dashboard" replace />} />
@@ -332,7 +350,7 @@ const App = () => {
           <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Route>
-      <Route path="*" element={<Navigate to="/admin/login" replace />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 };

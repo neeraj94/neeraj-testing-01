@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../services/http';
 import type { BlogCategory, PublicBlogPost, PublicBlogPostPage } from '../types/blog';
-import StorefrontHeader from '../components/StorefrontHeader';
 
 const DEFAULT_PAGE_SIZE = 9;
 
@@ -87,8 +86,7 @@ const PublicBlogListPage = () => {
   const cards = useMemo(() => postsQuery.data?.content ?? [], [postsQuery.data?.content]);
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <StorefrontHeader activeKey="blog" />
+    <div className="min-h-screen bg-slate-50 pb-20 pt-12">
 
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-6xl flex-col gap-4 px-6 py-10 sm:flex-row sm:items-center sm:justify-between">
@@ -123,7 +121,7 @@ const PublicBlogListPage = () => {
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-6 py-10">
+      <div className="mx-auto max-w-6xl px-6 py-10">
         <div className="mb-6 flex items-center justify-between text-sm text-slate-500">
           <span>
             Showing {showingFrom}-{showingTo} of {totalElements}
@@ -216,7 +214,7 @@ const PublicBlogListPage = () => {
             Next
           </button>
         </div>
-      </main>
+      </div>
     </div>
   );
 };

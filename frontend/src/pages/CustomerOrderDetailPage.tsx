@@ -1,7 +1,6 @@
 import { useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import StorefrontHeader from '../components/StorefrontHeader';
 import OrderStatusTracker from '../components/orders/OrderStatusTracker';
 import Spinner from '../components/Spinner';
 import { useToast } from '../components/ToastProvider';
@@ -67,9 +66,8 @@ const CustomerOrderDetailPage = () => {
     : null;
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-16">
-      <StorefrontHeader />
-      <main className="mx-auto max-w-5xl px-4 py-10 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-slate-50 pb-20 pt-12">
+      <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 lg:px-8">
         <Link
           to="/account/orders"
           className="inline-flex items-center gap-2 text-sm font-semibold text-primary transition hover:text-primary/80"
@@ -241,7 +239,7 @@ const CustomerOrderDetailPage = () => {
             to select a different order.
           </div>
         )}
-      </main>
+      </div>
     </div>
   );
 };

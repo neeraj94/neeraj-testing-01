@@ -1,6 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import StorefrontHeader from '../components/StorefrontHeader';
 import Button from '../components/Button';
 import Spinner from '../components/Spinner';
 import { useAppDispatch, useAppSelector } from '../app/hooks';
@@ -345,9 +344,8 @@ const MyAccountPage = () => {
   const addressSubmitting = createAddressMutation.isPending || updateAddressMutation.isPending;
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-16">
-      <StorefrontHeader />
-      <main className="mx-auto max-w-5xl px-4 py-10 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-slate-50 pb-20 pt-12">
+      <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 lg:px-8">
         <section className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
           <header className="border-b border-slate-200 pb-6">
             <h1 className="text-3xl font-semibold text-slate-900">My Account</h1>
@@ -739,7 +737,7 @@ const MyAccountPage = () => {
             </form>
           )}
         </section>
-      </main>
+      </div>
     </div>
   );
 };
