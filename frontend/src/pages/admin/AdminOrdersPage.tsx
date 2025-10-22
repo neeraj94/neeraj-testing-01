@@ -42,20 +42,73 @@ const normalizeOrdersResponse = (payload: unknown): OrderListItem[] => {
   return [];
 };
 
-const isPlainRecord = (value: unknown): value is Record<string, unknown> =>
+const normalizeOrderDetailResponse = (payload: unknown): OrderDetail | null => {
+  if (Array.isArray(payload)) {
+    return payload.length ? normalizeOrderDetailResponse(payload[0]) : null;
+  }
+
+  if (isRecord(payload)) {
+    if (payload.data) {
+      return normalizeOrderDetailResponse(payload.data);
+    }
+
+    if (typeof payload.id === 'number') {
+      const detailRecord = payload as Record<string, unknown>;
+      const lines = Array.isArray(detailRecord.lines)
+        ? (detailRecord.lines as unknown as OrderDetail['lines'])
+        : [];
+      const summary = isRecord(detailRecord.summary)
+        ? (detailRecord.summary as unknown as OrderDetail['summary'])
+        : null;
+      const shippingAddress = isRecord(detailRecord.shippingAddress)
+        ? (detailRecord.shippingAddress as unknown as OrderDetail['shippingAddress'])
+        : null;
+      const billingAddress = isRecord(detailRecord.billingAddress)
+        ? (detailRecord.billingAddress as unknown as OrderDetail['billingAddress'])
+        : null;
+      const paymentMethod = isRecord(detailRecord.paymentMethod)
+        ? (detailRecord.paymentMethod as unknown as OrderDetail['paymentMethod'])
+        : null;
+
+      return {
+        ...(detailRecord as unknown as OrderDetail),
+        lines,
+        summary,
+        shippingAddress,
+        billingAddress,
+        paymentMethod
+      };
+    }
+  }
+
+  return null;
+};
+
+const formatDateTime = (value: string | null | undefined) => {
+  if (!value) {
+    return 'Unknown date';
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return 'Unknown date';
+  }
+  return date.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+};
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null;
 
 const normalizeOrdersResponse = (payload: unknown): OrderListItem[] => {
   if (Array.isArray(payload)) {
     return payload
-      .filter((item): item is OrderListItem => isPlainRecord(item) && typeof item.id === 'number')
+      .filter((item): item is OrderListItem => isRecord(item) && typeof item.id === 'number')
       .map((item) => ({
         ...item,
         lines: Array.isArray(item.lines) ? item.lines : []
       }));
   }
 
-  if (isPlainRecord(payload)) {
+  if (isRecord(payload)) {
     if (Array.isArray(payload.data)) {
       return normalizeOrdersResponse(payload.data);
     }
@@ -72,7 +125,7 @@ const normalizeOrderDetailResponse = (payload: unknown): OrderDetail | null => {
     return payload.length ? normalizeOrderDetailResponse(payload[0]) : null;
   }
 
-  if (isPlainRecord(payload)) {
+  if (isRecord(payload)) {
     if (payload.data) {
       return normalizeOrderDetailResponse(payload.data);
     }
@@ -82,16 +135,16 @@ const normalizeOrderDetailResponse = (payload: unknown): OrderDetail | null => {
       const lines = Array.isArray(detailRecord.lines)
         ? (detailRecord.lines as unknown as OrderDetail['lines'])
         : [];
-      const summary = isPlainRecord(detailRecord.summary)
+      const summary = isRecord(detailRecord.summary)
         ? (detailRecord.summary as unknown as OrderDetail['summary'])
         : null;
-      const shippingAddress = isPlainRecord(detailRecord.shippingAddress)
+      const shippingAddress = isRecord(detailRecord.shippingAddress)
         ? (detailRecord.shippingAddress as unknown as OrderDetail['shippingAddress'])
         : null;
-      const billingAddress = isPlainRecord(detailRecord.billingAddress)
+      const billingAddress = isRecord(detailRecord.billingAddress)
         ? (detailRecord.billingAddress as unknown as OrderDetail['billingAddress'])
         : null;
-      const paymentMethod = isPlainRecord(detailRecord.paymentMethod)
+      const paymentMethod = isRecord(detailRecord.paymentMethod)
         ? (detailRecord.paymentMethod as unknown as OrderDetail['paymentMethod'])
         : null;
 
@@ -142,31 +195,6 @@ const AdminOrdersPage = () => {
   const [detailOrderId, setDetailOrderId] = useState<number | null>(null);
   const [deletingOrderId, setDeletingOrderId] = useState<number | null>(null);
   const [editorState, setEditorState] = useState<EditorState | null>(null);
-
-  const fetchOrderDetail = useCallback(async (orderId: number) => {
-    const { data } = await adminApi.get<unknown>(`/orders/${orderId}`);
-    return normalizeOrderDetailResponse(data);
-  }, []);
-
-  const ordersQuery = useQuery<OrderListItem[]>({
-    queryKey: ['orders', 'admin'],
-    enabled: canViewOrders,
-    queryFn: async () => {
-      const { data } = await adminApi.get<unknown>('/orders');
-      return normalizeOrdersResponse(data);
-    }
-  });
-
-  const orderDetailQuery = useQuery<OrderDetail | null>({
-    queryKey: ['orders', 'admin', 'detail', detailOrderId],
-    enabled: detailOrderId != null,
-    queryFn: async () => {
-      if (detailOrderId == null) {
-        return null;
-      }
-      return fetchOrderDetail(detailOrderId);
-    }
-  });
 
   const fetchOrderDetail = useCallback(async (orderId: number) => {
     const { data } = await adminApi.get<unknown>(`/orders/${orderId}`);
