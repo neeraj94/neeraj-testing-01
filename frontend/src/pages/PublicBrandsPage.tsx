@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../services/http';
 import type { PublicBrand } from '../types/brand';
-import StorefrontHeader from '../components/StorefrontHeader';
 
 const PublicBrandsPage = () => {
   const [search, setSearch] = useState('');
@@ -29,8 +28,7 @@ const PublicBrandsPage = () => {
   }, [brands, search]);
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
-      <StorefrontHeader activeKey="brands" />
+    <div className="bg-slate-50 text-slate-900">
 
       <main>
         <section className="border-b border-slate-200 bg-white">
