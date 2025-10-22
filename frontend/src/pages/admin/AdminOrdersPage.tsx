@@ -4,7 +4,7 @@ import DataTable from '../../components/DataTable';
 import Spinner from '../../components/Spinner';
 import Button from '../../components/Button';
 import OrderDetailPanel from '../../components/orders/OrderDetailPanel';
-import OrderEditorModal from './components/OrderEditor';
+import OrderEditor from './components/OrderEditor';
 import { adminApi } from '../../services/http';
 import type { OrderDetail, OrderListItem } from '../../types/orders';
 import type { PermissionKey } from '../../types/auth';
@@ -16,84 +16,6 @@ import { hasAnyPermission } from '../../utils/permissions';
 import { useToast } from '../../components/ToastProvider';
 import { useConfirm } from '../../components/ConfirmDialogProvider';
 import OrderEditor from './components/OrderEditor';
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null;
-
-const normalizeOrdersResponse = (payload: unknown): OrderListItem[] => {
-  if (Array.isArray(payload)) {
-    return payload
-      .filter((item): item is OrderListItem => isRecord(item) && typeof item.id === 'number')
-      .map((item) => ({
-        ...item,
-        lines: Array.isArray(item.lines) ? item.lines : []
-      }));
-  }
-
-  if (isRecord(payload)) {
-    if (Array.isArray(payload.data)) {
-      return normalizeOrdersResponse(payload.data);
-    }
-    if (Array.isArray(payload.content)) {
-      return normalizeOrdersResponse(payload.content);
-    }
-  }
-
-  return [];
-};
-
-const normalizeOrderDetailResponse = (payload: unknown): OrderDetail | null => {
-  if (Array.isArray(payload)) {
-    return payload.length ? normalizeOrderDetailResponse(payload[0]) : null;
-  }
-
-  if (isRecord(payload)) {
-    if (payload.data) {
-      return normalizeOrderDetailResponse(payload.data);
-    }
-
-    if (typeof payload.id === 'number') {
-      const detailRecord = payload as Record<string, unknown>;
-      const lines = Array.isArray(detailRecord.lines)
-        ? (detailRecord.lines as unknown as OrderDetail['lines'])
-        : [];
-      const summary = isRecord(detailRecord.summary)
-        ? (detailRecord.summary as unknown as OrderDetail['summary'])
-        : null;
-      const shippingAddress = isRecord(detailRecord.shippingAddress)
-        ? (detailRecord.shippingAddress as unknown as OrderDetail['shippingAddress'])
-        : null;
-      const billingAddress = isRecord(detailRecord.billingAddress)
-        ? (detailRecord.billingAddress as unknown as OrderDetail['billingAddress'])
-        : null;
-      const paymentMethod = isRecord(detailRecord.paymentMethod)
-        ? (detailRecord.paymentMethod as unknown as OrderDetail['paymentMethod'])
-        : null;
-
-      return {
-        ...(detailRecord as unknown as OrderDetail),
-        lines,
-        summary,
-        shippingAddress,
-        billingAddress,
-        paymentMethod
-      };
-    }
-  }
-
-  return null;
-};
-
-const formatDateTime = (value: string | null | undefined) => {
-  if (!value) {
-    return 'Unknown date';
-  }
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return 'Unknown date';
-  }
-  return date.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
-};
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null;
@@ -221,31 +143,6 @@ const AdminOrdersPage = () => {
     }
   });
 
-  const fetchOrderDetail = useCallback(async (orderId: number) => {
-    const { data } = await adminApi.get<unknown>(`/orders/${orderId}`);
-    return normalizeOrderDetailResponse(data);
-  }, []);
-
-  const ordersQuery = useQuery<OrderListItem[]>({
-    queryKey: ['orders', 'admin'],
-    enabled: canViewOrders,
-    queryFn: async () => {
-      const { data } = await adminApi.get<unknown>('/orders');
-      return normalizeOrdersResponse(data);
-    }
-  });
-
-  const orderDetailQuery = useQuery<OrderDetail | null>({
-    queryKey: ['orders', 'admin', 'detail', detailOrderId],
-    enabled: detailOrderId != null,
-    queryFn: async () => {
-      if (detailOrderId == null) {
-        return null;
-      }
-      return fetchOrderDetail(detailOrderId);
-    }
-  });
-
   const deleteOrderMutation = useMutation({
     mutationFn: async (orderId: number) => {
       await adminApi.delete(`/orders/${orderId}`);
@@ -331,6 +228,23 @@ const AdminOrdersPage = () => {
     },
     [fetchOrderDetail, notify, queryClient]
   );
+
+  if (!canViewOrders) {
+    return (
+      <div className="space-y-4 rounded-3xl border border-amber-200 bg-amber-50/80 p-10 text-center shadow">
+        <h1 className="text-xl font-semibold text-amber-800">Orders access is restricted</h1>
+        <p className="text-sm text-amber-700">
+          You do not have permission to view orders. Contact an administrator if you believe this is a mistake.
+        </p>
+      </div>
+    );
+  }
+
+  useEffect(() => {
+    if (editorState?.type === 'edit' && editorState.orderId !== selectedOrderId) {
+      setEditorState(null);
+    }
+  }, [editorState, selectedOrderId]);
 
   if (!canViewOrders) {
     return (
@@ -551,7 +465,7 @@ const AdminOrdersPage = () => {
       {editorState && (
         <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/60 px-4 py-10">
           <div className="w-full max-w-5xl">
-            <OrderEditorModal
+            <OrderEditor
               mode={editorState.type === 'create' ? 'create' : 'edit'}
               baseCurrency={baseCurrency}
               initialOrder={editorState.type === 'edit' ? editorState.order : undefined}
