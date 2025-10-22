@@ -1,6 +1,8 @@
 package com.example.rbac.admin.checkout.dto;
 
 import java.math.BigDecimal;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * Represents a purchasable product (and optionally variant) that can be added to an admin order.
@@ -20,6 +22,9 @@ public class AdminOrderProductOptionDto {
     private String variantSku;
     private String variantLabel;
     private String variantKey;
+
+    private boolean hasVariants;
+    private List<AdminOrderProductVariantOptionDto> variants = Collections.emptyList();
 
     private Long taxRateId;
     private String taxRateName;
@@ -153,5 +158,21 @@ public class AdminOrderProductOptionDto {
 
     public void setUnitPrice(BigDecimal unitPrice) {
         this.unitPrice = unitPrice;
+    }
+
+    public boolean isHasVariants() {
+        return hasVariants;
+    }
+
+    public void setHasVariants(boolean hasVariants) {
+        this.hasVariants = hasVariants;
+    }
+
+    public List<AdminOrderProductVariantOptionDto> getVariants() {
+        return variants;
+    }
+
+    public void setVariants(List<AdminOrderProductVariantOptionDto> variants) {
+        this.variants = variants != null ? variants : Collections.emptyList();
     }
 }

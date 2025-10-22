@@ -10,6 +10,7 @@ import com.example.rbac.admin.products.dto.ProductDto;
 import com.example.rbac.admin.products.dto.ProductTaxRateDto;
 import com.example.rbac.admin.products.dto.ProductVariantDto;
 import com.example.rbac.admin.products.dto.ProductVariantValueDto;
+import com.example.rbac.admin.checkout.dto.AdminOrderProductVariantOptionDto;
 import com.example.rbac.admin.products.model.Product;
 import com.example.rbac.admin.products.repository.ProductRepository;
 import com.example.rbac.admin.products.service.ProductService;
@@ -139,6 +140,20 @@ public class OrderAdminService {
             }
         }
         return options;
+    }
+
+    @Transactional(readOnly = true)
+    public List<AdminOrderProductOptionDto> getProductOptions(Long productId) {
+        if (productId == null) {
+            return Collections.emptyList();
+        }
+        try {
+            ProductDto detail = productService.get(productId);
+            return toProductOptions(detail);
+        } catch (Exception ex) {
+            LOGGER.warn("Unable to load product {} for order selection", productId, ex);
+            return Collections.emptyList();
+        }
     }
 
     @Transactional
@@ -276,28 +291,51 @@ public class OrderAdminService {
         List<AdminOrderProductOptionDto> options = new ArrayList<>();
         List<ProductVariantDto> variants = detail.getVariants();
         if (!CollectionUtils.isEmpty(variants)) {
-            for (ProductVariantDto variant : variants) {
-                if (variant == null) {
-                    continue;
-                }
+            List<AdminOrderProductVariantOptionDto> variantOptions = buildVariantOptions(variants, normalizedBasePrice);
+            for (AdminOrderProductVariantOptionDto variantOption : variantOptions) {
                 AdminOrderProductOptionDto option = createBaseProductOption(detail, taxRateDto, taxRate, categoryName);
-                option.setVariantId(variant.getId());
-                option.setVariantSku(variant.getSku());
-                option.setVariantKey(variant.getKey());
-                option.setVariantLabel(buildVariantLabel(variant));
-                BigDecimal price = normalizedBasePrice;
-                if (variant.getPriceAdjustment() != null) {
-                    price = price.add(variant.getPriceAdjustment());
-                }
-                option.setUnitPrice(normalizeMoney(price));
+                option.setVariantId(variantOption.getId());
+                option.setVariantSku(variantOption.getSku());
+                option.setVariantKey(variantOption.getKey());
+                option.setVariantLabel(variantOption.getLabel());
+                option.setUnitPrice(variantOption.getUnitPrice());
+                option.setHasVariants(true);
+                option.setVariants(variantOptions);
                 options.add(option);
             }
         } else {
             AdminOrderProductOptionDto option = createBaseProductOption(detail, taxRateDto, taxRate, categoryName);
             option.setUnitPrice(normalizeMoney(basePrice));
+            option.setHasVariants(false);
+            option.setVariants(Collections.emptyList());
             options.add(option);
         }
         return options;
+    }
+
+    private List<AdminOrderProductVariantOptionDto> buildVariantOptions(List<ProductVariantDto> variants,
+                                                                        BigDecimal normalizedBasePrice) {
+        if (CollectionUtils.isEmpty(variants)) {
+            return Collections.emptyList();
+        }
+        List<AdminOrderProductVariantOptionDto> variantOptions = new ArrayList<>();
+        for (ProductVariantDto variant : variants) {
+            if (variant == null) {
+                continue;
+            }
+            AdminOrderProductVariantOptionDto dto = new AdminOrderProductVariantOptionDto();
+            dto.setId(variant.getId());
+            dto.setSku(variant.getSku());
+            dto.setKey(variant.getKey());
+            dto.setLabel(buildVariantLabel(variant));
+            BigDecimal price = normalizedBasePrice != null ? normalizedBasePrice : BigDecimal.ZERO;
+            if (variant.getPriceAdjustment() != null) {
+                price = price.add(variant.getPriceAdjustment());
+            }
+            dto.setUnitPrice(normalizeMoney(price));
+            variantOptions.add(dto);
+        }
+        return variantOptions;
     }
 
     private AdminOrderProductOptionDto createBaseProductOption(ProductDto detail,

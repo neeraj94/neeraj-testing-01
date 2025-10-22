@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type {
   AdminOrderCustomerOption,
   AdminOrderPayload,
   AdminOrderProductOption,
+  AdminOrderProductVariantOption,
   OrderDetail
 } from '../../../types/orders';
 import type { CheckoutAddress, CheckoutOrderLine, PaymentMethod, ShippingQuote } from '../../../types/checkout';
@@ -55,6 +56,7 @@ type OrderLineFormState = {
   taxRateName: string;
   thumbnailUrl: string;
   selectedProduct: AdminOrderProductOption | null;
+  variants: AdminOrderProductVariantOption[];
 };
 
 type CouponOption = {
@@ -117,7 +119,8 @@ const createEmptyLine = (): OrderLineFormState => ({
   taxRateId: '',
   taxRateName: '',
   thumbnailUrl: '',
-  selectedProduct: null
+  selectedProduct: null,
+  variants: []
 });
 
 const parseAmountInput = (value: string): number => {
@@ -166,6 +169,100 @@ const ReadOnlyField = ({ label, value }: { label: string; value: ReactNode }) =>
     <span className="mt-1 break-words text-sm font-medium text-slate-900">{value ?? '—'}</span>
   </div>
 );
+
+const sanitizeVariants = (
+  variants?: AdminOrderProductVariantOption[]
+): AdminOrderProductVariantOption[] => {
+  if (!Array.isArray(variants)) {
+    return [];
+  }
+  return variants
+    .filter((variant): variant is AdminOrderProductVariantOption => variant != null)
+    .map((variant) => ({
+      id: variant.id ?? null,
+      sku: variant.sku ?? null,
+      label: variant.label ?? null,
+      key: variant.key ?? variant.label ?? (variant.sku ? `sku:${variant.sku}` : null),
+      unitPrice: variant.unitPrice ?? null
+    }));
+};
+
+const resolveVariantValue = (variantId?: number | null, variantKey?: string | null): string => {
+  if (variantId != null) {
+    return String(variantId);
+  }
+  return variantKey?.trim() ?? '';
+};
+
+const expandProductOptions = (option: AdminOrderProductOption): AdminOrderProductOption[] => {
+  const variants = sanitizeVariants(option.variants);
+  if (!variants.length) {
+    return [{ ...option, variants }];
+  }
+  return variants.map((variant) => ({
+    ...option,
+    variantId: variant.id ?? null,
+    variantSku: variant.sku ?? option.variantSku ?? null,
+    variantLabel: variant.label ?? option.variantLabel ?? null,
+    variantKey: variant.key ?? option.variantKey ?? null,
+    unitPrice: variant.unitPrice ?? option.unitPrice,
+    variants
+  }));
+};
+
+const toLineFromOption = (
+  line: OrderLineFormState,
+  option: AdminOrderProductOption
+): OrderLineFormState => {
+  const sanitizedVariants = sanitizeVariants(option.variants);
+  const existingQuantity = Number.parseInt(line.quantity, 10);
+  const safeQuantity = Number.isFinite(existingQuantity) && existingQuantity > 0
+    ? line.quantity
+    : '1';
+  const unitPriceValue = Number(option.unitPrice ?? 0);
+  const unitPrice = Number.isFinite(unitPriceValue) ? unitPriceValue.toFixed(2) : '0';
+  const taxRateValue = option.taxRate != null && Number.isFinite(option.taxRate)
+    ? (option.taxRate * 100).toFixed(2)
+    : '';
+  const variantIdentifier = resolveVariantValue(option.variantId, option.variantKey);
+  return {
+    ...line,
+    selectedProduct: option,
+    productId: option.productId != null ? String(option.productId) : '',
+    name: option.productName,
+    productSlug: option.productSlug ?? '',
+    variantId: variantIdentifier,
+    variantSku: option.variantSku ?? '',
+    variantLabel: option.variantLabel ?? '',
+    productSku: option.variantSku ?? option.productSku ?? '',
+    productVariety: option.productVariety ?? '',
+    productSlot: option.productSlot ?? '',
+    brandName: option.brandName ?? '',
+    taxRateId: option.taxRateId != null ? String(option.taxRateId) : '',
+    taxRateName: option.taxRateName ?? '',
+    thumbnailUrl: option.thumbnailUrl ?? '',
+    unitPrice,
+    taxRate: taxRateValue,
+    quantity: safeQuantity,
+    variants: sanitizedVariants
+  };
+};
+
+const getVariantDisplayName = (variant: AdminOrderProductVariantOption): string => {
+  const label = variant.label?.trim();
+  if (label) {
+    return label;
+  }
+  const sku = variant.sku?.trim();
+  if (sku) {
+    return sku;
+  }
+  const key = variant.key?.trim();
+  if (key) {
+    return key;
+  }
+  return 'Default configuration';
+};
 
 const isAddressEmpty = (form: AddressFormState): boolean =>
   !form.fullName.trim() &&
@@ -235,16 +332,31 @@ type OrderEditorProps = {
   onCancel: () => void;
   onSaved: (order: OrderDetail) => void;
   initialOrder?: OrderDetail | null;
+  initialCustomer?: { id: number; fullName?: string | null; email?: string | null } | null;
 };
 
-const OrderEditor = ({ mode, baseCurrency, onCancel, onSaved, initialOrder }: OrderEditorProps) => {
+const OrderEditor = ({
+  mode,
+  baseCurrency,
+  onCancel,
+  onSaved,
+  initialOrder,
+  initialCustomer
+}: OrderEditorProps) => {
   const queryClient = useQueryClient();
   const { notify } = useToast();
 
-  const initialCustomerId = mode === 'edit' ? initialOrder?.customerId ?? null : null;
+  const initialCustomerId =
+    mode === 'edit'
+      ? initialOrder?.customerId ?? null
+      : initialCustomer?.id ?? null;
   const [customerId, setCustomerId] = useState<number | null>(initialCustomerId);
-  const [customerEmail, setCustomerEmail] = useState(initialOrder?.customerEmail ?? '');
-  const [customerName, setCustomerName] = useState(initialOrder?.customerName ?? '');
+  const [customerEmail, setCustomerEmail] = useState(
+    mode === 'edit' ? initialOrder?.customerEmail ?? '' : initialCustomer?.email ?? ''
+  );
+  const [customerName, setCustomerName] = useState(
+    mode === 'edit' ? initialOrder?.customerName ?? '' : initialCustomer?.fullName ?? ''
+  );
   const [status, setStatus] = useState(initialOrder?.status ?? 'PROCESSING');
   const [shippingAddress, setShippingAddress] = useState<AddressFormState>(
     initialOrder?.shippingAddress ? toAddressFormState(initialOrder.shippingAddress) : createEmptyAddressState()
@@ -289,12 +401,16 @@ const OrderEditor = ({ mode, baseCurrency, onCancel, onSaved, initialOrder }: Or
           taxRateId: '',
           taxRateName: '',
           thumbnailUrl: '',
-          selectedProduct: null
+          selectedProduct: null,
+          variants: []
         } as OrderLineFormState;
       });
     }
     return [createEmptyLine()];
   });
+  const [productOptionCache, setProductOptionCache] = useState<Record<number, AdminOrderProductOption[]>>({});
+  const productOptionCacheRef = useRef<Record<number, AdminOrderProductOption[]>>({});
+  const loadingProductIdsRef = useRef<Set<number>>(new Set());
   const [formError, setFormError] = useState<string | null>(null);
   const [shippingManuallyEdited, setShippingManuallyEdited] = useState(mode === 'edit');
   const [isFetchingShippingQuote, setIsFetchingShippingQuote] = useState(false);
@@ -308,6 +424,59 @@ const OrderEditor = ({ mode, baseCurrency, onCancel, onSaved, initialOrder }: Or
   );
   const [selectedShippingAddressId, setSelectedShippingAddressId] = useState('');
   const [selectedBillingAddressId, setSelectedBillingAddressId] = useState('');
+
+  useEffect(() => {
+    productOptionCacheRef.current = productOptionCache;
+  }, [productOptionCache]);
+
+  const ensureProductOptions = useCallback(
+    async (productId: number, fallback?: AdminOrderProductOption | null) => {
+      if (!Number.isFinite(productId)) {
+        return [] as AdminOrderProductOption[];
+      }
+
+      const cached = productOptionCacheRef.current[productId];
+      if (cached && cached.length) {
+        return cached;
+      }
+
+      if (fallback) {
+        const expanded = expandProductOptions({
+          ...fallback,
+          variants: sanitizeVariants(fallback.variants)
+        });
+        if (expanded.length) {
+          setProductOptionCache((current) => ({ ...current, [productId]: expanded }));
+          return expanded;
+        }
+      }
+
+      if (loadingProductIdsRef.current.has(productId)) {
+        return productOptionCacheRef.current[productId] ?? [];
+      }
+
+      loadingProductIdsRef.current.add(productId);
+      try {
+        const { data } = await adminApi.get<AdminOrderProductOption[]>(`/orders/products/${productId}`);
+        const options = Array.isArray(data)
+          ? data.map((option) => ({
+              ...option,
+              variants: sanitizeVariants(option.variants)
+            }))
+          : [];
+        if (options.length) {
+          setProductOptionCache((current) => ({ ...current, [productId]: options }));
+        }
+        return options;
+      } catch (error) {
+        console.error('Unable to load product variants for admin order', error);
+        return [];
+      } finally {
+        loadingProductIdsRef.current.delete(productId);
+      }
+    },
+    []
+  );
 
   const customersQuery = useQuery<AdminOrderCustomerOption[]>({
     queryKey: ['orders', 'admin', 'customers'],
@@ -390,30 +559,163 @@ const OrderEditor = ({ mode, baseCurrency, onCancel, onSaved, initialOrder }: Or
   );
 
   useEffect(() => {
+    const numericProductIds = Array.from(
+      new Set(
+        lines
+          .map((line) => {
+            const value = Number(line.productId.trim());
+            return Number.isFinite(value) ? value : null;
+          })
+          .filter((value): value is number => value != null)
+      )
+    );
+    const missingProductIds = numericProductIds.filter((productId) => {
+      if (loadingProductIdsRef.current.has(productId)) {
+        return false;
+      }
+      const cached = productOptionCacheRef.current[productId];
+      return !cached || cached.length === 0;
+    });
+    if (!missingProductIds.length) {
+      return;
+    }
+    missingProductIds.forEach((id) => loadingProductIdsRef.current.add(id));
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const responses = await Promise.all(
+          missingProductIds.map(async (productId) => {
+            try {
+              const { data } = await adminApi.get<AdminOrderProductOption[]>(`/orders/products/${productId}`);
+              return [productId, Array.isArray(data) ? data : []] as const;
+            } catch (error) {
+              console.error('Unable to load product variants for admin order', error);
+              return [productId, []] as const;
+            }
+          })
+        );
+        if (cancelled) {
+          return;
+        }
+        setProductOptionCache((current) => {
+          const next = { ...current };
+          for (const [productId, options] of responses) {
+            if (options.length) {
+              next[productId] = options.map((option) => ({
+                ...option,
+                variants: sanitizeVariants(option.variants)
+              }));
+            } else if (!next[productId]) {
+              next[productId] = [];
+            }
+          }
+          return next;
+        });
+      } finally {
+        missingProductIds.forEach((id) => loadingProductIdsRef.current.delete(id));
+      }
+    };
+    void load();
+    return () => {
+      cancelled = true;
+      missingProductIds.forEach((id) => loadingProductIdsRef.current.delete(id));
+    };
+  }, [lines]);
+
+  useEffect(() => {
     if (billingSameAsShipping) {
       setBillingAddress({ ...shippingAddress });
     }
   }, [billingSameAsShipping, shippingAddress]);
 
+  useEffect(() => {
+    if (mode !== 'create' || initialCustomer?.id == null) {
+      return;
+    }
+    setCustomerId((current) => (current == null ? initialCustomer.id : current));
+    setCustomerEmail((current) => {
+      if (current && current.trim().length > 0) {
+        return current;
+      }
+      return initialCustomer.email ?? '';
+    });
+    setCustomerName((current) => {
+      if (current && current.trim().length > 0) {
+        return current;
+      }
+      return initialCustomer.fullName ?? '';
+    });
+  }, [mode, initialCustomer]);
+
+  useEffect(() => {
+    if (!Object.keys(productOptionCache).length) {
+      return;
+    }
+    setLines((current) =>
+      current.map((line) => {
+        const productIdValue = Number(line.productId.trim());
+        if (!Number.isFinite(productIdValue)) {
+          return line;
+        }
+        const cachedOptions = productOptionCache[productIdValue];
+        if (!cachedOptions || cachedOptions.length === 0) {
+          if (line.variants.length) {
+            return { ...line, variants: [] };
+          }
+          return line;
+        }
+        const targetOption =
+          cachedOptions.find((option) => {
+            const variantIdValue = resolveVariantValue(option.variantId, option.variantKey);
+            return variantIdValue === line.variantId;
+          }) ?? cachedOptions[0];
+        if (!targetOption) {
+          return line;
+        }
+        const sanitizedVariants = sanitizeVariants(targetOption.variants);
+        const sameProduct =
+          line.selectedProduct?.productId === targetOption.productId &&
+          (line.selectedProduct?.variantId ?? null) === (targetOption.variantId ?? null);
+        const sameVariantCount = line.variants.length === sanitizedVariants.length;
+        if (sameProduct && sameVariantCount) {
+          if (line.variants !== sanitizedVariants) {
+            return { ...line, variants: sanitizedVariants };
+          }
+          return line;
+        }
+        return toLineFromOption(line, { ...targetOption, variants: sanitizedVariants });
+      })
+    );
+  }, [productOptionCache]);
+
   const customers = useMemo(() => {
     const list = customersQuery.data ?? [];
+    const enriched = [...list];
     if (mode === 'edit' && initialCustomerId != null && initialOrder) {
-      if (!list.some((customer) => customer.id === initialCustomerId)) {
-        return [
-          {
-            id: initialCustomerId,
-            fullName:
-              initialOrder.customerName ??
-              initialOrder.customerEmail ??
-              `Customer #${initialCustomerId}`,
-            email: initialOrder.customerEmail ?? null
-          },
-          ...list
-        ];
+      if (!enriched.some((customer) => customer.id === initialCustomerId)) {
+        enriched.unshift({
+          id: initialCustomerId,
+          fullName:
+            initialOrder.customerName ??
+            initialOrder.customerEmail ??
+            `Customer #${initialCustomerId}`,
+          email: initialOrder.customerEmail ?? null
+        });
+      }
+    } else if (mode === 'create' && initialCustomer?.id != null) {
+      if (!enriched.some((customer) => customer.id === initialCustomer.id)) {
+        enriched.unshift({
+          id: initialCustomer.id,
+          fullName:
+            initialCustomer.fullName ??
+            initialCustomer.email ??
+            `Customer #${initialCustomer.id}`,
+          email: initialCustomer.email ?? null
+        });
       }
     }
-    return list;
-  }, [customersQuery.data, mode, initialCustomerId, initialOrder]);
+    return enriched;
+  }, [customersQuery.data, mode, initialCustomerId, initialOrder, initialCustomer]);
 
   useEffect(() => {
     if (mode === 'create' && customerId != null) {
@@ -562,39 +864,83 @@ const OrderEditor = ({ mode, baseCurrency, onCancel, onSaved, initialOrder }: Or
     []
   );
 
-  const handleProductSelect = useCallback((key: string, option: AdminOrderProductOption) => {
+  const handleProductSelect = useCallback(
+    (key: string, option: AdminOrderProductOption) => {
+      const sanitizedOption: AdminOrderProductOption = {
+        ...option,
+        variants: sanitizeVariants(option.variants)
+      };
+      const productIdValue = option.productId != null ? Number(option.productId) : Number.NaN;
+
+      setLines((current) =>
+        current.map((line) => (line.key === key ? toLineFromOption(line, sanitizedOption) : line))
+      );
+
+      if (!Number.isFinite(productIdValue)) {
+        return;
+      }
+
+      void ensureProductOptions(productIdValue, sanitizedOption).then((options) => {
+        if (!options.length) {
+          return;
+        }
+        const targetVariantId = resolveVariantValue(option.variantId, option.variantKey);
+        const preferredOption =
+          options.find(
+            (candidate) =>
+              resolveVariantValue(candidate.variantId, candidate.variantKey) === targetVariantId
+          ) ?? options[0];
+        if (!preferredOption) {
+          return;
+        }
+        const enrichedOption: AdminOrderProductOption = {
+          ...preferredOption,
+          variants: sanitizeVariants(preferredOption.variants)
+        };
+        setLines((current) =>
+          current.map((line) => {
+            if (line.key !== key) {
+              return line;
+            }
+            const currentProductId = Number(line.productId.trim());
+            if (
+              Number.isFinite(currentProductId) &&
+              preferredOption.productId != null &&
+              currentProductId !== Number(preferredOption.productId)
+            ) {
+              return line;
+            }
+            return toLineFromOption(line, enrichedOption);
+          })
+        );
+      });
+    },
+    [ensureProductOptions]
+  );
+
+  const handleVariantChange = useCallback((key: string, variantId: string) => {
     setLines((current) =>
       current.map((line) => {
         if (line.key !== key) {
           return line;
         }
-        const existingQuantity = Number.parseInt(line.quantity, 10);
-        const safeQuantity = Number.isFinite(existingQuantity) && existingQuantity > 0
-          ? line.quantity
-          : '1';
-        return {
-          ...line,
-          selectedProduct: option,
-          productId: option.productId != null ? String(option.productId) : '',
-          name: option.productName,
-          productSlug: option.productSlug ?? '',
-          variantId: option.variantId != null ? String(option.variantId) : '',
-          variantSku: option.variantSku ?? '',
-          variantLabel: option.variantLabel ?? '',
-          productSku: option.variantSku ?? option.productSku ?? '',
-          productVariety: option.productVariety ?? '',
-          productSlot: option.productSlot ?? '',
-          brandName: option.brandName ?? '',
-          taxRateId: option.taxRateId != null ? String(option.taxRateId) : '',
-          taxRateName: option.taxRateName ?? '',
-          thumbnailUrl: option.thumbnailUrl ?? '',
-          unitPrice: Number(option.unitPrice ?? 0).toFixed(2),
-          taxRate:
-            option.taxRate != null && Number.isFinite(option.taxRate)
-              ? (option.taxRate * 100).toFixed(2)
-              : '',
-          quantity: safeQuantity
-        };
+        const productIdValue = Number(line.productId.trim());
+        if (!Number.isFinite(productIdValue)) {
+          return { ...line, variantId };
+        }
+        const cachedOptions = productOptionCacheRef.current[productIdValue];
+        if (!cachedOptions || cachedOptions.length === 0) {
+          return { ...line, variantId };
+        }
+        const targetOption =
+          cachedOptions.find((option) => {
+            const candidateId = resolveVariantValue(option.variantId, option.variantKey);
+            return candidateId === variantId;
+          }) ?? cachedOptions[0];
+        if (!targetOption) {
+          return line;
+        }
+        return toLineFromOption(line, targetOption);
       })
     );
   }, []);
@@ -1155,6 +1501,29 @@ const OrderEditor = ({ mode, baseCurrency, onCancel, onSaved, initialOrder }: Or
                           currencyCode={currency}
                           onSelect={(option) => handleProductSelect(line.key, option)}
                         />
+                        {line.variants.length > 0 ? (
+                          <div className="flex flex-col">
+                            <label className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                              Variant option
+                            </label>
+                            <select
+                              value={line.variantId}
+                              onChange={(event) => handleVariantChange(line.key, event.target.value)}
+                              disabled={isSaving}
+                              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                            >
+                              {line.variants.map((variant, variantIndex) => {
+                                const value = resolveVariantValue(variant.id ?? null, variant.key ?? null);
+                                const optionValue = value || `variant-${variantIndex}`;
+                                return (
+                                  <option key={optionValue} value={optionValue}>
+                                    {getVariantDisplayName(variant)}
+                                  </option>
+                                );
+                              })}
+                            </select>
+                          </div>
+                        ) : null}
                         <p className="text-xs text-slate-500">
                           {productSlug ? (
                             <>

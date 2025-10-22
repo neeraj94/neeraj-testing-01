@@ -67,6 +67,12 @@ public class OrderAdminController {
         return orderAdminService.searchProductOptions(search, limit);
     }
 
+    @GetMapping("/products/{productId}")
+    @PreAuthorize("@orderPermissionEvaluator.canViewOrders()")
+    public List<AdminOrderProductOptionDto> productOptionsById(@PathVariable Long productId) {
+        return orderAdminService.getProductOptions(productId);
+    }
+
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("@orderPermissionEvaluator.canCreateOrders()")

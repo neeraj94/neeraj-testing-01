@@ -60,4 +60,14 @@ export interface AdminOrderProductOption {
   taxRateName?: string | null;
   taxRate: number;
   unitPrice: number;
+  hasVariants?: boolean;
+  variants?: AdminOrderProductVariantOption[];
+}
+
+export interface AdminOrderProductVariantOption {
+  id?: number | null;
+  sku?: string | null;
+  label?: string | null;
+  key?: string | null;
+  unitPrice?: number | null;
 }

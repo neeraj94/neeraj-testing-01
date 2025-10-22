@@ -1,11 +1,11 @@
 import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import PageHeader from '../../components/PageHeader';
 import PageSection from '../../components/PageSection';
 import Spinner from '../../components/Spinner';
 import Button from '../../components/Button';
 import OrderDetailPanel from '../../components/orders/OrderDetailPanel';
-import OrderEditor from './components/OrderEditor';
 import { adminApi } from '../../services/http';
 import { useAppSelector } from '../../app/hooks';
 import { selectBaseCurrency } from '../../features/settings/selectors';
@@ -95,7 +95,12 @@ const formatDateTime = (value: string | null | undefined) => {
   return date.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
 };
 
-type EditorState = { type: 'create' } | { type: 'edit'; orderId: number };
+const toTitleCase = (value: string) =>
+  value
+    .toLowerCase()
+    .split(' ')
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
 
 const toTitleCase = (value: string) =>
   value
@@ -110,6 +115,7 @@ const AdminOrdersPage = () => {
   const { notify } = useToast();
   const confirm = useConfirm();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const canViewOrders = useMemo(
     () =>
@@ -121,7 +127,6 @@ const AdminOrdersPage = () => {
   const canDeleteOrders = useMemo(() => hasAnyPermission(permissions, ['ORDER_DELETE']), [permissions]);
 
   const [detailOrderId, setDetailOrderId] = useState<number | null>(null);
-  const [editorState, setEditorState] = useState<EditorState | null>(null);
   const [deletingOrderId, setDeletingOrderId] = useState<number | null>(null);
 
   const deleteOrderMutation = useMutation({
@@ -134,9 +139,6 @@ const AdminOrdersPage = () => {
     onSuccess: (_, orderId) => {
       notify({ title: 'Order deleted', message: 'The order was removed successfully.', type: 'success' });
       setDetailOrderId((current) => (current === orderId ? null : current));
-      setEditorState((current) =>
-        current?.type === 'edit' && current.orderId === orderId ? null : current
-      );
       queryClient.invalidateQueries({ queryKey: ['orders', 'admin'] });
       queryClient.invalidateQueries({ queryKey: ['orders', 'admin', 'detail', orderId] });
     },
@@ -176,21 +178,6 @@ const AdminOrdersPage = () => {
     }
   });
 
-  const editOrderId = editorState?.type === 'edit' ? editorState.orderId : null;
-  const editOrderQuery = useQuery<OrderDetail | null>({
-    queryKey: ['orders', 'admin', 'detail', editOrderId],
-    enabled: editOrderId != null,
-    queryFn: async () => {
-      if (editOrderId == null) {
-        return null;
-      }
-      const { data } = await adminApi.get<unknown>(`/orders/${editOrderId}`);
-      return normalizeOrderDetailResponse(data);
-    }
-  });
-
-  const editorInitialOrder = editorState?.type === 'edit' ? editOrderQuery.data ?? null : null;
-
   const handleDeleteOrder = async (orderId: number, orderNumber?: string | null) => {
     if (!canDeleteOrders || deleteOrderMutation.isPending) {
       return;
@@ -215,11 +202,6 @@ const AdminOrdersPage = () => {
 
   const closeDetail = () => {
     setDetailOrderId(null);
-  };
-
-  const handleEditorSaved = (order: OrderDetail) => {
-    setEditorState(null);
-    setDetailOrderId(order.id);
   };
 
   const formatPaymentStatus = (order: OrderListItem): string => {
@@ -362,16 +344,11 @@ const AdminOrdersPage = () => {
                                   onClick={(event) => {
                                     event.stopPropagation();
                                     setDetailOrderId(null);
-                                    setEditorState({ type: 'edit', orderId: order.id });
+                                    navigate(`/admin/orders/${order.id}/edit`);
                                   }}
-                                  disabled={
-                                    editorState?.type === 'edit' && editorState.orderId === order.id
-                                  }
                                   className="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
                                 >
-                                  {editorState?.type === 'edit' && editorState.orderId === order.id
-                                    ? 'Editing…'
-                                    : 'Edit'}
+                                  Edit
                                 </button>
                               )}
                               {canDeleteOrders && (
@@ -424,10 +401,9 @@ const AdminOrdersPage = () => {
             ? (
                 <Button
                   type="button"
-                  onClick={() => setEditorState({ type: 'create' })}
-                  disabled={editorState?.type === 'create'}
+                  onClick={() => navigate('/admin/orders/new')}
                 >
-                  {editorState?.type === 'create' ? 'Creating…' : 'Create order'}
+                  Create order
                 </Button>
               )
             : undefined
@@ -457,44 +433,6 @@ const AdminOrdersPage = () => {
               </section>
             ) : detailQuery.data ? (
               <OrderDetailPanel order={detailQuery.data} baseCurrency={baseCurrency} onClose={closeDetail} />
-            ) : null}
-          </div>
-        </div>
-      ) : null}
-
-      {editorState ? (
-        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/60 px-4 py-10">
-          <div className="w-full max-w-4xl">
-            {editorState.type === 'create' ? (
-              <OrderEditor
-                mode="create"
-                baseCurrency={baseCurrency}
-                onCancel={() => setEditorState(null)}
-                onSaved={handleEditorSaved}
-              />
-            ) : editorState.type === 'edit' ? (
-              editOrderQuery.isLoading ? (
-                <section className="flex min-h-[260px] items-center justify-center rounded-2xl border border-slate-200 bg-white shadow-sm">
-                  <Spinner />
-                </section>
-              ) : editorInitialOrder ? (
-                <OrderEditor
-                  mode="edit"
-                  baseCurrency={baseCurrency}
-                  initialOrder={editorInitialOrder}
-                  onCancel={() => setEditorState(null)}
-                  onSaved={handleEditorSaved}
-                />
-              ) : (
-                <section className="space-y-3 rounded-2xl border border-rose-200 bg-rose-50/80 p-6 text-sm text-rose-600 shadow-sm">
-                  <p>Unable to load order details for editing.</p>
-                  <div className="flex justify-end">
-                    <Button type="button" variant="ghost" onClick={() => setEditorState(null)}>
-                      Close
-                    </Button>
-                  </div>
-                </section>
-              )
             ) : null}
           </div>
         </div>
