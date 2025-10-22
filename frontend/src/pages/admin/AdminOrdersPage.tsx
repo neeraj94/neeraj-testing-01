@@ -95,14 +95,7 @@ const formatDateTime = (value: string | null | undefined) => {
   return date.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
 };
 
-const toTitleCase = (value: string) =>
-  value
-    .toLowerCase()
-    .split(' ')
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(' ');
-
-const toTitleCase = (value: string) =>
+const toStatusLabel = (value: string) =>
   value
     .toLowerCase()
     .split(' ')
@@ -207,7 +200,7 @@ const AdminOrdersPage = () => {
   const formatPaymentStatus = (order: OrderListItem): string => {
     const raw = order.paymentStatus ?? (order.summary as Record<string, unknown> | null)?.paymentStatus;
     if (typeof raw === 'string' && raw.trim()) {
-      return toTitleCase(raw.replace(/_/g, ' '));
+      return toStatusLabel(raw.replace(/_/g, ' '));
     }
     return '—';
   };
