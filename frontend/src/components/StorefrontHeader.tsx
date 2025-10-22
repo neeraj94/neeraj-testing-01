@@ -1,7 +1,9 @@
 import { Link, useLocation } from 'react-router-dom';
-import { useMemo } from 'react';
-import { useAppSelector } from '../app/hooks';
-import { selectCartCount } from '../features/cart/cartSlice';
+import { useMemo, useState } from 'react';
+import { useAppDispatch, useAppSelector } from '../app/hooks';
+import { initializeCart, selectCartCount } from '../features/cart/cartSlice';
+import { logout as logoutAction } from '../features/auth/authSlice';
+import { api } from '../services/http';
 
 type StorefrontNavKey = 'home' | 'products' | 'coupons' | 'categories' | 'brands' | 'blog';
 
@@ -45,6 +47,7 @@ const deriveActiveKeyFromPath = (pathname: string): StorefrontNavKey | undefined
 
 const StorefrontHeader = ({ activeKey }: StorefrontHeaderProps) => {
   const location = useLocation();
+  const dispatch = useAppDispatch();
   const resolvedActiveKey = useMemo(() => {
     if (activeKey) {
       return activeKey;
@@ -55,6 +58,27 @@ const StorefrontHeader = ({ activeKey }: StorefrontHeaderProps) => {
   const cartCount = useAppSelector(selectCartCount) ?? 0;
   const hasItemsInCart = cartCount > 0;
   const cartLabel = hasItemsInCart ? (cartCount > 99 ? '99+' : cartCount.toString()) : undefined;
+  const auth = useAppSelector((state) => state.auth);
+  const isCustomer = Boolean(auth.accessToken && auth.portal === 'client' && auth.user);
+  const [signingOut, setSigningOut] = useState(false);
+
+  const handleSignOut = async () => {
+    if (signingOut) {
+      return;
+    }
+    setSigningOut(true);
+    try {
+      if (auth.refreshToken) {
+        await api.post('/auth/logout', { refreshToken: auth.refreshToken });
+      }
+    } catch (error) {
+      console.warn('Unable to revoke session', error);
+    } finally {
+      dispatch(logoutAction());
+      dispatch(initializeCart());
+      setSigningOut(false);
+    }
+  };
 
   return (
     <header className="border-b border-slate-200 bg-white/95 backdrop-blur">
@@ -81,7 +105,48 @@ const StorefrontHeader = ({ activeKey }: StorefrontHeaderProps) => {
             );
           })}
         </nav>
-        <div className="flex items-center gap-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+          <div className="flex flex-wrap items-center gap-2 text-sm font-semibold text-slate-700">
+            {isCustomer ? (
+              <>
+                <Link
+                  to="/account"
+                  className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-100"
+                >
+                  My account
+                </Link>
+                <Link
+                  to="/account/orders"
+                  className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-100"
+                >
+                  Orders
+                </Link>
+                <button
+                  type="button"
+                  onClick={handleSignOut}
+                  className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-100 disabled:opacity-60"
+                  disabled={signingOut}
+                >
+                  {signingOut ? 'Signing out…' : 'Sign out'}
+                </button>
+              </>
+            ) : (
+              <>
+                <Link
+                  to="/login"
+                  className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-100"
+                >
+                  Sign in
+                </Link>
+                <Link
+                  to="/signup"
+                  className="rounded-full bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-primary/30 transition hover:bg-blue-600"
+                >
+                  Create account
+                </Link>
+              </>
+            )}
+          </div>
           <div className="hidden text-xs uppercase tracking-[0.35em] text-slate-500 sm:flex sm:flex-col sm:items-end">
             <span>Support</span>
             <a
