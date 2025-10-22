@@ -42,39 +42,39 @@ const normalizeOrdersResponse = (payload: unknown): OrderListItem[] => {
   return [];
 };
 
-const isPlainRecord = (value: unknown): value is Record<string, unknown> =>
+const isOrdersPageRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null;
 
-const normalizeOrdersResponse = (payload: unknown): OrderListItem[] => {
+const mapOrdersPayload = (payload: unknown): OrderListItem[] => {
   if (Array.isArray(payload)) {
     return payload
-      .filter((item): item is OrderListItem => isPlainRecord(item) && typeof item.id === 'number')
+      .filter((item): item is OrderListItem => isOrdersPageRecord(item) && typeof item.id === 'number')
       .map((item) => ({
         ...item,
         lines: Array.isArray(item.lines) ? item.lines : []
       }));
   }
 
-  if (isPlainRecord(payload)) {
+  if (isOrdersPageRecord(payload)) {
     if (Array.isArray(payload.data)) {
-      return normalizeOrdersResponse(payload.data);
+      return mapOrdersPayload(payload.data);
     }
     if (Array.isArray(payload.content)) {
-      return normalizeOrdersResponse(payload.content);
+      return mapOrdersPayload(payload.content);
     }
   }
 
   return [];
 };
 
-const normalizeOrderDetailResponse = (payload: unknown): OrderDetail | null => {
+const mapOrderDetailPayload = (payload: unknown): OrderDetail | null => {
   if (Array.isArray(payload)) {
-    return payload.length ? normalizeOrderDetailResponse(payload[0]) : null;
+    return payload.length ? mapOrderDetailPayload(payload[0]) : null;
   }
 
-  if (isPlainRecord(payload)) {
+  if (isOrdersPageRecord(payload)) {
     if (payload.data) {
-      return normalizeOrderDetailResponse(payload.data);
+      return mapOrderDetailPayload(payload.data);
     }
 
     if (typeof payload.id === 'number') {
@@ -82,16 +82,16 @@ const normalizeOrderDetailResponse = (payload: unknown): OrderDetail | null => {
       const lines = Array.isArray(detailRecord.lines)
         ? (detailRecord.lines as unknown as OrderDetail['lines'])
         : [];
-      const summary = isPlainRecord(detailRecord.summary)
+      const summary = isOrdersPageRecord(detailRecord.summary)
         ? (detailRecord.summary as unknown as OrderDetail['summary'])
         : null;
-      const shippingAddress = isPlainRecord(detailRecord.shippingAddress)
+      const shippingAddress = isOrdersPageRecord(detailRecord.shippingAddress)
         ? (detailRecord.shippingAddress as unknown as OrderDetail['shippingAddress'])
         : null;
-      const billingAddress = isPlainRecord(detailRecord.billingAddress)
+      const billingAddress = isOrdersPageRecord(detailRecord.billingAddress)
         ? (detailRecord.billingAddress as unknown as OrderDetail['billingAddress'])
         : null;
-      const paymentMethod = isPlainRecord(detailRecord.paymentMethod)
+      const paymentMethod = isOrdersPageRecord(detailRecord.paymentMethod)
         ? (detailRecord.paymentMethod as unknown as OrderDetail['paymentMethod'])
         : null;
 
@@ -109,7 +109,7 @@ const normalizeOrderDetailResponse = (payload: unknown): OrderDetail | null => {
   return null;
 };
 
-const formatDateTime = (value: string | null | undefined) => {
+const formatOrdersDateTime = (value: string | null | undefined) => {
   if (!value) {
     return 'Unknown date';
   }
@@ -229,6 +229,31 @@ const AdminOrdersPage = () => {
     queryFn: async () => {
       const { data } = await adminApi.get<unknown>('/orders');
       return normalizeOrdersResponse(data);
+    }
+  });
+
+  const orderDetailQuery = useQuery<OrderDetail | null>({
+    queryKey: ['orders', 'admin', 'detail', detailOrderId],
+    enabled: detailOrderId != null,
+    queryFn: async () => {
+      if (detailOrderId == null) {
+        return null;
+      }
+      return fetchOrderDetail(detailOrderId);
+    }
+  });
+
+  const fetchOrderDetail = useCallback(async (orderId: number) => {
+    const { data } = await adminApi.get<unknown>(`/orders/${orderId}`);
+    return mapOrderDetailPayload(data);
+  }, []);
+
+  const ordersQuery = useQuery<OrderListItem[]>({
+    queryKey: ['orders', 'admin'],
+    enabled: canViewOrders,
+    queryFn: async () => {
+      const { data } = await adminApi.get<unknown>('/orders');
+      return mapOrdersPayload(data);
     }
   });
 
@@ -426,7 +451,7 @@ const AdminOrdersPage = () => {
                   <td className="px-4 py-3 text-right text-sm font-semibold text-slate-900">
                     {formatCurrency(rowTotal, baseCurrency)}
                   </td>
-                  <td className="px-4 py-3 text-sm text-slate-600">{formatDateTime(order.createdAt)}</td>
+                  <td className="px-4 py-3 text-sm text-slate-600">{formatOrdersDateTime(order.createdAt)}</td>
                   <td className="px-4 py-3 text-right text-sm text-slate-600">
                     <div className="flex justify-end gap-2">
                       {canEditOrders && (
