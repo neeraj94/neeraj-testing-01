@@ -14,8 +14,83 @@ import { hasAnyPermission } from '../../utils/permissions';
 import { useToast } from '../../components/ToastProvider';
 import { useConfirm } from '../../components/ConfirmDialogProvider';
 
-const formatDateTime = (value: string) =>
-  new Date(value).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null;
+
+const normalizeOrdersResponse = (payload: unknown): OrderListItem[] => {
+  if (Array.isArray(payload)) {
+    return payload
+      .filter((item): item is OrderListItem => isRecord(item) && typeof item.id === 'number')
+      .map((item) => ({
+        ...item,
+        lines: Array.isArray(item.lines) ? item.lines : []
+      }));
+  }
+
+  if (isRecord(payload)) {
+    if (Array.isArray(payload.data)) {
+      return normalizeOrdersResponse(payload.data);
+    }
+    if (Array.isArray(payload.content)) {
+      return normalizeOrdersResponse(payload.content);
+    }
+  }
+
+  return [];
+};
+
+const normalizeOrderDetailResponse = (payload: unknown): OrderDetail | null => {
+  if (Array.isArray(payload)) {
+    return payload.length ? normalizeOrderDetailResponse(payload[0]) : null;
+  }
+
+  if (isRecord(payload)) {
+    if (payload.data) {
+      return normalizeOrderDetailResponse(payload.data);
+    }
+
+    if (typeof payload.id === 'number') {
+      const detailRecord = payload as Record<string, unknown>;
+      const lines = Array.isArray(detailRecord.lines)
+        ? (detailRecord.lines as unknown as OrderDetail['lines'])
+        : [];
+      const summary = isRecord(detailRecord.summary)
+        ? (detailRecord.summary as unknown as OrderDetail['summary'])
+        : null;
+      const shippingAddress = isRecord(detailRecord.shippingAddress)
+        ? (detailRecord.shippingAddress as unknown as OrderDetail['shippingAddress'])
+        : null;
+      const billingAddress = isRecord(detailRecord.billingAddress)
+        ? (detailRecord.billingAddress as unknown as OrderDetail['billingAddress'])
+        : null;
+      const paymentMethod = isRecord(detailRecord.paymentMethod)
+        ? (detailRecord.paymentMethod as unknown as OrderDetail['paymentMethod'])
+        : null;
+
+      return {
+        ...(detailRecord as unknown as OrderDetail),
+        lines,
+        summary,
+        shippingAddress,
+        billingAddress,
+        paymentMethod
+      };
+    }
+  }
+
+  return null;
+};
+
+const formatDateTime = (value: string | null | undefined) => {
+  if (!value) {
+    return 'Unknown date';
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return 'Unknown date';
+  }
+  return date.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+};
 
 const AdminOrdersPage = () => {
   const baseCurrency = useAppSelector(selectBaseCurrency);
@@ -71,13 +146,12 @@ const AdminOrdersPage = () => {
   const ordersQuery = useQuery<OrderListItem[]>({
     queryKey: ['orders', 'admin'],
     queryFn: async () => {
-      const { data } = await adminApi.get<OrderListItem[]>('/orders');
-      return data;
+      const { data } = await adminApi.get<unknown>('/orders');
+      return normalizeOrdersResponse(data);
     }
   });
 
   const orders = ordersQuery.data ?? [];
-  const selectedOrder = orderDetailQuery.data ?? null;
 
   useEffect(() => {
     if (!orders.length) {
@@ -89,12 +163,12 @@ const AdminOrdersPage = () => {
     }
   }, [orders, selectedOrderId]);
 
-  const orderDetailQuery = useQuery<OrderDetail>({
+  const orderDetailQuery = useQuery<OrderDetail | null>({
     queryKey: ['orders', 'admin', 'detail', selectedOrderId],
     enabled: selectedOrderId != null,
     queryFn: async () => {
-      const { data } = await adminApi.get<OrderDetail>(`/orders/${selectedOrderId}`);
-      return data;
+      const { data } = await adminApi.get<unknown>(`/orders/${selectedOrderId}`);
+      return normalizeOrderDetailResponse(data);
     }
   });
 
