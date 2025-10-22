@@ -1,17 +1,4 @@
--- Remove legacy placeholder customers and related accounting records
-DELETE FROM invoice_items
-WHERE invoice_id IN (
-    SELECT id FROM invoices
-    WHERE customer_id IN (
-        SELECT id FROM customers WHERE LOWER(name) IN ('acme corporation', 'globex llc', 'soylent industries')
-    )
-);
-
-DELETE FROM invoices
-WHERE customer_id IN (
-    SELECT id FROM customers WHERE LOWER(name) IN ('acme corporation', 'globex llc', 'soylent industries')
-);
-
+-- Remove legacy placeholder customers seeded for the legacy invoice module
 DELETE FROM customers
 WHERE LOWER(name) IN ('acme corporation', 'globex llc', 'soylent industries');
 
