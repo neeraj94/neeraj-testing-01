@@ -15,6 +15,7 @@ import { formatCurrency } from '../../utils/currency';
 import { hasAnyPermission } from '../../utils/permissions';
 import { useToast } from '../../components/ToastProvider';
 import { useConfirm } from '../../components/ConfirmDialogProvider';
+import OrderEditor from './components/OrderEditor';
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null;
@@ -115,6 +116,7 @@ const AdminOrdersPage = () => {
   const [editorState, setEditorState] = useState<EditorState | null>(null);
   const [detailOrderId, setDetailOrderId] = useState<number | null>(null);
   const [deletingOrderId, setDeletingOrderId] = useState<number | null>(null);
+  const [editorState, setEditorState] = useState<EditorState | null>(null);
 
   const fetchOrderDetail = useCallback(async (orderId: number) => {
     const { data } = await adminApi.get<unknown>(`/orders/${orderId}`);
@@ -226,6 +228,23 @@ const AdminOrdersPage = () => {
     },
     [fetchOrderDetail, notify, queryClient]
   );
+
+  if (!canViewOrders) {
+    return (
+      <div className="space-y-4 rounded-3xl border border-amber-200 bg-amber-50/80 p-10 text-center shadow">
+        <h1 className="text-xl font-semibold text-amber-800">Orders access is restricted</h1>
+        <p className="text-sm text-amber-700">
+          You do not have permission to view orders. Contact an administrator if you believe this is a mistake.
+        </p>
+      </div>
+    );
+  }
+
+  useEffect(() => {
+    if (editorState?.type === 'edit' && editorState.orderId !== selectedOrderId) {
+      setEditorState(null);
+    }
+  }, [editorState, selectedOrderId]);
 
   if (!canViewOrders) {
     return (
