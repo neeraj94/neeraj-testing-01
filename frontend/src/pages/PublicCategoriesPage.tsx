@@ -152,10 +152,13 @@ const PublicCategoriesPage = () => {
                         </p>
                       </div>
                     </div>
-                    <div className="mt-6 flex items-center justify-between text-xs font-semibold uppercase tracking-[0.3em] text-primary">
+                    <Link
+                      to={`/products?categories=${encodeURIComponent(category.slug)}`}
+                      className="mt-6 flex items-center justify-between text-xs font-semibold uppercase tracking-[0.3em] text-primary transition hover:text-primary/80"
+                    >
                       <span>Shop now</span>
                       <span aria-hidden>→</span>
-                    </div>
+                    </Link>
                   </div>
                 </article>
               ))
