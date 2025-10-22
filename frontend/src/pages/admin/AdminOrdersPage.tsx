@@ -15,6 +15,32 @@ import { formatCurrency } from '../../utils/currency';
 import { hasAnyPermission } from '../../utils/permissions';
 import { useToast } from '../../components/ToastProvider';
 import { useConfirm } from '../../components/ConfirmDialogProvider';
+import OrderEditor from './components/OrderEditor';
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null;
+
+const normalizeOrdersResponse = (payload: unknown): OrderListItem[] => {
+  if (Array.isArray(payload)) {
+    return payload
+      .filter((item): item is OrderListItem => isRecord(item) && typeof item.id === 'number')
+      .map((item) => ({
+        ...item,
+        lines: Array.isArray(item.lines) ? item.lines : []
+      }));
+  }
+
+  if (isRecord(payload)) {
+    if (Array.isArray(payload.data)) {
+      return normalizeOrdersResponse(payload.data);
+    }
+    if (Array.isArray(payload.content)) {
+      return normalizeOrdersResponse(payload.content);
+    }
+  }
+
+  return [];
+};
 
 const isOrdersPageRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null;
@@ -115,6 +141,107 @@ const AdminOrdersPage = () => {
   const [editorState, setEditorState] = useState<EditorState | null>(null);
   const [detailOrderId, setDetailOrderId] = useState<number | null>(null);
   const [deletingOrderId, setDeletingOrderId] = useState<number | null>(null);
+  const [editorState, setEditorState] = useState<EditorState | null>(null);
+
+  const fetchOrderDetail = useCallback(async (orderId: number) => {
+    const { data } = await adminApi.get<unknown>(`/orders/${orderId}`);
+    return normalizeOrderDetailResponse(data);
+  }, []);
+
+  const ordersQuery = useQuery<OrderListItem[]>({
+    queryKey: ['orders', 'admin'],
+    enabled: canViewOrders,
+    queryFn: async () => {
+      const { data } = await adminApi.get<unknown>('/orders');
+      return normalizeOrdersResponse(data);
+    }
+  });
+
+  const orderDetailQuery = useQuery<OrderDetail | null>({
+    queryKey: ['orders', 'admin', 'detail', detailOrderId],
+    enabled: detailOrderId != null,
+    queryFn: async () => {
+      if (detailOrderId == null) {
+        return null;
+      }
+      return fetchOrderDetail(detailOrderId);
+    }
+  });
+
+  const fetchOrderDetail = useCallback(async (orderId: number) => {
+    const { data } = await adminApi.get<unknown>(`/orders/${orderId}`);
+    return normalizeOrderDetailResponse(data);
+  }, []);
+
+  const ordersQuery = useQuery<OrderListItem[]>({
+    queryKey: ['orders', 'admin'],
+    enabled: canViewOrders,
+    queryFn: async () => {
+      const { data } = await adminApi.get<unknown>('/orders');
+      return normalizeOrdersResponse(data);
+    }
+  });
+
+  const orderDetailQuery = useQuery<OrderDetail | null>({
+    queryKey: ['orders', 'admin', 'detail', detailOrderId],
+    enabled: detailOrderId != null,
+    queryFn: async () => {
+      if (detailOrderId == null) {
+        return null;
+      }
+      return fetchOrderDetail(detailOrderId);
+    }
+  });
+
+  const fetchOrderDetail = useCallback(async (orderId: number) => {
+    const { data } = await adminApi.get<unknown>(`/orders/${orderId}`);
+    return normalizeOrderDetailResponse(data);
+  }, []);
+
+  const ordersQuery = useQuery<OrderListItem[]>({
+    queryKey: ['orders', 'admin'],
+    enabled: canViewOrders,
+    queryFn: async () => {
+      const { data } = await adminApi.get<unknown>('/orders');
+      return normalizeOrdersResponse(data);
+    }
+  });
+
+  const orderDetailQuery = useQuery<OrderDetail | null>({
+    queryKey: ['orders', 'admin', 'detail', detailOrderId],
+    enabled: detailOrderId != null,
+    queryFn: async () => {
+      if (detailOrderId == null) {
+        return null;
+      }
+      return fetchOrderDetail(detailOrderId);
+    }
+  });
+
+  const fetchOrderDetail = useCallback(async (orderId: number) => {
+    const { data } = await adminApi.get<unknown>(`/orders/${orderId}`);
+    return normalizeOrderDetailResponse(data);
+  }, []);
+
+  const ordersQuery = useQuery<OrderListItem[]>({
+    queryKey: ['orders', 'admin'],
+    enabled: canViewOrders,
+    queryFn: async () => {
+      const { data } = await adminApi.get<unknown>('/orders');
+      return normalizeOrdersResponse(data);
+    }
+  });
+
+  const orderDetailQuery = useQuery<OrderDetail | null>({
+    queryKey: ['orders', 'admin', 'detail', detailOrderId],
+    enabled: detailOrderId != null,
+    queryFn: async () => {
+      if (detailOrderId == null) {
+        return null;
+      }
+      return fetchOrderDetail(detailOrderId);
+    }
+  });
 
   const fetchOrderDetail = useCallback(async (orderId: number) => {
     const { data } = await adminApi.get<unknown>(`/orders/${orderId}`);
