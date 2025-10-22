@@ -1,5 +1,7 @@
 package com.example.rbac.admin.checkout.controller;
 
+import com.example.rbac.admin.checkout.dto.AdminOrderCustomerOptionDto;
+import com.example.rbac.admin.checkout.dto.AdminOrderProductOptionDto;
 import com.example.rbac.admin.checkout.dto.AdminOrderRequest;
 import com.example.rbac.admin.checkout.service.OrderAdminService;
 import com.example.rbac.client.checkout.dto.OrderDetailDto;
@@ -16,6 +18,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
@@ -46,6 +49,22 @@ public class OrderAdminController {
     public OrderDetailDto getOrder(@PathVariable Long orderId,
                                    @AuthenticationPrincipal UserPrincipal principal) {
         return checkoutService.getOrderDetailForAdmin(orderId, principal);
+    }
+
+    @GetMapping("/customers")
+    @PreAuthorize("@orderPermissionEvaluator.canViewOrders()")
+    public List<AdminOrderCustomerOptionDto> customerOptions(
+            @RequestParam(name = "search", required = false) String search,
+            @RequestParam(name = "limit", defaultValue = "20") int limit) {
+        return orderAdminService.listCustomerOptions(search, limit);
+    }
+
+    @GetMapping("/products")
+    @PreAuthorize("@orderPermissionEvaluator.canViewOrders()")
+    public List<AdminOrderProductOptionDto> productOptions(
+            @RequestParam(name = "search", required = false) String search,
+            @RequestParam(name = "limit", defaultValue = "20") int limit) {
+        return orderAdminService.searchProductOptions(search, limit);
     }
 
     @PostMapping
