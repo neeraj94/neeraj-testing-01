@@ -11,31 +11,17 @@ import java.util.Optional;
 
 public interface ProductRepository extends JpaRepository<Product, Long> {
 
-    @EntityGraph(attributePaths = {"brand", "categories"})
+    @EntityGraph(attributePaths = {"brand"})
     Page<Product> findByNameContainingIgnoreCase(String name, Pageable pageable);
 
     @Override
-    @EntityGraph(attributePaths = {"brand", "categories"})
+    @EntityGraph(attributePaths = {"brand"})
     Page<Product> findAll(Pageable pageable);
 
     @EntityGraph(attributePaths = {
             "brand"
     })
     Optional<Product> findDetailedById(Long id);
-
-    @EntityGraph(attributePaths = {"brand", "categories"})
-    Optional<Product> findBySkuIgnoreCase(String sku);
-
-    @EntityGraph(attributePaths = {
-            "brand",
-            "categories",
-            "taxRates",
-            "variants",
-            "variants.values",
-            "variants.values.attributeValue",
-            "variants.values.attributeValue.attribute"
-    })
-    Optional<Product> findForAdminOrderComposerById(Long id);
 
     Optional<Product> findDetailedBySlugIgnoreCase(String slug);
 
