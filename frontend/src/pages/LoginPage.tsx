@@ -12,6 +12,8 @@ type LocationState = {
   fallback?: string;
 };
 
+const emailPattern = /.+@.+\..+/i;
+
 const LoginPage = () => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
@@ -28,9 +30,21 @@ const LoginPage = () => {
   const queryRedirect = searchParams.get('redirect') ?? undefined;
   const queryFallback = searchParams.get('fallback') ?? undefined;
 
+  const emailValid = emailPattern.test(email.trim());
+  const passwordValid = password.trim().length >= 8;
+  const canSubmit = emailValid && passwordValid && status !== 'loading';
+
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     setFormError(null);
+    if (!emailValid) {
+      setFormError('Enter a valid email address.');
+      return;
+    }
+    if (!passwordValid) {
+      setFormError('Your password must be at least 8 characters long.');
+      return;
+    }
     const result = await dispatch(customerLogin({ email, password }));
     if (customerLogin.fulfilled.match(result)) {
       notify({ type: 'success', message: 'Signed in successfully.' });
@@ -78,8 +92,12 @@ const LoginPage = () => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+              aria-invalid={!emailValid}
               className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 focus:border-primary focus:outline-none"
             />
+            {!emailValid && email.trim().length > 0 && (
+              <p className="mt-1 text-xs text-rose-500">Please enter a valid email.</p>
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-600">Password</label>
@@ -89,6 +107,7 @@ const LoginPage = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                minLength={8}
                 className="w-full rounded-l-md border-none px-3 py-2 text-sm focus:outline-none"
               />
               <button
@@ -135,7 +154,7 @@ const LoginPage = () => {
           <button
             type="submit"
             className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-blue-600"
-            disabled={status === 'loading'}
+            disabled={!canSubmit}
           >
             {status === 'loading' ? 'Signing in...' : 'Sign in'}
           </button>

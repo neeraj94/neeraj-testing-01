@@ -6,6 +6,7 @@ import com.example.rbac.client.checkout.dto.CheckoutOrderRequest;
 import com.example.rbac.client.checkout.dto.CheckoutOrderResponse;
 import com.example.rbac.client.checkout.dto.CheckoutSummaryDto;
 import com.example.rbac.client.checkout.dto.OrderDetailDto;
+import com.example.rbac.client.checkout.dto.OrderListItemDto;
 import com.example.rbac.client.checkout.dto.OrderSummaryDto;
 import com.example.rbac.client.checkout.dto.PaymentMethodDto;
 import com.example.rbac.client.checkout.service.CheckoutService;
@@ -88,6 +89,13 @@ public class CheckoutController {
     public OrderSummaryDto previewOrder(@RequestBody CheckoutOrderRequest request) {
         Long userId = checkoutService.resolveCurrentUserId();
         return checkoutService.buildSummary(userId, request).getOrderSummary();
+    }
+
+    @GetMapping("/orders")
+    @PreAuthorize("hasAuthority('CUSTOMER_VIEW_ORDER_HISTORY')")
+    public List<OrderListItemDto> listOrders() {
+        Long userId = checkoutService.resolveCurrentUserId();
+        return checkoutService.listOrdersForUser(userId);
     }
 
     @PostMapping("/orders")

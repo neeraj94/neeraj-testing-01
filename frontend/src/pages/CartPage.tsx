@@ -1,5 +1,6 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, createSearchParams, useNavigate } from 'react-router-dom';
+import { useMutation } from '@tanstack/react-query';
 import { useAppDispatch, useAppSelector } from '../app/hooks';
 import { selectBaseCurrency } from '../features/settings/selectors';
 import {
@@ -14,6 +15,9 @@ import type { CartItem } from '../types/cart';
 import { useToast } from '../components/ToastProvider';
 import { formatCurrency } from '../utils/currency';
 import { rememberPostLoginRedirect } from '../utils/postLoginRedirect';
+import { api } from '../services/http';
+import type { CheckoutOrderLine, OrderSummary } from '../types/checkout';
+import { extractErrorMessage } from '../utils/errors';
 
 const CartPage = () => {
   const dispatch = useAppDispatch();
@@ -25,6 +29,122 @@ const CartPage = () => {
   const baseCurrency = useAppSelector(selectBaseCurrency);
   const currencyCode = baseCurrency ?? 'USD';
   const isAuthenticatedCart = source === 'authenticated';
+  const [couponCode, setCouponCode] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null);
+  const [cartSummary, setCartSummary] = useState<OrderSummary | null>(null);
+  const [couponFeedback, setCouponFeedback] = useState<{ tone: 'success' | 'error'; text: string } | null>(null);
+
+  const orderLines = useMemo<CheckoutOrderLine[]>(
+    () =>
+      cart.items.map((item) => ({
+        productId: item.productId,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice ?? 0,
+        variantId: item.variantId ?? undefined,
+        variantSku: item.sku ?? undefined,
+        variantLabel: item.variantLabel ?? undefined,
+        productSlug: item.productSlug ?? undefined
+      })),
+    [cart.items]
+  );
+
+  const orderLinesKey = useMemo(
+    () =>
+      orderLines
+        .map((line) => `${line.productId ?? 'p'}-${line.variantId ?? 'base'}:${line.quantity}`)
+        .join('|'),
+    [orderLines]
+  );
+
+  const {
+    mutate: recalcSummary,
+    isPending: summaryPending
+  } = useMutation({
+    mutationFn: async ({ coupon }: { coupon: string | null }) => {
+      const payload = {
+        lines: orderLines.map((line) => ({
+          productId: line.productId,
+          quantity: line.quantity,
+          unitPrice: Number(line.unitPrice ?? 0),
+          variantId: line.variantId ?? null,
+          variantSku: line.variantSku ?? undefined,
+          variantLabel: line.variantLabel ?? undefined
+        })),
+        couponCode: coupon ?? undefined
+      };
+      const { data } = await api.post<OrderSummary>('/checkout/summary', payload);
+      return { data, coupon };
+    },
+    onSuccess: ({ data, coupon }) => {
+      setCartSummary(data);
+      const resolvedCode = data.appliedCoupon?.code ?? (coupon ? coupon.toUpperCase() : null);
+      setAppliedCoupon(resolvedCode);
+      setCouponCode(resolvedCode ?? '');
+      setCouponFeedback({
+        tone: 'success',
+        text: coupon ? 'Coupon applied successfully.' : 'Coupon removed.'
+      });
+    },
+    onError: (error) => {
+      setCouponFeedback({
+        tone: 'error',
+        text: extractErrorMessage(error, 'Unable to update your coupon. Please try again later.')
+      });
+    }
+  });
+
+  useEffect(() => {
+    if (!auth.accessToken || auth.portal !== 'client') {
+      setCartSummary(null);
+      return;
+    }
+    if (appliedCoupon) {
+      recalcSummary({ coupon: appliedCoupon });
+    }
+  }, [appliedCoupon, auth.accessToken, auth.portal, orderLinesKey, recalcSummary]);
+
+  const summaryTotals = useMemo(() => {
+    if (cartSummary) {
+      return {
+        subtotal: cartSummary.productTotal ?? 0,
+        tax: cartSummary.taxTotal ?? 0,
+        shipping: cartSummary.shippingTotal ?? 0,
+        discount: cartSummary.discountTotal ?? 0,
+        total: cartSummary.grandTotal ?? cartSummary.productTotal ?? 0
+      };
+    }
+    return {
+      subtotal: cart.subtotal ?? 0,
+      tax: null,
+      shipping: null,
+      discount: null,
+      total: cart.subtotal ?? 0
+    };
+  }, [cart.subtotal, cartSummary]);
+
+  const applyCoupon = () => {
+    setCouponFeedback(null);
+    const normalized = couponCode.trim().toUpperCase();
+    if (!auth.accessToken || auth.portal !== 'client') {
+      setCouponFeedback({ tone: 'error', text: 'Sign in to apply coupons to your cart.' });
+      return;
+    }
+    if (!normalized) {
+      setCouponFeedback({ tone: 'error', text: 'Enter a coupon code to apply.' });
+      return;
+    }
+    setCouponCode(normalized);
+    recalcSummary({ coupon: normalized });
+  };
+
+  const removeCoupon = () => {
+    setCouponFeedback(null);
+    if (!auth.accessToken || auth.portal !== 'client') {
+      setCouponFeedback({ tone: 'error', text: 'Sign in to manage coupons.' });
+      return;
+    }
+    recalcSummary({ coupon: null });
+  };
 
   const handleQuantityChange = useCallback(
     (item: CartItem, quantity: number) => {
@@ -236,10 +356,86 @@ const CartPage = () => {
                   <div className="flex items-center justify-between">
                     <dt>Subtotal</dt>
                     <dd className="font-semibold text-slate-900">
-                      {formatCurrency(cart.subtotal ?? 0, currencyCode)}
+                      {formatCurrency(summaryTotals.subtotal, currencyCode)}
                     </dd>
                   </div>
+                  {summaryTotals.tax != null && (
+                    <div className="flex items-center justify-between">
+                      <dt>Tax</dt>
+                      <dd>{formatCurrency(summaryTotals.tax, currencyCode)}</dd>
+                    </div>
+                  )}
+                  {summaryTotals.shipping != null && (
+                    <div className="flex items-center justify-between">
+                      <dt>Shipping</dt>
+                      <dd>{formatCurrency(summaryTotals.shipping, currencyCode)}</dd>
+                    </div>
+                  )}
+                  {summaryTotals.discount != null && summaryTotals.discount > 0 && (
+                    <div className="flex items-center justify-between text-emerald-600">
+                      <dt>Discount</dt>
+                      <dd>-{formatCurrency(summaryTotals.discount, currencyCode)}</dd>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between border-t border-slate-200 pt-2 text-base font-semibold text-slate-900">
+                    <dt>Total</dt>
+                    <dd>{formatCurrency(summaryTotals.total, currencyCode)}</dd>
+                  </div>
                 </dl>
+                <div className="mt-6 rounded-xl bg-slate-50 p-4">
+                  <label className="text-sm font-semibold text-slate-700" htmlFor="cart-coupon-code">
+                    Coupon code
+                  </label>
+                  <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+                    <input
+                      id="cart-coupon-code"
+                      type="text"
+                      value={couponCode}
+                      onChange={(event) => {
+                        setCouponCode(event.target.value);
+                        setCouponFeedback(null);
+                      }}
+                      placeholder="Enter code"
+                      className="w-full rounded-full border border-slate-300 px-4 py-2 text-sm focus:border-primary focus:outline-none"
+                      disabled={summaryPending || cart.items.length === 0}
+                    />
+                    <button
+                      type="button"
+                      onClick={applyCoupon}
+                      className="rounded-full bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-60"
+                      disabled={summaryPending || cart.items.length === 0}
+                    >
+                      {summaryPending ? 'Applying…' : 'Apply'}
+                    </button>
+                    {appliedCoupon && (
+                      <button
+                        type="button"
+                        onClick={removeCoupon}
+                        className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                        disabled={summaryPending}
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                  {appliedCoupon && cartSummary?.appliedCoupon && (
+                    <p className="mt-2 text-xs text-emerald-600">
+                      Savings: {formatCurrency(cartSummary.appliedCoupon.discountAmount ?? summaryTotals.discount ?? 0, currencyCode)}
+                    </p>
+                  )}
+                  {couponFeedback && (
+                    <p
+                      className={`mt-2 text-xs ${
+                        couponFeedback.tone === 'success' ? 'text-emerald-600' : 'text-rose-600'
+                      }`}
+                    >
+                      {couponFeedback.text}
+                    </p>
+                  )}
+                  {!auth.accessToken && (
+                    <p className="mt-2 text-xs text-slate-500">Sign in during checkout to apply coupons.</p>
+                  )}
+                </div>
                 <button
                   type="button"
                   className="mt-6 w-full rounded-full bg-primary px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-primary/30 transition hover:-translate-y-0.5 hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-60"

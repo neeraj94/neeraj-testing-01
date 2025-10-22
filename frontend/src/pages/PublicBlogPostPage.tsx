@@ -3,7 +3,6 @@ import { Link, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../services/http';
 import type { PublicBlogPost } from '../types/blog';
-import StorefrontHeader from '../components/StorefrontHeader';
 
 const stripHtml = (value?: string | null) =>
   (value ?? '')
@@ -84,8 +83,7 @@ const PublicBlogPostPage = () => {
   const publishedLabel = post ? formatDisplayDate(post.publishedAt) : null;
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <StorefrontHeader activeKey="blog" />
+    <div className="min-h-screen bg-slate-50 pb-20 pt-12">
 
       {isLoading && (
         <div className="flex min-h-[60vh] items-center justify-center px-6 text-slate-500">Loading article…</div>

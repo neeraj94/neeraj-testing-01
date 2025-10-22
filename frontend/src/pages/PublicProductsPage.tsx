@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import StorefrontHeader from '../components/StorefrontHeader';
 import { useAppDispatch, useAppSelector } from '../app/hooks';
 import { selectBaseCurrency } from '../features/settings/selectors';
 import { api } from '../services/http';
@@ -659,9 +658,8 @@ const PublicProductsPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
-      <StorefrontHeader activeKey="products" />
-      <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-slate-50 pb-20 pt-12 text-slate-900">
+      <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
         <div className="flex flex-col gap-10 lg:grid lg:grid-cols-[280px_1fr]">
           <aside className="space-y-10">
             <div className="flex items-center justify-between">
@@ -781,115 +779,7 @@ const PublicProductsPage = () => {
             {renderPagination()}
           </section>
         </div>
-      </main>
-
-      <footer className="border-t border-slate-200 bg-white">
-        <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8">
-          <div className="grid gap-10 md:grid-cols-3">
-            <div className="space-y-3">
-              <h2 className="text-xl font-semibold text-slate-900">Aurora Market</h2>
-              <p className="text-sm text-slate-600">
-                We curate mindful products from independent makers and global brands. Every item is crafted to elevate your
-                everyday rituals.
-              </p>
-            </div>
-            <div className="grid grid-cols-2 gap-4 text-sm text-slate-600">
-              <div className="space-y-2">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Explore</p>
-                <Link to="/" className="block transition hover:text-primary">
-                  Home
-                </Link>
-                <Link to="/products" className="block transition hover:text-primary">
-                  All Products
-                </Link>
-                <Link to="/categories" className="block transition hover:text-primary">
-                  Categories
-                </Link>
-                <Link to="/brands" className="block transition hover:text-primary">
-                  Brands
-                </Link>
-                <Link to="/coupons" className="block transition hover:text-primary">
-                  Coupons
-                </Link>
-              </div>
-              <div className="space-y-2">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Support</p>
-                <a href="mailto:support@auroramarket.com" className="block transition hover:text-primary">
-                  Email Us
-                </a>
-                <a href="tel:+18004561234" className="block transition hover:text-primary">
-                  +1 (800) 456-1234
-                </a>
-                <a href="/privacy" className="block transition hover:text-primary">
-                  Privacy Policy
-                </a>
-                <a href="/terms" className="block transition hover:text-primary">
-                  Terms & Conditions
-                </a>
-              </div>
-            </div>
-            <div className="space-y-4">
-              <p className="text-sm text-slate-600">
-                Join our newsletter for launch announcements, curated edits, and exclusive offers.
-              </p>
-              <form
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  notify({
-                    type: 'success',
-                    title: 'Thank you!',
-                    message: 'You are on the list. Look out for upcoming product drops.'
-                  });
-                  (event.currentTarget.elements.namedItem('email') as HTMLInputElement | null)?.blur();
-                  event.currentTarget.reset();
-                }}
-                className="flex flex-col gap-3 sm:flex-row"
-              >
-                <label htmlFor="newsletter-email" className="sr-only">
-                  Email address
-                </label>
-                <input
-                  id="newsletter-email"
-                  name="email"
-                  type="email"
-                  required
-                  placeholder="you@example.com"
-                  className="w-full rounded-full border border-slate-200 px-4 py-2 text-sm text-slate-700 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                />
-                <button
-                  type="submit"
-                  className="rounded-full bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-primary/90"
-                >
-                  Subscribe
-                </button>
-              </form>
-              <div className="flex items-center gap-4 text-slate-500">
-                <a href="https://www.instagram.com" className="transition hover:text-primary" aria-label="Instagram">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5">
-                    <path d="M7 2C4.2 2 2 4.2 2 7v10c0 2.8 2.2 5 5 5h10c2.8 0 5-2.2 5-5V7c0-2.8-2.2-5-5-5H7zm0 2h10c1.7 0 3 1.3 3 3v10c0 1.7-1.3 3-3 3H7c-1.7 0-3-1.3-3-3V7c0-1.7 1.3-3 3-3zm10 1a1 1 0 100 2 1 1 0 000-2zM12 7a5 5 0 100 10 5 5 0 000-10zm0 2a3 3 0 110 6 3 3 0 010-6z" />
-                  </svg>
-                </a>
-                <a href="https://www.twitter.com" className="transition hover:text-primary" aria-label="Twitter">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5">
-                    <path d="M20.9 7.5c.6-.4 1.1-.9 1.5-1.5-.6.3-1.2.5-1.8.6a3.16 3.16 0 001.4-1.7 6.18 6.18 0 01-2 .8A3.1 3.1 0 0016.2 5c-1.7 0-3.2 1.4-3.2 3.2 0 .3 0 .6.1.8-2.7-.1-5.1-1.4-6.7-3.4-.3.6-.5 1.2-.5 1.9 0 1.2.6 2.3 1.5 2.9-.6 0-1.1-.2-1.6-.4v.1c0 1.7 1.2 3.1 2.7 3.4-.3.1-.7.1-1 .1-.2 0-.5 0-.7-.1.5 1.5 1.9 2.6 3.6 2.6A6.24 6.24 0 014 18.6a8.8 8.8 0 004.8 1.4c5.7 0 8.8-4.8 8.8-8.8v-.4c.6-.4 1.1-.9 1.5-1.5z" />
-                  </svg>
-                </a>
-                <a href="https://www.linkedin.com" className="transition hover:text-primary" aria-label="LinkedIn">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5">
-                    <path d="M4.5 3A2.5 2.5 0 102 5.5 2.5 2.5 0 004.5 3zM3 8h3v12H3zm7 0h2.9v1.8h.1c.4-.7 1.4-1.6 3-1.6 3.2 0 3.8 2.1 3.8 4.8V20H18v-6c0-1.4 0-3.1-1.9-3.1s-2.2 1.5-2.2 3v6h-3z" />
-                  </svg>
-                </a>
-              </div>
-            </div>
-          </div>
-          <div className="mt-10 border-t border-slate-200 pt-6 text-sm text-slate-500 sm:flex sm:items-center sm:justify-between">
-            <p>© {new Date().getFullYear()} Aurora Market. All rights reserved.</p>
-            <div className="mt-4 flex items-center gap-3 sm:mt-0">
-              <span>Made with care in NYC.</span>
-            </div>
-          </div>
-        </div>
-      </footer>
+      </div>
     </div>
   );
 };
