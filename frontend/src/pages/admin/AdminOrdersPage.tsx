@@ -246,6 +246,31 @@ const AdminOrdersPage = () => {
     }
   });
 
+  const fetchOrderDetail = useCallback(async (orderId: number) => {
+    const { data } = await adminApi.get<unknown>(`/orders/${orderId}`);
+    return normalizeOrderDetailResponse(data);
+  }, []);
+
+  const ordersQuery = useQuery<OrderListItem[]>({
+    queryKey: ['orders', 'admin'],
+    enabled: canViewOrders,
+    queryFn: async () => {
+      const { data } = await adminApi.get<unknown>('/orders');
+      return normalizeOrdersResponse(data);
+    }
+  });
+
+  const orderDetailQuery = useQuery<OrderDetail | null>({
+    queryKey: ['orders', 'admin', 'detail', detailOrderId],
+    enabled: detailOrderId != null,
+    queryFn: async () => {
+      if (detailOrderId == null) {
+        return null;
+      }
+      return fetchOrderDetail(detailOrderId);
+    }
+  });
+
   const deleteOrderMutation = useMutation({
     mutationFn: async (orderId: number) => {
       await adminApi.delete(`/orders/${orderId}`);

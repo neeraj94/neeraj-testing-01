@@ -20,7 +20,7 @@ import com.example.rbac.admin.products.model.ProductVariantValue;
 import com.example.rbac.admin.attributes.model.AttributeValue;
 import com.example.rbac.admin.products.repository.ProductRepository;
 import com.example.rbac.admin.coupons.model.Coupon;
-import com.example.rbac.admin.coupons.model.DiscountType;
+import com.example.rbac.admin.products.model.DiscountType;
 import com.example.rbac.admin.coupons.repository.CouponRepository;
 import com.example.rbac.admin.finance.taxrate.model.TaxRate;
 import com.example.rbac.admin.finance.taxrate.model.TaxRateType;
