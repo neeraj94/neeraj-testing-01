@@ -13,9 +13,87 @@ import { extractErrorMessage } from '../../utils/errors';
 import { hasAnyPermission } from '../../utils/permissions';
 import { useToast } from '../../components/ToastProvider';
 import { useConfirm } from '../../components/ConfirmDialogProvider';
+import OrderEditor from './components/OrderEditor';
 
-const formatDateTime = (value: string) =>
-  new Date(value).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null;
+
+const normalizeOrdersResponse = (payload: unknown): OrderListItem[] => {
+  if (Array.isArray(payload)) {
+    return payload
+      .filter((item): item is OrderListItem => isRecord(item) && typeof item.id === 'number')
+      .map((item) => ({
+        ...item,
+        lines: Array.isArray(item.lines) ? item.lines : []
+      }));
+  }
+
+  if (isRecord(payload)) {
+    if (Array.isArray(payload.data)) {
+      return normalizeOrdersResponse(payload.data);
+    }
+    if (Array.isArray(payload.content)) {
+      return normalizeOrdersResponse(payload.content);
+    }
+  }
+
+  return [];
+};
+
+const normalizeOrderDetailResponse = (payload: unknown): OrderDetail | null => {
+  if (Array.isArray(payload)) {
+    return payload.length ? normalizeOrderDetailResponse(payload[0]) : null;
+  }
+
+  if (isRecord(payload)) {
+    if (payload.data) {
+      return normalizeOrderDetailResponse(payload.data);
+    }
+
+    if (typeof payload.id === 'number') {
+      const detailRecord = payload as Record<string, unknown>;
+      const lines = Array.isArray(detailRecord.lines)
+        ? (detailRecord.lines as unknown as OrderDetail['lines'])
+        : [];
+      const summary = isRecord(detailRecord.summary)
+        ? (detailRecord.summary as unknown as OrderDetail['summary'])
+        : null;
+      const shippingAddress = isRecord(detailRecord.shippingAddress)
+        ? (detailRecord.shippingAddress as unknown as OrderDetail['shippingAddress'])
+        : null;
+      const billingAddress = isRecord(detailRecord.billingAddress)
+        ? (detailRecord.billingAddress as unknown as OrderDetail['billingAddress'])
+        : null;
+      const paymentMethod = isRecord(detailRecord.paymentMethod)
+        ? (detailRecord.paymentMethod as unknown as OrderDetail['paymentMethod'])
+        : null;
+
+      return {
+        ...(detailRecord as unknown as OrderDetail),
+        lines,
+        summary,
+        shippingAddress,
+        billingAddress,
+        paymentMethod
+      };
+    }
+  }
+
+  return null;
+};
+
+const formatDateTime = (value: string | null | undefined) => {
+  if (!value) {
+    return 'Unknown date';
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return 'Unknown date';
+  }
+  return date.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+};
+
+type EditorState = { type: 'create' } | { type: 'edit'; orderId: number };
 
 const AdminOrdersPage = () => {
   const baseCurrency = useAppSelector(selectBaseCurrency);
@@ -23,9 +101,17 @@ const AdminOrdersPage = () => {
   const { notify } = useToast();
   const confirm = useConfirm();
   const queryClient = useQueryClient();
+  const canViewOrders = useMemo(
+    () =>
+      hasAnyPermission(permissions, ['ORDER_VIEW_GLOBAL', 'ORDER_CREATE', 'ORDER_EDIT', 'ORDER_DELETE']),
+    [permissions]
+  );
+  const canCreateOrders = useMemo(() => hasAnyPermission(permissions, ['ORDER_CREATE']), [permissions]);
+  const canEditOrders = useMemo(() => hasAnyPermission(permissions, ['ORDER_EDIT']), [permissions]);
   const canDeleteOrders = useMemo(() => hasAnyPermission(permissions, ['ORDER_DELETE']), [permissions]);
   const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
   const [deletingOrderId, setDeletingOrderId] = useState<number | null>(null);
+  const [editorState, setEditorState] = useState<EditorState | null>(null);
 
   const deleteOrderMutation = useMutation({
     mutationFn: async (orderId: number) => {
@@ -37,6 +123,9 @@ const AdminOrdersPage = () => {
     onSuccess: (_, orderId) => {
       notify({ title: 'Order deleted', message: 'The order was removed successfully.', type: 'success' });
       setSelectedOrderId((current) => (current === orderId ? null : current));
+      setEditorState((current) =>
+        current?.type === 'edit' && current.orderId === orderId ? null : current
+      );
       queryClient.invalidateQueries({ queryKey: ['orders', 'admin'] });
       queryClient.invalidateQueries({ queryKey: ['orders', 'admin', 'detail', orderId] });
     },
@@ -70,18 +159,19 @@ const AdminOrdersPage = () => {
 
   const ordersQuery = useQuery<OrderListItem[]>({
     queryKey: ['orders', 'admin'],
+    enabled: canViewOrders,
     queryFn: async () => {
-      const { data } = await adminApi.get<OrderListItem[]>('/orders');
-      return data;
+      const { data } = await adminApi.get<unknown>('/orders');
+      return normalizeOrdersResponse(data);
     }
   });
 
   const orders = ordersQuery.data ?? [];
-  const selectedOrder = orderDetailQuery.data ?? null;
 
   useEffect(() => {
     if (!orders.length) {
       setSelectedOrderId(null);
+      setEditorState((current) => (current?.type === 'edit' ? null : current));
       return;
     }
     if (!orders.some((order) => order.id === selectedOrderId)) {
@@ -89,16 +179,33 @@ const AdminOrdersPage = () => {
     }
   }, [orders, selectedOrderId]);
 
-  const orderDetailQuery = useQuery<OrderDetail>({
+  const orderDetailQuery = useQuery<OrderDetail | null>({
     queryKey: ['orders', 'admin', 'detail', selectedOrderId],
     enabled: selectedOrderId != null,
     queryFn: async () => {
-      const { data } = await adminApi.get<OrderDetail>(`/orders/${selectedOrderId}`);
-      return data;
+      const { data } = await adminApi.get<unknown>(`/orders/${selectedOrderId}`);
+      return normalizeOrderDetailResponse(data);
     }
   });
 
   const selectedOrderDetail = orderDetailQuery.data ?? null;
+
+  useEffect(() => {
+    if (editorState?.type === 'edit' && editorState.orderId !== selectedOrderId) {
+      setEditorState(null);
+    }
+  }, [editorState, selectedOrderId]);
+
+  if (!canViewOrders) {
+    return (
+      <div className="space-y-4 rounded-3xl border border-amber-200 bg-amber-50/80 p-10 text-center shadow">
+        <h1 className="text-xl font-semibold text-amber-800">Orders access is restricted</h1>
+        <p className="text-sm text-amber-700">
+          You do not have permission to view orders. Contact an administrator if you believe this is a mistake.
+        </p>
+      </div>
+    );
+  }
 
   if (ordersQuery.isLoading) {
     return (
@@ -125,12 +232,35 @@ const AdminOrdersPage = () => {
 
   return (
     <div className="space-y-8">
-      <header>
-        <h1 className="text-2xl font-semibold text-slate-900">Orders</h1>
-        <p className="text-sm text-slate-500">
-          Review recent purchases placed through the checkout experience and drill into the full order details.
-        </p>
+      <header className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-slate-900">Orders</h1>
+          <p className="text-sm text-slate-500">
+            Review recent purchases placed through the checkout experience and drill into the full order details.
+          </p>
+        </div>
+        {canCreateOrders && (
+          <Button
+            type="button"
+            onClick={() => setEditorState({ type: 'create' })}
+            disabled={editorState?.type === 'create'}
+          >
+            {editorState?.type === 'create' ? 'Creating…' : 'Create order'}
+          </Button>
+        )}
       </header>
+
+      {editorState?.type === 'create' ? (
+        <OrderEditor
+          mode="create"
+          baseCurrency={baseCurrency}
+          onCancel={() => setEditorState(null)}
+          onSaved={(order) => {
+            setEditorState(null);
+            setSelectedOrderId(order.id);
+          }}
+        />
+      ) : null}
 
       {hasOrders ? (
         <div className="grid gap-6 lg:grid-cols-[320px,1fr]">
@@ -197,31 +327,60 @@ const AdminOrdersPage = () => {
                 </div>
               </section>
             ) : selectedOrderDetail ? (
-              <div className="space-y-4">
-                {canDeleteOrders && (
-                  <div className="flex justify-end">
-                    <Button
-                      type="button"
-                      onClick={() =>
-                        void handleDeleteOrder(selectedOrderDetail.id, selectedOrderDetail.orderNumber)
-                      }
-                      disabled={
-                        deletingOrderId === selectedOrderDetail.id && deleteOrderMutation.isPending
-                      }
-                      className="inline-flex items-center justify-center rounded-lg border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-600 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      {deletingOrderId === selectedOrderDetail.id && deleteOrderMutation.isPending
-                        ? 'Deleting…'
-                        : 'Delete order'}
-                    </Button>
-                  </div>
-                )}
-                <OrderDetailPanel
-                  order={selectedOrderDetail}
+              editorState?.type === 'edit' && editorState.orderId === selectedOrderDetail.id ? (
+                <OrderEditor
+                  mode="edit"
                   baseCurrency={baseCurrency}
-                  onClose={() => setSelectedOrderId(null)}
+                  initialOrder={selectedOrderDetail}
+                  onCancel={() => setEditorState(null)}
+                  onSaved={(order) => {
+                    setEditorState(null);
+                    setSelectedOrderId(order.id);
+                  }}
                 />
-              </div>
+              ) : (
+                <div className="space-y-4">
+                  {(canEditOrders || canDeleteOrders) && (
+                    <div className="flex flex-wrap justify-end gap-2">
+                      {canEditOrders && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          onClick={() => setEditorState({ type: 'edit', orderId: selectedOrderDetail.id })}
+                          disabled={editorState?.type === 'edit' && editorState.orderId === selectedOrderDetail.id}
+                        >
+                          {editorState?.type === 'edit' && editorState.orderId === selectedOrderDetail.id
+                            ? 'Editing order'
+                            : 'Edit order'}
+                        </Button>
+                      )}
+                      {canDeleteOrders && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          onClick={() =>
+                            void handleDeleteOrder(selectedOrderDetail.id, selectedOrderDetail.orderNumber)
+                          }
+                          disabled={
+                            (deletingOrderId === selectedOrderDetail.id && deleteOrderMutation.isPending) ||
+                            (editorState?.type === 'edit' && editorState.orderId === selectedOrderDetail.id)
+                          }
+                          className="border border-rose-200 text-rose-600 hover:bg-rose-50"
+                        >
+                          {deletingOrderId === selectedOrderDetail.id && deleteOrderMutation.isPending
+                            ? 'Deleting…'
+                            : 'Delete order'}
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                  <OrderDetailPanel
+                    order={selectedOrderDetail}
+                    baseCurrency={baseCurrency}
+                    onClose={() => setSelectedOrderId(null)}
+                  />
+                </div>
+              )
             ) : null}
           </div>
         </div>
@@ -231,6 +390,17 @@ const AdminOrdersPage = () => {
           <p className="mt-2 text-sm text-slate-500">
             Orders will appear here automatically once customers complete checkout.
           </p>
+          {canCreateOrders ? (
+            <div className="mt-6 flex justify-center">
+              <Button
+                type="button"
+                onClick={() => setEditorState({ type: 'create' })}
+                disabled={editorState?.type === 'create'}
+              >
+                {editorState?.type === 'create' ? 'Creating…' : 'Create an order'}
+              </Button>
+            </div>
+          ) : null}
         </section>
       )}
     </div>
