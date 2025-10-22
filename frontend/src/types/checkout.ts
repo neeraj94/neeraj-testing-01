@@ -26,6 +26,20 @@ export interface CheckoutAddress {
   updatedAt: string;
 }
 
+export interface CheckoutAddressPayload {
+  type: AddressType;
+  countryId?: number | null;
+  stateId?: number | null;
+  cityId?: number | null;
+  fullName: string;
+  mobileNumber: string;
+  pinCode?: string | null;
+  addressLine1: string;
+  addressLine2?: string | null;
+  landmark?: string | null;
+  makeDefault?: boolean;
+}
+
 export interface PaymentMethod {
   key: string;
   displayName: string;

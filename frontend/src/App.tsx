@@ -25,6 +25,7 @@ import ShippingPage from './pages/admin/ShippingPage';
 import EcommerceHomePage from './pages/EcommerceHomePage';
 import ProtectedRoute from './routes/ProtectedRoute';
 import PermissionRoute from './routes/PermissionRoute';
+import CustomerRoute from './routes/CustomerRoute';
 import { useAppDispatch, useAppSelector } from './app/hooks';
 import {
   loadCurrentUser,
@@ -55,6 +56,9 @@ import PublicProductsPage from './pages/PublicProductsPage';
 import CartPage from './pages/CartPage';
 import CheckoutPage from './pages/CheckoutPage';
 import OrderConfirmationPage from './pages/OrderConfirmationPage';
+import MyAccountPage from './pages/MyAccountPage';
+import MyOrdersPage from './pages/MyOrdersPage';
+import CustomerOrderDetailPage from './pages/CustomerOrderDetailPage';
 import AdminPaymentPage from './pages/admin/AdminPaymentPage';
 import AdminOrdersPage from './pages/admin/AdminOrdersPage';
 import AdminOrderEditorPage from './pages/admin/AdminOrderEditorPage';
@@ -191,6 +195,11 @@ const App = () => {
       <Route path="/order-confirmation/:orderId" element={<OrderConfirmationPage />} />
       <Route path="/products/showcase" element={<Navigate to="/product/demo-product" replace />} />
       <Route path="/product/:slug" element={<PublicProductPage />} />
+      <Route element={<CustomerRoute />}>
+        <Route path="/account" element={<MyAccountPage />} />
+        <Route path="/account/orders" element={<MyOrdersPage />} />
+        <Route path="/account/orders/:orderId" element={<CustomerOrderDetailPage />} />
+      </Route>
       <Route element={<ProtectedRoute />}>
         <Route path="/admin" element={<Layout />}>
           <Route index element={<Navigate to="dashboard" replace />} />
