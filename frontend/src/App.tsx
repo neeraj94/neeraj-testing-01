@@ -57,6 +57,7 @@ import CheckoutPage from './pages/CheckoutPage';
 import OrderConfirmationPage from './pages/OrderConfirmationPage';
 import AdminPaymentPage from './pages/admin/AdminPaymentPage';
 import AdminOrdersPage from './pages/admin/AdminOrdersPage';
+import AdminOrderEditorPage from './pages/admin/AdminOrderEditorPage';
 import AdminCartsPage from './pages/admin/AdminCartsPage';
 
 const App = () => {
@@ -277,6 +278,8 @@ const App = () => {
             }
           >
             <Route path="orders" element={<AdminOrdersPage />} />
+            <Route path="orders/new" element={<AdminOrderEditorPage />} />
+            <Route path="orders/:orderId/edit" element={<AdminOrderEditorPage />} />
           </Route>
           <Route element={<PermissionRoute required={['USER_VIEW_GLOBAL']} />}>
             <Route path="carts" element={<AdminCartsPage />} />

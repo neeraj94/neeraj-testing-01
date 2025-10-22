@@ -1,7 +1,19 @@
 package com.example.rbac.admin.checkout.service;
 
 import com.example.rbac.admin.activity.service.ActivityRecorder;
+import com.example.rbac.admin.checkout.dto.AdminOrderCustomerOptionDto;
+import com.example.rbac.admin.checkout.dto.AdminOrderProductOptionDto;
 import com.example.rbac.admin.checkout.dto.AdminOrderRequest;
+import com.example.rbac.admin.finance.taxrate.model.TaxRateType;
+import com.example.rbac.admin.products.dto.ProductCategoryDto;
+import com.example.rbac.admin.products.dto.ProductDto;
+import com.example.rbac.admin.products.dto.ProductTaxRateDto;
+import com.example.rbac.admin.products.dto.ProductVariantDto;
+import com.example.rbac.admin.products.dto.ProductVariantValueDto;
+import com.example.rbac.admin.checkout.dto.AdminOrderProductVariantOptionDto;
+import com.example.rbac.admin.products.model.Product;
+import com.example.rbac.admin.products.repository.ProductRepository;
+import com.example.rbac.admin.products.service.ProductService;
 import com.example.rbac.admin.users.model.User;
 import com.example.rbac.admin.users.repository.UserRepository;
 import com.example.rbac.client.checkout.dto.AppliedCouponDto;
@@ -18,6 +30,12 @@ import com.example.rbac.client.checkout.service.OrderService;
 import com.example.rbac.common.exception.ApiException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,30 +46,114 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
 public class OrderAdminService {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(OrderAdminService.class);
+    private static final String CUSTOMER_ROLE_KEY = "CUSTOMER";
+    private static final int MAX_LOOKUP_SIZE = 50;
+
     private final CheckoutOrderRepository orderRepository;
     private final ActivityRecorder activityRecorder;
     private final UserRepository userRepository;
     private final OrderService orderService;
+    private final ProductRepository productRepository;
+    private final ProductService productService;
     private final ObjectMapper objectMapper;
 
     public OrderAdminService(CheckoutOrderRepository orderRepository,
                              ActivityRecorder activityRecorder,
                              UserRepository userRepository,
                              OrderService orderService,
+                             ProductRepository productRepository,
+                             ProductService productService,
                              ObjectMapper objectMapper) {
         this.orderRepository = orderRepository;
         this.activityRecorder = activityRecorder;
         this.userRepository = userRepository;
         this.orderService = orderService;
+        this.productRepository = productRepository;
+        this.productService = productService;
         this.objectMapper = objectMapper;
+    }
+
+    @Transactional(readOnly = true)
+    public List<AdminOrderCustomerOptionDto> listCustomerOptions(String search, int limit) {
+        int pageSize = Math.min(Math.max(limit, 1), MAX_LOOKUP_SIZE);
+        Pageable pageable = PageRequest.of(0, pageSize, Sort.by(Sort.Order.asc("fullName"), Sort.Order.asc("id")));
+        String normalizedSearch = search != null ? search.trim() : null;
+        Page<User> page;
+        if (StringUtils.hasText(normalizedSearch)) {
+            page = userRepository.searchCustomersByRoleKey(CUSTOMER_ROLE_KEY, normalizedSearch, pageable);
+        } else {
+            page = userRepository.findCustomersByRoleKey(CUSTOMER_ROLE_KEY, pageable);
+        }
+        if (page == null || CollectionUtils.isEmpty(page.getContent())) {
+            return Collections.emptyList();
+        }
+        return page.getContent().stream()
+                .filter(user -> user != null && user.getId() != null)
+                .map(user -> {
+                    AdminOrderCustomerOptionDto dto = new AdminOrderCustomerOptionDto();
+                    dto.setId(user.getId());
+                    dto.setFullName(StringUtils.hasText(user.getFullName()) ? user.getFullName() : user.getEmail());
+                    dto.setEmail(user.getEmail());
+                    return dto;
+                })
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<AdminOrderProductOptionDto> searchProductOptions(String search, int limit) {
+        int pageSize = Math.min(Math.max(limit, 1), MAX_LOOKUP_SIZE);
+        Pageable pageable = PageRequest.of(0, pageSize, Sort.by(Sort.Order.asc("name"), Sort.Order.asc("id")));
+        String normalizedSearch = search != null ? search.trim() : null;
+        Page<Product> page;
+        if (StringUtils.hasText(normalizedSearch)) {
+            page = productRepository.searchByNameOrSku(normalizedSearch, pageable);
+            if (page.isEmpty()) {
+                page = productRepository.findByNameContainingIgnoreCase(normalizedSearch, pageable);
+            }
+        } else {
+            page = productRepository.findAll(pageable);
+        }
+        if (page == null || CollectionUtils.isEmpty(page.getContent())) {
+            return Collections.emptyList();
+        }
+        List<AdminOrderProductOptionDto> options = new ArrayList<>();
+        for (Product product : page.getContent()) {
+            if (product == null || product.getId() == null) {
+                continue;
+            }
+            try {
+                ProductDto detail = productService.get(product.getId());
+                options.addAll(toProductOptions(detail));
+            } catch (Exception ex) {
+                LOGGER.warn("Unable to load product {} for order selection", product.getId(), ex);
+            }
+        }
+        return options;
+    }
+
+    @Transactional(readOnly = true)
+    public List<AdminOrderProductOptionDto> getProductOptions(Long productId) {
+        if (productId == null) {
+            return Collections.emptyList();
+        }
+        try {
+            ProductDto detail = productService.get(productId);
+            return toProductOptions(detail);
+        } catch (Exception ex) {
+            LOGGER.warn("Unable to load product {} for order selection", productId, ex);
+            return Collections.emptyList();
+        }
     }
 
     @Transactional
@@ -174,6 +276,143 @@ public class OrderAdminService {
         context.put("deletedAt", Instant.now().toString());
 
         activityRecorder.record("Orders", "DELETE", "Deleted order " + orderNumber, "SUCCESS", context);
+    }
+
+    private List<AdminOrderProductOptionDto> toProductOptions(ProductDto detail) {
+        if (detail == null) {
+            return Collections.emptyList();
+        }
+        BigDecimal basePrice = detail.getPricing() != null ? detail.getPricing().getUnitPrice() : null;
+        BigDecimal normalizedBasePrice = normalizeMoney(basePrice);
+        ProductTaxRateDto taxRateDto = resolvePrimaryTaxRate(detail);
+        BigDecimal taxRate = resolveTaxRateDecimal(taxRateDto);
+        String categoryName = resolvePrimaryCategory(detail);
+
+        List<AdminOrderProductOptionDto> options = new ArrayList<>();
+        List<ProductVariantDto> variants = detail.getVariants();
+        if (!CollectionUtils.isEmpty(variants)) {
+            List<AdminOrderProductVariantOptionDto> variantOptions = buildVariantOptions(variants, normalizedBasePrice);
+            for (AdminOrderProductVariantOptionDto variantOption : variantOptions) {
+                AdminOrderProductOptionDto option = createBaseProductOption(detail, taxRateDto, taxRate, categoryName);
+                option.setVariantId(variantOption.getId());
+                option.setVariantSku(variantOption.getSku());
+                option.setVariantKey(variantOption.getKey());
+                option.setVariantLabel(variantOption.getLabel());
+                option.setUnitPrice(variantOption.getUnitPrice());
+                option.setHasVariants(true);
+                option.setVariants(variantOptions);
+                options.add(option);
+            }
+        } else {
+            AdminOrderProductOptionDto option = createBaseProductOption(detail, taxRateDto, taxRate, categoryName);
+            option.setUnitPrice(normalizeMoney(basePrice));
+            option.setHasVariants(false);
+            option.setVariants(Collections.emptyList());
+            options.add(option);
+        }
+        return options;
+    }
+
+    private List<AdminOrderProductVariantOptionDto> buildVariantOptions(List<ProductVariantDto> variants,
+                                                                        BigDecimal normalizedBasePrice) {
+        if (CollectionUtils.isEmpty(variants)) {
+            return Collections.emptyList();
+        }
+        List<AdminOrderProductVariantOptionDto> variantOptions = new ArrayList<>();
+        for (ProductVariantDto variant : variants) {
+            if (variant == null) {
+                continue;
+            }
+            AdminOrderProductVariantOptionDto dto = new AdminOrderProductVariantOptionDto();
+            dto.setId(variant.getId());
+            dto.setSku(variant.getSku());
+            dto.setKey(variant.getKey());
+            dto.setLabel(buildVariantLabel(variant));
+            BigDecimal price = normalizedBasePrice != null ? normalizedBasePrice : BigDecimal.ZERO;
+            if (variant.getPriceAdjustment() != null) {
+                price = price.add(variant.getPriceAdjustment());
+            }
+            dto.setUnitPrice(normalizeMoney(price));
+            variantOptions.add(dto);
+        }
+        return variantOptions;
+    }
+
+    private AdminOrderProductOptionDto createBaseProductOption(ProductDto detail,
+                                                               ProductTaxRateDto taxRateDto,
+                                                               BigDecimal taxRate,
+                                                               String categoryName) {
+        AdminOrderProductOptionDto dto = new AdminOrderProductOptionDto();
+        dto.setProductId(detail.getId());
+        dto.setProductName(detail.getName());
+        dto.setProductSlug(detail.getSlug());
+        dto.setProductSku(detail.getPricing() != null ? detail.getPricing().getSku() : null);
+        dto.setProductVariety(StringUtils.hasText(detail.getUnit()) ? detail.getUnit() : null);
+        dto.setProductSlot(categoryName);
+        dto.setBrandName(detail.getBrand() != null ? detail.getBrand().getName() : null);
+        dto.setThumbnailUrl(detail.getThumbnail() != null ? detail.getThumbnail().getUrl() : null);
+        if (taxRateDto != null) {
+            dto.setTaxRateId(taxRateDto.getId());
+            dto.setTaxRateName(taxRateDto.getName());
+        }
+        dto.setTaxRate(taxRate);
+        return dto;
+    }
+
+    private String resolvePrimaryCategory(ProductDto detail) {
+        if (detail.getCategories() == null) {
+            return null;
+        }
+        return detail.getCategories().stream()
+                .filter(Objects::nonNull)
+                .map(ProductCategoryDto::getName)
+                .filter(StringUtils::hasText)
+                .findFirst()
+                .orElse(null);
+    }
+
+    private ProductTaxRateDto resolvePrimaryTaxRate(ProductDto detail) {
+        if (detail.getTaxRates() == null) {
+            return null;
+        }
+        return detail.getTaxRates().stream()
+                .filter(Objects::nonNull)
+                .filter(rate -> rate.getRateValue() != null)
+                .findFirst()
+                .orElse(null);
+    }
+
+    private BigDecimal resolveTaxRateDecimal(ProductTaxRateDto taxRateDto) {
+        if (taxRateDto == null || taxRateDto.getRateValue() == null) {
+            return normalizeRate(null);
+        }
+        BigDecimal value = taxRateDto.getRateValue();
+        if (taxRateDto.getRateType() == TaxRateType.PERCENTAGE) {
+            return normalizeRate(value.divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP));
+        }
+        return normalizeRate(value);
+    }
+
+    private String buildVariantLabel(ProductVariantDto variant) {
+        if (variant == null || CollectionUtils.isEmpty(variant.getValues())) {
+            return variant != null ? variant.getKey() : null;
+        }
+        String label = variant.getValues().stream()
+                .filter(Objects::nonNull)
+                .map(value -> {
+                    String option = value.getValue();
+                    if (!StringUtils.hasText(option)) {
+                        return null;
+                    }
+                    String attribute = value.getAttributeName();
+                    return StringUtils.hasText(attribute) ? attribute + ": " + option : option;
+                })
+                .filter(StringUtils::hasText)
+                .collect(Collectors.joining(" / "));
+        if (StringUtils.hasText(label)) {
+            return label;
+        }
+        return variant.getKey();
     }
 
     private List<CheckoutOrderLineRequest> sanitizeLines(List<CheckoutOrderLineRequest> lines) {
