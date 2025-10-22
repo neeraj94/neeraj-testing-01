@@ -5,6 +5,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
@@ -13,6 +15,14 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
     @EntityGraph(attributePaths = {"brand"})
     Page<Product> findByNameContainingIgnoreCase(String name, Pageable pageable);
+
+    @Query("""
+            SELECT DISTINCT p FROM Product p
+            WHERE LOWER(p.name) LIKE LOWER(CONCAT('%', :term, '%'))
+               OR LOWER(p.sku) LIKE LOWER(CONCAT('%', :term, '%'))
+            """)
+    @EntityGraph(attributePaths = {"brand"})
+    Page<Product> searchByNameOrSku(@Param("term") String term, Pageable pageable);
 
     @Override
     @EntityGraph(attributePaths = {"brand"})

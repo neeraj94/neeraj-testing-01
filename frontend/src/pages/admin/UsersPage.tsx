@@ -141,6 +141,18 @@ const UsersPage = ({
       ),
     [grantedPermissions]
   );
+  const canCreateOrders = useMemo(
+    () => hasAnyPermission((grantedPermissions ?? []) as PermissionKey[], ['ORDER_CREATE']),
+    [grantedPermissions]
+  );
+  const canEditOrders = useMemo(
+    () => hasAnyPermission((grantedPermissions ?? []) as PermissionKey[], ['ORDER_EDIT']),
+    [grantedPermissions]
+  );
+  const canDeleteOrders = useMemo(
+    () => hasAnyPermission((grantedPermissions ?? []) as PermissionKey[], ['ORDER_DELETE']),
+    [grantedPermissions]
+  );
   const baseCurrency = useAppSelector(selectBaseCurrency);
 
   const [page, setPage] = useState(0);
@@ -348,20 +360,63 @@ const UsersPage = ({
           <p className="mt-2 text-sm text-slate-500">
             This customer hasn’t placed an order yet. When they complete a checkout, their orders will appear here automatically.
           </p>
+          {canCreateOrders ? (
+            <Button
+              type="button"
+              onClick={() => navigate(`/admin/orders/new?customerId=${selectedUserId}`)}
+              className="mt-4"
+            >
+              Create order for this customer
+            </Button>
+          ) : null}
         </section>
       );
     }
 
+    const handleDeleteUserOrder = async (orderId: number, orderNumber?: string | null) => {
+      if (!canDeleteOrders || userOrderDeleteMutation.isPending) {
+        return;
+      }
+      const confirmed = await confirm({
+        title: 'Delete order?',
+        description: `Delete order ${
+          orderNumber && orderNumber.trim() ? orderNumber : `#${orderId}`
+        }? This action cannot be undone.`,
+        confirmLabel: 'Delete order',
+        tone: 'danger'
+      });
+      if (!confirmed) {
+        return;
+      }
+      await userOrderDeleteMutation.mutateAsync(orderId);
+    };
+
     return (
       <div className="grid gap-6 lg:grid-cols-[320px,1fr]">
         <div className="space-y-3">
+          {canCreateOrders ? (
+            <Button
+              type="button"
+              onClick={() => navigate(`/admin/orders/new?customerId=${selectedUserId}`)}
+              className="w-full"
+            >
+              Create order for this customer
+            </Button>
+          ) : null}
           {userOrders.map((order) => {
             const isSelected = selectedUserOrderId === order.id;
             return (
-              <button
+              <div
                 key={order.id}
-                type="button"
+                role="button"
+                tabIndex={0}
                 onClick={() => setSelectedUserOrderId(order.id)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    setSelectedUserOrderId(order.id);
+                  }
+                }}
                 className={`w-full rounded-2xl border px-4 py-3 text-left transition ${
                   isSelected
                     ? 'border-primary/40 bg-primary/5 shadow-sm'
@@ -388,7 +443,38 @@ const UsersPage = ({
                     </p>
                   </div>
                 </div>
-              </button>
+                {(canEditOrders || canDeleteOrders) && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {canEditOrders ? (
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          navigate(`/admin/orders/${order.id}/edit`);
+                        }}
+                        className="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-800"
+                      >
+                        Edit
+                      </button>
+                    ) : null}
+                    {canDeleteOrders ? (
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          void handleDeleteUserOrder(order.id, order.orderNumber);
+                        }}
+                        disabled={deletingUserOrderId === order.id && userOrderDeleteMutation.isPending}
+                        className="rounded-full border border-rose-200 px-3 py-1 text-xs font-semibold text-rose-600 transition hover:border-rose-300 hover:text-rose-700 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {deletingUserOrderId === order.id && userOrderDeleteMutation.isPending
+                          ? 'Deleting…'
+                          : 'Delete'}
+                      </button>
+                    ) : null}
+                  </div>
+                )}
+              </div>
             );
           })}
         </div>
@@ -792,6 +878,33 @@ const UsersPage = ({
       return data;
     },
     enabled: panelMode === 'detail' && activeTab === 'orders' && selectedUserId != null && canViewOrders
+  });
+
+  const [deletingUserOrderId, setDeletingUserOrderId] = useState<number | null>(null);
+
+  const userOrderDeleteMutation = useMutation({
+    mutationFn: async (orderId: number) => {
+      await adminApi.delete(`/orders/${orderId}`);
+    },
+    onMutate: (orderId) => {
+      setDeletingUserOrderId(orderId);
+    },
+    onSuccess: (_, orderId) => {
+      notify({ title: 'Order deleted', message: 'The order was removed successfully.', type: 'success' });
+      userOrdersQuery.refetch();
+      setSelectedUserOrderId((current) => (current === orderId ? null : current));
+      queryClient.invalidateQueries({ queryKey: ['orders', 'admin'] });
+    },
+    onError: (error) => {
+      notify({
+        title: 'Unable to delete order',
+        message: extractErrorMessage(error, 'Try again later.'),
+        type: 'error'
+      });
+    },
+    onSettled: () => {
+      setDeletingUserOrderId(null);
+    }
   });
 
   const userOrderDetailQuery = useQuery<OrderDetail>({

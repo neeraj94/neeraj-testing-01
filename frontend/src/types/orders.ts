@@ -13,6 +13,7 @@ export interface OrderListItem {
   customerId: number | null;
   customerName: string | null;
   customerEmail?: string | null;
+  paymentStatus?: string | null;
   summary: OrderSummary | null;
   createdAt: string;
   lines: OrderLine[];
@@ -34,4 +35,39 @@ export interface AdminOrderPayload {
   paymentMethod?: PaymentMethod | null;
   summary: Partial<OrderSummary> | null;
   lines: CheckoutOrderLine[];
+}
+
+export interface AdminOrderCustomerOption {
+  id: number;
+  fullName?: string | null;
+  email?: string | null;
+}
+
+export interface AdminOrderProductOption {
+  productId: number;
+  productName: string;
+  productSlug?: string | null;
+  productSku?: string | null;
+  productVariety?: string | null;
+  productSlot?: string | null;
+  brandName?: string | null;
+  thumbnailUrl?: string | null;
+  variantId?: number | null;
+  variantSku?: string | null;
+  variantLabel?: string | null;
+  variantKey?: string | null;
+  taxRateId?: number | null;
+  taxRateName?: string | null;
+  taxRate: number;
+  unitPrice: number;
+  hasVariants?: boolean;
+  variants?: AdminOrderProductVariantOption[];
+}
+
+export interface AdminOrderProductVariantOption {
+  id?: number | null;
+  sku?: string | null;
+  label?: string | null;
+  key?: string | null;
+  unitPrice?: number | null;
 }
