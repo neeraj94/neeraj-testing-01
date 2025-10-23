@@ -329,26 +329,26 @@ public class UserRecentViewService {
         }
         try {
             return entry.getProduct();
-        } catch (org.hibernate.HibernateException | EntityNotFoundException ex) {
+        } catch (EntityNotFoundException ex) {
             return null;
         } catch (RuntimeException ex) {
-            Package exceptionPackage = ex.getClass().getPackage();
-            if (exceptionPackage != null && exceptionPackage.getName().startsWith("org.hibernate")) {
+            if (isHibernateException(ex)) {
                 return null;
             }
             throw ex;
         }
-        try {
-            return entry.getProduct();
-        } catch (org.hibernate.HibernateException | LazyInitializationException | EntityNotFoundException ex) {
-            return null;
-        } catch (RuntimeException ex) {
-            Package exceptionPackage = ex.getClass().getPackage();
+    }
+
+    private boolean isHibernateException(RuntimeException ex) {
+        Throwable current = ex;
+        while (current != null) {
+            Package exceptionPackage = current.getClass().getPackage();
             if (exceptionPackage != null && exceptionPackage.getName().startsWith("org.hibernate")) {
-                return null;
+                return true;
             }
-            throw ex;
+            current = current.getCause();
         }
+        return false;
     }
 
     private String resolveThumbnailUrl(Product product, ProductVariant variant) {
