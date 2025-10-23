@@ -115,6 +115,35 @@ class UserRecentViewServiceTest {
     }
 
     @Test
+    void getRecentViewsForUserSkipsMissingEntriesButKeepsLaterProducts() {
+        UserRecentViewSummary missingFirst = summary(301L, 111L, Instant.parse("2024-03-01T10:00:00Z"));
+        UserRecentViewSummary missingSecond = summary(302L, 222L, Instant.parse("2024-02-28T12:00:00Z"));
+        UserRecentViewSummary retainedFirst = summary(303L, 333L, Instant.parse("2024-02-27T09:30:00Z"));
+        UserRecentViewSummary retainedSecond = summary(304L, 444L, Instant.parse("2024-02-26T08:45:00Z"));
+
+        when(recentViewRepository.findRecentSummariesByUserId(3L))
+                .thenReturn(List.of(missingFirst, missingSecond, retainedFirst, retainedSecond));
+
+        Product firstProduct = new Product();
+        firstProduct.setId(333L);
+        firstProduct.setName("Nebula Desk");
+        Product secondProduct = new Product();
+        secondProduct.setId(444L);
+        secondProduct.setName("Lunar Shelf");
+
+        when(productRepository.findByIdIn(List.of(111L, 222L, 333L, 444L)))
+                .thenReturn(List.of(firstProduct, secondProduct));
+
+        List<UserRecentViewDto> result = service.getRecentViewsForUser(3L);
+
+        assertEquals(2, result.size());
+        assertEquals(333L, result.get(0).getProductId());
+        assertEquals("Nebula Desk", result.get(0).getProductName());
+        assertEquals(444L, result.get(1).getProductId());
+        verify(recentViewRepository).deleteAllByIdInBatch(List.of(301L, 302L));
+    }
+
+    @Test
     void synchronizeGuestRecentViewsMergesGuestHistory() {
         User user = new User();
         user.setId(1L);

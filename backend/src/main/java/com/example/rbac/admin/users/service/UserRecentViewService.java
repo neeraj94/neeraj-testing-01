@@ -81,9 +81,6 @@ public class UserRecentViewService {
                 continue;
             }
             orderedProductIds.add(productId);
-            if (orderedProductIds.size() >= RESPONSE_LIMIT) {
-                break;
-            }
         }
         if (!staleIds.isEmpty()) {
             recentViewRepository.deleteAllByIdInBatch(staleIds);
@@ -91,8 +88,11 @@ public class UserRecentViewService {
         if (orderedProductIds.isEmpty()) {
             return List.of();
         }
-        List<Long> limited = new ArrayList<>(orderedProductIds);
-        return fetchProductsInOrder(limited);
+        List<Product> orderedProducts = fetchProductsInOrder(new ArrayList<>(orderedProductIds));
+        if (orderedProducts.size() <= RESPONSE_LIMIT) {
+            return orderedProducts;
+        }
+        return new ArrayList<>(orderedProducts.subList(0, RESPONSE_LIMIT));
     }
 
     @Transactional(readOnly = true)
@@ -174,9 +174,6 @@ public class UserRecentViewService {
                 continue;
             }
             dedupedByProduct.putIfAbsent(productId, summary);
-            if (dedupedByProduct.size() >= RESPONSE_LIMIT) {
-                break;
-            }
         }
         if (dedupedByProduct.isEmpty()) {
             if (!staleIds.isEmpty()) {
