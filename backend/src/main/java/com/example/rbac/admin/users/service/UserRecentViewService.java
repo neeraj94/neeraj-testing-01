@@ -9,7 +9,6 @@ import com.example.rbac.admin.products.model.ProductVariant;
 import com.example.rbac.admin.products.repository.ProductRepository;
 import com.example.rbac.admin.users.dto.UserRecentViewDto;
 import com.example.rbac.admin.users.model.User;
-import com.example.rbac.admin.users.model.UserPrincipal;
 import com.example.rbac.admin.users.model.UserRecentView;
 import com.example.rbac.admin.users.repository.UserRecentViewRepository;
 import com.example.rbac.admin.users.repository.projection.UserRecentViewSummary;
@@ -17,9 +16,6 @@ import jakarta.persistence.EntityNotFoundException;
 import org.hibernate.proxy.HibernateProxy;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
@@ -176,14 +172,6 @@ public class UserRecentViewService {
         if (userId == null) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "User id is required");
         }
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (!hasAuthority(authentication, "USER_VIEW_GLOBAL")) {
-            Long currentUserId = resolveCurrentUserId(authentication)
-                    .orElseThrow(() -> new ApiException(HttpStatus.FORBIDDEN, "You are not allowed to view this activity"));
-            if (!Objects.equals(currentUserId, userId)) {
-                throw new ApiException(HttpStatus.FORBIDDEN, "You are not allowed to view this activity");
-            }
-        }
         List<UserRecentViewSummary> summaries = Optional.ofNullable(
                         recentViewRepository.findRecentSummariesByUserId(userId))
                 .orElseGet(List::of);
@@ -276,27 +264,15 @@ public class UserRecentViewService {
                 .collect(Collectors.toList());
     }
 
-    private Optional<Long> resolveCurrentUserId(Authentication authentication) {
-        if (authentication == null || !(authentication.getPrincipal() instanceof UserPrincipal userPrincipal)) {
-            return Optional.empty();
+    private Long resolveProductId(UserRecentView entry) {
+        if (entry == null) {
+            return null;
         }
-        User user = userPrincipal.getUser();
-        if (user == null) {
-            return Optional.empty();
+        Long productId = entry.getProductId();
+        if (productId != null) {
+            return productId;
         }
-        return Optional.ofNullable(user.getId());
-    }
-
-    private boolean hasAuthority(Authentication authentication, String authority) {
-        if (authentication == null || authority == null) {
-            return false;
-        }
-        for (GrantedAuthority grantedAuthority : authentication.getAuthorities()) {
-            if (authority.equals(grantedAuthority.getAuthority())) {
-                return true;
-            }
-        }
-        return false;
+        return resolveProductId(tryGetProduct(entry));
     }
 
     private Long resolveProductId(UserRecentView entry) {
