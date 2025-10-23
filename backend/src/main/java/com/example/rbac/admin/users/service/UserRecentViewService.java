@@ -341,6 +341,23 @@ public class UserRecentViewService {
         }
     }
 
+    private Product safeGetProduct(UserRecentView entry) {
+        if (entry == null) {
+            return null;
+        }
+        try {
+            return entry.getProduct();
+        } catch (org.hibernate.HibernateException | LazyInitializationException | EntityNotFoundException ex) {
+            return null;
+        } catch (RuntimeException ex) {
+            Package exceptionPackage = ex.getClass().getPackage();
+            if (exceptionPackage != null && exceptionPackage.getName().startsWith("org.hibernate")) {
+                return null;
+            }
+            throw ex;
+        }
+    }
+
     private String resolveThumbnailUrl(Product product, ProductVariant variant) {
         if (variant != null && variant.getMedia() != null) {
             return variant.getMedia().stream()
