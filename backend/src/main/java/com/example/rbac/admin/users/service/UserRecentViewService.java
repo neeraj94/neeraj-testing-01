@@ -13,7 +13,6 @@ import com.example.rbac.admin.users.model.UserPrincipal;
 import com.example.rbac.admin.users.model.UserRecentView;
 import com.example.rbac.admin.users.repository.UserRecentViewRepository;
 import com.example.rbac.admin.users.repository.projection.UserRecentViewSummary;
-import org.hibernate.Hibernate;
 import jakarta.persistence.EntityNotFoundException;
 import org.hibernate.LazyInitializationException;
 import org.hibernate.proxy.HibernateProxy;
@@ -186,7 +185,9 @@ public class UserRecentViewService {
                 throw new ApiException(HttpStatus.FORBIDDEN, "You are not allowed to view this activity");
             }
         }
-        List<UserRecentViewSummary> summaries = recentViewRepository.findRecentSummariesByUserId(userId);
+        List<UserRecentViewSummary> summaries = Optional.ofNullable(
+                        recentViewRepository.findRecentSummariesByUserId(userId))
+                .orElseGet(List::of);
         Map<Long, UserRecentViewSummary> dedupedByProduct = new LinkedHashMap<>();
         List<Long> staleIds = new ArrayList<>();
         for (UserRecentViewSummary summary : summaries) {
@@ -207,18 +208,33 @@ public class UserRecentViewService {
             return List.of();
         }
 
-        List<Long> productIds = new ArrayList<>(dedupedByProduct.keySet());
-        Map<Long, Product> productsById = productRepository.findByIdIn(productIds).stream()
-                .filter(Objects::nonNull)
-                .collect(Collectors.toMap(Product::getId, product -> product, (existing, replacement) -> existing));
+        List<Product> products = findRecentProductsForUser(userId, null);
+        if (products.isEmpty()) {
+            if (!staleIds.isEmpty()) {
+                recentViewRepository.deleteAllByIdInBatch(staleIds);
+            }
+            return List.of();
+        }
 
-        List<UserRecentViewDto> result = new ArrayList<>();
+        List<Long> availableProductIds = products.stream()
+                .map(Product::getId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
         for (Map.Entry<Long, UserRecentViewSummary> entry : dedupedByProduct.entrySet()) {
             Long productId = entry.getKey();
-            UserRecentViewSummary summary = entry.getValue();
-            Product product = resolveProduct(productId, productsById.get(productId));
+            if (productId == null || availableProductIds.contains(productId)) {
+                continue;
+            }
+            staleIds.add(entry.getValue().getId());
+        }
+
+        List<UserRecentViewDto> result = new ArrayList<>();
+        for (Product product : products) {
             if (product == null) {
-                staleIds.add(summary.getId());
+                continue;
+            }
+            UserRecentViewSummary summary = dedupedByProduct.get(product.getId());
+            if (summary == null) {
                 continue;
             }
             UserRecentViewDto dto = new UserRecentViewDto();
@@ -259,17 +275,6 @@ public class UserRecentViewService {
                 .distinct()
                 .limit(MAX_RECENTS)
                 .collect(Collectors.toList());
-    }
-
-    private void initializeRecommendationAssociations(Product product) {
-        if (product == null) {
-            return;
-        }
-        Hibernate.initialize(product.getGalleryImages());
-        Hibernate.initialize(product.getVariants());
-        if (product.getVariants() != null) {
-            product.getVariants().forEach(variant -> Hibernate.initialize(variant.getMedia()));
-        }
     }
 
     private Optional<Long> resolveCurrentUserId(Authentication authentication) {
@@ -319,27 +324,20 @@ public class UserRecentViewService {
         return productRef.getId();
     }
 
-    private Product resolveProduct(Long productId, Product candidate) {
-        if (productId == null) {
+    private Product safeGetProduct(UserRecentView entry) {
+        if (entry == null) {
             return null;
         }
         try {
-            Product product = candidate;
-            if (product instanceof HibernateProxy proxy) {
-                Object implementation = proxy.getHibernateLazyInitializer().getImplementation();
-                product = implementation instanceof Product resolved ? resolved : null;
-            }
-            if (product == null || !Hibernate.isInitialized(product)) {
-                product = productRepository.findById(productId).orElse(product);
-            }
-            if (product == null) {
+            return entry.getProduct();
+        } catch (org.hibernate.HibernateException | LazyInitializationException | EntityNotFoundException ex) {
+            return null;
+        } catch (RuntimeException ex) {
+            Package exceptionPackage = ex.getClass().getPackage();
+            if (exceptionPackage != null && exceptionPackage.getName().startsWith("org.hibernate")) {
                 return null;
             }
-            Hibernate.initialize(product);
-            initializeRecommendationAssociations(product);
-            return product;
-        } catch (RuntimeException ex) {
-            return null;
+            throw ex;
         }
     }
 

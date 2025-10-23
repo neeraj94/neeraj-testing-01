@@ -6,6 +6,7 @@ import com.example.rbac.admin.products.repository.ProductRepository;
 import com.example.rbac.admin.users.dto.UserRecentViewDto;
 import com.example.rbac.admin.users.model.User;
 import com.example.rbac.admin.users.model.UserRecentView;
+import com.example.rbac.admin.users.repository.projection.UserRecentViewSummary;
 import com.example.rbac.admin.users.repository.UserRecentViewRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -49,20 +50,11 @@ class UserRecentViewServiceTest {
 
     @Test
     void getRecentViewsForUserReturnsOrderedDtos() {
-        UserRecentView firstView = new UserRecentView();
-        Product firstProductRef = new Product();
-        firstProductRef.setId(10L);
-        firstView.setProduct(firstProductRef);
-        firstView.setViewedAt(Instant.parse("2024-01-02T10:15:30Z"));
+        UserRecentViewSummary firstSummary = summary(101L, 10L, Instant.parse("2024-01-02T10:15:30Z"));
+        UserRecentViewSummary secondSummary = summary(102L, 20L, Instant.parse("2024-01-01T08:00:00Z"));
 
-        UserRecentView secondView = new UserRecentView();
-        Product secondProductRef = new Product();
-        secondProductRef.setId(20L);
-        secondView.setProduct(secondProductRef);
-        secondView.setViewedAt(Instant.parse("2024-01-01T08:00:00Z"));
-
-        when(recentViewRepository.findTop20ByUserIdOrderByViewedAtDesc(1L))
-                .thenReturn(List.of(firstView, secondView));
+        when(recentViewRepository.findRecentSummariesByUserId(1L))
+                .thenReturn(List.of(firstSummary, secondSummary));
 
         Product firstProduct = new Product();
         firstProduct.setId(10L);
@@ -143,5 +135,37 @@ class UserRecentViewServiceTest {
         assertNotNull(thirdTimestamp);
         assertTrue(firstTimestamp.isAfter(secondTimestamp));
         assertTrue(secondTimestamp.isAfter(thirdTimestamp));
+    }
+
+    private static UserRecentViewSummary summary(Long id, Long productId, Instant viewedAt) {
+        return new TestUserRecentViewSummary(id, productId, viewedAt);
+    }
+
+    private static final class TestUserRecentViewSummary implements UserRecentViewSummary {
+
+        private final Long id;
+        private final Long productId;
+        private final Instant viewedAt;
+
+        private TestUserRecentViewSummary(Long id, Long productId, Instant viewedAt) {
+            this.id = id;
+            this.productId = productId;
+            this.viewedAt = viewedAt;
+        }
+
+        @Override
+        public Long getId() {
+            return id;
+        }
+
+        @Override
+        public Long getProductId() {
+            return productId;
+        }
+
+        @Override
+        public Instant getViewedAt() {
+            return viewedAt;
+        }
     }
 }
