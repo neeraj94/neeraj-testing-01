@@ -275,6 +275,17 @@ public class UserRecentViewService {
         return resolveProductId(tryGetProduct(entry));
     }
 
+    private Long resolveProductId(UserRecentView entry) {
+        if (entry == null) {
+            return null;
+        }
+        Long productId = entry.getProductId();
+        if (productId != null) {
+            return productId;
+        }
+        return resolveProductId(tryGetProduct(entry));
+    }
+
     private Long resolveProductId(Product productRef) {
         if (productRef == null) {
             return null;
