@@ -12,7 +12,10 @@ import com.example.rbac.admin.users.model.User;
 import com.example.rbac.admin.users.model.UserPrincipal;
 import com.example.rbac.admin.users.model.UserRecentView;
 import com.example.rbac.admin.users.repository.UserRecentViewRepository;
+import com.example.rbac.admin.users.repository.projection.UserRecentViewSummary;
 import org.hibernate.Hibernate;
+import jakarta.persistence.EntityNotFoundException;
+import org.hibernate.LazyInitializationException;
 import org.hibernate.proxy.HibernateProxy;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -28,13 +31,13 @@ import java.math.RoundingMode;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -66,19 +69,46 @@ public class UserRecentViewService {
         pruneExcessEntries(user.getId());
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public List<Product> findRecentProductsForUser(Long userId, Long excludeProductId) {
         if (userId == null) {
             return List.of();
         }
-        List<UserRecentView> entries = recentViewRepository.findTop20ByUserIdOrderByViewedAtDesc(userId);
-        return entries.stream()
-                .map(UserRecentView::getProduct)
+        List<UserRecentViewSummary> summaries = recentViewRepository.findRecentSummariesByUserId(userId);
+        LinkedHashSet<Long> orderedProductIds = new LinkedHashSet<>();
+        List<Long> staleIds = new ArrayList<>();
+        for (UserRecentViewSummary summary : summaries) {
+            Long productId = summary.getProductId();
+            if (productId == null) {
+                staleIds.add(summary.getId());
+                continue;
+            }
+            if (Objects.equals(productId, excludeProductId)) {
+                continue;
+            }
+            orderedProductIds.add(productId);
+            if (orderedProductIds.size() >= RESPONSE_LIMIT) {
+                break;
+            }
+        }
+        if (!staleIds.isEmpty()) {
+            recentViewRepository.deleteAllByIdInBatch(staleIds);
+        }
+        if (orderedProductIds.isEmpty()) {
+            return List.of();
+        }
+        List<Long> limited = new ArrayList<>(orderedProductIds);
+        Map<Long, Product> productsById = productRepository.findByIdIn(limited).stream()
                 .filter(Objects::nonNull)
-                .filter(product -> !Objects.equals(product.getId(), excludeProductId))
-                .distinct()
-                .limit(RESPONSE_LIMIT)
-                .collect(Collectors.toList());
+                .collect(Collectors.toMap(Product::getId, product -> product));
+        List<Product> orderedProducts = new ArrayList<>();
+        for (Long productId : limited) {
+            Product product = productsById.get(productId);
+            if (product != null) {
+                orderedProducts.add(product);
+            }
+        }
+        return orderedProducts;
     }
 
     @Transactional(readOnly = true)
@@ -112,9 +142,13 @@ public class UserRecentViewService {
             return;
         }
         List<UserRecentView> existingEntries = recentViewRepository.findByUserIdAndProductIdIn(user.getId(), sanitized);
-        Map<Long, UserRecentView> existingByProductId = existingEntries.stream()
-                .filter(entry -> entry.getProduct() != null && entry.getProduct().getId() != null)
-                .collect(Collectors.toMap(entry -> entry.getProduct().getId(), entry -> entry));
+        Map<Long, UserRecentView> existingByProductId = new HashMap<>();
+        for (UserRecentView entry : existingEntries) {
+            Long productId = resolveProductId(entry);
+            if (productId != null && !existingByProductId.containsKey(productId)) {
+                existingByProductId.put(productId, entry);
+            }
+        }
         List<Product> products = productRepository.findByIdIn(sanitized);
         Map<Long, Product> productsById = products.stream()
                 .filter(Objects::nonNull)
@@ -138,7 +172,7 @@ public class UserRecentViewService {
         pruneExcessEntries(user.getId());
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     @PreAuthorize("hasAnyAuthority('USER_VIEW','USER_VIEW_GLOBAL')")
     public List<UserRecentViewDto> getRecentViewsForUser(Long userId) {
         if (userId == null) {
@@ -152,44 +186,39 @@ public class UserRecentViewService {
                 throw new ApiException(HttpStatus.FORBIDDEN, "You are not allowed to view this activity");
             }
         }
-        List<UserRecentView> entries = recentViewRepository.findTop20ByUserIdOrderByViewedAtDesc(userId);
-        List<UserRecentView> validEntries = removeStaleEntries(entries);
-        List<Long> productIds = validEntries.stream()
-                .map(UserRecentView::getProduct)
-                .filter(Objects::nonNull)
-                .map(Product::getId)
-                .filter(Objects::nonNull)
-                .distinct()
-                .collect(Collectors.toList());
+        List<UserRecentViewSummary> summaries = recentViewRepository.findRecentSummariesByUserId(userId);
+        Map<Long, UserRecentViewSummary> dedupedByProduct = new LinkedHashMap<>();
+        List<Long> staleIds = new ArrayList<>();
+        for (UserRecentViewSummary summary : summaries) {
+            Long productId = summary.getProductId();
+            if (productId == null) {
+                staleIds.add(summary.getId());
+                continue;
+            }
+            dedupedByProduct.putIfAbsent(productId, summary);
+            if (dedupedByProduct.size() >= RESPONSE_LIMIT) {
+                break;
+            }
+        }
+        if (dedupedByProduct.isEmpty()) {
+            if (!staleIds.isEmpty()) {
+                recentViewRepository.deleteAllByIdInBatch(staleIds);
+            }
+            return List.of();
+        }
 
-        Map<Long, Product> productsById = productIds.isEmpty()
-                ? Collections.emptyMap()
-                : productRepository.findByIdIn(productIds).stream()
+        List<Long> productIds = new ArrayList<>(dedupedByProduct.keySet());
+        Map<Long, Product> productsById = productRepository.findByIdIn(productIds).stream()
                 .filter(Objects::nonNull)
                 .collect(Collectors.toMap(Product::getId, product -> product, (existing, replacement) -> existing));
 
-        Set<Long> emittedProductIds = new LinkedHashSet<>();
         List<UserRecentViewDto> result = new ArrayList<>();
-        List<UserRecentView> staleDuringMapping = new ArrayList<>();
-        for (UserRecentView entry : validEntries) {
-            Product productRef;
-            try {
-                productRef = entry.getProduct();
-            } catch (org.hibernate.HibernateException ex) {
-                staleDuringMapping.add(entry);
-                continue;
-            }
-            Long productId = resolveProductId(productRef);
-            if (productId == null) {
-                continue;
-            }
-            if (!emittedProductIds.add(productId)) {
-                continue;
-            }
-            Product productCandidate = productsById.getOrDefault(productId, productRef);
-            Product product = resolveProduct(productId, productCandidate);
+        for (Map.Entry<Long, UserRecentViewSummary> entry : dedupedByProduct.entrySet()) {
+            Long productId = entry.getKey();
+            UserRecentViewSummary summary = entry.getValue();
+            Product product = resolveProduct(productId, productsById.get(productId));
             if (product == null) {
-                staleDuringMapping.add(entry);
+                staleIds.add(summary.getId());
                 continue;
             }
             UserRecentViewDto dto = new UserRecentViewDto();
@@ -198,47 +227,15 @@ public class UserRecentViewService {
             dto.setProductSlug(product.getSlug());
             dto.setThumbnailUrl(resolveThumbnailUrl(product, null));
             dto.setSku(product.getSku());
-            dto.setLastViewedAt(entry.getViewedAt());
+            dto.setLastViewedAt(summary.getViewedAt());
             dto.setUnitPrice(product.getUnitPrice());
             dto.setFinalPrice(computeFinalPrice(product));
             result.add(dto);
-            if (result.size() >= RESPONSE_LIMIT) {
-                break;
-            }
         }
-        if (!staleDuringMapping.isEmpty()) {
-            recentViewRepository.deleteAll(staleDuringMapping);
-            recentViewRepository.flush();
+        if (!staleIds.isEmpty()) {
+            recentViewRepository.deleteAllByIdInBatch(staleIds);
         }
         return result;
-    }
-
-    private List<UserRecentView> removeStaleEntries(List<UserRecentView> entries) {
-        if (CollectionUtils.isEmpty(entries)) {
-            return List.of();
-        }
-        List<UserRecentView> valid = new ArrayList<>();
-        List<UserRecentView> stale = new ArrayList<>();
-        for (UserRecentView entry : entries) {
-            Product product;
-            try {
-                product = entry.getProduct();
-            } catch (org.hibernate.HibernateException ex) {
-                stale.add(entry);
-                continue;
-            }
-            Long productId = resolveProductId(product);
-            if (product == null || productId == null) {
-                stale.add(entry);
-                continue;
-            }
-            valid.add(entry);
-        }
-        if (!stale.isEmpty()) {
-            recentViewRepository.deleteAll(stale);
-            recentViewRepository.flush();
-        }
-        return valid;
     }
 
     private void pruneExcessEntries(Long userId) {
@@ -298,6 +295,17 @@ public class UserRecentViewService {
         return false;
     }
 
+    private Long resolveProductId(UserRecentView entry) {
+        if (entry == null) {
+            return null;
+        }
+        Long productId = entry.getProductId();
+        if (productId != null) {
+            return productId;
+        }
+        return resolveProductId(safeGetProduct(entry));
+    }
+
     private Long resolveProductId(Product productRef) {
         if (productRef == null) {
             return null;
@@ -332,6 +340,23 @@ public class UserRecentViewService {
             return product;
         } catch (RuntimeException ex) {
             return null;
+        }
+    }
+
+    private Product safeGetProduct(UserRecentView entry) {
+        if (entry == null) {
+            return null;
+        }
+        try {
+            return entry.getProduct();
+        } catch (org.hibernate.HibernateException | LazyInitializationException | EntityNotFoundException ex) {
+            return null;
+        } catch (RuntimeException ex) {
+            Package exceptionPackage = ex.getClass().getPackage();
+            if (exceptionPackage != null && exceptionPackage.getName().startsWith("org.hibernate")) {
+                return null;
+            }
+            throw ex;
         }
     }
 
