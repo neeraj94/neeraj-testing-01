@@ -310,6 +310,7 @@ public class UserRecentViewService {
             }
             throw ex;
         }
+        return false;
     }
 
     private boolean isHibernateException(RuntimeException ex) {
