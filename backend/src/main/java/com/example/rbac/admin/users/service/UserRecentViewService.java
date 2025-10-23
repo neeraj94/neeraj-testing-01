@@ -14,7 +14,6 @@ import com.example.rbac.admin.users.model.UserRecentView;
 import com.example.rbac.admin.users.repository.UserRecentViewRepository;
 import com.example.rbac.admin.users.repository.projection.UserRecentViewSummary;
 import jakarta.persistence.EntityNotFoundException;
-import org.hibernate.LazyInitializationException;
 import org.hibernate.proxy.HibernateProxy;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -216,7 +215,7 @@ public class UserRecentViewService {
             return List.of();
         }
 
-        List<Long> availableProductIds = products.stream()
+        LinkedHashSet<Long> availableProductIds = products.stream()
                 .map(Product::getId)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toCollection(LinkedHashSet::new));
@@ -308,7 +307,7 @@ public class UserRecentViewService {
         if (productId != null) {
             return productId;
         }
-        return resolveProductId(safeGetProduct(entry));
+        return resolveProductId(tryGetProduct(entry));
     }
 
     private Long resolveProductId(Product productRef) {
@@ -324,13 +323,13 @@ public class UserRecentViewService {
         return productRef.getId();
     }
 
-    private Product safeGetProduct(UserRecentView entry) {
+    private Product tryGetProduct(UserRecentView entry) {
         if (entry == null) {
             return null;
         }
         try {
             return entry.getProduct();
-        } catch (org.hibernate.HibernateException | LazyInitializationException | EntityNotFoundException ex) {
+        } catch (org.hibernate.HibernateException | EntityNotFoundException ex) {
             return null;
         } catch (RuntimeException ex) {
             Package exceptionPackage = ex.getClass().getPackage();
@@ -338,12 +337,6 @@ public class UserRecentViewService {
                 return null;
             }
             throw ex;
-        }
-    }
-
-    private Product safeGetProduct(UserRecentView entry) {
-        if (entry == null) {
-            return null;
         }
         try {
             return entry.getProduct();
