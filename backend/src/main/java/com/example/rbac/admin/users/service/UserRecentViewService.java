@@ -31,6 +31,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -74,13 +75,32 @@ public class UserRecentViewService {
             return List.of();
         }
         List<UserRecentView> entries = recentViewRepository.findTop20ByUserIdOrderByViewedAtDesc(userId);
-        return entries.stream()
-                .map(UserRecentView::getProduct)
+        LinkedHashSet<Long> orderedProductIds = new LinkedHashSet<>();
+        for (UserRecentView entry : entries) {
+            Long productId = resolveProductId(entry);
+            if (productId == null || Objects.equals(productId, excludeProductId)) {
+                continue;
+            }
+            orderedProductIds.add(productId);
+            if (orderedProductIds.size() >= RESPONSE_LIMIT) {
+                break;
+            }
+        }
+        if (orderedProductIds.isEmpty()) {
+            return List.of();
+        }
+        List<Long> limited = new ArrayList<>(orderedProductIds);
+        Map<Long, Product> productsById = productRepository.findByIdIn(limited).stream()
                 .filter(Objects::nonNull)
-                .filter(product -> !Objects.equals(product.getId(), excludeProductId))
-                .distinct()
-                .limit(RESPONSE_LIMIT)
-                .collect(Collectors.toList());
+                .collect(Collectors.toMap(Product::getId, product -> product));
+        List<Product> orderedProducts = new ArrayList<>();
+        for (Long productId : limited) {
+            Product product = productsById.get(productId);
+            if (product != null) {
+                orderedProducts.add(product);
+            }
+        }
+        return orderedProducts;
     }
 
     @Transactional(readOnly = true)
@@ -114,9 +134,13 @@ public class UserRecentViewService {
             return;
         }
         List<UserRecentView> existingEntries = recentViewRepository.findByUserIdAndProductIdIn(user.getId(), sanitized);
-        Map<Long, UserRecentView> existingByProductId = existingEntries.stream()
-                .filter(entry -> entry.getProduct() != null && entry.getProduct().getId() != null)
-                .collect(Collectors.toMap(entry -> entry.getProduct().getId(), entry -> entry));
+        Map<Long, UserRecentView> existingByProductId = new HashMap<>();
+        for (UserRecentView entry : existingEntries) {
+            Long productId = resolveProductId(entry);
+            if (productId != null && !existingByProductId.containsKey(productId)) {
+                existingByProductId.put(productId, entry);
+            }
+        }
         List<Product> products = productRepository.findByIdIn(sanitized);
         Map<Long, Product> productsById = products.stream()
                 .filter(Objects::nonNull)
@@ -157,13 +181,7 @@ public class UserRecentViewService {
         List<UserRecentView> entries = recentViewRepository.findTop20ByUserIdOrderByViewedAtDesc(userId);
         List<UserRecentView> validEntries = removeStaleEntries(entries);
         List<Long> productIds = validEntries.stream()
-                .map(entry -> {
-                    Long productId = entry.getProductId();
-                    if (productId == null) {
-                        productId = resolveProductId(safeGetProduct(entry));
-                    }
-                    return productId;
-                })
+                .map(this::resolveProductId)
                 .filter(Objects::nonNull)
                 .distinct()
                 .collect(Collectors.toList());
@@ -178,10 +196,7 @@ public class UserRecentViewService {
         List<UserRecentViewDto> result = new ArrayList<>();
         List<UserRecentView> staleDuringMapping = new ArrayList<>();
         for (UserRecentView entry : validEntries) {
-            Long productId = entry.getProductId();
-            if (productId == null) {
-                productId = resolveProductId(safeGetProduct(entry));
-            }
+            Long productId = resolveProductId(entry);
             if (productId == null) {
                 continue;
             }
@@ -225,10 +240,7 @@ public class UserRecentViewService {
         List<UserRecentView> valid = new ArrayList<>();
         List<UserRecentView> stale = new ArrayList<>();
         for (UserRecentView entry : entries) {
-            Long productId = entry.getProductId();
-            if (productId == null) {
-                productId = resolveProductId(safeGetProduct(entry));
-            }
+            Long productId = resolveProductId(entry);
             if (productId == null) {
                 stale.add(entry);
                 continue;
@@ -297,6 +309,17 @@ public class UserRecentViewService {
             }
         }
         return false;
+    }
+
+    private Long resolveProductId(UserRecentView entry) {
+        if (entry == null) {
+            return null;
+        }
+        Long productId = entry.getProductId();
+        if (productId != null) {
+            return productId;
+        }
+        return resolveProductId(safeGetProduct(entry));
     }
 
     private Long resolveProductId(Product productRef) {
