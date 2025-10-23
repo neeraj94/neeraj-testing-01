@@ -92,6 +92,29 @@ class UserRecentViewServiceTest {
     }
 
     @Test
+    void getRecentViewsForUserPrunesMissingProducts() {
+        UserRecentViewSummary retainedSummary = summary(201L, 10L, Instant.parse("2024-02-01T09:15:00Z"));
+        UserRecentViewSummary staleSummary = summary(202L, 99L, Instant.parse("2024-02-01T08:00:00Z"));
+
+        when(recentViewRepository.findRecentSummariesByUserId(2L))
+                .thenReturn(List.of(retainedSummary, staleSummary));
+
+        Product retainedProduct = new Product();
+        retainedProduct.setId(10L);
+        retainedProduct.setName("Orbit Chair");
+        retainedProduct.setSlug("orbit-chair");
+
+        when(productRepository.findByIdIn(List.of(10L, 99L)))
+                .thenReturn(List.of(retainedProduct));
+
+        List<UserRecentViewDto> result = service.getRecentViewsForUser(2L);
+
+        assertEquals(1, result.size());
+        assertEquals(10L, result.get(0).getProductId());
+        verify(recentViewRepository).deleteAllByIdInBatch(List.of(202L));
+    }
+
+    @Test
     void synchronizeGuestRecentViewsMergesGuestHistory() {
         User user = new User();
         user.setId(1L);
