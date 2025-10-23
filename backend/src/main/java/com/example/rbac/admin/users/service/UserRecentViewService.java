@@ -13,6 +13,8 @@ import com.example.rbac.admin.users.model.UserPrincipal;
 import com.example.rbac.admin.users.model.UserRecentView;
 import com.example.rbac.admin.users.repository.UserRecentViewRepository;
 import org.hibernate.Hibernate;
+import jakarta.persistence.EntityNotFoundException;
+import org.hibernate.LazyInitializationException;
 import org.hibernate.proxy.HibernateProxy;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -155,9 +157,13 @@ public class UserRecentViewService {
         List<UserRecentView> entries = recentViewRepository.findTop20ByUserIdOrderByViewedAtDesc(userId);
         List<UserRecentView> validEntries = removeStaleEntries(entries);
         List<Long> productIds = validEntries.stream()
-                .map(UserRecentView::getProduct)
-                .filter(Objects::nonNull)
-                .map(Product::getId)
+                .map(entry -> {
+                    Long productId = entry.getProductId();
+                    if (productId == null) {
+                        productId = resolveProductId(safeGetProduct(entry));
+                    }
+                    return productId;
+                })
                 .filter(Objects::nonNull)
                 .distinct()
                 .collect(Collectors.toList());
@@ -172,21 +178,20 @@ public class UserRecentViewService {
         List<UserRecentViewDto> result = new ArrayList<>();
         List<UserRecentView> staleDuringMapping = new ArrayList<>();
         for (UserRecentView entry : validEntries) {
-            Product productRef;
-            try {
-                productRef = entry.getProduct();
-            } catch (org.hibernate.HibernateException ex) {
-                staleDuringMapping.add(entry);
-                continue;
+            Long productId = entry.getProductId();
+            if (productId == null) {
+                productId = resolveProductId(safeGetProduct(entry));
             }
-            Long productId = resolveProductId(productRef);
             if (productId == null) {
                 continue;
             }
             if (!emittedProductIds.add(productId)) {
                 continue;
             }
-            Product productCandidate = productsById.getOrDefault(productId, productRef);
+            Product productCandidate = productsById.get(productId);
+            if (productCandidate == null) {
+                productCandidate = safeGetProduct(entry);
+            }
             Product product = resolveProduct(productId, productCandidate);
             if (product == null) {
                 staleDuringMapping.add(entry);
@@ -220,15 +225,11 @@ public class UserRecentViewService {
         List<UserRecentView> valid = new ArrayList<>();
         List<UserRecentView> stale = new ArrayList<>();
         for (UserRecentView entry : entries) {
-            Product product;
-            try {
-                product = entry.getProduct();
-            } catch (org.hibernate.HibernateException ex) {
-                stale.add(entry);
-                continue;
+            Long productId = entry.getProductId();
+            if (productId == null) {
+                productId = resolveProductId(safeGetProduct(entry));
             }
-            Long productId = resolveProductId(product);
-            if (product == null || productId == null) {
+            if (productId == null) {
                 stale.add(entry);
                 continue;
             }
@@ -332,6 +333,23 @@ public class UserRecentViewService {
             return product;
         } catch (RuntimeException ex) {
             return null;
+        }
+    }
+
+    private Product safeGetProduct(UserRecentView entry) {
+        if (entry == null) {
+            return null;
+        }
+        try {
+            return entry.getProduct();
+        } catch (org.hibernate.HibernateException | LazyInitializationException | EntityNotFoundException ex) {
+            return null;
+        } catch (RuntimeException ex) {
+            Package exceptionPackage = ex.getClass().getPackage();
+            if (exceptionPackage != null && exceptionPackage.getName().startsWith("org.hibernate")) {
+                return null;
+            }
+            throw ex;
         }
     }
 
