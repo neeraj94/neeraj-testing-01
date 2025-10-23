@@ -28,6 +28,9 @@ public class UserRecentView {
     @JoinColumn(name = "product_id", nullable = false)
     private Product product;
 
+    @Column(name = "product_id", insertable = false, updatable = false)
+    private Long productId;
+
     @Column(name = "viewed_at", nullable = false)
     private Instant viewedAt;
 
@@ -61,6 +64,10 @@ public class UserRecentView {
 
     public void setProduct(Product product) {
         this.product = product;
+    }
+
+    public Long getProductId() {
+        return productId;
     }
 
     public Instant getViewedAt() {
