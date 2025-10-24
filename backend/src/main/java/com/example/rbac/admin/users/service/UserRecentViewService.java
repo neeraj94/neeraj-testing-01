@@ -332,6 +332,18 @@ public class UserRecentViewService {
         return false;
     }
 
+    private boolean isHibernateException(RuntimeException ex) {
+        Throwable current = ex;
+        while (current != null) {
+            Package exceptionPackage = current.getClass().getPackage();
+            if (exceptionPackage != null && exceptionPackage.getName().startsWith("org.hibernate")) {
+                return true;
+            }
+            current = current.getCause();
+        }
+        return false;
+    }
+
     private String resolveThumbnailUrl(Product product, ProductVariant variant) {
         if (variant != null && variant.getMedia() != null) {
             return variant.getMedia().stream()

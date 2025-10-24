@@ -144,6 +144,34 @@ class UserRecentViewServiceTest {
     }
 
     @Test
+    void findRecentProductsForUserSkipsExcludedAndStaleEntries() {
+        UserRecentViewSummary firstSummary = summary(401L, 55L, Instant.parse("2024-04-01T12:00:00Z"));
+        UserRecentViewSummary staleSummary = summary(402L, null, Instant.parse("2024-03-31T09:45:00Z"));
+        UserRecentViewSummary excludedSummary = summary(403L, 88L, Instant.parse("2024-03-30T08:30:00Z"));
+
+        when(recentViewRepository.findRecentSummariesByUserId(7L))
+                .thenReturn(List.of(firstSummary, staleSummary, excludedSummary));
+
+        Product firstProduct = new Product();
+        firstProduct.setId(55L);
+        firstProduct.setName("Gravity Mug");
+
+        Product excludedProduct = new Product();
+        excludedProduct.setId(88L);
+        excludedProduct.setName("Zero-G Plate");
+
+        when(productRepository.findByIdIn(List.of(55L, 88L)))
+                .thenReturn(List.of(excludedProduct, firstProduct));
+
+        List<Product> products = service.findRecentProductsForUser(7L, 88L);
+
+        assertEquals(1, products.size());
+        assertEquals(55L, products.get(0).getId());
+        assertEquals("Gravity Mug", products.get(0).getName());
+        verify(recentViewRepository).deleteAllByIdInBatch(List.of(402L));
+    }
+
+    @Test
     void synchronizeGuestRecentViewsMergesGuestHistory() {
         User user = new User();
         user.setId(1L);
