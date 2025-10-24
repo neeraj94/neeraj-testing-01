@@ -220,9 +220,6 @@ public class UserRecentViewService {
             dto.setUnitPrice(product.getUnitPrice());
             dto.setFinalPrice(computeFinalPrice(product));
             result.add(dto);
-            if (result.size() >= RESPONSE_LIMIT) {
-                break;
-            }
         }
         if (!staleIds.isEmpty()) {
             recentViewRepository.deleteAllByIdInBatch(staleIds);
