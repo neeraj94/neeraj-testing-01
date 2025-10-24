@@ -101,15 +101,15 @@ const DashboardPage = () => {
   return (
     <div className="space-y-6">
       <div className="rounded-2xl bg-gradient-to-r from-primary/90 to-primary shadow-lg">
-        <div className="flex flex-col gap-4 px-6 py-6 text-white sm:flex-row sm:items-center sm:justify-between">
-          <div>
+        <div className="flex flex-col gap-6 px-6 py-6 text-white lg:flex-row lg:items-center lg:justify-between">
+          <div className="space-y-3">
             <p className="text-sm font-medium uppercase tracking-[0.25em] text-white/80">Dashboard overview</p>
-            <h1 className="mt-2 text-3xl font-semibold">Good to see you back, Admin</h1>
-            <p className="mt-2 max-w-2xl text-sm text-white/80">
+            <h1 className="text-3xl font-semibold">Good to see you back, Admin</h1>
+            <p className="max-w-2xl text-sm text-white/80">
               Monitor engagement, track revenue, and stay ahead of upcoming work from a single, actionable workspace.
             </p>
           </div>
-          <div className="flex flex-col gap-3 text-sm sm:text-right">
+          <div className="flex flex-col gap-3 text-sm sm:flex-row sm:items-center sm:justify-end sm:text-right">
             <span className="inline-flex items-center gap-2 rounded-full bg-white/20 px-3 py-1 text-white">
               <DashboardSparkleIcon />
               Daily summary refreshed moments ago
@@ -121,7 +121,7 @@ const DashboardPage = () => {
         </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="flex items-start justify-between">
             <div>
@@ -164,8 +164,8 @@ const DashboardPage = () => {
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="space-y-6 lg:col-span-2">
+      <div className="grid gap-6 lg:grid-cols-2 xl:grid-cols-3">
+        <div className="space-y-6 xl:col-span-2">
           <DataTable title="Active carts overview">
             <thead>
               <tr>
