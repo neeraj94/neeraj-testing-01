@@ -220,9 +220,6 @@ public class UserRecentViewService {
             dto.setUnitPrice(product.getUnitPrice());
             dto.setFinalPrice(computeFinalPrice(product));
             result.add(dto);
-            if (result.size() >= RESPONSE_LIMIT) {
-                break;
-            }
         }
         if (!staleIds.isEmpty()) {
             recentViewRepository.deleteAllByIdInBatch(staleIds);
@@ -308,6 +305,19 @@ public class UserRecentViewService {
             }
             return null;
         }
+        return false;
+    }
+
+    private boolean isHibernateException(RuntimeException ex) {
+        Throwable current = ex;
+        while (current != null) {
+            Package exceptionPackage = current.getClass().getPackage();
+            if (exceptionPackage != null && exceptionPackage.getName().startsWith("org.hibernate")) {
+                return true;
+            }
+            current = current.getCause();
+        }
+        return false;
     }
 
     private boolean isHibernateException(RuntimeException ex) {
