@@ -321,6 +321,7 @@ const Layout = () => {
 
   const isSidebarCondensed = sidebarCollapsed && isDesktop;
   const desktopWidthClass = isSidebarCondensed ? 'lg:w-20' : 'lg:w-72';
+  const desktopOffsetClass = isSidebarCondensed ? 'lg:ml-20' : 'lg:ml-72';
 
   return (
     <div className="flex min-h-screen bg-slate-50">
@@ -333,7 +334,7 @@ const Layout = () => {
         />
       )}
       <aside
-        className={`fixed inset-y-0 left-0 z-40 flex w-72 max-w-[85vw] transform flex-col border-r border-slate-200 bg-white shadow-lg transition-transform duration-300 ease-in-out lg:static lg:h-screen lg:max-w-none lg:translate-x-0 lg:shadow-none ${
+        className={`fixed inset-y-0 left-0 z-40 flex w-72 max-w-[85vw] transform flex-col border-r border-slate-200 bg-white shadow-lg transition-transform duration-300 ease-in-out lg:max-w-none lg:translate-x-0 lg:shadow-none ${
           mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'
         } ${desktopWidthClass}`}
       >
@@ -524,7 +525,7 @@ const Layout = () => {
           </nav>
         </div>
       </aside>
-      <div className="flex min-h-screen flex-1 flex-col lg:pl-0">
+      <div className={`flex min-h-screen flex-1 flex-col lg:pl-0 ${desktopOffsetClass}`}>
         <header className="flex h-16 items-center justify-between border-b border-slate-200 bg-white px-4 sm:px-6">
           <div className="flex items-center gap-3">
             <button
