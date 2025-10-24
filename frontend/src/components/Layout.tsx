@@ -285,7 +285,7 @@ const Layout = () => {
   }, [location.pathname]);
 
   const toggleSection = (key: string) => {
-    setExpandedSections((prev) => ({ ...prev, [key]: !(prev[key] ?? true) }));
+    setExpandedSections((prev) => ({ ...prev, [key]: !(prev[key] ?? false) }));
   };
 
   const getInitials = () => {
@@ -321,6 +321,7 @@ const Layout = () => {
 
   const isSidebarCondensed = sidebarCollapsed && isDesktop;
   const desktopWidthClass = isSidebarCondensed ? 'lg:w-20' : 'lg:w-72';
+  const desktopOffsetClass = isSidebarCondensed ? 'lg:ml-20' : 'lg:ml-72';
 
   return (
     <div className="flex min-h-screen bg-slate-50">
@@ -333,7 +334,7 @@ const Layout = () => {
         />
       )}
       <aside
-        className={`fixed inset-y-0 left-0 z-40 flex w-72 max-w-[85vw] transform flex-col border-r border-slate-200 bg-white shadow-lg transition-transform duration-300 ease-in-out lg:static lg:max-w-none lg:translate-x-0 lg:shadow-none ${
+        className={`fixed inset-y-0 left-0 z-40 flex w-72 max-w-[85vw] transform flex-col border-r border-slate-200 bg-white shadow-lg transition-transform duration-300 ease-in-out lg:max-w-none lg:translate-x-0 lg:shadow-none ${
           mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'
         } ${desktopWidthClass}`}
       >
@@ -385,7 +386,7 @@ const Layout = () => {
             </button>
           </div>
         </div>
-        <div className="px-3">
+        <div className="flex-1 overflow-y-auto px-3">
           <div className="relative" ref={profileMenuRef}>
             <button
               type="button"
@@ -439,92 +440,92 @@ const Layout = () => {
               </div>
             )}
           </div>
-        </div>
-        <nav className="mt-6 space-y-1 px-2 pb-8">
-          {navigation.map((item) => {
-            if (item.children?.length) {
-              const isExpanded = expandedSections[item.key] ?? true;
-              const isActive = item.children.some((child) => child.to && location.pathname.startsWith(child.to));
+          <nav className="mt-6 space-y-1 px-2 pb-8">
+            {navigation.map((item) => {
+              if (item.children?.length) {
+                const isExpanded = expandedSections[item.key] ?? false;
+                const isActive = item.children.some((child) => child.to && location.pathname.startsWith(child.to));
+
+                return (
+                  <div key={item.key}>
+                    <button
+                      type="button"
+                      onClick={() => toggleSection(item.key)}
+                      className={`flex w-full items-center rounded-lg px-2.5 py-2 text-sm font-medium transition-colors ${
+                        isSidebarCondensed ? 'lg:justify-center lg:px-0' : 'gap-3'
+                      } ${
+                        isActive ? 'bg-primary/10 text-primary' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                      }`}
+                      title={isSidebarCondensed ? item.label : undefined}
+                    >
+                      <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 text-sm">
+                        {item.icon ?? item.label.charAt(0)}
+                      </span>
+                      {!isSidebarCondensed && <span className="flex-1 text-left">{item.label}</span>}
+                      {!isSidebarCondensed && (
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                          className={`h-4 w-4 transition-transform ${isExpanded ? '' : '-rotate-90'}`}
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                        </svg>
+                      )}
+                    </button>
+                    {isExpanded && !isSidebarCondensed && (
+                      <div className="mt-1 space-y-1 pl-10">
+                        {item.children.map((child) => (
+                          <NavLink
+                            key={child.key}
+                            to={child.to ?? '#'}
+                            className={({ isActive }) =>
+                              `flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors ${
+                                isActive
+                                  ? 'bg-primary/10 font-medium text-primary'
+                                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                              }`
+                            }
+                          >
+                            <span className="text-xs text-slate-400">•</span>
+                            <span>{child.label}</span>
+                          </NavLink>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              }
 
               return (
-                <div key={item.key}>
-                  <button
-                    type="button"
-                    onClick={() => toggleSection(item.key)}
-                    className={`flex w-full items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                <NavLink
+                  key={item.key}
+                  to={item.to ?? '#'}
+                  end={item.to === '/admin/dashboard'}
+                  title={isSidebarCondensed ? item.label : undefined}
+                  className={({ isActive }) =>
+                    `group flex items-center rounded-lg px-2.5 py-2 text-sm font-medium transition-colors ${
                       isSidebarCondensed ? 'lg:justify-center lg:px-0' : 'gap-3'
                     } ${
-                      isActive ? 'bg-primary/10 text-primary' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                    }`}
-                    title={isSidebarCondensed ? item.label : undefined}
-                  >
-                    <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-base">
-                      {item.icon ?? item.label.charAt(0)}
-                    </span>
-                    {!isSidebarCondensed && <span className="flex-1 text-left">{item.label}</span>}
-                    {!isSidebarCondensed && (
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="1.5"
-                        className={`h-4 w-4 transition-transform ${isExpanded ? '' : '-rotate-90'}`}
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-                      </svg>
-                    )}
-                  </button>
-                  {isExpanded && !isSidebarCondensed && (
-                    <div className="mt-1 space-y-1 pl-12">
-                      {item.children.map((child) => (
-                        <NavLink
-                          key={child.key}
-                          to={child.to ?? '#'}
-                          className={({ isActive }) =>
-                            `flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors ${
-                              isActive
-                                ? 'bg-primary/10 font-medium text-primary'
-                                : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                            }`
-                          }
-                        >
-                          <span className="text-xs text-slate-400">•</span>
-                          <span>{child.label}</span>
-                        </NavLink>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                      isActive
+                        ? 'bg-primary/10 text-primary'
+                        : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                    }`
+                  }
+                >
+                  <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 text-sm">
+                    {item.icon ?? item.label.charAt(0)}
+                  </span>
+                  {!isSidebarCondensed && <span>{item.label}</span>}
+                </NavLink>
               );
-            }
-
-            return (
-              <NavLink
-                key={item.key}
-                to={item.to ?? '#'}
-                end={item.to === '/admin/dashboard'}
-                title={isSidebarCondensed ? item.label : undefined}
-                className={({ isActive }) =>
-                  `group flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                    isSidebarCondensed ? 'lg:justify-center lg:px-0' : 'gap-3'
-                  } ${
-                    isActive
-                      ? 'bg-primary/10 text-primary'
-                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                  }`
-                }
-              >
-                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-base">
-                  {item.icon ?? item.label.charAt(0)}
-                </span>
-                {!isSidebarCondensed && <span>{item.label}</span>}
-              </NavLink>
-            );
-          })}
-        </nav>
+            })}
+          </nav>
+        </div>
       </aside>
-      <div className="flex min-h-screen flex-1 flex-col lg:pl-0">
+      <div className={`flex min-h-screen flex-1 flex-col lg:pl-0 ${desktopOffsetClass}`}>
         <header className="flex h-16 items-center justify-between border-b border-slate-200 bg-white px-4 sm:px-6">
           <div className="flex items-center gap-3">
             <button

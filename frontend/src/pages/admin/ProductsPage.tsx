@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import PageHeader from '../../components/PageHeader';
 import PageSection from '../../components/PageSection';
@@ -478,6 +478,9 @@ const ProductsPage = () => {
   const [searchDraft, setSearchDraft] = useState('');
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState<TabId>('basic');
+  const tabListRef = useRef<HTMLDivElement | null>(null);
+  const tabButtonRefs = useRef<Record<TabId, HTMLButtonElement | null>>({} as Record<TabId, HTMLButtonElement | null>);
+  const [tabScrollIndicators, setTabScrollIndicators] = useState({ left: false, right: false });
   const [form, setForm] = useState<ProductFormState>({ ...defaultFormState, infoSections: [] });
   const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
   const [skuManuallyEdited, setSkuManuallyEdited] = useState(false);
@@ -513,6 +516,25 @@ const ProductsPage = () => {
 
   const createSectionId = () => `section-${Math.random().toString(36).slice(2, 10)}-${Date.now()}`;
 
+  const updateTabScrollIndicators = useCallback(() => {
+    const list = tabListRef.current;
+    if (!list) {
+      return;
+    }
+
+    const { scrollLeft, scrollWidth, clientWidth } = list;
+    const maxScrollLeft = Math.max(0, scrollWidth - clientWidth);
+    const leftVisible = scrollLeft > 4;
+    const rightVisible = maxScrollLeft > 4 && scrollLeft < maxScrollLeft - 4;
+
+    setTabScrollIndicators((previous) => {
+      if (previous.left === leftVisible && previous.right === rightVisible) {
+        return previous;
+      }
+      return { left: leftVisible, right: rightVisible };
+    });
+  }, []);
+
   const canCreate = useMemo(
     () => hasAnyPermission(permissions as PermissionKey[], ['PRODUCT_CREATE']),
     [permissions]
@@ -537,6 +559,63 @@ const ProductsPage = () => {
     }, 300);
     return () => window.clearTimeout(timer);
   }, [searchDraft]);
+
+  useEffect(() => {
+    const list = tabListRef.current;
+    if (!list) {
+      return;
+    }
+
+    updateTabScrollIndicators();
+
+    const handleScroll = () => {
+      updateTabScrollIndicators();
+    };
+
+    list.addEventListener('scroll', handleScroll);
+
+    let resizeObserver: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== 'undefined') {
+      resizeObserver = new ResizeObserver(handleScroll);
+      resizeObserver.observe(list);
+    }
+
+    const handleWindowResize = () => {
+      updateTabScrollIndicators();
+    };
+    window.addEventListener('resize', handleWindowResize);
+
+    return () => {
+      list.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('resize', handleWindowResize);
+      resizeObserver?.disconnect();
+    };
+  }, [updateTabScrollIndicators]);
+
+  useEffect(() => {
+    const list = tabListRef.current;
+    const activeButton = tabButtonRefs.current[activeTab];
+    if (!list || !activeButton) {
+      return;
+    }
+
+    const listRect = list.getBoundingClientRect();
+    const buttonRect = activeButton.getBoundingClientRect();
+
+    if (buttonRect.left < listRect.left) {
+      list.scrollBy({ left: buttonRect.left - listRect.left - 16, behavior: 'smooth' });
+    } else if (buttonRect.right > listRect.right) {
+      list.scrollBy({ left: buttonRect.right - listRect.right + 16, behavior: 'smooth' });
+    }
+
+    if (typeof window !== 'undefined') {
+      window.requestAnimationFrame(() => {
+        updateTabScrollIndicators();
+      });
+    } else {
+      updateTabScrollIndicators();
+    }
+  }, [activeTab, updateTabScrollIndicators]);
 
   const brandsQuery = useQuery({
     queryKey: ['products', 'brands'],
@@ -2180,26 +2259,49 @@ const ProductsPage = () => {
     return (
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <div className="grid gap-0 lg:grid-cols-[240px_minmax(0,1fr)]">
-            <nav className="flex flex-col gap-2 border-b border-slate-200 bg-slate-50 p-4 sm:p-6 lg:border-b-0 lg:border-r">
-              {tabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`w-full rounded-lg px-3 py-2 text-left text-sm transition focus:outline-none focus:ring-2 focus:ring-primary/20 ${
-                    activeTab === tab.id
-                      ? 'bg-primary text-white shadow-sm shadow-primary/30'
-                      : 'bg-white text-slate-600 hover:bg-primary/10 hover:text-primary'
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </nav>
+          <div className="border-b border-slate-200 bg-slate-50">
+            <div className="relative">
+              {tabScrollIndicators.left && (
+                <div className="pointer-events-none absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-slate-50 to-transparent" />
+              )}
+              {tabScrollIndicators.right && (
+                <div className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-slate-50 to-transparent" />
+              )}
+              <div
+                ref={tabListRef}
+                role="tablist"
+                aria-label="Product form sections"
+                className="flex items-center gap-2 overflow-x-auto px-4 py-3 sm:px-6"
+              >
+                {tabs.map((tab) => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    ref={(element) => {
+                      tabButtonRefs.current[tab.id] = element;
+                    }}
+                    id={`product-tab-${tab.id}`}
+                    role="tab"
+                    aria-selected={activeTab === tab.id}
+                    aria-controls={`product-tabpanel-${tab.id}`}
+                    tabIndex={activeTab === tab.id ? 0 : -1}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`flex-shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 ${
+                      activeTab === tab.id
+                        ? 'bg-primary text-white shadow-sm shadow-primary/30'
+                        : 'bg-white text-slate-600 hover:bg-primary/10 hover:text-primary'
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
 
-            <div className="space-y-6 px-4 py-6 sm:px-6">
-              {activeTab === 'basic' && (
+          <div className="space-y-6 px-4 py-6 sm:px-6">
+            {activeTab === 'basic' && (
+              <div role="tabpanel" id="product-tabpanel-basic" aria-labelledby="product-tab-basic">
                 <PageSection
                   title="Basic information"
                   description="Capture the core catalog attributes, merchandising units, and customer-facing messaging."
@@ -2806,12 +2908,14 @@ const ProductsPage = () => {
                     </div>
                   </div>
                 </PageSection>
-              )}
+              </div>
+            )}
             {activeTab === 'media' && (
-              <PageSection
-                title="Media"
-                description="Manage gallery imagery, hero thumbnails, product videos, and supporting specification documents."
-              >
+              <div role="tabpanel" id="product-tabpanel-media" aria-labelledby="product-tab-media">
+                <PageSection
+                  title="Media"
+                  description="Manage gallery imagery, hero thumbnails, product videos, and supporting specification documents."
+                >
                 <div className="grid gap-8 lg:grid-cols-2">
                   <div className="space-y-6">
                     <div className="rounded-xl border border-slate-200 p-4 shadow-sm">
@@ -2948,13 +3052,15 @@ const ProductsPage = () => {
                     </div>
                   </div>
                 </div>
-              </PageSection>
+                </PageSection>
+              </div>
             )}
             {activeTab === 'pricing' && (
-              <PageSection
-                title="Price & Stock"
-                description="Configure pricing, inventory, and attribute-driven variants. Base pricing powers quick calculations for every variant."
-              >
+              <div role="tabpanel" id="product-tabpanel-pricing" aria-labelledby="product-tab-pricing">
+                <PageSection
+                  title="Price & Stock"
+                  description="Configure pricing, inventory, and attribute-driven variants. Base pricing powers quick calculations for every variant."
+                >
                 <div className="grid gap-8 xl:grid-cols-[320px_minmax(0,1fr)]">
                   <aside className="space-y-4">
                     <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4 shadow-sm">
@@ -3384,13 +3490,15 @@ const ProductsPage = () => {
                     </div>
                   </div>
                 </div>
-              </PageSection>
+                </PageSection>
+              </div>
             )}
             {activeTab === 'seo' && (
-              <PageSection
-                title="SEO"
-                description="Craft search-friendly titles, descriptions, and imagery to support marketing campaigns."
-              >
+              <div role="tabpanel" id="product-tabpanel-seo" aria-labelledby="product-tab-seo">
+                <PageSection
+                  title="SEO"
+                  description="Craft search-friendly titles, descriptions, and imagery to support marketing campaigns."
+                >
                 <div className="grid gap-6 lg:grid-cols-2">
                   <div className="space-y-4">
                     <div>
@@ -3474,36 +3582,46 @@ const ProductsPage = () => {
                     </div>
                   </div>
                 </div>
-              </PageSection>
+                </PageSection>
+              </div>
             )}
 
             {activeTab === 'shipping' && (
-              <PageSection
-                title="Shipping"
-                description="Configure shipping rules, dimensional weight, and fulfillment promises for this product."
-              >
+              <div role="tabpanel" id="product-tabpanel-shipping" aria-labelledby="product-tab-shipping">
+                <PageSection
+                  title="Shipping"
+                  description="Configure shipping rules, dimensional weight, and fulfillment promises for this product."
+                >
                 <div className="rounded-xl border border-dashed border-slate-300 px-6 py-10 text-center text-sm text-slate-500">
                   Shipping configuration will live here. Use this space to define carriers, lead times, and packaging soon.
                 </div>
-              </PageSection>
+                </PageSection>
+              </div>
             )}
 
             {activeTab === 'warranty' && (
-              <PageSection
-                title="Warranty"
-                description="Document warranty coverage to build buyer confidence."
-              >
+              <div role="tabpanel" id="product-tabpanel-warranty" aria-labelledby="product-tab-warranty">
+                <PageSection
+                  title="Warranty"
+                  description="Document warranty coverage to build buyer confidence."
+                >
                 <div className="rounded-xl border border-dashed border-slate-300 px-6 py-10 text-center text-sm text-slate-500">
                   Warranty content builder coming soon. Add warranty tiers, coverage notes, and registration requirements here.
                 </div>
-              </PageSection>
+                </PageSection>
+              </div>
             )}
 
             {activeTab === 'frequentlyBought' && (
-              <PageSection
-                title="Frequently bought together"
-                description="Cross-sell complementary items and categories to raise average order value."
+              <div
+                role="tabpanel"
+                id="product-tabpanel-frequentlyBought"
+                aria-labelledby="product-tab-frequentlyBought"
               >
+                <PageSection
+                  title="Frequently bought together"
+                  description="Cross-sell complementary items and categories to raise average order value."
+                >
                 <div className="grid gap-6 lg:grid-cols-2">
                   <div className="space-y-5">
                     <div>
@@ -3786,33 +3904,35 @@ const ProductsPage = () => {
                     )}
                   </div>
                 </div>
-              </PageSection>
+                </PageSection>
+              </div>
             )}
 
             {activeTab === 'reviews' && (
-              <div className="space-y-6">
-                <PageSection
-                  title="Review snapshot"
-                  description="Understand overall sentiment and score distribution for this product."
-                >
-                  <div className="grid gap-6 lg:grid-cols-[minmax(0,260px)_minmax(0,1fr)]">
-                    <div className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                      <div>
-                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Average rating</p>
-                        <div className="mt-3 flex items-baseline gap-3">
-                          <span className="text-4xl font-semibold text-slate-900">
-                            {reviewSummary.total ? reviewSummary.average.toFixed(1) : '—'}
-                          </span>
-                          {reviewSummary.total > 0 && (
-                            <StarRating
-                              value={reviewSummary.average}
-                              min={0}
-                              allowHalf
-                              readOnly
-                              size="lg"
-                              ariaLabel="Average product rating"
-                            />
-                          )}
+              <div role="tabpanel" id="product-tabpanel-reviews" aria-labelledby="product-tab-reviews">
+                <div className="space-y-6">
+                  <PageSection
+                    title="Review snapshot"
+                    description="Understand overall sentiment and score distribution for this product."
+                  >
+                    <div className="grid gap-6 lg:grid-cols-[minmax(0,260px)_minmax(0,1fr)]">
+                      <div className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Average rating</p>
+                          <div className="mt-3 flex items-baseline gap-3">
+                            <span className="text-4xl font-semibold text-slate-900">
+                              {reviewSummary.total ? reviewSummary.average.toFixed(1) : '—'}
+                            </span>
+                            {reviewSummary.total > 0 && (
+                              <StarRating
+                                value={reviewSummary.average}
+                                min={0}
+                                allowHalf
+                                readOnly
+                                size="lg"
+                                ariaLabel="Average product rating"
+                              />
+                            )}
                         </div>
                       </div>
                       <p className="mt-6 text-sm text-slate-600">
@@ -3994,10 +4114,10 @@ const ProductsPage = () => {
                     </div>
                   )}
                 </PageSection>
+                </div>
               </div>
             )}
           </div>
-        </div>
         </div>
         <div className="flex flex-col items-stretch gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <div className="space-y-1 text-sm text-slate-500">
