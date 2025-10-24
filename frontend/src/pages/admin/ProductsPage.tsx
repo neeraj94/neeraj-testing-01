@@ -535,6 +535,17 @@ const ProductsPage = () => {
     });
   }, []);
 
+  const scrollTabList = useCallback((direction: 'left' | 'right') => {
+    const list = tabListRef.current;
+    if (!list) {
+      return;
+    }
+
+    const scrollAmount = list.clientWidth * 0.8;
+    const delta = direction === 'left' ? -scrollAmount : scrollAmount;
+    list.scrollBy({ left: delta, behavior: 'smooth' });
+  }, []);
+
   const canCreate = useMemo(
     () => hasAnyPermission(permissions as PermissionKey[], ['PRODUCT_CREATE']),
     [permissions]
@@ -2262,16 +2273,44 @@ const ProductsPage = () => {
           <div className="border-b border-slate-200 bg-slate-50">
             <div className="relative">
               {tabScrollIndicators.left && (
-                <div className="pointer-events-none absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-slate-50 to-transparent" />
+                <>
+                  <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-10 bg-gradient-to-r from-slate-50 to-transparent" />
+                  <div className="absolute inset-y-0 left-0 z-20 flex items-center pl-2 pr-1">
+                    <button
+                      type="button"
+                      onClick={() => scrollTabList('left')}
+                      className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:border-slate-300 hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                      aria-label="Scroll product sections left"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={1.5} className="h-4 w-4">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12.5 5.5L8 10l4.5 4.5" />
+                      </svg>
+                    </button>
+                  </div>
+                </>
               )}
               {tabScrollIndicators.right && (
-                <div className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-slate-50 to-transparent" />
+                <>
+                  <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-10 bg-gradient-to-l from-slate-50 to-transparent" />
+                  <div className="absolute inset-y-0 right-0 z-20 flex items-center pr-2 pl-1">
+                    <button
+                      type="button"
+                      onClick={() => scrollTabList('right')}
+                      className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:border-slate-300 hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                      aria-label="Scroll product sections right"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={1.5} className="h-4 w-4">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 5.5L12 10l-4.5 4.5" />
+                      </svg>
+                    </button>
+                  </div>
+                </>
               )}
               <div
                 ref={tabListRef}
                 role="tablist"
                 aria-label="Product form sections"
-                className="flex items-center gap-2 overflow-x-auto px-4 py-3 sm:px-6"
+                className="flex items-center gap-2 overflow-x-auto px-10 py-3 sm:px-12"
               >
                 {tabs.map((tab) => (
                   <button
