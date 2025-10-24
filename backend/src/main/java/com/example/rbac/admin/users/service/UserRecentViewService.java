@@ -243,7 +243,8 @@ public class UserRecentViewService {
         }
         return productIds.stream()
                 .filter(Objects::nonNull)
-                .map(Math::abs)
+                .map(UserRecentViewService::normalizeProductId)
+                .filter(Objects::nonNull)
                 .filter(id -> !Objects.equals(id, excludeProductId))
                 .distinct()
                 .limit(MAX_RECENTS)
@@ -280,7 +281,7 @@ public class UserRecentViewService {
         }
         Map<Long, Product> productsById = productRepository.findByIdIn(productIds).stream()
                 .filter(Objects::nonNull)
-                .collect(Collectors.toMap(Product::getId, product -> product));
+                .collect(Collectors.toMap(Product::getId, product -> product, (left, right) -> left, LinkedHashMap::new));
         List<Product> orderedProducts = new ArrayList<>();
         for (Long productId : productIds) {
             Product product = productsById.get(productId);
@@ -300,39 +301,24 @@ public class UserRecentViewService {
         } catch (EntityNotFoundException ex) {
             return null;
         } catch (RuntimeException ex) {
-            if (!isHibernateException(ex)) {
+            if (!isHibernateRelatedException(ex)) {
                 throw ex;
             }
             return null;
         }
-        return false;
     }
 
-    private boolean isHibernateException(RuntimeException ex) {
-        Throwable current = ex;
-        while (current != null) {
-            Package exceptionPackage = current.getClass().getPackage();
-            if (exceptionPackage != null && exceptionPackage.getName().startsWith("org.hibernate")) {
-                return true;
-            }
-            current = current.getCause();
+    private static Long normalizeProductId(Long productId) {
+        if (productId == null) {
+            return null;
         }
-        return false;
-    }
-
-    private boolean isHibernateException(RuntimeException ex) {
-        Throwable current = ex;
-        while (current != null) {
-            Package exceptionPackage = current.getClass().getPackage();
-            if (exceptionPackage != null && exceptionPackage.getName().startsWith("org.hibernate")) {
-                return true;
-            }
-            current = current.getCause();
+        if (productId == Long.MIN_VALUE) {
+            return null;
         }
-        return false;
+        return Math.abs(productId);
     }
 
-    private boolean isHibernateException(RuntimeException ex) {
+    private boolean isHibernateRelatedException(RuntimeException ex) {
         Throwable current = ex;
         while (current != null) {
             Package exceptionPackage = current.getClass().getPackage();
