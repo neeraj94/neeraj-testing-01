@@ -15,7 +15,6 @@ import com.example.rbac.admin.users.repository.projection.UserRecentViewSummary;
 import jakarta.persistence.EntityNotFoundException;
 import org.hibernate.proxy.HibernateProxy;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
@@ -157,7 +156,6 @@ public class UserRecentViewService {
     }
 
     @Transactional
-    @PreAuthorize("hasAnyAuthority('USER_VIEW','USER_VIEW_GLOBAL')")
     public List<UserRecentViewDto> getRecentViewsForUser(Long userId) {
         if (userId == null) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "User id is required");
@@ -302,10 +300,22 @@ public class UserRecentViewService {
         } catch (EntityNotFoundException ex) {
             return null;
         } catch (RuntimeException ex) {
-            if (isHibernateException(ex)) {
-                return null;
+            if (!isHibernateException(ex)) {
+                throw ex;
             }
-            throw ex;
+            return null;
+        }
+        return false;
+    }
+
+    private boolean isHibernateException(RuntimeException ex) {
+        Throwable current = ex;
+        while (current != null) {
+            Package exceptionPackage = current.getClass().getPackage();
+            if (exceptionPackage != null && exceptionPackage.getName().startsWith("org.hibernate")) {
+                return true;
+            }
+            current = current.getCause();
         }
         return false;
     }
