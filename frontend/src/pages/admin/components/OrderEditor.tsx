@@ -1488,154 +1488,212 @@ const OrderEditor = ({
         </section>
 
         <section className="space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <h3 className="text-base font-semibold text-slate-900">Line items</h3>
             <Button type="button" variant="ghost" onClick={handleAddLine} disabled={isSaving}>
               Add item
             </Button>
           </div>
-          <div className="space-y-4">
-            {lines.map((line, index) => {
-              const summary = lineSummaries[index];
-              const initialLabel = line.selectedProduct ? undefined : formatLineProductLabel(line);
-              const thumbnailUrl = line.selectedProduct?.thumbnailUrl ?? line.thumbnailUrl;
-              const productSlug = line.productSlug.trim();
-              const productIdDisplay = line.productId.trim() || '—';
-              const variantIdDisplay = line.variantId.trim() || '—';
-              const skuDisplay = line.variantSku.trim() || line.productSku.trim() || '—';
-              const variantDisplay =
-                line.variantLabel.trim() || line.variantSku.trim() || 'Default configuration';
-              const varietyDisplay = line.productVariety.trim() || '—';
-              const slotDisplay = line.productSlot.trim() || '—';
-              const brandDisplay = line.brandName.trim() || '—';
-              const taxRateNameDisplay = line.taxRateName.trim() || '—';
-              const unitPriceNumber = Number(line.unitPrice);
-              const unitPriceDisplay = formatCurrency(
-                Number.isFinite(unitPriceNumber) && unitPriceNumber >= 0 ? unitPriceNumber : 0,
-                currency
-              );
-              const taxRateNumber = Number(line.taxRate);
-              const taxRateDisplay =
-                line.taxRate.trim().length > 0 && Number.isFinite(taxRateNumber)
-                  ? `${taxRateNumber.toFixed(2)}%`
-                  : '—';
-              const metadataFields: { label: string; value: ReactNode }[] = [
-                { label: 'Variant', value: variantDisplay },
-                { label: 'SKU', value: skuDisplay },
-                { label: 'Product ID', value: productIdDisplay },
-                { label: 'Variant ID', value: variantIdDisplay },
-                { label: 'Variety', value: varietyDisplay },
-                { label: 'Slot', value: slotDisplay },
-                { label: 'Brand', value: brandDisplay },
-                { label: 'Tax code', value: taxRateNameDisplay }
-              ];
-              return (
-                <div key={line.key} className="space-y-4 rounded-xl border border-slate-200 p-4">
-                  <div className="flex flex-col gap-3 border-b border-slate-100 pb-4 md:flex-row md:items-start md:justify-between">
-                    <div className="flex flex-1 gap-3">
-                      <div className="h-14 w-14 flex-shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-slate-100">
-                        {thumbnailUrl ? (
-                          <img src={thumbnailUrl} alt="" className="h-full w-full object-cover" />
-                        ) : (
-                          <div className="flex h-full w-full items-center justify-center text-[11px] uppercase tracking-wide text-slate-400">
-                            No image
+          <div className="overflow-hidden rounded-xl border border-slate-200">
+            <table className="min-w-full divide-y divide-slate-200 text-sm text-slate-700">
+              <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                <tr>
+                  <th scope="col" className="px-4 py-2 text-left">
+                    Item
+                  </th>
+                  <th scope="col" className="px-4 py-2 text-right">
+                    Qty
+                  </th>
+                  <th scope="col" className="px-4 py-2 text-right">
+                    Rate
+                  </th>
+                  <th scope="col" className="px-4 py-2 text-right">
+                    Tax
+                  </th>
+                  <th scope="col" className="px-4 py-2 text-right">
+                    Amount
+                  </th>
+                  <th scope="col" className="px-4 py-2 text-right">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {lines.map((line, index) => {
+                  const summary = lineSummaries[index] ?? { subtotal: 0, taxAmount: 0, total: 0 };
+                  const initialLabel = line.selectedProduct ? undefined : formatLineProductLabel(line);
+                  const thumbnailUrl = line.selectedProduct?.thumbnailUrl ?? line.thumbnailUrl;
+                  const productSlug = line.productSlug.trim();
+                  const productIdDisplay = line.productId.trim() || '—';
+                  const variantIdDisplay = line.variantId.trim() || '—';
+                  const skuDisplay = line.variantSku.trim() || line.productSku.trim() || '—';
+                  const variantDisplay =
+                    line.variantLabel.trim() || line.variantSku.trim() || 'Default configuration';
+                  const varietyDisplay = line.productVariety.trim() || '—';
+                  const slotDisplay = line.productSlot.trim() || '—';
+                  const brandDisplay = line.brandName.trim() || '—';
+                  const taxRateNameDisplay = line.taxRateName.trim() || '—';
+                  const metadataFields: { label: string; value: ReactNode }[] = [
+                    { label: 'Variant', value: variantDisplay },
+                    { label: 'SKU', value: skuDisplay },
+                    { label: 'Product ID', value: productIdDisplay },
+                    { label: 'Variant ID', value: variantIdDisplay },
+                    { label: 'Variety', value: varietyDisplay },
+                    { label: 'Slot', value: slotDisplay },
+                    { label: 'Brand', value: brandDisplay },
+                    { label: 'Tax code', value: taxRateNameDisplay }
+                  ];
+                  return (
+                    <tr key={line.key} className="bg-slate-50">
+                      <td colSpan={6} className="px-4 py-4">
+                        <div className="space-y-4">
+                          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                            <div className="flex flex-1 gap-3">
+                              <div className="h-14 w-14 flex-shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-slate-100">
+                                {thumbnailUrl ? (
+                                  <img src={thumbnailUrl} alt="" className="h-full w-full object-cover" />
+                                ) : (
+                                  <div className="flex h-full w-full items-center justify-center text-[11px] uppercase tracking-wide text-slate-400">
+                                    No image
+                                  </div>
+                                )}
+                              </div>
+                              <div className="flex-1 space-y-3">
+                                <div className="space-y-2">
+                                  <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                    Product
+                                  </label>
+                                  <OrderProductSearchSelect
+                                    selected={line.selectedProduct}
+                                    initialLabel={initialLabel}
+                                    disabled={isSaving}
+                                    currencyCode={currency}
+                                    onSelect={(option) => handleProductSelect(line.key, option)}
+                                  />
+                                </div>
+                                {line.variants.length > 0 ? (
+                                  <div className="space-y-2">
+                                    <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                      Variant
+                                    </label>
+                                    <select
+                                      value={line.variantId}
+                                      onChange={(event) => handleVariantChange(line.key, event.target.value)}
+                                      disabled={isSaving}
+                                      className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                                    >
+                                      {line.variants.map((variant, variantIndex) => {
+                                        const value = resolveVariantValue(variant.id ?? null, variant.key ?? null);
+                                        const optionValue = value || `variant-${variantIndex}`;
+                                        return (
+                                          <option key={optionValue} value={optionValue}>
+                                            {getVariantDisplayName(variant)}
+                                          </option>
+                                        );
+                                      })}
+                                    </select>
+                                  </div>
+                                ) : null}
+                                <p className="text-xs text-slate-500">
+                                  {productSlug ? (
+                                    <>
+                                      Slug:{' '}
+                                      <code className="font-mono text-[11px] text-slate-600">{productSlug}</code>
+                                    </>
+                                  ) : (
+                                    'Search and select a product to populate pricing and tax details.'
+                                  )}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-start justify-end gap-3">
+                              <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-500 shadow-sm">
+                                Item {index + 1}
+                              </span>
+                              {lines.length > 1 ? (
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveLine(line.key)}
+                                  disabled={isSaving}
+                                  className="text-xs font-semibold text-rose-600 transition hover:text-rose-700"
+                                >
+                                  Remove
+                                </button>
+                              ) : null}
+                            </div>
                           </div>
-                        )}
-                      </div>
-                      <div className="flex-1 space-y-2">
-                        <OrderProductSearchSelect
-                          selected={line.selectedProduct}
-                          initialLabel={initialLabel}
-                          disabled={isSaving}
-                          currencyCode={currency}
-                          onSelect={(option) => handleProductSelect(line.key, option)}
-                        />
-                        {line.variants.length > 0 ? (
-                          <div className="flex flex-col">
-                            <label className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                              Variant option
-                            </label>
-                            <select
-                              value={line.variantId}
-                              onChange={(event) => handleVariantChange(line.key, event.target.value)}
-                              disabled={isSaving}
-                              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-                            >
-                              {line.variants.map((variant, variantIndex) => {
-                                const value = resolveVariantValue(variant.id ?? null, variant.key ?? null);
-                                const optionValue = value || `variant-${variantIndex}`;
-                                return (
-                                  <option key={optionValue} value={optionValue}>
-                                    {getVariantDisplayName(variant)}
-                                  </option>
-                                );
-                              })}
-                            </select>
+                          <div className="grid gap-3 md:grid-cols-4">
+                            <div className="space-y-2">
+                              <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                Quantity
+                              </label>
+                              <input
+                                type="number"
+                                min="1"
+                                step="1"
+                                value={line.quantity}
+                                onChange={(event) => handleLineChange(line.key, 'quantity', event.target.value)}
+                                disabled={isSaving}
+                                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                Unit price
+                              </label>
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={line.unitPrice}
+                                onChange={(event) => handleLineChange(line.key, 'unitPrice', event.target.value)}
+                                disabled={isSaving}
+                                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                Tax %
+                              </label>
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={line.taxRate}
+                                onChange={(event) => handleLineChange(line.key, 'taxRate', event.target.value)}
+                                disabled={isSaving}
+                                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                              />
+                            </div>
+                            <div className="space-y-2 rounded-xl bg-white px-3 py-2 text-sm text-slate-600 shadow-sm">
+                              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Totals</p>
+                              <p className="mt-1 font-medium text-slate-900">
+                                {formatCurrency(summary.total, currency)}
+                              </p>
+                              <p className="text-xs text-slate-500">
+                                Subtotal {formatCurrency(summary.subtotal, currency)} · Tax {formatCurrency(summary.taxAmount, currency)}
+                              </p>
+                            </div>
                           </div>
-                        ) : null}
-                        <p className="text-xs text-slate-500">
-                          {productSlug ? (
-                            <>
-                              Slug:{' '}
-                              <code className="font-mono text-[11px] text-slate-600">{productSlug}</code>
-                            </>
-                          ) : (
-                            'Search and select a product to populate pricing and tax details.'
-                          )}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between gap-3 md:flex-col md:items-end">
-                      <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                        Item {index + 1}
-                      </span>
-                      {lines.length > 1 ? (
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveLine(line.key)}
-                          disabled={isSaving}
-                          className="text-xs font-semibold text-rose-600 transition hover:text-rose-700"
-                        >
-                          Remove
-                        </button>
-                      ) : null}
-                    </div>
-                  </div>
-                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                    <div className="flex flex-col">
-                      <label className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                        Quantity
-                      </label>
-                      <input
-                        type="number"
-                        min="1"
-                        step="1"
-                        value={line.quantity}
-                        onChange={(event) => handleLineChange(line.key, 'quantity', event.target.value)}
-                        disabled={isSaving}
-                        className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-                      />
-                    </div>
-                    <ReadOnlyField label="Unit price" value={unitPriceDisplay} />
-                    <ReadOnlyField label="Tax rate" value={taxRateDisplay} />
-                    <ReadOnlyField
-                      label="Line subtotal"
-                      value={formatCurrency(summary.subtotal, currency)}
-                    />
-                    <ReadOnlyField
-                      label="Tax amount"
-                      value={formatCurrency(summary.taxAmount, currency)}
-                    />
-                    <ReadOnlyField label="Line total" value={formatCurrency(summary.total, currency)} />
-                  </div>
-                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                    {metadataFields.map((field) => (
-                      <ReadOnlyField key={field.label} label={field.label} value={field.value} />
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
+                          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                            {metadataFields.map((field) => (
+                              <ReadOnlyField key={field.label} label={field.label} value={field.value} />
+                            ))}
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+                {lines.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-4 py-6 text-center text-sm text-slate-500">
+                      Add a product to start building this order.
+                    </td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </table>
           </div>
         </section>
 
