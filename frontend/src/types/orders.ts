@@ -17,6 +17,8 @@ export interface OrderListItem {
   summary: OrderSummary | null;
   createdAt: string;
   lines: OrderLine[];
+  dueDate?: string | null;
+  notes?: string | null;
 }
 
 export interface OrderDetail extends OrderListItem {
