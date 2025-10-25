@@ -262,6 +262,15 @@ export const DEFAULT_NAVIGATION_MENU: NavigationNode[] = [
         group: false,
         permissions: ['PAYMENT_VIEW', 'PAYMENT_MANAGE'],
         children: []
+      },
+      {
+        key: 'statusConfiguration',
+        label: 'Status',
+        icon: '🗂️',
+        path: '/admin/configuration/status',
+        group: false,
+        permissions: ['CONFIG.STATUS.VIEW', 'CONFIG.STATUS.MANAGE'],
+        children: []
       }
     ]
   },
