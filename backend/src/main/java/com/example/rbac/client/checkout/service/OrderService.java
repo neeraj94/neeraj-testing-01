@@ -11,6 +11,7 @@ import com.example.rbac.client.checkout.dto.OrderSummaryDto;
 import com.example.rbac.client.checkout.dto.PaymentMethodDto;
 import com.example.rbac.client.checkout.model.CheckoutOrder;
 import com.example.rbac.client.checkout.repository.CheckoutOrderRepository;
+import com.example.rbac.admin.settings.service.TemplatedEmailSender;
 import com.example.rbac.common.exception.ApiException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -40,10 +41,14 @@ public class OrderService {
 
     private final CheckoutOrderRepository orderRepository;
     private final ObjectMapper objectMapper;
+    private final TemplatedEmailSender emailSender;
 
-    public OrderService(CheckoutOrderRepository orderRepository, ObjectMapper objectMapper) {
+    public OrderService(CheckoutOrderRepository orderRepository,
+                        ObjectMapper objectMapper,
+                        TemplatedEmailSender emailSender) {
         this.orderRepository = orderRepository;
         this.objectMapper = objectMapper;
+        this.emailSender = emailSender;
     }
 
     @Transactional
@@ -72,7 +77,9 @@ public class OrderService {
             saved.setOrderNumber(generateOrderNumber(saved.getId()));
             saved = orderRepository.save(saved);
         }
-        return toOrderResponse(saved);
+        CheckoutOrderResponse response = toOrderResponse(saved);
+        emailSender.sendOrderConfirmationEmail(response);
+        return response;
     }
 
     @Transactional(readOnly = true)

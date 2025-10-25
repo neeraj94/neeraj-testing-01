@@ -5,25 +5,39 @@ import com.example.rbac.admin.settings.dto.EmailSettingsDto;
 import com.example.rbac.admin.settings.model.EmailTemplate;
 import com.example.rbac.admin.settings.repository.EmailTemplateRepository;
 import com.example.rbac.admin.users.model.User;
+import com.example.rbac.client.checkout.dto.AppliedCouponDto;
+import com.example.rbac.client.checkout.dto.CheckoutAddressDto;
+import com.example.rbac.client.checkout.dto.CheckoutOrderResponse;
+import com.example.rbac.client.checkout.dto.OrderLineDto;
+import com.example.rbac.client.checkout.dto.OrderSummaryDto;
+import com.example.rbac.client.checkout.dto.PaymentMethodDto;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.mail.MailException;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
+import org.springframework.web.util.HtmlUtils;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.text.NumberFormat;
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Currency;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
@@ -36,7 +50,11 @@ public class TemplatedEmailSender {
     private static final Logger log = LoggerFactory.getLogger(TemplatedEmailSender.class);
     private static final String VERIFICATION_TEMPLATE_CODE = "staff_verification_request";
     private static final String WELCOME_TEMPLATE_CODE = "user_signup_welcome";
+    private static final String ORDER_CONFIRMATION_TEMPLATE_CODE = "order_confirmation_customer";
     private static final DateTimeFormatter EXPIRY_FORMATTER =
+            DateTimeFormatter.ofPattern("MMM d, yyyy h:mm a z", Locale.ENGLISH)
+                    .withZone(ZoneId.systemDefault());
+    private static final DateTimeFormatter ORDER_DATE_FORMATTER =
             DateTimeFormatter.ofPattern("MMM d, yyyy h:mm a z", Locale.ENGLISH)
                     .withZone(ZoneId.systemDefault());
 
@@ -78,6 +96,18 @@ public class TemplatedEmailSender {
         tokens.put("{{user_email}}", Optional.ofNullable(user.getEmail()).orElse(""));
         tokens.put("{{temporary_password}}", Optional.ofNullable(temporaryPassword).orElse(""));
         return sendTemplate(WELCOME_TEMPLATE_CODE, user.getEmail(), tokens, buildAuditContext(user, "WELCOME"));
+    }
+
+    public boolean sendOrderConfirmationEmail(CheckoutOrderResponse order) {
+        if (order == null || !StringUtils.hasText(order.getCustomerEmail())) {
+            return false;
+        }
+        Map<String, String> tokens = buildOrderTokens(order);
+        return sendTemplate(
+                ORDER_CONFIRMATION_TEMPLATE_CODE,
+                order.getCustomerEmail(),
+                tokens,
+                buildOrderAuditContext(order));
     }
 
     public String buildVerificationLink(String token) {
@@ -155,6 +185,264 @@ public class TemplatedEmailSender {
         tokens.put("{{current_year}}", String.valueOf(java.time.Year.now().getValue()));
         tokens.putIfAbsent("{{temporary_password}}", "");
         return tokens;
+    }
+
+    private Map<String, String> buildOrderTokens(CheckoutOrderResponse order) {
+        Map<String, String> tokens = new HashMap<>();
+        tokens.put("{{customer_name}}", resolveCustomerName(order));
+        tokens.put("{{order_number}}", Optional.ofNullable(order.getOrderNumber()).orElse(""));
+        tokens.put("{{order_date}}", formatOrderDate(order.getCreatedAt()));
+        tokens.put("{{order_status}}", Optional.ofNullable(order.getStatus()).orElse(""));
+        OrderSummaryDto summary = order.getSummary();
+        tokens.put("{{order_total}}", formatMoney(summary != null ? summary.getGrandTotal() : null));
+        tokens.put("{{order_items_table}}", buildOrderItemsTable(order));
+        tokens.put("{{billing_address}}", formatAddress(order.getBillingAddress()));
+        tokens.put("{{shipping_address}}", formatAddress(order.getShippingAddress()));
+        tokens.put("{{shipping_method}}", formatShippingMethod(summary));
+        tokens.put("{{payment_method}}", formatPaymentMethod(order.getPaymentMethod()));
+        tokens.put("{{customer_notes}}", resolveCustomerNotes(order));
+        return tokens;
+    }
+
+    private Map<String, Object> buildOrderAuditContext(CheckoutOrderResponse order) {
+        Map<String, Object> context = new HashMap<>();
+        context.put("type", "ORDER_CONFIRMATION");
+        if (order != null) {
+            context.put("orderId", order.getOrderId());
+            context.put("orderNumber", order.getOrderNumber());
+            context.put("customerId", order.getCustomerId());
+            context.put("email", order.getCustomerEmail());
+        }
+        return context;
+    }
+
+    private String formatOrderDate(Instant createdAt) {
+        if (createdAt == null) {
+            return "";
+        }
+        return ORDER_DATE_FORMATTER.format(createdAt);
+    }
+
+    private String resolveCustomerName(CheckoutOrderResponse order) {
+        if (order == null) {
+            return "";
+        }
+        if (StringUtils.hasText(order.getCustomerName())) {
+            return order.getCustomerName();
+        }
+        return Optional.ofNullable(order.getCustomerEmail()).orElse("");
+    }
+
+    private String buildOrderItemsTable(CheckoutOrderResponse order) {
+        List<OrderLineDto> lines = order != null ? order.getLines() : List.of();
+        OrderSummaryDto summary = order != null ? order.getSummary() : null;
+        StringBuilder html = new StringBuilder();
+        html.append("<table style=\"width:100%;border-collapse:collapse;\">");
+        html.append("<thead><tr>")
+                .append("<th style=\"text-align:left;padding:8px;border-bottom:1px solid #e2e8f0;\">Item</th>")
+                .append("<th style=\"text-align:center;padding:8px;border-bottom:1px solid #e2e8f0;\">Qty</th>")
+                .append("<th style=\"text-align:right;padding:8px;border-bottom:1px solid #e2e8f0;\">Price</th>")
+                .append("<th style=\"text-align:right;padding:8px;border-bottom:1px solid #e2e8f0;\">Total</th>")
+                .append("</tr></thead>");
+        html.append("<tbody>");
+        if (CollectionUtils.isEmpty(lines)) {
+            html.append("<tr><td colspan=\"4\" style=\"padding:12px;text-align:center;color:#64748b;\">No items found.</td></tr>");
+        } else {
+            for (OrderLineDto line : lines) {
+                if (line == null) {
+                    continue;
+                }
+                html.append("<tr>");
+                html.append("<td style=\"padding:8px;border-bottom:1px solid #f1f5f9;\">")
+                        .append(formatLineName(line))
+                        .append("</td>");
+                html.append("<td style=\"padding:8px;text-align:center;border-bottom:1px solid #f1f5f9;\">")
+                        .append(Optional.ofNullable(line.getQuantity()).map(String::valueOf).orElse(""))
+                        .append("</td>");
+                html.append("<td style=\"padding:8px;text-align:right;border-bottom:1px solid #f1f5f9;\">")
+                        .append(formatMoney(line.getUnitPrice()))
+                        .append("</td>");
+                html.append("<td style=\"padding:8px;text-align:right;border-bottom:1px solid #f1f5f9;\">")
+                        .append(formatMoney(line.getLineTotal()))
+                        .append("</td>");
+                html.append("</tr>");
+            }
+        }
+
+        appendSummaryRow(html, "Subtotal", summary != null ? summary.getProductTotal() : null, false, false);
+        appendSummaryRow(html, "Shipping", summary != null ? summary.getShippingTotal() : null, false, false);
+        appendSummaryRow(html, "Tax", summary != null ? summary.getTaxTotal() : null, false, false);
+        appendDiscountRow(html, summary);
+        appendSummaryRow(html, "Grand total", summary != null ? summary.getGrandTotal() : null, true, false);
+
+        html.append("</tbody></table>");
+        return html.toString();
+    }
+
+    private void appendDiscountRow(StringBuilder html, OrderSummaryDto summary) {
+        if (summary == null) {
+            return;
+        }
+        BigDecimal discount = summary.getDiscountTotal();
+        if (discount == null || discount.compareTo(BigDecimal.ZERO) <= 0) {
+            return;
+        }
+        AppliedCouponDto coupon = summary.getAppliedCoupon();
+        String label = "Discount";
+        if (coupon != null && StringUtils.hasText(coupon.getCode())) {
+            label = label + " (" + coupon.getCode() + ")";
+        }
+        appendSummaryRow(html, label, discount, false, true);
+    }
+
+    private void appendSummaryRow(StringBuilder html, String label, BigDecimal amount, boolean emphasize, boolean negative) {
+        if (amount == null) {
+            return;
+        }
+        String formatted = formatMoney(amount.abs());
+        if (!StringUtils.hasText(formatted)) {
+            return;
+        }
+        if (negative) {
+            formatted = "-" + formatted;
+        }
+        String textStyle = emphasize ? "font-weight:600;font-size:15px;" : "";
+        html.append("<tr>");
+        html.append("<td colspan=\"3\" style=\"padding:8px;text-align:right;border-bottom:1px solid #f1f5f9;")
+                .append(textStyle)
+                .append("\">")
+                .append(HtmlUtils.htmlEscape(label))
+                .append("</td>");
+        html.append("<td style=\"padding:8px;text-align:right;border-bottom:1px solid #f1f5f9;")
+                .append(textStyle)
+                .append("\">")
+                .append(formatted)
+                .append("</td>")
+                .append("</tr>");
+    }
+
+    private String formatLineName(OrderLineDto line) {
+        String name = HtmlUtils.htmlEscape(Optional.ofNullable(line.getName()).orElse(""));
+        String variant = Optional.ofNullable(line.getVariantLabel())
+                .filter(StringUtils::hasText)
+                .map(HtmlUtils::htmlEscape)
+                .orElse("");
+        String sku = Optional.ofNullable(line.getVariantSku())
+                .filter(StringUtils::hasText)
+                .map(HtmlUtils::htmlEscape)
+                .orElse("");
+        List<String> details = new ArrayList<>();
+        if (StringUtils.hasText(variant)) {
+            details.add(variant);
+        }
+        if (StringUtils.hasText(sku)) {
+            details.add("SKU: " + sku);
+        }
+        if (details.isEmpty()) {
+            return name;
+        }
+        return name + "<div style=\"color:#64748b;font-size:12px;margin-top:4px;\">" + String.join(" • ", details) + "</div>";
+    }
+
+    private String formatAddress(CheckoutAddressDto address) {
+        if (address == null) {
+            return "";
+        }
+        List<String> lines = new ArrayList<>();
+        if (StringUtils.hasText(address.getFullName())) {
+            lines.add(address.getFullName().trim());
+        }
+        if (StringUtils.hasText(address.getAddressLine1())) {
+            lines.add(address.getAddressLine1().trim());
+        }
+        if (StringUtils.hasText(address.getAddressLine2())) {
+            lines.add(address.getAddressLine2().trim());
+        }
+        if (StringUtils.hasText(address.getLandmark())) {
+            lines.add(address.getLandmark().trim());
+        }
+
+        StringBuilder cityLine = new StringBuilder();
+        if (StringUtils.hasText(address.getCityName())) {
+            cityLine.append(address.getCityName().trim());
+        }
+        if (StringUtils.hasText(address.getStateName())) {
+            if (cityLine.length() > 0) {
+                cityLine.append(", ");
+            }
+            cityLine.append(address.getStateName().trim());
+        }
+        if (StringUtils.hasText(address.getPinCode())) {
+            if (cityLine.length() > 0) {
+                cityLine.append(" ");
+            }
+            cityLine.append(address.getPinCode().trim());
+        }
+        if (cityLine.length() > 0) {
+            lines.add(cityLine.toString());
+        }
+
+        if (StringUtils.hasText(address.getCountryName())) {
+            lines.add(address.getCountryName().trim());
+        }
+        if (StringUtils.hasText(address.getMobileNumber())) {
+            lines.add("Phone: " + address.getMobileNumber().trim());
+        }
+
+        return String.join("\n", lines);
+    }
+
+    private String formatShippingMethod(OrderSummaryDto summary) {
+        if (summary == null) {
+            return "";
+        }
+        String name = Optional.ofNullable(summary.getShippingMethod()).filter(StringUtils::hasText).orElse("");
+        String cost = formatMoney(summary.getShippingTotal());
+        if (StringUtils.hasText(name) && StringUtils.hasText(cost)) {
+            return name + " (" + cost + ")";
+        }
+        if (StringUtils.hasText(name)) {
+            return name;
+        }
+        return cost;
+    }
+
+    private String formatPaymentMethod(PaymentMethodDto paymentMethod) {
+        if (paymentMethod == null) {
+            return "";
+        }
+        String displayName = Optional.ofNullable(paymentMethod.getDisplayName()).orElse("").trim();
+        String notes = Optional.ofNullable(paymentMethod.getNotes()).orElse("").trim();
+        if (StringUtils.hasText(displayName) && StringUtils.hasText(notes)) {
+            return displayName + " - " + notes;
+        }
+        if (StringUtils.hasText(displayName)) {
+            return displayName;
+        }
+        return notes;
+    }
+
+    private String resolveCustomerNotes(CheckoutOrderResponse order) {
+        return "";
+    }
+
+    private String formatMoney(BigDecimal amount) {
+        if (amount == null) {
+            return "";
+        }
+        BigDecimal scaled = amount.setScale(2, RoundingMode.HALF_UP);
+        String currencyCode = settingsService.resolveBaseCurrency();
+        if (!StringUtils.hasText(currencyCode)) {
+            return scaled.toPlainString();
+        }
+        try {
+            Currency currency = Currency.getInstance(currencyCode);
+            NumberFormat formatter = NumberFormat.getCurrencyInstance(Locale.US);
+            formatter.setCurrency(currency);
+            return formatter.format(scaled);
+        } catch (IllegalArgumentException ex) {
+            return currencyCode + " " + scaled.toPlainString();
+        }
     }
 
     private String wrapWithLayout(String body, EmailSettingsDto settings) {
