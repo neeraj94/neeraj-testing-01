@@ -68,6 +68,7 @@ import AdminPaymentPage from './pages/admin/AdminPaymentPage';
 import AdminOrdersPage from './pages/admin/AdminOrdersPage';
 import AdminOrderEditorPage from './pages/admin/AdminOrderEditorPage';
 import AdminCartsPage from './pages/admin/AdminCartsPage';
+import StatusConfigurationPage from './pages/admin/StatusConfigurationPage';
 
 const App = () => {
   const dispatch = useAppDispatch();
@@ -296,6 +297,13 @@ const App = () => {
           </Route>
           <Route element={<PermissionRoute required={['PAYMENT_VIEW']} />}>
             <Route path="payments" element={<AdminPaymentPage />} />
+          </Route>
+          <Route
+            element={
+              <PermissionRoute required={['CONFIG.STATUS.VIEW', 'CONFIG.STATUS.MANAGE']} />
+            }
+          >
+            <Route path="configuration/status" element={<StatusConfigurationPage />} />
           </Route>
           <Route
             element={
