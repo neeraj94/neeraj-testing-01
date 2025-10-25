@@ -8,6 +8,7 @@ import type { PermissionKey } from '../types/auth';
 import { adminApi } from '../services/http';
 import { DEFAULT_NAVIGATION_MENU } from '../constants/navigation';
 import type { NavigationNode, NavigationResponse } from '../types/navigation';
+import { ensureStatusConfigurationEntry, mergeMenuNodes } from '../utils/navigation';
 
 type SidebarItem = {
   key: string;
@@ -15,53 +16,6 @@ type SidebarItem = {
   to?: string;
   icon?: string;
   children?: SidebarItem[];
-};
-
-const mergeMenuNodes = (
-  stored: NavigationNode[] = [],
-  defaults: NavigationNode[] = []
-): NavigationNode[] => {
-  if (!defaults.length) {
-    return stored.map((node) => ({
-      ...node,
-      children: mergeMenuNodes(node.children ?? [], [])
-    }));
-  }
-
-  const defaultMap = new Map(defaults.map((definition) => [definition.key, definition] as const));
-  const usedKeys = new Set<string>();
-  const result: NavigationNode[] = [];
-
-  for (const node of stored ?? []) {
-    const definition = defaultMap.get(node.key);
-    if (definition) {
-      const mergedChildren = mergeMenuNodes(node.children ?? [], definition.children ?? []);
-      result.push({
-        ...definition,
-        ...node,
-        children: mergedChildren
-      });
-      usedKeys.add(definition.key);
-    } else {
-      result.push({
-        ...node,
-        children: mergeMenuNodes(node.children ?? [], [])
-      });
-      usedKeys.add(node.key);
-    }
-  }
-
-  for (const definition of defaults) {
-    if (usedKeys.has(definition.key)) {
-      continue;
-    }
-    result.push({
-      ...definition,
-      children: mergeMenuNodes([], definition.children ?? [])
-    });
-  }
-
-  return result;
 };
 
 const Layout = () => {
@@ -107,13 +61,20 @@ const Layout = () => {
         if (!active) {
           return;
         }
-        const merged = mergeMenuNodes(data?.menu ?? [], data?.defaults ?? DEFAULT_NAVIGATION_MENU);
-        setNavItems(merged.length ? merged : DEFAULT_NAVIGATION_MENU);
+        const providedDefaults = data?.defaults ?? [];
+        const effectiveDefaults = mergeMenuNodes(providedDefaults, DEFAULT_NAVIGATION_MENU);
+        const normalizedDefaults = ensureStatusConfigurationEntry(
+          effectiveDefaults.length ? effectiveDefaults : DEFAULT_NAVIGATION_MENU,
+          DEFAULT_NAVIGATION_MENU
+        );
+        const merged = mergeMenuNodes(data?.menu ?? [], normalizedDefaults);
+        const normalizedMenu = ensureStatusConfigurationEntry(merged.length ? merged : normalizedDefaults, normalizedDefaults);
+        setNavItems(normalizedMenu);
       } catch (error) {
         if (!active) {
           return;
         }
-        setNavItems(DEFAULT_NAVIGATION_MENU);
+        setNavItems(ensureStatusConfigurationEntry(DEFAULT_NAVIGATION_MENU, DEFAULT_NAVIGATION_MENU));
       }
     };
 
