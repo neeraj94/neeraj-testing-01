@@ -69,6 +69,8 @@ type CouponOption = {
 
 const createLineKey = () => `line-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
 
+const SHIPPING_METHOD_OPTIONS = ['Standard Shipping', 'Express Shipping', 'Free Shipping'];
+
 const createEmptyAddressState = (): AddressFormState => ({
   id: null,
   countryId: '',
@@ -372,6 +374,9 @@ const OrderEditor = ({
   const [shippingTotalInput, setShippingTotalInput] = useState(
     initialOrder?.summary?.shippingTotal != null ? String(initialOrder.summary.shippingTotal) : '0'
   );
+  const [shippingMethodInput, setShippingMethodInput] = useState(
+    initialOrder?.summary?.shippingMethod ?? ''
+  );
   const [discountInput, setDiscountInput] = useState(
     initialOrder?.summary?.discountTotal != null ? String(initialOrder.summary.discountTotal) : '0'
   );
@@ -424,6 +429,19 @@ const OrderEditor = ({
   );
   const [selectedShippingAddressId, setSelectedShippingAddressId] = useState('');
   const [selectedBillingAddressId, setSelectedBillingAddressId] = useState('');
+
+  const shippingMethodOptions = useMemo(() => {
+    const base = [...SHIPPING_METHOD_OPTIONS];
+    const existing = initialOrder?.summary?.shippingMethod?.trim();
+    if (existing && !base.includes(existing)) {
+      base.push(existing);
+    }
+    return base;
+  }, [initialOrder?.summary?.shippingMethod]);
+
+  useEffect(() => {
+    setShippingMethodInput(initialOrder?.summary?.shippingMethod ?? '');
+  }, [initialOrder?.summary?.shippingMethod]);
 
   useEffect(() => {
     productOptionCacheRef.current = productOptionCache;
@@ -533,7 +551,7 @@ const OrderEditor = ({
       name: coupon.name,
       code: coupon.code,
       discountType: coupon.discountType,
-      discountValue: coupon.discountValue
+      discountValue: coupon.discountValue ?? 0
     }));
     const applied = initialOrder?.summary?.appliedCoupon;
     if (applied && applied.id != null && !mapped.some((coupon) => coupon.id === applied.id)) {
@@ -800,6 +818,9 @@ const OrderEditor = ({
         const total =
           data?.effectiveCost ?? data?.cityCost ?? data?.stateCost ?? data?.countryCost ?? 0;
         setShippingTotalInput(String(total ?? 0));
+        setShippingMethodInput((current) =>
+          current.trim().length ? current : SHIPPING_METHOD_OPTIONS[0]
+        );
       } catch (error) {
         if (!cancelled) {
           setShippingQuoteError(
@@ -969,6 +990,9 @@ const OrderEditor = ({
         setBillingAddress(toAddressFormState(address));
       }
       setShippingManuallyEdited(false);
+      setShippingMethodInput((current) =>
+        current.trim().length ? current : SHIPPING_METHOD_OPTIONS[0]
+      );
     } else {
       setBillingAddress(toAddressFormState(address));
       setBillingSameAsShipping(false);
@@ -1050,15 +1074,40 @@ const OrderEditor = ({
       return;
     }
 
+    const baseSummary = initialOrder?.summary ?? null;
+    const trimmedShippingMethod = shippingMethodInput.trim();
+    let appliedCoupon = baseSummary?.appliedCoupon ?? null;
+    if (discountManuallyEdited) {
+      appliedCoupon = null;
+    } else if (selectedCoupon) {
+      appliedCoupon = {
+        id: selectedCoupon.id,
+        name: selectedCoupon.name,
+        code: selectedCoupon.code ?? null,
+        discountType: selectedCoupon.discountType,
+        discountValue: selectedCoupon.discountValue,
+        discountAmount: roundCurrency(discountTotal),
+        description: null
+      };
+    } else if (selectedCouponId == null) {
+      appliedCoupon = null;
+    }
+
     const summary = {
       productTotal: roundCurrency(productTotal),
       taxTotal: roundCurrency(taxTotal),
       shippingTotal: roundCurrency(shippingTotal),
       discountTotal: roundCurrency(discountTotal),
       grandTotal: roundCurrency(grandTotal),
-      taxLines: initialOrder?.summary?.taxLines ?? [],
-      shippingBreakdown: initialOrder?.summary?.shippingBreakdown ?? null,
-      appliedCoupon: initialOrder?.summary?.appliedCoupon ?? null
+      taxLines: baseSummary?.taxLines ?? [],
+      shippingBreakdown: baseSummary?.shippingBreakdown ?? null,
+      appliedCoupon,
+      paymentStatus: baseSummary?.paymentStatus ?? null,
+      dueDate: baseSummary?.dueDate ?? null,
+      balanceDue: baseSummary?.balanceDue ?? null,
+      amountDue: baseSummary?.amountDue ?? null,
+      notes: baseSummary?.notes ?? null,
+      shippingMethod: trimmedShippingMethod.length ? trimmedShippingMethod : null
     };
 
     const shippingPayload = toAddressPayload(shippingAddress, 'SHIPPING');
@@ -1439,158 +1488,216 @@ const OrderEditor = ({
         </section>
 
         <section className="space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <h3 className="text-base font-semibold text-slate-900">Line items</h3>
             <Button type="button" variant="ghost" onClick={handleAddLine} disabled={isSaving}>
               Add item
             </Button>
           </div>
-          <div className="space-y-4">
-            {lines.map((line, index) => {
-              const summary = lineSummaries[index];
-              const initialLabel = line.selectedProduct ? undefined : formatLineProductLabel(line);
-              const thumbnailUrl = line.selectedProduct?.thumbnailUrl ?? line.thumbnailUrl;
-              const productSlug = line.productSlug.trim();
-              const productIdDisplay = line.productId.trim() || '—';
-              const variantIdDisplay = line.variantId.trim() || '—';
-              const skuDisplay = line.variantSku.trim() || line.productSku.trim() || '—';
-              const variantDisplay =
-                line.variantLabel.trim() || line.variantSku.trim() || 'Default configuration';
-              const varietyDisplay = line.productVariety.trim() || '—';
-              const slotDisplay = line.productSlot.trim() || '—';
-              const brandDisplay = line.brandName.trim() || '—';
-              const taxRateNameDisplay = line.taxRateName.trim() || '—';
-              const unitPriceNumber = Number(line.unitPrice);
-              const unitPriceDisplay = formatCurrency(
-                Number.isFinite(unitPriceNumber) && unitPriceNumber >= 0 ? unitPriceNumber : 0,
-                currency
-              );
-              const taxRateNumber = Number(line.taxRate);
-              const taxRateDisplay =
-                line.taxRate.trim().length > 0 && Number.isFinite(taxRateNumber)
-                  ? `${taxRateNumber.toFixed(2)}%`
-                  : '—';
-              const metadataFields: { label: string; value: ReactNode }[] = [
-                { label: 'Variant', value: variantDisplay },
-                { label: 'SKU', value: skuDisplay },
-                { label: 'Product ID', value: productIdDisplay },
-                { label: 'Variant ID', value: variantIdDisplay },
-                { label: 'Variety', value: varietyDisplay },
-                { label: 'Slot', value: slotDisplay },
-                { label: 'Brand', value: brandDisplay },
-                { label: 'Tax code', value: taxRateNameDisplay }
-              ];
-              return (
-                <div key={line.key} className="space-y-4 rounded-xl border border-slate-200 p-4">
-                  <div className="flex flex-col gap-3 border-b border-slate-100 pb-4 md:flex-row md:items-start md:justify-between">
-                    <div className="flex flex-1 gap-3">
-                      <div className="h-14 w-14 flex-shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-slate-100">
-                        {thumbnailUrl ? (
-                          <img src={thumbnailUrl} alt="" className="h-full w-full object-cover" />
-                        ) : (
-                          <div className="flex h-full w-full items-center justify-center text-[11px] uppercase tracking-wide text-slate-400">
-                            No image
+          <div className="overflow-hidden rounded-xl border border-slate-200">
+            <table className="min-w-full divide-y divide-slate-200 text-sm text-slate-700">
+              <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                <tr>
+                  <th scope="col" className="px-4 py-2 text-left">
+                    Item
+                  </th>
+                  <th scope="col" className="px-4 py-2 text-right">
+                    Qty
+                  </th>
+                  <th scope="col" className="px-4 py-2 text-right">
+                    Rate
+                  </th>
+                  <th scope="col" className="px-4 py-2 text-right">
+                    Tax
+                  </th>
+                  <th scope="col" className="px-4 py-2 text-right">
+                    Amount
+                  </th>
+                  <th scope="col" className="px-4 py-2 text-right">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {lines.map((line, index) => {
+                  const summary = lineSummaries[index] ?? { subtotal: 0, taxAmount: 0, total: 0 };
+                  const initialLabel = line.selectedProduct ? undefined : formatLineProductLabel(line);
+                  const thumbnailUrl = line.selectedProduct?.thumbnailUrl ?? line.thumbnailUrl;
+                  const productSlug = line.productSlug.trim();
+                  const productIdDisplay = line.productId.trim() || '—';
+                  const variantIdDisplay = line.variantId.trim() || '—';
+                  const skuDisplay = line.variantSku.trim() || line.productSku.trim() || '—';
+                  const variantDisplay =
+                    line.variantLabel.trim() || line.variantSku.trim() || 'Default configuration';
+                  const varietyDisplay = line.productVariety.trim() || '—';
+                  const slotDisplay = line.productSlot.trim() || '—';
+                  const brandDisplay = line.brandName.trim() || '—';
+                  const taxRateNameDisplay = line.taxRateName.trim() || '—';
+                  const metadataFields: { label: string; value: ReactNode }[] = [
+                    { label: 'Variant', value: variantDisplay },
+                    { label: 'SKU', value: skuDisplay },
+                    { label: 'Product ID', value: productIdDisplay },
+                    { label: 'Variant ID', value: variantIdDisplay },
+                    { label: 'Variety', value: varietyDisplay },
+                    { label: 'Slot', value: slotDisplay },
+                    { label: 'Brand', value: brandDisplay },
+                    { label: 'Tax code', value: taxRateNameDisplay }
+                  ];
+                  return (
+                    <tr key={line.key} className="bg-slate-50">
+                      <td colSpan={6} className="px-4 py-4">
+                        <div className="space-y-4">
+                          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                            <div className="flex flex-1 gap-3">
+                              <div className="h-14 w-14 flex-shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-slate-100">
+                                {thumbnailUrl ? (
+                                  <img src={thumbnailUrl} alt="" className="h-full w-full object-cover" />
+                                ) : (
+                                  <div className="flex h-full w-full items-center justify-center text-[11px] uppercase tracking-wide text-slate-400">
+                                    No image
+                                  </div>
+                                )}
+                              </div>
+                              <div className="flex-1 space-y-3">
+                                <div className="space-y-2">
+                                  <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                    Product
+                                  </label>
+                                  <OrderProductSearchSelect
+                                    selected={line.selectedProduct}
+                                    initialLabel={initialLabel}
+                                    disabled={isSaving}
+                                    currencyCode={currency}
+                                    onSelect={(option) => handleProductSelect(line.key, option)}
+                                  />
+                                </div>
+                                {line.variants.length > 0 ? (
+                                  <div className="space-y-2">
+                                    <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                      Variant
+                                    </label>
+                                    <select
+                                      value={line.variantId}
+                                      onChange={(event) => handleVariantChange(line.key, event.target.value)}
+                                      disabled={isSaving}
+                                      className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                                    >
+                                      {line.variants.map((variant, variantIndex) => {
+                                        const value = resolveVariantValue(variant.id ?? null, variant.key ?? null);
+                                        const optionValue = value || `variant-${variantIndex}`;
+                                        return (
+                                          <option key={optionValue} value={optionValue}>
+                                            {getVariantDisplayName(variant)}
+                                          </option>
+                                        );
+                                      })}
+                                    </select>
+                                  </div>
+                                ) : null}
+                                <p className="text-xs text-slate-500">
+                                  {productSlug ? (
+                                    <>
+                                      Slug:{' '}
+                                      <code className="font-mono text-[11px] text-slate-600">{productSlug}</code>
+                                    </>
+                                  ) : (
+                                    'Search and select a product to populate pricing and tax details.'
+                                  )}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-start justify-end gap-3">
+                              <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-500 shadow-sm">
+                                Item {index + 1}
+                              </span>
+                              {lines.length > 1 ? (
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveLine(line.key)}
+                                  disabled={isSaving}
+                                  className="text-xs font-semibold text-rose-600 transition hover:text-rose-700"
+                                >
+                                  Remove
+                                </button>
+                              ) : null}
+                            </div>
                           </div>
-                        )}
-                      </div>
-                      <div className="flex-1 space-y-2">
-                        <OrderProductSearchSelect
-                          selected={line.selectedProduct}
-                          initialLabel={initialLabel}
-                          disabled={isSaving}
-                          currencyCode={currency}
-                          onSelect={(option) => handleProductSelect(line.key, option)}
-                        />
-                        {line.variants.length > 0 ? (
-                          <div className="flex flex-col">
-                            <label className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                              Variant option
-                            </label>
-                            <select
-                              value={line.variantId}
-                              onChange={(event) => handleVariantChange(line.key, event.target.value)}
-                              disabled={isSaving}
-                              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-                            >
-                              {line.variants.map((variant, variantIndex) => {
-                                const value = resolveVariantValue(variant.id ?? null, variant.key ?? null);
-                                const optionValue = value || `variant-${variantIndex}`;
-                                return (
-                                  <option key={optionValue} value={optionValue}>
-                                    {getVariantDisplayName(variant)}
-                                  </option>
-                                );
-                              })}
-                            </select>
+                          <div className="grid gap-3 md:grid-cols-4">
+                            <div className="space-y-2">
+                              <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                Quantity
+                              </label>
+                              <input
+                                type="number"
+                                min="1"
+                                step="1"
+                                value={line.quantity}
+                                onChange={(event) => handleLineChange(line.key, 'quantity', event.target.value)}
+                                disabled={isSaving}
+                                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                Unit price
+                              </label>
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={line.unitPrice}
+                                onChange={(event) => handleLineChange(line.key, 'unitPrice', event.target.value)}
+                                disabled={isSaving}
+                                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                Tax %
+                              </label>
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={line.taxRate}
+                                onChange={(event) => handleLineChange(line.key, 'taxRate', event.target.value)}
+                                disabled={isSaving}
+                                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                              />
+                            </div>
+                            <div className="space-y-2 rounded-xl bg-white px-3 py-2 text-sm text-slate-600 shadow-sm">
+                              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Totals</p>
+                              <p className="mt-1 font-medium text-slate-900">
+                                {formatCurrency(summary.total, currency)}
+                              </p>
+                              <p className="text-xs text-slate-500">
+                                Subtotal {formatCurrency(summary.subtotal, currency)} · Tax {formatCurrency(summary.taxAmount, currency)}
+                              </p>
+                            </div>
                           </div>
-                        ) : null}
-                        <p className="text-xs text-slate-500">
-                          {productSlug ? (
-                            <>
-                              Slug:{' '}
-                              <code className="font-mono text-[11px] text-slate-600">{productSlug}</code>
-                            </>
-                          ) : (
-                            'Search and select a product to populate pricing and tax details.'
-                          )}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between gap-3 md:flex-col md:items-end">
-                      <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                        Item {index + 1}
-                      </span>
-                      {lines.length > 1 ? (
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveLine(line.key)}
-                          disabled={isSaving}
-                          className="text-xs font-semibold text-rose-600 transition hover:text-rose-700"
-                        >
-                          Remove
-                        </button>
-                      ) : null}
-                    </div>
-                  </div>
-                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                    <div className="flex flex-col">
-                      <label className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                        Quantity
-                      </label>
-                      <input
-                        type="number"
-                        min="1"
-                        step="1"
-                        value={line.quantity}
-                        onChange={(event) => handleLineChange(line.key, 'quantity', event.target.value)}
-                        disabled={isSaving}
-                        className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-                      />
-                    </div>
-                    <ReadOnlyField label="Unit price" value={unitPriceDisplay} />
-                    <ReadOnlyField label="Tax rate" value={taxRateDisplay} />
-                    <ReadOnlyField
-                      label="Line subtotal"
-                      value={formatCurrency(summary.subtotal, currency)}
-                    />
-                    <ReadOnlyField
-                      label="Tax amount"
-                      value={formatCurrency(summary.taxAmount, currency)}
-                    />
-                    <ReadOnlyField label="Line total" value={formatCurrency(summary.total, currency)} />
-                  </div>
-                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                    {metadataFields.map((field) => (
-                      <ReadOnlyField key={field.label} label={field.label} value={field.value} />
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
+                          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                            {metadataFields.map((field) => (
+                              <ReadOnlyField key={field.label} label={field.label} value={field.value} />
+                            ))}
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+                {lines.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-4 py-6 text-center text-sm text-slate-500">
+                      Add a product to start building this order.
+                    </td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </table>
           </div>
         </section>
 
-        <section className="grid gap-4 md:grid-cols-3">
+        <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <div className="space-y-2">
             <label className="text-sm font-semibold text-slate-800" htmlFor="order-shipping-total">
               Shipping total
@@ -1617,6 +1724,29 @@ const OrderEditor = ({
                 Automatically updates from the selected shipping address.
               </p>
             ) : null}
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-slate-800" htmlFor="order-shipping-method">
+              Shipping method
+            </label>
+            <input
+              id="order-shipping-method"
+              type="text"
+              list="order-shipping-method-options"
+              value={shippingMethodInput}
+              onChange={(event) => setShippingMethodInput(event.target.value)}
+              disabled={isSaving}
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+              placeholder="Standard Shipping"
+            />
+            <datalist id="order-shipping-method-options">
+              {shippingMethodOptions.map((option) => (
+                <option key={option} value={option} />
+              ))}
+            </datalist>
+            <p className="text-xs text-slate-500">
+              Provide the fulfillment method shown on invoices and customer communications.
+            </p>
           </div>
           <div className="space-y-2">
             <label className="text-sm font-semibold text-slate-800" htmlFor="order-discount-total">
@@ -1721,9 +1851,18 @@ const OrderEditor = ({
             <span>Tax</span>
             <span className="font-semibold text-slate-900">{formatCurrency(taxTotal, currency)}</span>
           </div>
-          <div className="flex items-center justify-between">
+          <div className="flex items-start justify-between">
             <span>Shipping</span>
-            <span className="font-semibold text-slate-900">{formatCurrency(shippingTotal, currency)}</span>
+            <div className="text-right">
+              <span className="block font-semibold text-slate-900">
+                {formatCurrency(shippingTotal, currency)}
+              </span>
+              {shippingMethodInput.trim() ? (
+                <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                  {shippingMethodInput.trim()}
+                </span>
+              ) : null}
+            </div>
           </div>
           <div className="flex items-center justify-between text-emerald-700">
             <span>Discount</span>
@@ -1733,9 +1872,10 @@ const OrderEditor = ({
             <span>Total</span>
             <span>{formatCurrency(grandTotal, currency)}</span>
           </div>
-          {mode === 'edit' && initialOrder?.summary?.appliedCoupon ? (
+          {!discountManuallyEdited && (selectedCoupon || initialOrder?.summary?.appliedCoupon) ? (
             <div className="rounded-lg border border-emerald-200 bg-emerald-50/70 px-3 py-2 text-xs text-emerald-700">
-              Coupon {initialOrder.summary.appliedCoupon.code} will remain applied to this order.
+              Coupon {selectedCoupon?.code ?? selectedCoupon?.name ?? initialOrder?.summary?.appliedCoupon?.code ?? initialOrder?.summary?.appliedCoupon?.name ?? ''}
+              {' '}will be applied to this order.
             </div>
           ) : null}
         </section>
