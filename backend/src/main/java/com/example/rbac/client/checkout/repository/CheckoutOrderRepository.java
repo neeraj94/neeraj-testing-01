@@ -10,5 +10,7 @@ public interface CheckoutOrderRepository extends JpaRepository<CheckoutOrder, Lo
     List<CheckoutOrder> findAllByOrderByCreatedAtDesc();
 
     List<CheckoutOrder> findByUserIdOrderByCreatedAtDesc(Long userId);
+
+    boolean existsByStatusIgnoreCase(String status);
 }
 
