@@ -16,6 +16,7 @@ public class OrderSummaryDto {
     private ShippingRateQuoteDto shippingBreakdown;
     private List<OrderTaxLineDto> taxLines = new ArrayList<>();
     private AppliedCouponDto appliedCoupon;
+    private String shippingMethod;
 
     public BigDecimal getProductTotal() {
         return productTotal;
@@ -79,5 +80,13 @@ public class OrderSummaryDto {
 
     public void setAppliedCoupon(AppliedCouponDto appliedCoupon) {
         this.appliedCoupon = appliedCoupon;
+    }
+
+    public String getShippingMethod() {
+        return shippingMethod;
+    }
+
+    public void setShippingMethod(String shippingMethod) {
+        this.shippingMethod = shippingMethod;
     }
 }

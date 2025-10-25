@@ -77,6 +77,12 @@ export interface OrderSummary {
   shippingBreakdown: ShippingQuote | null;
   taxLines: OrderTaxLine[];
   appliedCoupon: AppliedCoupon | null;
+  paymentStatus?: string | null;
+  dueDate?: string | null;
+  balanceDue?: number | null;
+  amountDue?: number | null;
+  notes?: string | null;
+  shippingMethod?: string | null;
 }
 
 export interface CheckoutSummary {
