@@ -262,20 +262,6 @@ export const DEFAULT_NAVIGATION_MENU: NavigationNode[] = [
         group: false,
         permissions: ['PAYMENT_VIEW', 'PAYMENT_MANAGE'],
         children: []
-      },
-      {
-        key: 'statusConfiguration',
-        label: 'Order & Payment statuses',
-        icon: '🔁',
-        path: '/admin/config/order-status',
-        group: false,
-        permissions: [
-          'CONFIG.ORDER_STATUS.VIEW',
-          'CONFIG.ORDER_STATUS.MANAGE',
-          'CONFIG.PAYMENT_STATUS.VIEW',
-          'CONFIG.PAYMENT_STATUS.MANAGE'
-        ],
-        children: []
       }
     ]
   },
