@@ -187,7 +187,7 @@ const STATUS_FILTERS = [
 ] as const;
 
 type StatusFilterKey = (typeof STATUS_FILTERS)[number]['key'];
-type PanelMode = 'view' | 'edit' | 'payment';
+type PanelMode = 'view' | 'payment';
 
 const AdminOrdersPage = () => {
   const baseCurrency = useAppSelector(selectBaseCurrency);
@@ -213,6 +213,7 @@ const AdminOrdersPage = () => {
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(10);
   const [panelMode, setPanelMode] = useState<PanelMode>('view');
+  const [isInlineEditing, setIsInlineEditing] = useState(false);
 
   const deleteOrderMutation = useMutation({
     mutationFn: async (orderId: number) => {
@@ -225,6 +226,7 @@ const AdminOrdersPage = () => {
       notify({ title: 'Order deleted', message: 'The order was removed successfully.', type: 'success' });
       setDetailOrderId((current) => (current === orderId ? null : current));
       setPanelMode('view');
+      setIsInlineEditing(false);
       queryClient.invalidateQueries({ queryKey: ['orders', 'admin'] });
       queryClient.invalidateQueries({ queryKey: ['orders', 'admin', 'detail', orderId] });
     },
@@ -363,8 +365,41 @@ const AdminOrdersPage = () => {
     if (!existsInFiltered) {
       setDetailOrderId(null);
       setPanelMode('view');
+      setIsInlineEditing(false);
     }
   }, [detailOrderId, filteredOrders]);
+
+  const updateOrderMutation = useMutation({
+    mutationFn: async ({
+      orderId,
+      payload
+    }: {
+      orderId: number;
+      payload: Record<string, unknown>;
+    }) => {
+      const { data } = await adminApi.patch<unknown>(`/orders/${orderId}`, payload);
+      return normalizeOrderDetailResponse(data);
+    },
+    onSuccess: (updatedOrder, variables) => {
+      notify({ title: 'Order updated', message: 'Changes saved successfully.', type: 'success' });
+      queryClient.invalidateQueries({ queryKey: ['orders', 'admin'] });
+      if (updatedOrder) {
+        queryClient.setQueryData<OrderDetail | null>(
+          ['orders', 'admin', 'detail', variables.orderId],
+          () => updatedOrder
+        );
+      } else {
+        queryClient.invalidateQueries({ queryKey: ['orders', 'admin', 'detail', variables.orderId] });
+      }
+    },
+    onError: (error) => {
+      notify({
+        title: 'Unable to update order',
+        message: extractErrorMessage(error, 'Try again later.'),
+        type: 'error'
+      });
+    }
+  });
 
   const detailQuery = useQuery<OrderDetail | null>({
     queryKey: ['orders', 'admin', 'detail', detailOrderId],
@@ -399,11 +434,13 @@ const AdminOrdersPage = () => {
   const openDetail = (orderId: number) => {
     setDetailOrderId(orderId);
     setPanelMode('view');
+    setIsInlineEditing(false);
   };
 
   const closeDetail = () => {
     setDetailOrderId(null);
     setPanelMode('view');
+    setIsInlineEditing(false);
   };
 
   const formatPaymentStatus = (order: OrderListItem): string => {
@@ -641,15 +678,16 @@ const AdminOrdersPage = () => {
                           onClick={(event) => {
                             event.stopPropagation();
                             setDetailOrderId(order.id);
-                            setPanelMode('edit');
-                          }}
-                          className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${
-                            panelMode === 'edit' && detailOrderId === order.id
-                              ? 'border-primary text-primary'
-                              : 'border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-800'
-                          }`}
-                        >
-                          Edit
+                          setPanelMode('view');
+                          setIsInlineEditing(true);
+                        }}
+                        className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${
+                          isInlineEditing && detailOrderId === order.id
+                            ? 'border-primary text-primary'
+                            : 'border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-800'
+                        }`}
+                      >
+                        Edit
                         </button>
                       )}
                       {canDeleteOrders && (
@@ -727,22 +765,14 @@ const AdminOrdersPage = () => {
       );
     }
 
-    if (panelMode === 'edit') {
-      return (
-        <OrderEditor
-          mode="edit"
-          baseCurrency={baseCurrency}
-          initialOrder={detailOrder}
-          onCancel={() => setPanelMode('view')}
-          onSaved={(order) => {
-            setPanelMode('view');
-            setDetailOrderId(order.id);
-          }}
-        />
-      );
-    }
-
     const isDeleting = deletingOrderId === detailOrder.id && deleteOrderMutation.isPending;
+
+    const handleOrderUpdates = async (updates: Record<string, unknown>) => {
+      if (!detailOrderId || updateOrderMutation.isPending) {
+        return;
+      }
+      await updateOrderMutation.mutateAsync({ orderId: detailOrderId, payload: updates });
+    };
 
     return (
       <OrderDetailPanel
@@ -750,19 +780,23 @@ const AdminOrdersPage = () => {
         baseCurrency={baseCurrency}
         onClose={closeDetail}
         mode={panelMode}
+        editingEnabled={isInlineEditing && canEditOrders}
+        canEdit={canEditOrders}
+        isUpdating={updateOrderMutation.isPending}
+        onUpdateField={handleOrderUpdates}
         actions={
           <div className="flex flex-wrap justify-end gap-2">
             {canEditOrders ? (
               <button
                 type="button"
-                onClick={() => setPanelMode('edit')}
+                onClick={() => setIsInlineEditing((current) => !current)}
                 className={`rounded-lg border px-3 py-1 text-xs font-semibold transition ${
-                  panelMode === 'edit'
+                  isInlineEditing
                     ? 'border-primary bg-primary/10 text-primary'
                     : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:text-slate-900'
                 }`}
               >
-                Edit
+                {isInlineEditing ? 'Editing' : 'Edit'}
               </button>
             ) : null}
             <button
