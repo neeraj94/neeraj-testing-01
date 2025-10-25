@@ -479,6 +479,7 @@ public class OrderAdminService {
                     ? new ArrayList<>(incoming.getTaxLines())
                     : new ArrayList<>());
             summary.setAppliedCoupon(copyAppliedCoupon(incoming.getAppliedCoupon()));
+            summary.setShippingMethod(trimToNull(incoming.getShippingMethod()));
         } else {
             summary.setTaxLines(new ArrayList<>());
         }

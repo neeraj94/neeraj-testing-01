@@ -210,25 +210,6 @@ export const DEFAULT_NAVIGATION_MENU: NavigationNode[] = [
     ]
   },
   {
-    key: 'shipping',
-    label: 'Shipping',
-    icon: '🚚',
-    path: undefined,
-    group: true,
-    permissions: [],
-    children: [
-      {
-        key: 'shippingOverview',
-        label: 'Shipping overview',
-        icon: '🗺️',
-        path: '/admin/shipping',
-        group: false,
-        permissions: ['SHIPPING_VIEW'],
-        children: []
-      }
-    ]
-  },
-  {
     key: 'commerce',
     label: 'Commerce',
     icon: '💳',
@@ -253,10 +234,29 @@ export const DEFAULT_NAVIGATION_MENU: NavigationNode[] = [
         group: false,
         permissions: ['USER_VIEW_GLOBAL'],
         children: []
+      }
+    ]
+  },
+  {
+    key: 'configuration',
+    label: 'Configuration',
+    icon: '🧩',
+    path: undefined,
+    group: true,
+    permissions: [],
+    children: [
+      {
+        key: 'shippingOverview',
+        label: 'Shipping overview',
+        icon: '🗺️',
+        path: '/admin/shipping',
+        group: false,
+        permissions: ['SHIPPING_VIEW'],
+        children: []
       },
       {
-        key: 'payments',
-        label: 'Payments',
+        key: 'paymentModes',
+        label: 'Payment Modes',
         icon: '💰',
         path: '/admin/payments',
         group: false,

@@ -376,15 +376,6 @@ public class SetupService {
                             )
                     )
             )),
-            MenuDefinition.group("shipping", "Shipping", "🚚", List.of(
-                    MenuDefinition.item(
-                            "shippingOverview",
-                            "Shipping overview",
-                            "🗺️",
-                            "/admin/shipping",
-                            List.of("SHIPPING_VIEW")
-                    )
-            )),
             MenuDefinition.group("commerce", "Commerce", "💳", List.of(
                     MenuDefinition.item(
                             "carts",
@@ -400,9 +391,18 @@ public class SetupService {
                             "/admin/orders",
                             List.of("ORDER_VIEW_GLOBAL", "ORDER_CREATE", "ORDER_EDIT", "ORDER_DELETE")
                     ),
+            )),
+            MenuDefinition.group("configuration", "Configuration", "🧩", List.of(
                     MenuDefinition.item(
-                            "payments",
-                            "Payments",
+                            "shippingOverview",
+                            "Shipping overview",
+                            "🗺️",
+                            "/admin/shipping",
+                            List.of("SHIPPING_VIEW")
+                    ),
+                    MenuDefinition.item(
+                            "paymentModes",
+                            "Payment Modes",
                             "💰",
                             "/admin/payments",
                             List.of("PAYMENT_VIEW", "PAYMENT_MANAGE")

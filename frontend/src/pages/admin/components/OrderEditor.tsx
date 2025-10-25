@@ -69,6 +69,8 @@ type CouponOption = {
 
 const createLineKey = () => `line-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
 
+const SHIPPING_METHOD_OPTIONS = ['Standard Shipping', 'Express Shipping', 'Free Shipping'];
+
 const createEmptyAddressState = (): AddressFormState => ({
   id: null,
   countryId: '',
@@ -372,6 +374,9 @@ const OrderEditor = ({
   const [shippingTotalInput, setShippingTotalInput] = useState(
     initialOrder?.summary?.shippingTotal != null ? String(initialOrder.summary.shippingTotal) : '0'
   );
+  const [shippingMethodInput, setShippingMethodInput] = useState(
+    initialOrder?.summary?.shippingMethod ?? ''
+  );
   const [discountInput, setDiscountInput] = useState(
     initialOrder?.summary?.discountTotal != null ? String(initialOrder.summary.discountTotal) : '0'
   );
@@ -424,6 +429,19 @@ const OrderEditor = ({
   );
   const [selectedShippingAddressId, setSelectedShippingAddressId] = useState('');
   const [selectedBillingAddressId, setSelectedBillingAddressId] = useState('');
+
+  const shippingMethodOptions = useMemo(() => {
+    const base = [...SHIPPING_METHOD_OPTIONS];
+    const existing = initialOrder?.summary?.shippingMethod?.trim();
+    if (existing && !base.includes(existing)) {
+      base.push(existing);
+    }
+    return base;
+  }, [initialOrder?.summary?.shippingMethod]);
+
+  useEffect(() => {
+    setShippingMethodInput(initialOrder?.summary?.shippingMethod ?? '');
+  }, [initialOrder?.summary?.shippingMethod]);
 
   useEffect(() => {
     productOptionCacheRef.current = productOptionCache;
@@ -533,7 +551,7 @@ const OrderEditor = ({
       name: coupon.name,
       code: coupon.code,
       discountType: coupon.discountType,
-      discountValue: coupon.discountValue
+      discountValue: coupon.discountValue ?? 0
     }));
     const applied = initialOrder?.summary?.appliedCoupon;
     if (applied && applied.id != null && !mapped.some((coupon) => coupon.id === applied.id)) {
@@ -800,6 +818,9 @@ const OrderEditor = ({
         const total =
           data?.effectiveCost ?? data?.cityCost ?? data?.stateCost ?? data?.countryCost ?? 0;
         setShippingTotalInput(String(total ?? 0));
+        setShippingMethodInput((current) =>
+          current.trim().length ? current : SHIPPING_METHOD_OPTIONS[0]
+        );
       } catch (error) {
         if (!cancelled) {
           setShippingQuoteError(
@@ -969,6 +990,9 @@ const OrderEditor = ({
         setBillingAddress(toAddressFormState(address));
       }
       setShippingManuallyEdited(false);
+      setShippingMethodInput((current) =>
+        current.trim().length ? current : SHIPPING_METHOD_OPTIONS[0]
+      );
     } else {
       setBillingAddress(toAddressFormState(address));
       setBillingSameAsShipping(false);
@@ -1050,15 +1074,40 @@ const OrderEditor = ({
       return;
     }
 
+    const baseSummary = initialOrder?.summary ?? null;
+    const trimmedShippingMethod = shippingMethodInput.trim();
+    let appliedCoupon = baseSummary?.appliedCoupon ?? null;
+    if (discountManuallyEdited) {
+      appliedCoupon = null;
+    } else if (selectedCoupon) {
+      appliedCoupon = {
+        id: selectedCoupon.id,
+        name: selectedCoupon.name,
+        code: selectedCoupon.code ?? null,
+        discountType: selectedCoupon.discountType,
+        discountValue: selectedCoupon.discountValue,
+        discountAmount: roundCurrency(discountTotal),
+        description: null
+      };
+    } else if (selectedCouponId == null) {
+      appliedCoupon = null;
+    }
+
     const summary = {
       productTotal: roundCurrency(productTotal),
       taxTotal: roundCurrency(taxTotal),
       shippingTotal: roundCurrency(shippingTotal),
       discountTotal: roundCurrency(discountTotal),
       grandTotal: roundCurrency(grandTotal),
-      taxLines: initialOrder?.summary?.taxLines ?? [],
-      shippingBreakdown: initialOrder?.summary?.shippingBreakdown ?? null,
-      appliedCoupon: initialOrder?.summary?.appliedCoupon ?? null
+      taxLines: baseSummary?.taxLines ?? [],
+      shippingBreakdown: baseSummary?.shippingBreakdown ?? null,
+      appliedCoupon,
+      paymentStatus: baseSummary?.paymentStatus ?? null,
+      dueDate: baseSummary?.dueDate ?? null,
+      balanceDue: baseSummary?.balanceDue ?? null,
+      amountDue: baseSummary?.amountDue ?? null,
+      notes: baseSummary?.notes ?? null,
+      shippingMethod: trimmedShippingMethod.length ? trimmedShippingMethod : null
     };
 
     const shippingPayload = toAddressPayload(shippingAddress, 'SHIPPING');
@@ -1590,7 +1639,7 @@ const OrderEditor = ({
           </div>
         </section>
 
-        <section className="grid gap-4 md:grid-cols-3">
+        <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <div className="space-y-2">
             <label className="text-sm font-semibold text-slate-800" htmlFor="order-shipping-total">
               Shipping total
@@ -1617,6 +1666,29 @@ const OrderEditor = ({
                 Automatically updates from the selected shipping address.
               </p>
             ) : null}
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-slate-800" htmlFor="order-shipping-method">
+              Shipping method
+            </label>
+            <input
+              id="order-shipping-method"
+              type="text"
+              list="order-shipping-method-options"
+              value={shippingMethodInput}
+              onChange={(event) => setShippingMethodInput(event.target.value)}
+              disabled={isSaving}
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+              placeholder="Standard Shipping"
+            />
+            <datalist id="order-shipping-method-options">
+              {shippingMethodOptions.map((option) => (
+                <option key={option} value={option} />
+              ))}
+            </datalist>
+            <p className="text-xs text-slate-500">
+              Provide the fulfillment method shown on invoices and customer communications.
+            </p>
           </div>
           <div className="space-y-2">
             <label className="text-sm font-semibold text-slate-800" htmlFor="order-discount-total">
@@ -1721,9 +1793,18 @@ const OrderEditor = ({
             <span>Tax</span>
             <span className="font-semibold text-slate-900">{formatCurrency(taxTotal, currency)}</span>
           </div>
-          <div className="flex items-center justify-between">
+          <div className="flex items-start justify-between">
             <span>Shipping</span>
-            <span className="font-semibold text-slate-900">{formatCurrency(shippingTotal, currency)}</span>
+            <div className="text-right">
+              <span className="block font-semibold text-slate-900">
+                {formatCurrency(shippingTotal, currency)}
+              </span>
+              {shippingMethodInput.trim() ? (
+                <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                  {shippingMethodInput.trim()}
+                </span>
+              ) : null}
+            </div>
           </div>
           <div className="flex items-center justify-between text-emerald-700">
             <span>Discount</span>
@@ -1733,9 +1814,10 @@ const OrderEditor = ({
             <span>Total</span>
             <span>{formatCurrency(grandTotal, currency)}</span>
           </div>
-          {mode === 'edit' && initialOrder?.summary?.appliedCoupon ? (
+          {!discountManuallyEdited && (selectedCoupon || initialOrder?.summary?.appliedCoupon) ? (
             <div className="rounded-lg border border-emerald-200 bg-emerald-50/70 px-3 py-2 text-xs text-emerald-700">
-              Coupon {initialOrder.summary.appliedCoupon.code} will remain applied to this order.
+              Coupon {selectedCoupon?.code ?? selectedCoupon?.name ?? initialOrder?.summary?.appliedCoupon?.code ?? initialOrder?.summary?.appliedCoupon?.name ?? ''}
+              {' '}will be applied to this order.
             </div>
           ) : null}
         </section>

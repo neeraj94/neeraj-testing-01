@@ -14,9 +14,12 @@ export interface OrderListItem {
   customerName: string | null;
   customerEmail?: string | null;
   paymentStatus?: string | null;
+  paymentMethodLabel?: string | null;
   summary: OrderSummary | null;
   createdAt: string;
   lines: OrderLine[];
+  dueDate?: string | null;
+  notes?: string | null;
 }
 
 export interface OrderDetail extends OrderListItem {

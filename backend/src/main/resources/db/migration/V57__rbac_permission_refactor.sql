@@ -33,7 +33,7 @@ DELETE FROM permissions WHERE code = 'COUPON_MANAGE';
 
 -- Add dedicated permissions for payments
 INSERT INTO permissions (code, name)
-SELECT 'PAYMENT_VIEW', 'Payments: View'
+SELECT 'PAYMENT_VIEW', 'Payment Modes: View'
 WHERE NOT EXISTS (SELECT 1 FROM permissions WHERE code = 'PAYMENT_VIEW');
 
 INSERT INTO role_permissions (role_id, permission_id)
@@ -101,7 +101,7 @@ DELETE FROM permissions WHERE code = 'ORDER_MANAGE';
 UPDATE permissions SET name = 'Settings: View' WHERE code = 'SETTINGS_VIEW';
 UPDATE permissions SET name = 'Settings: Edit' WHERE code = 'SETTINGS_UPDATE';
 UPDATE permissions SET name = 'Setup: Manage' WHERE code = 'SETUP_MANAGE';
-UPDATE permissions SET name = 'Payments: Manage' WHERE code = 'PAYMENT_MANAGE';
+UPDATE permissions SET name = 'Payment Modes: Manage' WHERE code = 'PAYMENT_MANAGE';
 UPDATE permissions SET name = 'Coupons: Create' WHERE code = 'COUPON_CREATE';
 UPDATE permissions SET name = 'Coupons: Edit' WHERE code = 'COUPON_UPDATE';
 UPDATE permissions SET name = 'Coupons: Delete' WHERE code = 'COUPON_DELETE';
