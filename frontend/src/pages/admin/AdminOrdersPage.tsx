@@ -16,8 +16,9 @@ import { useConfirm } from '../../components/ConfirmDialogProvider';
 import { formatCurrency } from '../../utils/currency';
 import { extractErrorMessage } from '../../utils/errors';
 import { hasAnyPermission } from '../../utils/permissions';
+import { toAdminOrderPayload } from '../../utils/orderPayload';
 import type { PermissionKey } from '../../types/auth';
-import type { OrderDetail, OrderListItem } from '../../types/orders';
+import type { AdminOrderPayload, OrderDetail, OrderListItem } from '../../types/orders';
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null;
@@ -369,35 +370,54 @@ const AdminOrdersPage = () => {
     }
   }, [detailOrderId, filteredOrders]);
 
-  const updateOrderMutation = useMutation({
-    mutationFn: async ({
-      orderId,
-      payload
-    }: {
-      orderId: number;
-      payload: Record<string, unknown>;
-    }) => {
-      const { data } = await adminApi.patch<unknown>(`/orders/${orderId}`, payload);
+  const updateOrderMutation = useMutation<
+    OrderDetail | null,
+    unknown,
+    { orderId: number; payload: AdminOrderPayload; optimistic: OrderDetail },
+    { previous?: OrderDetail | null }
+  >({
+    mutationFn: async ({ orderId, payload }) => {
+      const { data } = await adminApi.put<unknown>(`/orders/${orderId}`, payload);
       return normalizeOrderDetailResponse(data);
     },
+    onMutate: async ({ orderId, optimistic }) => {
+      await queryClient.cancelQueries({ queryKey: ['orders', 'admin', 'detail', orderId] });
+      const previous = queryClient.getQueryData<OrderDetail | null>([
+        'orders',
+        'admin',
+        'detail',
+        orderId
+      ]);
+      queryClient.setQueryData<OrderDetail | null>(
+        ['orders', 'admin', 'detail', orderId],
+        optimistic
+      );
+      return { previous };
+    },
     onSuccess: (updatedOrder, variables) => {
+      const nextDetail = updatedOrder ?? variables.optimistic;
       notify({ title: 'Order updated', message: 'Changes saved successfully.', type: 'success' });
       queryClient.invalidateQueries({ queryKey: ['orders', 'admin'] });
-      if (updatedOrder) {
+      queryClient.setQueryData<OrderDetail | null>(
+        ['orders', 'admin', 'detail', variables.orderId],
+        nextDetail
+      );
+    },
+    onError: (error, variables, context) => {
+      if (context?.previous) {
         queryClient.setQueryData<OrderDetail | null>(
           ['orders', 'admin', 'detail', variables.orderId],
-          () => updatedOrder
+          context.previous
         );
-      } else {
-        queryClient.invalidateQueries({ queryKey: ['orders', 'admin', 'detail', variables.orderId] });
       }
-    },
-    onError: (error) => {
       notify({
         title: 'Unable to update order',
         message: extractErrorMessage(error, 'Try again later.'),
         type: 'error'
       });
+    },
+    onSettled: (_, __, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['orders', 'admin', 'detail', variables.orderId] });
     }
   });
 
@@ -767,11 +787,27 @@ const AdminOrdersPage = () => {
 
     const isDeleting = deletingOrderId === detailOrder.id && deleteOrderMutation.isPending;
 
-    const handleOrderUpdates = async (updates: Record<string, unknown>) => {
-      if (!detailOrderId || updateOrderMutation.isPending) {
+    const handleOrderUpdates = async (updater: (current: OrderDetail) => OrderDetail) => {
+      if (!detailOrderId || updateOrderMutation.isPending || !detailOrder) {
         return;
       }
-      await updateOrderMutation.mutateAsync({ orderId: detailOrderId, payload: updates });
+      const optimistic = updater(detailOrder);
+      let payload: AdminOrderPayload;
+      try {
+        payload = toAdminOrderPayload(optimistic);
+      } catch (error) {
+        notify({
+          title: 'Unable to update order',
+          message: extractErrorMessage(error, 'Select a customer before saving changes.'),
+          type: 'error'
+        });
+        return;
+      }
+      await updateOrderMutation.mutateAsync({
+        orderId: detailOrderId,
+        payload,
+        optimistic
+      });
     };
 
     return (
@@ -783,7 +819,7 @@ const AdminOrdersPage = () => {
         editingEnabled={isInlineEditing && canEditOrders}
         canEdit={canEditOrders}
         isUpdating={updateOrderMutation.isPending}
-        onUpdateField={handleOrderUpdates}
+        onApplyChanges={handleOrderUpdates}
         actions={
           <div className="flex flex-wrap justify-end gap-2">
             {canEditOrders ? (

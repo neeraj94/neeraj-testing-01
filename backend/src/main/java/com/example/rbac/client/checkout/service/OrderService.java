@@ -250,6 +250,7 @@ public class OrderService {
         copy.setShippingBreakdown(summary.getShippingBreakdown());
         copy.setTaxLines(summary.getTaxLines() != null ? new ArrayList<>(summary.getTaxLines()) : List.of());
         copy.setAppliedCoupon(copyAppliedCoupon(summary.getAppliedCoupon()));
+        copy.setShippingMethod(summary.getShippingMethod());
         return copy;
     }
 

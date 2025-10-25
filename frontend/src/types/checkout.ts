@@ -82,6 +82,7 @@ export interface OrderSummary {
   balanceDue?: number | null;
   amountDue?: number | null;
   notes?: string | null;
+  shippingMethod?: string | null;
 }
 
 export interface CheckoutSummary {
