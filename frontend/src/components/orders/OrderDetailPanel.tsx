@@ -50,6 +50,40 @@ const formatPaymentStatusLabel = (value: string | null | undefined): string => {
     .join(' ');
 };
 
+const formatDateTime = (value: string | null | undefined) => {
+  if (!value) {
+    return 'Unknown date';
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return 'Unknown date';
+  }
+  return date.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+};
+
+const formatDate = (value: string | null | undefined) => {
+  if (!value) {
+    return 'No due date';
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return 'No due date';
+  }
+  return date.toLocaleDateString();
+};
+
+const formatPaymentStatusLabel = (value: string | null | undefined): string => {
+  if (!value) {
+    return '—';
+  }
+  return value
+    .toLowerCase()
+    .split(/[\s_]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+};
+
 type OrderDetailPanelProps = {
   order: OrderDetail;
   baseCurrency: string | null;
