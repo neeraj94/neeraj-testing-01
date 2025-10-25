@@ -58,14 +58,6 @@ const extractManageVariants = (permission: string): string[] => {
     }
   }
 
-  if (permission.endsWith('.VIEW')) {
-    const base = permission.slice(0, -'.VIEW'.length);
-    variants.add(`${base}.MANAGE`);
-  } else if (permission.endsWith('.MANAGE')) {
-    const base = permission.slice(0, -'.MANAGE'.length);
-    variants.add(`${base}.VIEW`);
-  }
-
   return Array.from(variants);
 };
 
@@ -91,14 +83,6 @@ const expandCandidates = (permission: string): string[] => {
     candidates.add(`${base}_VIEW_GLOBAL`);
     candidates.add(`${base}_VIEW_OWN`);
     candidates.add(base);
-  }
-
-  if (permission.endsWith('.VIEW')) {
-    const base = permission.slice(0, -'.VIEW'.length);
-    candidates.add(`${base}.MANAGE`);
-  } else if (permission.endsWith('.MANAGE')) {
-    const base = permission.slice(0, -'.MANAGE'.length);
-    candidates.add(`${base}.VIEW`);
   }
 
   extractManageVariants(permission).forEach((variant) => candidates.add(variant));
@@ -133,20 +117,6 @@ export const hasAnyPermission = (userPermissions: PermissionKey[], required: Per
     if (/_VIEW_(OWN|GLOBAL)$/.test(candidate)) {
       const base = normalizeViewPermission(candidate);
       if (normalizedUserPermissions.has(base)) {
-        return true;
-      }
-    }
-
-    if (candidate.endsWith('.VIEW')) {
-      const manageVariant = candidate.slice(0, -'.VIEW'.length) + '.MANAGE';
-      if (normalizedUserPermissions.has(manageVariant)) {
-        return true;
-      }
-    }
-
-    if (candidate.endsWith('.MANAGE')) {
-      const viewVariant = candidate.slice(0, -'.MANAGE'.length) + '.VIEW';
-      if (normalizedUserPermissions.has(viewVariant)) {
         return true;
       }
     }
