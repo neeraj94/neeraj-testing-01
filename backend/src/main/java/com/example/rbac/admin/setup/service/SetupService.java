@@ -406,18 +406,6 @@ public class SetupService {
                             "💰",
                             "/admin/payments",
                             List.of("PAYMENT_VIEW", "PAYMENT_MANAGE")
-                    ),
-                    MenuDefinition.item(
-                            "statusConfiguration",
-                            "Order & Payment statuses",
-                            "🔁",
-                            "/admin/config/order-status",
-                            List.of(
-                                    "CONFIG.ORDER_STATUS.VIEW",
-                                    "CONFIG.ORDER_STATUS.MANAGE",
-                                    "CONFIG.PAYMENT_STATUS.VIEW",
-                                    "CONFIG.PAYMENT_STATUS.MANAGE"
-                            )
                     )
             )),
             MenuDefinition.item("gallery", "Gallery", "🖼️", "/admin/gallery", List.of("GALLERY_VIEW_ALL", "GALLERY_VIEW_OWN", "GALLERY_CREATE")),
