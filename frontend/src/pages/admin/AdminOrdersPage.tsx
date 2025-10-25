@@ -7,6 +7,7 @@ import Button from '../../components/Button';
 import DataTable from '../../components/DataTable';
 import PaginationControls from '../../components/PaginationControls';
 import OrderDetailPanel from '../../components/orders/OrderDetailPanel';
+import OrderEditor from './components/OrderEditor';
 import { adminApi } from '../../services/http';
 import { useAppSelector } from '../../app/hooks';
 import { selectBaseCurrency } from '../../features/settings/selectors';
