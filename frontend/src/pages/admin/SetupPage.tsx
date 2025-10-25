@@ -1,6 +1,7 @@
 import { Fragment, type DragEvent, useEffect, useMemo, useState } from 'react';
 import { adminApi } from '../../services/http';
 import { DEFAULT_NAVIGATION_MENU } from '../../constants/navigation';
+import { ensureStatusConfigurationEntry, mergeMenuNodes } from '../../utils/navigation';
 import type {
   MenuLayoutConfigNode,
   MenuLayoutUpdatePayload,
@@ -51,11 +52,21 @@ const SetupPage = () => {
         if (!active) {
           return;
         }
-        const fetchedLayout = data?.layout?.length ? data.layout : data?.defaults ?? DEFAULT_NAVIGATION_MENU;
-        const fetchedDefaults = data?.defaults?.length ? data.defaults : DEFAULT_NAVIGATION_MENU;
-        setLayout(cloneNodes(fetchedLayout));
-        setSavedLayout(cloneNodes(fetchedLayout));
-        setDefaults(cloneNodes(fetchedDefaults));
+        const providedDefaults = data?.defaults ?? [];
+        const effectiveDefaults = mergeMenuNodes(providedDefaults, DEFAULT_NAVIGATION_MENU);
+        const normalizedDefaults = ensureStatusConfigurationEntry(
+          effectiveDefaults.length ? effectiveDefaults : DEFAULT_NAVIGATION_MENU,
+          DEFAULT_NAVIGATION_MENU
+        );
+        const providedLayout = data?.layout ?? [];
+        const effectiveLayout = mergeMenuNodes(providedLayout, normalizedDefaults);
+        const layoutToUse = ensureStatusConfigurationEntry(
+          effectiveLayout.length ? effectiveLayout : normalizedDefaults,
+          normalizedDefaults
+        );
+        setLayout(cloneNodes(layoutToUse));
+        setSavedLayout(cloneNodes(layoutToUse));
+        setDefaults(cloneNodes(normalizedDefaults));
         setUpdatedAt(data.updatedAt ?? null);
         setUpdatedBy(data.updatedBy ?? null);
         setError(null);
@@ -64,9 +75,13 @@ const SetupPage = () => {
           return;
         }
         setError(extractErrorMessage(err, 'Unable to load setup information. Displaying defaults.'));
-        setLayout(cloneNodes(DEFAULT_NAVIGATION_MENU));
-        setSavedLayout(cloneNodes(DEFAULT_NAVIGATION_MENU));
-        setDefaults(cloneNodes(DEFAULT_NAVIGATION_MENU));
+        const normalizedDefaults = ensureStatusConfigurationEntry(
+          DEFAULT_NAVIGATION_MENU,
+          DEFAULT_NAVIGATION_MENU
+        );
+        setLayout(cloneNodes(normalizedDefaults));
+        setSavedLayout(cloneNodes(normalizedDefaults));
+        setDefaults(cloneNodes(normalizedDefaults));
       } finally {
         if (active) {
           setLoading(false);
@@ -175,11 +190,21 @@ const SetupPage = () => {
     try {
       const payload: MenuLayoutUpdatePayload = { layout: serializeLayout(layout) };
       const { data } = await adminApi.put<SetupLayoutResponse>('/setup/menu', payload);
-      const refreshedLayout = data?.layout?.length ? data.layout : layout;
-      const refreshedDefaults = data?.defaults?.length ? data.defaults : defaults;
-      setLayout(cloneNodes(refreshedLayout));
-      setSavedLayout(cloneNodes(refreshedLayout));
-      setDefaults(cloneNodes(refreshedDefaults));
+      const providedDefaults = data?.defaults ?? [];
+      const effectiveDefaults = mergeMenuNodes(providedDefaults, DEFAULT_NAVIGATION_MENU);
+      const normalizedDefaults = ensureStatusConfigurationEntry(
+        effectiveDefaults.length ? effectiveDefaults : DEFAULT_NAVIGATION_MENU,
+        DEFAULT_NAVIGATION_MENU
+      );
+      const providedLayout = data?.layout ?? layout;
+      const effectiveLayout = mergeMenuNodes(providedLayout, normalizedDefaults);
+      const layoutToUse = ensureStatusConfigurationEntry(
+        effectiveLayout.length ? effectiveLayout : normalizedDefaults,
+        normalizedDefaults
+      );
+      setLayout(cloneNodes(layoutToUse));
+      setSavedLayout(cloneNodes(layoutToUse));
+      setDefaults(cloneNodes(normalizedDefaults));
       setUpdatedAt(data.updatedAt ?? null);
       setUpdatedBy(data.updatedBy ?? null);
       notify({ type: 'success', message: 'Menu layout saved successfully.' });
