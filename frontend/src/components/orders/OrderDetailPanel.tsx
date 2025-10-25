@@ -16,41 +16,7 @@ import OrderProductSearchSelect, {
 } from '../../pages/admin/components/OrderProductSearchSelect';
 import { adminApi } from '../../services/http';
 
-const formatDateTime = (value: string | null | undefined) => {
-  if (!value) {
-    return 'Unknown date';
-  }
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return 'Unknown date';
-  }
-  return date.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
-};
-
-const formatDate = (value: string | null | undefined) => {
-  if (!value) {
-    return 'No due date';
-  }
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return 'No due date';
-  }
-  return date.toLocaleDateString();
-};
-
-const formatPaymentStatusLabel = (value: string | null | undefined): string => {
-  if (!value) {
-    return '—';
-  }
-  return value
-    .toLowerCase()
-    .split(/[\s_]+/)
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(' ');
-};
-
-const formatDateTime = (value: string | null | undefined) => {
+const formatDateTimeDisplay = (value: string | null | undefined) => {
   if (!value) {
     return 'Unknown date';
   }
@@ -1418,7 +1384,7 @@ const OrderDetailPanel = ({
           <div className="space-y-2">
             <h3 className="text-2xl font-semibold text-slate-900">{order.orderNumber}</h3>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-slate-500">
-              <span>Placed on {formatDateTime(order.createdAt)}</span>
+              <span>Placed on {formatDateTimeDisplay(order.createdAt)}</span>
               {dueDate ? <span className="font-medium text-slate-600">Due {formatDate(dueDate)}</span> : null}
             </div>
           </div>
@@ -1509,7 +1475,7 @@ const OrderDetailPanel = ({
             id="order-placed-at"
             label="Order placed"
             value={order.createdAt}
-            displayValue={formatDateTime(order.createdAt)}
+            displayValue={formatDateTimeDisplay(order.createdAt)}
             editingEnabled={false}
             canEdit={false}
             isUpdating={false}
