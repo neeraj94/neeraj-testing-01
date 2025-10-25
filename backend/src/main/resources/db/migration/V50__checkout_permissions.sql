@@ -7,7 +7,7 @@ SELECT 'ORDER_MANAGE', 'Orders: Manage'
 WHERE NOT EXISTS (SELECT 1 FROM permissions WHERE code = 'ORDER_MANAGE');
 
 INSERT INTO permissions (code, name)
-SELECT 'PAYMENT_MANAGE', 'Payments: Manage'
+SELECT 'PAYMENT_MANAGE', 'Payment Modes: Manage'
 WHERE NOT EXISTS (SELECT 1 FROM permissions WHERE code = 'PAYMENT_MANAGE');
 
 INSERT INTO role_permissions (role_id, permission_id)

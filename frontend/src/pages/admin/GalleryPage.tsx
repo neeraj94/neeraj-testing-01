@@ -836,7 +836,7 @@ const GalleryPage = () => {
         </button>
       </div>
 
-      <div className="relative flex flex-col gap-6 lg:flex-row">
+      <div className="relative flex flex-col gap-6 lg:grid lg:grid-cols-[minmax(0,20rem)_1fr] lg:items-start">
         {isSidebarOpen && (
           <button
             type="button"
@@ -846,11 +846,11 @@ const GalleryPage = () => {
           />
         )}
         <aside
-          className={`transform ${
+          className={`fixed inset-y-6 left-4 right-4 z-40 flex max-h-[80vh] flex-col gap-4 overflow-hidden overflow-y-auto rounded-3xl border border-slate-200 bg-white p-4 shadow-xl transition-all duration-200 transform ${
             isSidebarOpen
-              ? 'translate-x-0 opacity-100 pointer-events-auto'
-              : '-translate-x-full opacity-0 pointer-events-none lg:translate-x-0 lg:opacity-100 lg:pointer-events-auto'
-          } fixed inset-y-6 left-4 right-4 z-40 flex max-h-[80vh] flex-col gap-4 overflow-hidden overflow-y-auto rounded-3xl border border-slate-200 bg-white p-4 shadow-xl transition-all duration-200 lg:static lg:h-full lg:min-h-[26rem] lg:w-72 lg:max-h-none lg:overflow-visible lg:p-4 lg:shadow-sm`}
+              ? 'translate-x-0 pointer-events-auto opacity-100'
+              : '-translate-x-full pointer-events-none opacity-0'
+          } lg:inset-auto lg:h-[calc(100vh-6rem)] lg:max-h-[calc(100vh-6rem)] lg:w-full lg:translate-x-0 lg:transform-none lg:overflow-hidden lg:p-5 lg:shadow-sm lg:transition-none lg:pointer-events-auto lg:opacity-100 lg:sticky lg:top-24`}
         >
           <div className="flex items-center justify-between gap-3">
             <h2 className="text-sm font-semibold text-slate-800">Navigation</h2>
@@ -873,7 +873,7 @@ const GalleryPage = () => {
               </button>
             </div>
           </div>
-          <div className="flex flex-1 flex-col gap-3 overflow-y-auto pr-1">
+          <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pr-1 lg:pr-2">
             <button
               type="button"
               onClick={handleSelectMyFiles}
@@ -882,8 +882,8 @@ const GalleryPage = () => {
               }`}
             >
               <span className="inline-flex items-center gap-3">
-                <span className="text-xl">📁</span>
-                <span>My Files</span>
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-lg">📁</span>
+                <span className="text-sm font-medium">My Files</span>
               </span>
               {isViewingMyFiles && <span className="text-xs uppercase tracking-wide text-primary">Active</span>}
             </button>
@@ -897,8 +897,8 @@ const GalleryPage = () => {
                   }`}
                 >
                   <span className="inline-flex items-center gap-3">
-                    <span className="text-xl">🤝</span>
-                    <span>Shared with me</span>
+                    <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-lg">🤝</span>
+                    <span className="text-sm font-medium">Shared with me</span>
                   </span>
                   <span className="text-sm text-slate-400">{isSharedExpanded ? '▾' : '▸'}</span>
                 </button>
@@ -950,7 +950,7 @@ const GalleryPage = () => {
           </div>
         </aside>
 
-        <div className="flex-1 space-y-6">
+        <div className="flex-1 space-y-6 lg:min-w-0">
           <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
               <div>
