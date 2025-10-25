@@ -88,6 +88,23 @@ const Layout = () => {
   const accessibleNavigation = useMemo<NavigationNode[]>(() => {
     const granted = (permissions as PermissionKey[]) ?? [];
 
+    const hasStatusPermission = hasAnyPermission(granted, [
+      'CONFIG.STATUS.VIEW',
+      'CONFIG.STATUS.MANAGE'
+    ]);
+
+    const cloneNode = (node: NavigationNode): NavigationNode => ({
+      ...node,
+      children: node.children?.map(cloneNode) ?? []
+    });
+
+    const findNodeByKey = (nodes: NavigationNode[] | undefined, key: string): NavigationNode | undefined => {
+      if (!nodes?.length) {
+        return undefined;
+      }
+      return nodes.find((node) => node.key === key);
+    };
+
     const filterNodes = (nodes: NavigationNode[]): NavigationNode[] =>
       nodes
         .map((node) => {
@@ -97,11 +114,7 @@ const Layout = () => {
           const hasChildren = filteredChildren.length > 0;
 
           if (node.group) {
-            if (!nodeHasPermission) {
-              return null;
-            }
-
-            if (!hasChildren) {
+            if (!nodeHasPermission || !hasChildren) {
               return null;
             }
 
@@ -118,10 +131,123 @@ const Layout = () => {
 
     const filtered = filterNodes(navItems);
 
+    const configurationReference =
+      findNodeByKey(navItems, 'configuration') ??
+      findNodeByKey(DEFAULT_NAVIGATION_MENU, 'configuration');
+    const fallbackConfiguration = findNodeByKey(DEFAULT_NAVIGATION_MENU, 'configuration');
+    const statusReference =
+      findNodeByKey(configurationReference?.children ?? [], 'statusConfiguration') ??
+      findNodeByKey(fallbackConfiguration?.children ?? [], 'statusConfiguration');
+
+    const insertStatusChild = (
+      children: NavigationNode[] | undefined,
+      referenceChildren: NavigationNode[] | undefined
+    ): NavigationNode[] => {
+      const existing = children ? [...children] : [];
+      if (!statusReference || existing.some((child) => child.key === 'statusConfiguration')) {
+        return existing;
+      }
+
+      if (!referenceChildren?.length) {
+        return [...existing, cloneNode(statusReference)];
+      }
+
+      const remaining = new Map<string, NavigationNode>(
+        existing
+          .filter((child) => child.key)
+          .map((child) => [child.key as string, child])
+      );
+      const ordered: NavigationNode[] = [];
+      let inserted = false;
+
+      for (const reference of referenceChildren) {
+        if (reference.key === 'statusConfiguration') {
+          ordered.push(cloneNode(statusReference));
+          inserted = true;
+          continue;
+        }
+
+        if (reference.key && remaining.has(reference.key)) {
+          ordered.push(remaining.get(reference.key)!);
+          remaining.delete(reference.key);
+        }
+      }
+
+      for (const child of existing) {
+        if (!child.key) {
+          ordered.push(child);
+          continue;
+        }
+
+        if (remaining.has(child.key)) {
+          ordered.push(child);
+          remaining.delete(child.key);
+        }
+      }
+
+      if (!inserted) {
+        ordered.push(cloneNode(statusReference));
+      }
+
+      return ordered;
+    };
+
+    const ensureStatusNode = (nodes: NavigationNode[]): NavigationNode[] => {
+      if (!hasStatusPermission || !statusReference) {
+        return nodes;
+      }
+
+      const configurationIndex = nodes.findIndex((node) => node.key === 'configuration');
+      if (configurationIndex === -1) {
+        const referenceOrder = (navItems.length ? navItems : DEFAULT_NAVIGATION_MENU).map(
+          (node) => node.key
+        );
+        const desiredIndex = referenceOrder.indexOf('configuration');
+        const insertionIndex = desiredIndex >= 0 ? Math.min(desiredIndex, nodes.length) : nodes.length;
+
+        const baseGroup: NavigationNode = configurationReference
+          ? {
+              ...configurationReference,
+              permissions: [...(configurationReference.permissions ?? [])],
+              children: [cloneNode(statusReference)],
+              group: true,
+              path: configurationReference.path
+            }
+          : {
+              key: 'configuration',
+              label: 'Configuration',
+              icon: '🧩',
+              path: undefined,
+              group: true,
+              permissions: [],
+              children: [cloneNode(statusReference)]
+            };
+
+        const next = [...nodes];
+        next.splice(insertionIndex, 0, baseGroup);
+        return next;
+      }
+
+      const configurationNode = nodes[configurationIndex];
+      const referenceChildren = configurationReference?.children?.length
+        ? configurationReference.children
+        : fallbackConfiguration?.children;
+      const ensuredChildren = insertStatusChild(configurationNode.children, referenceChildren);
+      if (ensuredChildren === configurationNode.children) {
+        return nodes;
+      }
+
+      const next = [...nodes];
+      next[configurationIndex] = { ...configurationNode, children: ensuredChildren };
+      return next;
+    };
+
+    const withStatus = ensureStatusNode(filtered);
+
     const defaultCommerce = DEFAULT_NAVIGATION_MENU.find((node) => node.key === 'commerce');
     const defaultCart = defaultCommerce?.children?.find((child) => child.key === 'carts');
     if (!defaultCart) {
-      return filtered;
+      return withStatus;
     }
 
     const cloneCartNode = (): NavigationNode => ({
@@ -142,7 +268,7 @@ const Layout = () => {
     };
 
     let commerceFound = false;
-    const supplemented = filtered.map((node) => {
+    const supplemented = withStatus.map((node) => {
       if (node.key !== 'commerce' || !node.group) {
         return node;
       }
