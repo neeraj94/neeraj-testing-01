@@ -99,15 +99,18 @@ public class TemplatedEmailSender {
     }
 
     public boolean sendOrderConfirmationEmail(CheckoutOrderResponse order) {
-        if (order == null || !StringUtils.hasText(order.getCustomerEmail())) {
+        Map<String, Object> auditContext = buildOrderAuditContext(order);
+        String recipient = order != null ? normalizeEmail(order.getCustomerEmail()) : null;
+        if (!StringUtils.hasText(recipient)) {
+            recordSkip(ORDER_CONFIRMATION_TEMPLATE_CODE, recipient, auditContext, "RECIPIENT_MISSING");
             return false;
         }
         Map<String, String> tokens = buildOrderTokens(order);
         return sendTemplate(
                 ORDER_CONFIRMATION_TEMPLATE_CODE,
-                order.getCustomerEmail(),
+                recipient,
                 tokens,
-                buildOrderAuditContext(order));
+                auditContext);
     }
 
     public String buildVerificationLink(String token) {
@@ -211,7 +214,7 @@ public class TemplatedEmailSender {
             context.put("orderId", order.getOrderId());
             context.put("orderNumber", order.getOrderNumber());
             context.put("customerId", order.getCustomerId());
-            context.put("email", order.getCustomerEmail());
+            context.put("email", normalizeEmail(order.getCustomerEmail()));
         }
         return context;
     }
@@ -228,9 +231,9 @@ public class TemplatedEmailSender {
             return "";
         }
         if (StringUtils.hasText(order.getCustomerName())) {
-            return order.getCustomerName();
+            return order.getCustomerName().trim();
         }
-        return Optional.ofNullable(order.getCustomerEmail()).orElse("");
+        return Optional.ofNullable(normalizeEmail(order.getCustomerEmail())).orElse("");
     }
 
     private String buildOrderItemsTable(CheckoutOrderResponse order) {
@@ -524,6 +527,13 @@ public class TemplatedEmailSender {
         audit.put("recipient", recipient);
         audit.put("error", message);
         activityRecorder.record("Email", "SEND", "Failed to send email template", "FAILED", audit);
+    }
+
+    private String normalizeEmail(String email) {
+        if (!StringUtils.hasText(email)) {
+            return null;
+        }
+        return email.trim();
     }
 
     private String render(String template, Map<String, String> tokens) {
