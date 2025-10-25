@@ -16,6 +16,7 @@ import org.springframework.util.StringUtils;
 
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -56,6 +57,23 @@ public class EmailTemplateService {
                 new EmailMergeFieldDto("{{email_signature}}", "Email signature", "Signature configured in email settings."),
                 new EmailMergeFieldDto("{{support_email}}", "Support email", "Primary support contact email address.")
         ));
+
+        List<EmailMergeFieldDto> orderConfirmationFields = new ArrayList<>(baseFields);
+        orderConfirmationFields.addAll(List.of(
+                new EmailMergeFieldDto("{{customer_name}}", "Customer name", "Full name of the customer who placed the order."),
+                new EmailMergeFieldDto("{{order_number}}", "Order number", "Unique reference generated for the order."),
+                new EmailMergeFieldDto("{{order_date}}", "Order date", "Date and time when the order was placed."),
+                new EmailMergeFieldDto("{{order_status}}", "Order status", "Current status of the order."),
+                new EmailMergeFieldDto("{{order_total}}", "Order total", "Grand total including taxes and shipping."),
+                new EmailMergeFieldDto("{{order_items_table}}", "Order items table", "HTML table containing line items and totals."),
+                new EmailMergeFieldDto("{{billing_address}}", "Billing address", "Formatted billing address."),
+                new EmailMergeFieldDto("{{shipping_address}}", "Shipping address", "Formatted shipping address."),
+                new EmailMergeFieldDto("{{shipping_method}}", "Shipping method", "Selected shipping method."),
+                new EmailMergeFieldDto("{{payment_method}}", "Payment method", "Summary of the payment method used."),
+                new EmailMergeFieldDto("{{customer_notes}}", "Customer notes", "Notes supplied by the customer during checkout.")
+        ));
+
+        mergeFields.put("order_confirmation_customer", orderConfirmationFields);
 
         MERGE_FIELDS_BY_CODE = Collections.unmodifiableMap(mergeFields);
     }
