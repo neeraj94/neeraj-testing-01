@@ -7,6 +7,7 @@ import Button from '../../components/Button';
 import DataTable from '../../components/DataTable';
 import PaginationControls from '../../components/PaginationControls';
 import OrderDetailPanel from '../../components/orders/OrderDetailPanel';
+import OrderEditor from './components/OrderEditor';
 import { adminApi } from '../../services/http';
 import { useAppSelector } from '../../app/hooks';
 import { selectBaseCurrency } from '../../features/settings/selectors';
@@ -20,6 +21,28 @@ import type { OrderDetail, OrderListItem } from '../../types/orders';
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null;
+
+const resolvePaymentMethodLabel = (value: unknown): string | null => {
+  if (typeof value === 'string' && value.trim()) {
+    return value.trim();
+  }
+  if (!isRecord(value)) {
+    return null;
+  }
+  const displayName = value.displayName;
+  if (typeof displayName === 'string' && displayName.trim()) {
+    return displayName.trim();
+  }
+  const name = value.name;
+  if (typeof name === 'string' && name.trim()) {
+    return name.trim();
+  }
+  const method = value.method;
+  if (typeof method === 'string' && method.trim()) {
+    return method.trim();
+  }
+  return null;
+};
 
 const normalizeOrdersResponse = (payload: unknown): OrderListItem[] => {
   if (Array.isArray(payload)) {
@@ -39,6 +62,10 @@ const normalizeOrdersResponse = (payload: unknown): OrderListItem[] => {
             ? item.paymentStatus
             : summaryPaymentStatus;
 
+        const paymentMethodLabel =
+          resolvePaymentMethodLabel(item.paymentMethod) ??
+          resolvePaymentMethodLabel(summary?.paymentMethod);
+
         return {
           id: item.id as number,
           orderNumber: typeof item.orderNumber === 'string' ? item.orderNumber : `#${item.id}`,
@@ -47,6 +74,7 @@ const normalizeOrdersResponse = (payload: unknown): OrderListItem[] => {
           customerName: typeof item.customerName === 'string' ? item.customerName : null,
           customerEmail: typeof item.customerEmail === 'string' ? item.customerEmail : null,
           paymentStatus,
+          paymentMethodLabel,
           summary,
           createdAt: typeof item.createdAt === 'string' ? item.createdAt : new Date().toISOString(),
           lines,
@@ -95,6 +123,9 @@ const normalizeOrderDetailResponse = (payload: unknown): OrderDetail | null => {
       const paymentMethod = isRecord(detailRecord.paymentMethod)
         ? (detailRecord.paymentMethod as unknown as OrderDetail['paymentMethod'])
         : null;
+      const paymentMethodLabel =
+        resolvePaymentMethodLabel(detailRecord.paymentMethod) ??
+        resolvePaymentMethodLabel(summary?.paymentMethod);
       const dueDate = typeof detailRecord.dueDate === 'string' ? detailRecord.dueDate : summary?.dueDate ?? null;
       const notes = typeof detailRecord.notes === 'string' ? detailRecord.notes : summary?.notes ?? null;
       const summaryPaymentStatus =
@@ -115,7 +146,8 @@ const normalizeOrderDetailResponse = (payload: unknown): OrderDetail | null => {
         paymentMethod,
         dueDate,
         notes,
-        paymentStatus
+        paymentStatus,
+        paymentMethodLabel
       };
     }
   }
@@ -155,7 +187,7 @@ const STATUS_FILTERS = [
 ] as const;
 
 type StatusFilterKey = (typeof STATUS_FILTERS)[number]['key'];
-type PanelMode = 'view' | 'edit' | 'open' | 'payment';
+type PanelMode = 'view' | 'edit' | 'payment';
 
 const AdminOrdersPage = () => {
   const baseCurrency = useAppSelector(selectBaseCurrency);
@@ -300,6 +332,7 @@ const AdminOrdersPage = () => {
         order.customerEmail ?? undefined,
         getPaymentStatus(order) ?? undefined,
         order.status ?? undefined,
+        order.paymentMethodLabel ?? undefined,
         order.dueDate ?? undefined,
         order.summary?.dueDate ?? undefined,
         order.summary?.grandTotal?.toString() ?? undefined
@@ -391,6 +424,9 @@ const AdminOrdersPage = () => {
     const end = start + pageSize;
     return filteredOrders.slice(start, end);
   }, [filteredOrders, page, pageSize]);
+
+  const showSplitView = detailOrderId != null;
+  const detailOrder = detailQuery.data;
 
   const dataTableToolbar = (
     <div className="flex flex-wrap items-center gap-2">
@@ -504,20 +540,17 @@ const AdminOrdersPage = () => {
         title="Order list"
         actions={dataTableActions}
         toolbar={dataTableToolbar}
-        bodyWrapperClassName="lg:max-h-[calc(100vh-360px)] lg:overflow-y-auto"
         footer={dataTableFooter}
       >
         <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
           <tr>
             <th scope="col" className="px-4 py-3 text-left">Order ID</th>
             <th scope="col" className="px-4 py-3 text-left">Customer</th>
-            <th scope="col" className="px-4 py-3 text-left">Total</th>
             <th scope="col" className="px-4 py-3 text-left">Order date</th>
+            <th scope="col" className="px-4 py-3 text-left">Total amount</th>
             <th scope="col" className="px-4 py-3 text-left">Status</th>
-            <th scope="col" className="px-4 py-3 text-left">Due date</th>
-            {(canEditOrders || canDeleteOrders) && (
-              <th scope="col" className="px-4 py-3 text-right">Actions</th>
-            )}
+            <th scope="col" className="px-4 py-3 text-left">Payment method</th>
+            <th scope="col" className="px-4 py-3 text-right">Actions</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-100 bg-white text-sm text-slate-700">
@@ -559,72 +592,205 @@ const AdminOrdersPage = () => {
                       ) : null}
                     </div>
                   </td>
-                  <td className="px-4 py-3 font-semibold text-slate-900">
-                    {formatCurrency(order.summary?.grandTotal ?? 0, baseCurrency)}
-                  </td>
                   <td className="px-4 py-3 text-sm text-slate-600">{formatDateTime(order.createdAt)}</td>
-                  <td className="px-4 py-3 text-sm">
-                    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold uppercase tracking-wide ${statusTone}`}>
-                      {order.status?.replace(/_/g, ' ') ?? 'Processing'}
-                    </span>
-                    <p className="mt-1 text-xs text-slate-500">{formatPaymentStatus(order)}</p>
+                  <td className="px-4 py-3 font-semibold text-slate-900">
+                    {formatCurrency(order.summary?.grandTotal ?? 0, baseCurrency ?? undefined)}
                   </td>
-                  <td className="px-4 py-3 text-sm text-slate-600">{formatDate(order.dueDate ?? order.summary?.dueDate)}</td>
-                  {(canEditOrders || canDeleteOrders) && (
-                    <td className="px-4 py-3">
-                      <div className="flex justify-end gap-2">
-                        {canEditOrders && (
-                          <button
-                            type="button"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              setDetailOrderId(order.id);
-                              setPanelMode('edit');
-                            }}
-                            className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${
-                              panelMode === 'edit' && detailOrderId === order.id
-                                ? 'border-primary text-primary'
-                                : 'border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-800'
-                            }`}
-                          >
-                            Edit
-                          </button>
-                        )}
-                        {canDeleteOrders && (
-                          <button
-                            type="button"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              void handleDeleteOrder(order.id, order.orderNumber);
-                            }}
-                            disabled={
-                              deletingOrderId === order.id && deleteOrderMutation.isPending
-                            }
-                            className="rounded-full border border-rose-200 px-3 py-1 text-xs font-semibold text-rose-600 transition hover:border-rose-300 hover:text-rose-700 disabled:cursor-not-allowed disabled:opacity-60"
-                          >
-                            {deletingOrderId === order.id && deleteOrderMutation.isPending
-                              ? 'Deleting…'
-                              : 'Delete'}
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  )}
+                  <td className="px-4 py-3 text-sm">
+                    <div className="flex flex-col gap-1">
+                      <span
+                        className={`inline-flex w-fit items-center rounded-full px-2.5 py-1 text-xs font-semibold uppercase tracking-wide ${statusTone}`}
+                      >
+                        {order.status?.replace(/_/g, ' ') ?? 'Processing'}
+                      </span>
+                      {order.dueDate || order.summary?.dueDate ? (
+                        <span className="text-xs font-medium text-slate-500">
+                          Due {formatDate(order.dueDate ?? order.summary?.dueDate)}
+                        </span>
+                      ) : null}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex flex-col">
+                      <span className="text-sm font-medium text-slate-900">
+                        {order.paymentMethodLabel ?? '—'}
+                      </span>
+                      <span className="text-xs text-slate-500">{formatPaymentStatus(order)}</span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          openDetail(order.id);
+                          setPanelMode('view');
+                        }}
+                        className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${
+                          detailOrderId === order.id && panelMode === 'view'
+                            ? 'border-primary text-primary'
+                            : 'border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-800'
+                        }`}
+                      >
+                        View
+                      </button>
+                      {canEditOrders && (
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setDetailOrderId(order.id);
+                            setPanelMode('edit');
+                          }}
+                          className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${
+                            panelMode === 'edit' && detailOrderId === order.id
+                              ? 'border-primary text-primary'
+                              : 'border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-800'
+                          }`}
+                        >
+                          Edit
+                        </button>
+                      )}
+                      {canDeleteOrders && (
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            void handleDeleteOrder(order.id, order.orderNumber);
+                          }}
+                          disabled={
+                            deletingOrderId === order.id && deleteOrderMutation.isPending
+                          }
+                          className="rounded-full border border-rose-200 px-3 py-1 text-xs font-semibold text-rose-600 transition hover:border-rose-300 hover:text-rose-700 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {deletingOrderId === order.id && deleteOrderMutation.isPending
+                            ? 'Deleting…'
+                            : 'Delete'}
+                        </button>
+                      )}
+                    </div>
+                  </td>
                 </tr>
               );
             })
           ) : (
             <tr>
-              <td
-                colSpan={canEditOrders || canDeleteOrders ? 7 : 6}
-                className="px-6 py-10 text-center text-sm text-slate-500"
-              >
+              <td colSpan={7} className="px-6 py-10 text-center text-sm text-slate-500">
                 No orders match your filters yet. Try adjusting the search or status filters above.
               </td>
             </tr>
           )}
         </tbody>
       </DataTable>
+    );
+  };
+
+  const renderDetailPane = () => {
+    if (detailOrderId == null) {
+      return (
+        <div className="flex min-h-[320px] items-center justify-center rounded-2xl bg-white p-12 text-center text-sm text-slate-500 shadow-sm">
+          Choose an order from the list to inspect customer, payment, and fulfillment information.
+        </div>
+      );
+    }
+
+    if (detailQuery.isLoading) {
+      return (
+        <div className="flex min-h-[320px] items-center justify-center rounded-2xl bg-white p-12 shadow-sm">
+          <Spinner />
+        </div>
+      );
+    }
+
+    if (detailQuery.isError) {
+      return (
+        <div className="space-y-3 rounded-2xl bg-white p-6 text-sm text-rose-600 shadow-sm">
+          <p>{extractErrorMessage(detailQuery.error, 'Unable to load order details.')}</p>
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="ghost" onClick={() => detailQuery.refetch()}>
+              Retry
+            </Button>
+            <Button type="button" variant="ghost" onClick={closeDetail}>
+              Dismiss
+            </Button>
+          </div>
+        </div>
+      );
+    }
+
+    if (!detailOrder) {
+      return (
+        <div className="flex min-h-[320px] items-center justify-center rounded-2xl bg-white p-12 text-center text-sm text-slate-500 shadow-sm">
+          This order is no longer available.
+        </div>
+      );
+    }
+
+    if (panelMode === 'edit') {
+      return (
+        <OrderEditor
+          mode="edit"
+          baseCurrency={baseCurrency}
+          initialOrder={detailOrder}
+          onCancel={() => setPanelMode('view')}
+          onSaved={(order) => {
+            setPanelMode('view');
+            setDetailOrderId(order.id);
+          }}
+        />
+      );
+    }
+
+    const isDeleting = deletingOrderId === detailOrder.id && deleteOrderMutation.isPending;
+
+    return (
+      <OrderDetailPanel
+        order={detailOrder}
+        baseCurrency={baseCurrency}
+        onClose={closeDetail}
+        mode={panelMode}
+        actions={
+          <div className="flex flex-wrap justify-end gap-2">
+            {canEditOrders ? (
+              <button
+                type="button"
+                onClick={() => setPanelMode('edit')}
+                className={`rounded-lg border px-3 py-1 text-xs font-semibold transition ${
+                  panelMode === 'edit'
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:text-slate-900'
+                }`}
+              >
+                Edit
+              </button>
+            ) : null}
+            <button
+              type="button"
+              onClick={() => setPanelMode((current) => (current === 'payment' ? 'view' : 'payment'))}
+              className={`rounded-lg border px-3 py-1 text-xs font-semibold transition ${
+                panelMode === 'payment'
+                  ? 'border-primary bg-primary/10 text-primary'
+                  : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:text-slate-900'
+              }`}
+            >
+              Payment
+            </button>
+            {canDeleteOrders ? (
+              <button
+                type="button"
+                onClick={() => {
+                  void handleDeleteOrder(detailOrder.id, detailOrder.orderNumber);
+                }}
+                disabled={isDeleting}
+                className="rounded-lg border border-rose-200 px-3 py-1 text-xs font-semibold text-rose-600 transition hover:border-rose-300 hover:text-rose-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isDeleting ? 'Deleting…' : 'Delete'}
+              </button>
+            ) : null}
+          </div>
+        }
+      />
     );
   };
 
@@ -642,77 +808,14 @@ const AdminOrdersPage = () => {
         }
       />
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
-        <div className="space-y-4">{renderOrdersTable()}</div>
-
-        <div className={`transition-opacity duration-200 ${detailOrderId ? 'opacity-100' : 'opacity-90'}`}>
-          {detailOrderId == null ? (
-            <div className="flex min-h-[320px] items-center justify-center rounded-2xl bg-white p-12 text-center text-sm text-slate-500 shadow-sm">
-              Choose an order from the list to inspect customer, payment, and fulfillment information.
-            </div>
-          ) : detailQuery.isLoading ? (
-            <div className="flex min-h-[320px] items-center justify-center rounded-2xl bg-white p-12 shadow-sm">
-              <Spinner />
-            </div>
-          ) : detailQuery.isError ? (
-            <div className="space-y-3 rounded-2xl bg-white p-6 text-sm text-rose-600 shadow-sm">
-              <p>{extractErrorMessage(detailQuery.error, 'Unable to load order details.')}</p>
-              <div className="flex justify-end gap-2">
-                <Button type="button" variant="ghost" onClick={() => detailQuery.refetch()}>
-                  Retry
-                </Button>
-                <Button type="button" variant="ghost" onClick={closeDetail}>
-                  Dismiss
-                </Button>
-              </div>
-            </div>
-          ) : detailQuery.data ? (
-            <OrderDetailPanel
-              order={detailQuery.data}
-              baseCurrency={baseCurrency}
-              onClose={closeDetail}
-              mode={panelMode}
-              actions={
-                <div className="flex flex-wrap justify-end gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setPanelMode('edit')}
-                    className={`rounded-lg border px-3 py-1 text-xs font-semibold transition ${
-                      panelMode === 'edit'
-                        ? 'border-primary bg-primary/10 text-primary'
-                        : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:text-slate-900'
-                    }`}
-                  >
-                    Edit
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPanelMode('open')}
-                    className={`rounded-lg border px-3 py-1 text-xs font-semibold transition ${
-                      panelMode === 'open'
-                        ? 'border-primary bg-primary/10 text-primary'
-                        : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:text-slate-900'
-                    }`}
-                  >
-                    Open
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPanelMode('payment')}
-                    className={`rounded-lg border px-3 py-1 text-xs font-semibold transition ${
-                      panelMode === 'payment'
-                        ? 'border-primary bg-primary/10 text-primary'
-                        : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:text-slate-900'
-                    }`}
-                  >
-                    Payment
-                  </button>
-                </div>
-              }
-            />
-          ) : null}
+      {showSplitView ? (
+        <div className="grid gap-6 transition-[grid-template-columns] lg:grid-cols-[minmax(0,0.38fr)_minmax(0,0.62fr)] xl:grid-cols-[minmax(0,0.35fr)_minmax(0,0.65fr)]">
+          <div className="space-y-4">{renderOrdersTable()}</div>
+          <div className="space-y-4 transition-opacity duration-200">{renderDetailPane()}</div>
         </div>
-      </div>
+      ) : (
+        <div className="space-y-4">{renderOrdersTable()}</div>
+      )}
     </div>
   );
 };
