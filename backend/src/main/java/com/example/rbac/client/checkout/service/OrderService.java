@@ -14,6 +14,7 @@ import com.example.rbac.admin.users.model.User;
 import com.example.rbac.admin.users.repository.UserRepository;
 import com.example.rbac.client.checkout.model.CheckoutOrder;
 import com.example.rbac.client.checkout.repository.CheckoutOrderRepository;
+import com.example.rbac.admin.settings.service.TemplatedEmailSender;
 import com.example.rbac.common.exception.ApiException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
