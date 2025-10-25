@@ -256,129 +256,144 @@ const AdminOrdersPage = () => {
         title="Order list"
         description="Click on an order row to view customer, payment, and fulfillment details."
         padded={false}
-        bodyClassName="flex flex-col"
+        bodyClassName="flex max-h-[460px] flex-col overflow-hidden lg:max-h-[calc(100vh-280px)]"
       >
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-slate-200 text-sm">
-            <thead className="bg-slate-50">
-              <tr>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  Order
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  Customer
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  Status
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  Payment status
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  Total
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  Created
-                </th>
-                {(canEditOrders || canDeleteOrders) && (
-                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    Actions
+          <div className="max-h-[420px] overflow-y-auto pr-1 lg:max-h-[calc(100vh-320px)] lg:pr-0">
+            <table className="min-w-full divide-y divide-slate-200 text-sm">
+              <thead className="bg-slate-50">
+                <tr>
+                  <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                    Order
                   </th>
-                )}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 bg-white">
-              {hasOrders
-                ? orders.map((order) => {
-                    const statusTone =
-                      order.status === 'PROCESSING'
-                        ? 'bg-amber-50 text-amber-700'
-                        : 'bg-emerald-50 text-emerald-700';
-                    return (
-                      <tr
-                        key={order.id}
-                        onClick={() => openDetail(order.id)}
-                        className="cursor-pointer transition hover:bg-blue-50/40"
-                      >
-                        <td className="px-4 py-3">
-                          <div className="flex flex-col">
-                            <span className="font-semibold text-slate-900">{order.orderNumber}</span>
-                            <span className="text-xs text-slate-500">#{order.id}</span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex flex-col">
-                            <span className="font-medium text-slate-900">
-                              {order.customerName ?? 'Customer'}
-                            </span>
-                            {order.customerEmail && (
-                              <span className="text-xs text-slate-500">{order.customerEmail}</span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <span
-                            className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide ${statusTone}`}
-                          >
-                            {order.status ?? 'Processing'}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-slate-600">{formatPaymentStatus(order)}</td>
-                        <td className="px-4 py-3 font-semibold text-slate-900">
-                          {formatCurrency(order.summary?.grandTotal ?? 0, baseCurrency)}
-                        </td>
-                        <td className="px-4 py-3 text-slate-600">{formatDateTime(order.createdAt)}</td>
-                        {(canEditOrders || canDeleteOrders) && (
-                          <td className="px-4 py-3">
-                            <div className="flex justify-end gap-2">
-                              {canEditOrders && (
-                                <button
-                                  type="button"
-                                  onClick={(event) => {
-                                    event.stopPropagation();
-                                    setDetailOrderId(null);
-                                    navigate(`/admin/orders/${order.id}/edit`);
-                                  }}
-                                  className="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
-                                >
-                                  Edit
-                                </button>
-                              )}
-                              {canDeleteOrders && (
-                                <button
-                                  type="button"
-                                  onClick={(event) => {
-                                    event.stopPropagation();
-                                    void handleDeleteOrder(order.id, order.orderNumber);
-                                  }}
-                                  disabled={
-                                    deletingOrderId === order.id && deleteOrderMutation.isPending
-                                  }
-                                  className="rounded-full border border-rose-200 px-3 py-1 text-xs font-semibold text-rose-600 transition hover:border-rose-300 hover:text-rose-700 disabled:cursor-not-allowed disabled:opacity-60"
-                                >
-                                  {deletingOrderId === order.id && deleteOrderMutation.isPending
-                                    ? 'Deleting…'
-                                    : 'Delete'}
-                                </button>
+                  <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                    Customer
+                  </th>
+                  <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                    Status
+                  </th>
+                  <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                    Payment
+                  </th>
+                  <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                    Total
+                  </th>
+                  <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                    Created
+                  </th>
+                  {(canEditOrders || canDeleteOrders) && (
+                    <th className="px-3 py-2 text-right text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                      Actions
+                    </th>
+                  )}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 bg-white">
+                {hasOrders
+                  ? orders.map((order) => {
+                      const statusTone =
+                        order.status === 'PROCESSING'
+                          ? 'bg-amber-50 text-amber-700'
+                          : 'bg-emerald-50 text-emerald-700';
+                      const isSelected = detailOrderId === order.id;
+                      return (
+                        <tr
+                          key={order.id}
+                          tabIndex={0}
+                          onClick={() => openDetail(order.id)}
+                          onKeyDown={(event) => {
+                            if (event.key === 'Enter' || event.key === ' ') {
+                              event.preventDefault();
+                              openDetail(order.id);
+                            }
+                          }}
+                          aria-current={isSelected ? 'true' : undefined}
+                          className={`cursor-pointer align-top text-[13px] transition ${
+                            isSelected
+                              ? 'bg-blue-50/70 ring-1 ring-inset ring-primary/40'
+                              : 'hover:bg-blue-50/40'
+                          }`}
+                        >
+                          <td className="px-3 py-2">
+                            <div className="flex flex-col gap-1">
+                              <span className="text-sm font-semibold text-slate-900">{order.orderNumber}</span>
+                              <span className="text-[11px] uppercase tracking-wide text-slate-400">#{order.id}</span>
+                            </div>
+                          </td>
+                          <td className="px-3 py-2">
+                            <div className="flex flex-col gap-1">
+                              <span className="text-sm font-medium text-slate-900">
+                                {order.customerName ?? 'Customer'}
+                              </span>
+                              {order.customerEmail && (
+                                <span className="text-[11px] text-slate-500">{order.customerEmail}</span>
                               )}
                             </div>
                           </td>
-                        )}
-                      </tr>
-                    );
-                  })
-                : (
-                  <tr>
-                    <td
-                      colSpan={canEditOrders || canDeleteOrders ? 7 : 6}
-                      className="px-4 py-6 text-center text-sm text-slate-500"
-                    >
-                      No orders found. Orders will appear automatically once customers complete checkout.
-                    </td>
-                  </tr>
-                )}
-            </tbody>
-          </table>
+                          <td className="px-3 py-2">
+                            <span
+                              className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide ${statusTone}`}
+                            >
+                              {order.status ?? 'Processing'}
+                            </span>
+                          </td>
+                          <td className="px-3 py-2 text-slate-600">{formatPaymentStatus(order)}</td>
+                          <td className="px-3 py-2 font-semibold text-slate-900">
+                            {formatCurrency(order.summary?.grandTotal ?? 0, baseCurrency)}
+                          </td>
+                          <td className="px-3 py-2 text-slate-600">{formatDateTime(order.createdAt)}</td>
+                          {(canEditOrders || canDeleteOrders) && (
+                            <td className="px-3 py-2">
+                              <div className="flex justify-end gap-2">
+                                {canEditOrders && (
+                                  <button
+                                    type="button"
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      setDetailOrderId(null);
+                                      navigate(`/admin/orders/${order.id}/edit`);
+                                    }}
+                                    className="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                                  >
+                                    Edit
+                                  </button>
+                                )}
+                                {canDeleteOrders && (
+                                  <button
+                                    type="button"
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      void handleDeleteOrder(order.id, order.orderNumber);
+                                    }}
+                                    disabled={
+                                      deletingOrderId === order.id && deleteOrderMutation.isPending
+                                    }
+                                    className="rounded-full border border-rose-200 px-3 py-1 text-xs font-semibold text-rose-600 transition hover:border-rose-300 hover:text-rose-700 disabled:cursor-not-allowed disabled:opacity-60"
+                                  >
+                                    {deletingOrderId === order.id && deleteOrderMutation.isPending
+                                      ? 'Deleting…'
+                                      : 'Delete'}
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          )}
+                        </tr>
+                      );
+                    })
+                  : (
+                    <tr>
+                      <td
+                        colSpan={canEditOrders || canDeleteOrders ? 7 : 6}
+                        className="px-4 py-6 text-center text-sm text-slate-500"
+                      >
+                        No orders found. Orders will appear automatically once customers complete checkout.
+                      </td>
+                    </tr>
+                  )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </PageSection>
     );
@@ -403,33 +418,65 @@ const AdminOrdersPage = () => {
         }
       />
 
-      {renderOrdersTable()}
-
-      {detailOrderId != null ? (
-        <div className="fixed inset-0 z-40 flex items-start justify-center overflow-y-auto bg-slate-900/50 px-4 py-10">
-          <div className="w-full max-w-4xl">
-            {detailQuery.isLoading ? (
-              <section className="flex min-h-[260px] items-center justify-center rounded-2xl border border-slate-200 bg-white shadow-sm">
-                <Spinner />
-              </section>
-            ) : detailQuery.isError ? (
-              <section className="space-y-3 rounded-2xl border border-rose-200 bg-rose-50/80 p-6 text-sm text-rose-600 shadow-sm">
-                <p>{extractErrorMessage(detailQuery.error, 'Unable to load order details.')}</p>
-                <div className="flex justify-end gap-2">
-                  <Button type="button" variant="ghost" onClick={() => detailQuery.refetch()}>
-                    Retry
-                  </Button>
-                  <Button type="button" variant="ghost" onClick={closeDetail}>
-                    Close
-                  </Button>
-                </div>
-              </section>
-            ) : detailQuery.data ? (
-              <OrderDetailPanel order={detailQuery.data} baseCurrency={baseCurrency} onClose={closeDetail} />
-            ) : null}
-          </div>
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,360px)_1fr] xl:grid-cols-[minmax(0,400px)_1fr]">
+        <div className="space-y-6 lg:sticky lg:top-24 lg:self-start">
+          {renderOrdersTable()}
         </div>
-      ) : null}
+        <PageSection
+          title="Order details"
+          description="Inspect the selected order’s customer information, balances, and fulfillment progress."
+        >
+          {detailOrderId == null ? (
+            <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-sm text-slate-500">
+              Choose an order from the list to view its summary, payment status, and fulfillment details here.
+            </div>
+          ) : detailQuery.isLoading ? (
+            <div className="flex min-h-[240px] items-center justify-center">
+              <Spinner />
+            </div>
+          ) : detailQuery.isError ? (
+            <div className="space-y-3 rounded-xl border border-rose-200 bg-rose-50/80 p-6 text-sm text-rose-600">
+              <p>{extractErrorMessage(detailQuery.error, 'Unable to load order details.')}</p>
+              <div className="flex justify-end gap-2">
+                <Button type="button" variant="ghost" onClick={() => detailQuery.refetch()}>
+                  Retry
+                </Button>
+                <Button type="button" variant="ghost" onClick={closeDetail}>
+                  Dismiss
+                </Button>
+              </div>
+            </div>
+          ) : detailQuery.data ? (
+            <OrderDetailPanel
+              order={detailQuery.data}
+              baseCurrency={baseCurrency}
+              onClose={closeDetail}
+              actions={
+                <>
+                  <button
+                    type="button"
+                    className="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    className="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                  >
+                    Open
+                  </button>
+                  <button
+                    type="button"
+                    className="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                  >
+                    Payment
+                  </button>
+                </>
+              }
+            />
+          ) : null}
+        </PageSection>
+      </div>
     </div>
   );
 };
