@@ -9,6 +9,9 @@ import com.example.rbac.client.checkout.dto.OrderLineDto;
 import com.example.rbac.client.checkout.dto.OrderListItemDto;
 import com.example.rbac.client.checkout.dto.OrderSummaryDto;
 import com.example.rbac.client.checkout.dto.PaymentMethodDto;
+import com.example.rbac.admin.settings.service.TemplatedEmailSender;
+import com.example.rbac.admin.users.model.User;
+import com.example.rbac.admin.users.repository.UserRepository;
 import com.example.rbac.client.checkout.model.CheckoutOrder;
 import com.example.rbac.client.checkout.repository.CheckoutOrderRepository;
 import com.example.rbac.common.exception.ApiException;
@@ -40,10 +43,17 @@ public class OrderService {
 
     private final CheckoutOrderRepository orderRepository;
     private final ObjectMapper objectMapper;
+    private final TemplatedEmailSender emailSender;
+    private final UserRepository userRepository;
 
-    public OrderService(CheckoutOrderRepository orderRepository, ObjectMapper objectMapper) {
+    public OrderService(CheckoutOrderRepository orderRepository,
+                        ObjectMapper objectMapper,
+                        TemplatedEmailSender emailSender,
+                        UserRepository userRepository) {
         this.orderRepository = orderRepository;
         this.objectMapper = objectMapper;
+        this.emailSender = emailSender;
+        this.userRepository = userRepository;
     }
 
     @Transactional
@@ -57,9 +67,10 @@ public class OrderService {
                                              List<CheckoutOrderLineRequest> lineRequests) {
         List<OrderLineDto> orderLines = toOrderLines(lineRequests);
         CheckoutOrder order = new CheckoutOrder();
+        CustomerIdentity identity = resolveCustomerIdentity(userId, customerEmail, customerName);
         order.setUserId(userId);
-        order.setCustomerEmail(customerEmail);
-        order.setCustomerName(customerName);
+        order.setCustomerEmail(identity.email());
+        order.setCustomerName(identity.name());
         order.setStatus(DEFAULT_STATUS);
         order.setSummaryJson(writeJson(copySummary(summary)));
         order.setShippingAddressJson(writeJson(copyAddress(shippingAddress)));
@@ -72,7 +83,9 @@ public class OrderService {
             saved.setOrderNumber(generateOrderNumber(saved.getId()));
             saved = orderRepository.save(saved);
         }
-        return toOrderResponse(saved);
+        CheckoutOrderResponse response = toOrderResponse(saved);
+        emailSender.sendOrderConfirmationEmail(response);
+        return response;
     }
 
     @Transactional(readOnly = true)
@@ -124,8 +137,8 @@ public class OrderService {
         response.setOrderNumber(ensureOrderNumber(order));
         response.setStatus(order.getStatus());
         response.setCustomerId(order.getUserId());
-        response.setCustomerEmail(order.getCustomerEmail());
-        response.setCustomerName(order.getCustomerName());
+        response.setCustomerEmail(normalizeEmail(order.getCustomerEmail()));
+        response.setCustomerName(normalizeName(order.getCustomerName()));
         response.setCreatedAt(order.getCreatedAt());
         response.setSummary(copySummary(readSummary(order.getSummaryJson())));
         List<OrderLineDto> lines = readLines(order.getLinesJson());
@@ -141,8 +154,8 @@ public class OrderService {
         dto.setId(order.getId());
         dto.setOrderNumber(ensureOrderNumber(order));
         dto.setCustomerId(order.getUserId());
-        dto.setCustomerName(order.getCustomerName());
-        dto.setCustomerEmail(order.getCustomerEmail());
+        dto.setCustomerName(normalizeName(order.getCustomerName()));
+        dto.setCustomerEmail(normalizeEmail(order.getCustomerEmail()));
         dto.setStatus(order.getStatus());
         dto.setCreatedAt(order.getCreatedAt());
         dto.setSummary(copySummary(readSummary(order.getSummaryJson())));
@@ -157,8 +170,8 @@ public class OrderService {
         detail.setStatus(order.getStatus());
         detail.setCreatedAt(order.getCreatedAt());
         detail.setCustomerId(order.getUserId());
-        detail.setCustomerName(order.getCustomerName());
-        detail.setCustomerEmail(order.getCustomerEmail());
+        detail.setCustomerName(normalizeName(order.getCustomerName()));
+        detail.setCustomerEmail(normalizeEmail(order.getCustomerEmail()));
         detail.setShippingAddress(copyAddress(readAddress(order.getShippingAddressJson())));
         detail.setBillingAddress(copyAddress(readAddress(order.getBillingAddressJson())));
         detail.setPaymentMethod(copyPaymentMethod(readPaymentMethod(order.getPaymentMethodJson())));
@@ -373,6 +386,42 @@ public class OrderService {
         long sequenceBase = 999L;
         long numeric = (id != null ? id : 0L) + sequenceBase;
         return "ORD-" + numeric;
+    }
+
+    private CustomerIdentity resolveCustomerIdentity(Long userId, String email, String name) {
+        String normalizedEmail = normalizeEmail(email);
+        String normalizedName = normalizeName(name);
+
+        if (userId != null && (!StringUtils.hasText(normalizedEmail) || !StringUtils.hasText(normalizedName))) {
+            User user = userRepository.findById(userId).orElse(null);
+            if (user != null) {
+                if (!StringUtils.hasText(normalizedEmail)) {
+                    normalizedEmail = normalizeEmail(user.getEmail());
+                }
+                if (!StringUtils.hasText(normalizedName)) {
+                    normalizedName = normalizeName(user.getFullName());
+                }
+            }
+        }
+
+        return new CustomerIdentity(normalizedEmail, normalizedName);
+    }
+
+    private String normalizeEmail(String value) {
+        if (!StringUtils.hasText(value)) {
+            return null;
+        }
+        return value.trim();
+    }
+
+    private String normalizeName(String value) {
+        if (!StringUtils.hasText(value)) {
+            return null;
+        }
+        return value.trim();
+    }
+
+    private record CustomerIdentity(String email, String name) {
     }
 }
 
