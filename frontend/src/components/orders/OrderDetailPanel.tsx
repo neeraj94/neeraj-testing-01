@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import type { OrderDetail } from '../../types/orders';
 import { formatCurrency } from '../../utils/currency';
 
@@ -5,6 +6,7 @@ type OrderDetailPanelProps = {
   order: OrderDetail;
   baseCurrency: string | null;
   onClose?: () => void;
+  actions?: ReactNode;
 };
 
 const formatDateTime = (value: string) =>
@@ -45,7 +47,7 @@ const AddressBlock = ({
   );
 };
 
-const OrderDetailPanel = ({ order, baseCurrency, onClose }: OrderDetailPanelProps) => {
+const OrderDetailPanel = ({ order, baseCurrency, onClose, actions }: OrderDetailPanelProps) => {
   const currency = baseCurrency ?? 'USD';
   const lines = order.lines ?? [];
   const summary = order.summary;
@@ -71,31 +73,36 @@ const OrderDetailPanel = ({ order, baseCurrency, onClose }: OrderDetailPanelProp
 
   return (
     <section className="space-y-6 rounded-2xl border border-slate-200 bg-slate-50 p-6 shadow-sm">
-      <header className="flex flex-col gap-3 border-b border-slate-200 pb-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-primary">Order #{order.id}</p>
-          <h3 className="mt-1 text-2xl font-semibold text-slate-900">{order.orderNumber}</h3>
-          <p className="text-sm text-slate-500">Placed on {formatDateTime(order.createdAt)}</p>
-        </div>
-        <div className="flex flex-col items-end gap-2">
-          <span
-            className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide ${
-              order.status === 'PROCESSING'
-                ? 'bg-amber-50 text-amber-700'
-                : 'bg-emerald-50 text-emerald-700'
-            }`}
-          >
-            {order.status ?? 'Processing'}
-          </span>
-          {onClose && (
-            <button
-              type="button"
-              onClick={onClose}
-              className="text-xs font-semibold text-slate-500 transition hover:text-slate-700"
-            >
-              Close
-            </button>
-          )}
+      <header className="space-y-4 border-b border-slate-200 pb-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-primary">Order #{order.id}</p>
+            <h3 className="mt-1 text-2xl font-semibold text-slate-900">{order.orderNumber}</h3>
+            <p className="text-sm text-slate-500">Placed on {formatDateTime(order.createdAt)}</p>
+          </div>
+          <div className="flex flex-col items-stretch gap-3 sm:items-end">
+            {actions ? <div className="flex flex-wrap justify-end gap-2">{actions}</div> : null}
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <span
+                className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide ${
+                  order.status === 'PROCESSING'
+                    ? 'bg-amber-50 text-amber-700'
+                    : 'bg-emerald-50 text-emerald-700'
+                }`}
+              >
+                {order.status ?? 'Processing'}
+              </span>
+              {onClose ? (
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="text-xs font-semibold text-slate-500 transition hover:text-slate-700"
+                >
+                  Close
+                </button>
+              ) : null}
+            </div>
+          </div>
         </div>
       </header>
 
