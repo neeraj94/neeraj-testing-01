@@ -8,7 +8,7 @@ import type { PermissionKey } from '../types/auth';
 import { adminApi } from '../services/http';
 import { DEFAULT_NAVIGATION_MENU } from '../constants/navigation';
 import type { NavigationNode, NavigationResponse } from '../types/navigation';
-import { mergeMenuNodes } from '../utils/navigation';
+import { ensureStatusConfigurationEntry, mergeMenuNodes } from '../utils/navigation';
 
 type SidebarItem = {
   key: string;
@@ -63,13 +63,18 @@ const Layout = () => {
         }
         const providedDefaults = data?.defaults ?? [];
         const effectiveDefaults = mergeMenuNodes(providedDefaults, DEFAULT_NAVIGATION_MENU);
-        const merged = mergeMenuNodes(data?.menu ?? [], effectiveDefaults.length ? effectiveDefaults : DEFAULT_NAVIGATION_MENU);
-        setNavItems(merged.length ? merged : DEFAULT_NAVIGATION_MENU);
+        const normalizedDefaults = ensureStatusConfigurationEntry(
+          effectiveDefaults.length ? effectiveDefaults : DEFAULT_NAVIGATION_MENU,
+          DEFAULT_NAVIGATION_MENU
+        );
+        const merged = mergeMenuNodes(data?.menu ?? [], normalizedDefaults);
+        const normalizedMenu = ensureStatusConfigurationEntry(merged.length ? merged : normalizedDefaults, normalizedDefaults);
+        setNavItems(normalizedMenu);
       } catch (error) {
         if (!active) {
           return;
         }
-        setNavItems(DEFAULT_NAVIGATION_MENU);
+        setNavItems(ensureStatusConfigurationEntry(DEFAULT_NAVIGATION_MENU, DEFAULT_NAVIGATION_MENU));
       }
     };
 
